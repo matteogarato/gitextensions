@@ -9,16 +9,16 @@ public class RepositoryStorageTests
     private Current.IRepositorySerialiser<RepositoryCategory> _repositoryCategorySerialiser = null!;
     private RepositoryStorage _repositoryStorage = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryStorageTests()
     {
         _repositoryCategorySerialiser = Substitute.For<Current.IRepositorySerialiser<RepositoryCategory>>();
         _repositoryStorage = new RepositoryStorage(_repositoryCategorySerialiser);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("   ")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public void LoadLegacy_should_return_empty_collection_if_settings_empty(string? setting)
     {
         AppSettings.SetString("repositories", setting!);
@@ -28,7 +28,7 @@ public class RepositoryStorageTests
         repositories.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void LoadLegacy_should_return_empty_collection_if_failed_to_deserialise()
     {
         AppSettings.SetString("repositories", "repo");
@@ -39,7 +39,7 @@ public class RepositoryStorageTests
         repositories.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void LoadLegacy_should_return_collection()
     {
         AppSettings.SetString("repositories", "repos");

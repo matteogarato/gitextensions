@@ -3,28 +3,14 @@ using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.UserControls.RevisionGrid;
 using GitUIPluginInterfaces;
+using Xunit;
 
 namespace GitExtensions.UITests.UserControls.RevisionGrid;
-public class CopyContextMenuItemTests
+public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyContextMenuItemTestsFixture>
 {
-    private string? _originalTranslation;
     private CopyContextMenuItem _copyContextMenuItem = null!;
 
-    [OneTimeSetUp]
-    public void OneTimeSetup()
-    {
-        _originalTranslation = AppSettings.CurrentTranslation;
-        AppSettings.CurrentTranslation = "en";
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.CurrentTranslation = _originalTranslation;
-    }
-
-    [SetUp]
-    public void Setup()
+    public CopyContextMenuItemTests(CopyContextMenuItemTestsFixture fixture)
     {
         _copyContextMenuItem = new CopyContextMenuItem
         {
@@ -32,14 +18,13 @@ public class CopyContextMenuItemTests
         };
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _copyContextMenuItem.Owner!.Dispose();
         _copyContextMenuItem.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Should_should_contain_single_item_if_no_revision_supplied()
     {
         _copyContextMenuItem.SetRevisionFunc(() => null!);
@@ -49,7 +34,8 @@ public class CopyContextMenuItemTests
         _copyContextMenuItem.DropDownItems.Count.Should().Be(1);
     }
 
-    [TestCaseSource(nameof(GetArtificialCommits))]
+    [Theory]
+    [MemberData(nameof(GetArtificialCommits))]
     public void Should_should_show_minimum_info_for_artificial_commits(ObjectId objectId)
     {
         GitRevision[] revisions = [new GitRevision(objectId)];
@@ -65,7 +51,7 @@ public class CopyContextMenuItemTests
         _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
     }
 
-    [Test]
+    [Fact]
     public void Should_show_info_if_commit_has_defined_branches()
     {
         GitRevision revision = new(ObjectId.Random());
@@ -91,7 +77,7 @@ public class CopyContextMenuItemTests
         _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
     }
 
-    [Test]
+    [Fact]
     public void Should_show_info_if_commit_has_defined_tags()
     {
         GitRevision revision = new(ObjectId.Random());
@@ -117,7 +103,7 @@ public class CopyContextMenuItemTests
         _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
     }
 
-    [Test]
+    [Fact]
     public void Should_show_info_if_commit_has_defined_branches_and_tags()
     {
         GitRevision revision = new(ObjectId.Random());
@@ -149,7 +135,7 @@ public class CopyContextMenuItemTests
         _copyContextMenuItem.DropDownItems[11].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
     }
 
-    [Test]
+    [Fact]
     public void Should_should_show_info_for_multiple_commits()
     {
         GitRevision rev1 = new(ObjectId.Random())
@@ -201,13 +187,34 @@ public class CopyContextMenuItemTests
         return label;
     }
 
-    private static IEnumerable<ObjectId> GetArtificialCommits
+    public static IEnumerable<object[]> GetArtificialCommits
     {
         get
         {
-            yield return ObjectId.WorkTreeId;
-            yield return ObjectId.IndexId;
-            yield return ObjectId.CombinedDiffId;
+            yield return [ObjectId.WorkTreeId];
+            yield return [ObjectId.IndexId];
+            yield return [ObjectId.CombinedDiffId];
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class CopyContextMenuItemTestsFixture : System.IDisposable
+{
+    private string? _originalTranslation;
+
+    public CopyContextMenuItemTestsFixture()
+    {
+        _originalTranslation = AppSettings.CurrentTranslation;
+        AppSettings.CurrentTranslation = "en";
+    }
+
+    public void Dispose()
+    {
+        AppSettings.CurrentTranslation = _originalTranslation;
     }
 }

@@ -6,7 +6,7 @@ using ResourceManager;
 namespace GitCommandsTests.Git_Commands;
 public class GitCommandsHelperTest
 {
-    [Test]
+    [Fact]
     public void CanGetRelativeDateString()
     {
         AppSettings.CurrentTranslation = "English";
@@ -33,7 +33,7 @@ public class GitCommandsHelperTest
         LocalizationHelpers.GetRelativeDateString(now, now.AddDays(-730)).Should().Be("2 years ago");
     }
 
-    [Test]
+    [Fact]
     public void CanGetRelativeNegativeDateString()
     {
         AppSettings.CurrentTranslation = "English";
@@ -59,7 +59,7 @@ public class GitCommandsHelperTest
         LocalizationHelpers.GetRelativeDateString(now, now.AddDays(730)).Should().Be("-2 years ago");
     }
 
-    [Test]
+    [Fact]
     public void TestFetchArguments()
     {
         using ReferenceRepository referenceRepository = new(createCommit: false);
@@ -140,7 +140,7 @@ public class GitCommandsHelperTest
         }
     }
 
-    [Test]
+    [Fact]
     public void TestUnsetStagedStatus()
     {
         GitItemStatus item = new("name");

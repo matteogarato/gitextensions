@@ -4,7 +4,7 @@ using GitUI.Theming;
 
 namespace GitUITests.Editor.Diff;
 
-public abstract class AnsiEscapeUtilitiesTestBase
+public abstract class AnsiEscapeUtilitiesTestBase : IDisposable
 {
     protected const int BlackId = 0;
     protected const int RedId = 1;
@@ -59,8 +59,7 @@ public abstract class AnsiEscapeUtilitiesTestBase
     private ThemeId _themeId;
     private string[] _themeVariations = null!;
 
-    [OneTimeSetUp]
-    public void BaseOneTimeSetUp()
+    public AnsiEscapeUtilitiesTestBase()
     {
         _themeId = AppSettings.ThemeId;
         _themeVariations = AppSettings.ThemeVariations;
@@ -69,8 +68,7 @@ public abstract class AnsiEscapeUtilitiesTestBase
         ThemeModule.Load();
     }
 
-    [OneTimeTearDown]
-    public void BaseOneTimeTearDown()
+    public void Dispose()
     {
         AppSettings.ThemeId = _themeId;
         AppSettings.ThemeVariations = _themeVariations;

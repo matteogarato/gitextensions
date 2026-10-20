@@ -6,7 +6,7 @@ using IRepositoryStorage = GitCommands.UserRepositoryHistory.IRepositoryStorage;
 using Repository = GitCommands.UserRepositoryHistory.Repository;
 
 namespace GitCommandsTests.UserRepositoryHistory;
-public class LocalRepositoryManagerTests
+public class LocalRepositoryManagerTests : IDisposable
 {
     private const string KeyRecentHistory = "history";
     private const string KeyFavouriteHistory = "history-favourite";
@@ -15,8 +15,7 @@ public class LocalRepositoryManagerTests
     private LocalRepositoryManager _manager = null!;
     private int _userSetting;
 
-    [SetUp]
-    public void Setup()
+    public LocalRepositoryManagerTests()
     {
         // backup the user setting, will restore it at the end of the test run
         _userSetting = AppSettings.RecentRepositoriesHistorySize;
@@ -27,13 +26,12 @@ public class LocalRepositoryManagerTests
         _manager = new LocalRepositoryManager(_repositoryStorage, _repositoryHistoryMigrator);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         AppSettings.RecentRepositoriesHistorySize = _userSetting;
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_add_new_path_as_top_entry()
     {
         const string repoToAdd = "path to add\\";
@@ -52,7 +50,7 @@ public class LocalRepositoryManagerTests
         newHistory[0].Path.Should().Be(repoToAdd);
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_move_existing_path_as_top_entry()
     {
         const string repoToAdd = "path to add\\";
@@ -72,7 +70,7 @@ public class LocalRepositoryManagerTests
         newHistory[0].Path.Should().Be(repoToAdd);
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_move_only_first_existing_path_as_top_entry()
     {
         const string repoToAdd = "path to add\\";
@@ -94,7 +92,7 @@ public class LocalRepositoryManagerTests
         newHistory[4].Path.Should().Be(repoToAdd);
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_not_move_if_path_already_as_top_entry()
     {
         const string repoToAdd = "path to add\\";
@@ -115,14 +113,14 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.DidNotReceive().Save(KeyRecentHistory, Arg.Any<IList<Repository>>());
     }
 
-    [Test]
+    [Fact]
     public void AssignCategoryAsync_should_throw_if_key_null()
     {
         Func<Task> f = async () => { await _manager.AssignCategoryAsync(null!, null); };
         f.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task LoadFavouriteHistoryAsync_should_return_empty_list_if_nothing_loaded()
     {
         _repositoryStorage.Load(KeyFavouriteHistory).Returns(x => null!);
@@ -132,7 +130,7 @@ public class LocalRepositoryManagerTests
         history.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public async Task LoadFavouriteHistoryAsync_should_migrate_old_categorised_repositories()
     {
         _repositoryStorage.Load(KeyFavouriteHistory).Returns(x => new List<Repository>());
@@ -144,7 +142,7 @@ public class LocalRepositoryManagerTests
 #pragma warning restore 4014
     }
 
-    [Test]
+    [Fact]
     public async Task LoadRecentHistoryAsync_should_return_empty_list_if_nothing_loaded()
     {
         _repositoryStorage.Load(KeyRecentHistory).Returns(x => null!);
@@ -154,7 +152,7 @@ public class LocalRepositoryManagerTests
         history.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public async Task LoadRecentHistoryAsync_should_trim_history_per_settings()
     {
         const int size = 3;
@@ -177,7 +175,7 @@ public class LocalRepositoryManagerTests
         repositories.Select(r => r.Path).Should().ContainInOrder("path1", "path2", "path3");
     }
 
-    [Test]
+    [Fact]
     public async Task LoadRecentHistoryAsync_should_keep_anchored_repositories_when_trimming()
     {
         const int size = 3;
@@ -200,7 +198,7 @@ public class LocalRepositoryManagerTests
         repositories.Select(r => r.Path).Should().NotContain(["path2", "path3", "path4"]);
     }
 
-    [Test]
+    [Fact]
     public async Task LoadRecentHistoryAsync_should_keep_all_anchored_repositories_when_they_exceed_size()
     {
         const int size = 2;
@@ -220,7 +218,7 @@ public class LocalRepositoryManagerTests
         repositories.Select(r => r.Path).Should().NotContain("path1");
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveRecentAsync_should_remove_if_exists()
     {
         const string repoToDelete = "path to delete";
@@ -243,7 +241,7 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.Received(1).Save(KeyRecentHistory, Arg.Is<IEnumerable<Repository>>(h => h.All(r => r.Path != repoToDelete)));
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveFavouriteAsync_should_not_crash_if_not_exists()
     {
         const string repoToDelete = "path to delete";
@@ -270,7 +268,7 @@ public class LocalRepositoryManagerTests
 #pragma warning restore 4014
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveFavouriteAsync_should_remove_if_exists()
     {
         const string repoToDelete = "path to delete";
@@ -297,7 +295,7 @@ public class LocalRepositoryManagerTests
 #pragma warning restore 4014
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveRecentAsync_should_not_crash_if_not_exists()
     {
         const string repoToDelete = "path to delete";
@@ -320,14 +318,14 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.DidNotReceive().Save(KeyRecentHistory, Arg.Any<IEnumerable<Repository>>());
     }
 
-    [Test]
+    [Fact]
     public void SaveFavouriteHistoryAsync_should_throw_if_repositories_null()
     {
         Func<Task> action = async () => await _manager.SaveFavouriteHistoryAsync(null!);
         action.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task SaveFavouriteHistoryAsync_should_save()
     {
         List<Repository> history =
@@ -344,14 +342,14 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.Received(1).Save(KeyFavouriteHistory, history);
     }
 
-    [Test]
+    [Fact]
     public void SaveRecentHistoryAsync_should_throw_if_repositories_null()
     {
         Func<Task> action = async () => await _manager.SaveRecentHistoryAsync(null!);
         action.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task SaveRecentHistoryAsync_should_trim_history_size()
     {
         const int size = 3;
@@ -370,7 +368,7 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.Received(1).Save(KeyRecentHistory, Arg.Is<IEnumerable<Repository>>(h => h.Count() == size));
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveInvalidRepositoriesAsync_should_apply_predicate()
     {
         List<Repository> history =
@@ -390,7 +388,7 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.Received(1).Save(KeyRecentHistory, Arg.Is<IEnumerable<Repository>>(h => h.Count() == 2));
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveInvalidRepositoriesAsync_should_not_apply_predicate()
     {
         List<Repository> history =
@@ -409,7 +407,7 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.DidNotReceive().Save(KeyRecentHistory, Arg.Any<IEnumerable<Repository>>());
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveInvalidRepositoriesAsync_should_remove_recent_by_predicate()
     {
         const string repoToDelete = "different path";
@@ -430,7 +428,7 @@ public class LocalRepositoryManagerTests
         _repositoryStorage.Received(1).Save(KeyRecentHistory, Arg.Is<IEnumerable<Repository>>(h => h.All(r => r.Path != repoToDelete)));
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveInvalidRepositoriesAsync_should_remove_favourite_by_predicate()
     {
         const string repoToDelete = "different path";

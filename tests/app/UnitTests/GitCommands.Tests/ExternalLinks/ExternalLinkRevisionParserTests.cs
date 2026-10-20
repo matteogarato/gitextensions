@@ -16,8 +16,7 @@ public class ExternalLinkRevisionParserTests
     private ExternalLinkDefinition _linkDef = null!;
     private GitRevision _revision = null!;
 
-    [SetUp]
-    public void Setup()
+    public ExternalLinkRevisionParserTests()
     {
         _linkDef = Parse(GetGitHubIssuesXmlDef())[0];
 
@@ -29,7 +28,7 @@ public class ExternalLinkRevisionParserTests
         _parser = new ExternalLinkRevisionParser(_remotesManager);
     }
 
-    [Test]
+    [Fact]
     public void ParseGitHubIssueForUpstreamLink()
     {
         _revision.Body = "Merge pull request #3657 from RussKie/tweak_FormRemotes_tooltips";
@@ -42,7 +41,7 @@ public class ExternalLinkRevisionParserTests
         actualLinks.Should().Equal(expectedLinks);
     }
 
-    [Test]
+    [Fact]
     public void ParseGitHubIssueForOriginLink()
     {
         _linkDef.UseRemotesPattern = "origin|upstream";
@@ -56,7 +55,7 @@ public class ExternalLinkRevisionParserTests
         actualLinks.Should().Equal(expectedLinks);
     }
 
-    [Test]
+    [Fact]
     public void ParseGitHubIssueForUpstreamAndOriginLink()
     {
         _linkDef.UseOnlyFirstRemote = false;
@@ -71,7 +70,7 @@ public class ExternalLinkRevisionParserTests
         actualLinks.Should().Equal(expectedLinks);
     }
 
-    [Test]
+    [Fact]
     public void ParseGitHubIssueForAllRemotesLink()
     {
         _linkDef.UseRemotesPattern = string.Empty;
@@ -88,7 +87,7 @@ public class ExternalLinkRevisionParserTests
         actualLinks.Should().Equal(expectedLinks);
     }
 
-    [Test]
+    [Fact]
     public void ParseLinkWithEmptyRemotePart()
     {
         _linkDef = Parse(GetEmptyRemotePartXmlDef())[0];

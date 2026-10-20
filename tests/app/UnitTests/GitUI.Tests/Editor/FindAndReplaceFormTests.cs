@@ -7,8 +7,7 @@ using ICSharpCode.TextEditor.Document;
 
 namespace GitUITests.Editor;
 
-[Apartment(ApartmentState.STA)]
-public class FindAndReplaceFormTests
+public class FindAndReplaceFormTests : IDisposable
 {
     public struct TextRegion
     {
@@ -29,34 +28,33 @@ public class FindAndReplaceFormTests
     private FindAndReplaceForm.TestAccessor _testAccessor;
     private TextEditorControl _textEditorControl = null!;
 
-    [SetUp]
-    public void SetUp()
+    public FindAndReplaceFormTests()
     {
         _findAndReplaceForm = new FindAndReplaceForm();
         _textEditorControl = new TextEditorControl();
         _testAccessor = _findAndReplaceForm.GetTestAccessor();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _findAndReplaceForm.Dispose();
         _textEditorControl.Dispose();
     }
 
-    private static IEnumerable<TestCaseData> MatchCase
+    public static IEnumerable<object?[]> MatchCase
     {
         get
         {
-            yield return new TestCaseData("line one", "one", false, new TextRange(5, 3));
-            yield return new TestCaseData("line one", "ONE", false, new TextRange(5, 3));
-            yield return new TestCaseData("line one", "one", true, new TextRange(5, 3));
-            yield return new TestCaseData("line one", "ONE", true, null);
+            yield return new object?[] { "line one", "one", false, new TextRange(5, 3) };
+            yield return new object?[] { "line one", "ONE", false, new TextRange(5, 3) };
+            yield return new object?[] { "line one", "one", true, new TextRange(5, 3) };
+            yield return new object?[] { "line one", "ONE", true, null };
         }
     }
 
-    [TestCaseSource(nameof(MatchCase))]
-    public async Task FindNextAsync_match_case(string text, string searchPhrase, bool matchCase, TextRange expectedRange)
+    [StaTheory]
+    [MemberData(nameof(MatchCase))]
+    public async Task FindNextAsync_match_case(string text, string searchPhrase, bool matchCase, TextRange? expectedRange)
     {
         Arrange(text, searchPhrase, matchCase);
 
@@ -65,17 +63,18 @@ public class FindAndReplaceFormTests
         AssertTextRange(expectedRange, actualRange!);
     }
 
-    private static IEnumerable<TestCaseData> MatchWholeWordOnly
+    public static IEnumerable<object?[]> MatchWholeWordOnly
     {
         get
         {
-            yield return new TestCaseData("line one", "one", new TextRange(5, 3));
-            yield return new TestCaseData("line one", "on", null);
+            yield return new object?[] { "line one", "one", new TextRange(5, 3) };
+            yield return new object?[] { "line one", "on", null };
         }
     }
 
-    [TestCaseSource(nameof(MatchWholeWordOnly))]
-    public async Task FindNextAsync_match_whole_world_only(string text, string searchPhrase, TextRange expectedRange)
+    [StaTheory]
+    [MemberData(nameof(MatchWholeWordOnly))]
+    public async Task FindNextAsync_match_whole_world_only(string text, string searchPhrase, TextRange? expectedRange)
     {
         Arrange(text, searchPhrase, matchWholeWordOnly: true);
 
@@ -84,45 +83,55 @@ public class FindAndReplaceFormTests
         AssertTextRange(expectedRange, actualRange!);
     }
 
-    private static IEnumerable<TestCaseData> LoopAround
+    public static IEnumerable<object?[]> LoopAround
     {
         get
         {
             const string textToSearch = "line odd\r\nline even\r\nline odd";
+            TextRegion scanRegion = new(new TextLocation(0, 1), new TextLocation(5, 2));
 
             // Search entire document, both directions
-            yield return new TestCaseData(textToSearch, "odd", false, default, new[]
+            yield return new object?[]
             {
-                new TextRange(5, 3),
-                new TextRange(26, 3),
-                new TextRange(5, 3),
-            });
+                textToSearch,
+                "odd",
+                false,
+                default(TextRegion),
+                new[] { new TextRange(5, 3), new TextRange(26, 3), new TextRange(5, 3) }
+            };
 
-            yield return new TestCaseData(textToSearch, "odd", true, default, new[]
+            yield return new object?[]
             {
-                new TextRange(26, 3),
-                new TextRange(5, 3),
-                new TextRange(26, 3),
-            });
+                textToSearch,
+                "odd",
+                true,
+                default(TextRegion),
+                new[] { new TextRange(26, 3), new TextRange(5, 3), new TextRange(26, 3) }
+            };
 
             // Search scan region, both directions
-            yield return new TestCaseData(textToSearch, "line", false, new TextRegion(new TextLocation(0, 1), new TextLocation(5, 2)), new[]
+            yield return new object?[]
             {
-                new TextRange(10, 4),
-                new TextRange(21, 4),
-                new TextRange(10, 4),
-            });
+                textToSearch,
+                "line",
+                false,
+                scanRegion,
+                new[] { new TextRange(10, 4), new TextRange(21, 4), new TextRange(10, 4) }
+            };
 
-            yield return new TestCaseData(textToSearch, "line", true, new TextRegion(new TextLocation(0, 1), new TextLocation(5, 2)), new[]
+            yield return new object?[]
             {
-                new TextRange(21, 4),
-                new TextRange(10, 4),
-                new TextRange(21, 4),
-            });
+                textToSearch,
+                "line",
+                true,
+                scanRegion,
+                new[] { new TextRange(21, 4), new TextRange(10, 4), new TextRange(21, 4) }
+            };
         }
     }
 
-    [TestCaseSource(nameof(LoopAround))]
+    [StaTheory]
+    [MemberData(nameof(LoopAround))]
     public async Task FindNextAsync_should_make_a_loop_and_return_to_first_occurrence(
         string text,
         string searchPhrase,
@@ -140,7 +149,7 @@ public class FindAndReplaceFormTests
         }
     }
 
-    [Test]
+    [StaFact]
     public async Task FindNextAsync_pressing_f3_outside_of_scan_region_should_clear_it()
     {
         Arrange("line one\r\nline two\r\nline three", "line", scanRegion: new TextRegion(new TextLocation(0, 0), new TextLocation(0, 1)));
@@ -156,27 +165,34 @@ public class FindAndReplaceFormTests
         AssertTextRange(new TextRange(20, 4), actualRange!);
     }
 
-    private static IEnumerable<TestCaseData> MultiFileSearch
+    public static IEnumerable<object?[]> MultiFileSearch
     {
         get
         {
+            string[] texts = ["line one\r\nline two\r\nline three", "content one\r\ncontent two\r\ncontent three"];
+
             // Should find occurrences in both files
-            yield return new TestCaseData(
-                new[] { "line one\r\nline two\r\nline three", "content one\r\ncontent two\r\ncontent three" },
+            yield return new object?[]
+            {
+                texts,
                 "two",
-                default,
-                new[] { new TextRange(15, 3), new TextRange(21, 3), new TextRange(15, 3) });
+                default(TextRegion),
+                new[] { new TextRange(15, 3), new TextRange(21, 3), new TextRange(15, 3) }
+            };
 
             // Has scan region, should search the first file only
-            yield return new TestCaseData(
-                new[] { "line one\r\nline two\r\nline three", "content one\r\ncontent two\r\ncontent three" },
+            yield return new object?[]
+            {
+                texts,
                 "two",
                 new TextRegion(new TextLocation(0, 1), new TextLocation(0, 2)),
-                new[] { new TextRange(15, 3), new TextRange(15, 3) });
+                new[] { new TextRange(15, 3), new TextRange(15, 3) }
+            };
         }
     }
 
-    [TestCaseSource(nameof(MultiFileSearch))]
+    [StaTheory]
+    [MemberData(nameof(MultiFileSearch))]
     public async Task FindNextAsync_should_iterate_over_files(
         string[] texts,
         string searchPhrase,
@@ -207,7 +223,7 @@ public class FindAndReplaceFormTests
         }
     }
 
-    [Test]
+    [StaFact]
     public void FindAndReplaceForm_scan_region_clears_if_new_text_was_set()
     {
         Arrange("line 1\r\nline 2\r\nline 3", "line", scanRegion: new TextRegion(new TextLocation(0, 1), new TextLocation(0, 2)));
@@ -242,7 +258,7 @@ public class FindAndReplaceFormTests
         }
     }
 
-    private void AssertTextRange(TextRange expectedRange, TextRange actualRange)
+    private void AssertTextRange(TextRange? expectedRange, TextRange actualRange)
     {
         // Assert returned value
         actualRange.Should().BeEquivalentTo(expectedRange);

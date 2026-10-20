@@ -16,88 +16,96 @@ public sealed partial class ObjectIdTests
     [GeneratedRegex(@"[XYZa-f0-9]{39}", RegexOptions.ExplicitCapture)]
     private static partial Regex ShaXYZRegex { get; }
 
-    [TestCase("0000000000000000000000000000000000000000")]
-    [TestCase("0102030405060708091011121314151617181920")]
-    [TestCase("0123456789abcdef0123456789abcdef01234567")]
+    [Theory]
+    [InlineData("0000000000000000000000000000000000000000")]
+    [InlineData("0102030405060708091011121314151617181920")]
+    [InlineData("0123456789abcdef0123456789abcdef01234567")]
     public void TryParse_handles_valid_hashes(string sha1)
     {
         ObjectId.TryParse(sha1, out ObjectId id).Should().BeTrue();
         id.ToString().Should().Be(sha1.ToLower());
     }
 
-    [TestCase("00000000000000000000000000000000000000")]
-    [TestCase("000000000000000000000000000000000000000")]
-    [TestCase("01020304050607080910111213141516171819200")]
-    [TestCase("010203040506070809101112131415161718192001")]
-    [TestCase("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")]
-    [TestCase("  0000000000000000000000000000000000000000  ")]
+    [Theory]
+    [InlineData("00000000000000000000000000000000000000")]
+    [InlineData("000000000000000000000000000000000000000")]
+    [InlineData("01020304050607080910111213141516171819200")]
+    [InlineData("010203040506070809101112131415161718192001")]
+    [InlineData("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")]
+    [InlineData("  0000000000000000000000000000000000000000  ")]
     public void TryParse_identifies_invalid_hashes(string sha1)
     {
         ObjectId.TryParse(sha1, out _).Should().BeFalse();
     }
 
-    [TestCase("0000000000000000000000000000000000000000", 0)]
-    [TestCase("0000000000000000000000000000000000000000__", 0)]
-    [TestCase("_0102030405060708091011121314151617181920", 1)]
-    [TestCase("_0102030405060708091011121314151617181920_", 1)]
-    [TestCase("__0102030405060708091011121314151617181920", 2)]
-    [TestCase("__0102030405060708091011121314151617181920__", 2)]
+    [Theory]
+    [InlineData("0000000000000000000000000000000000000000", 0)]
+    [InlineData("0000000000000000000000000000000000000000__", 0)]
+    [InlineData("_0102030405060708091011121314151617181920", 1)]
+    [InlineData("_0102030405060708091011121314151617181920_", 1)]
+    [InlineData("__0102030405060708091011121314151617181920", 2)]
+    [InlineData("__0102030405060708091011121314151617181920__", 2)]
     public void TryParse_with_offset_handles_valid_hashes(string sha1, int offset)
     {
         ObjectId.TryParse(sha1, offset, out ObjectId id).Should().BeTrue();
         id.ToString().Should().Be(sha1.Substring(offset, 40));
     }
 
-    [TestCase("0000000000000000000000000000000000000000")]
-    [TestCase("0102030405060708091011121314151617181920")]
-    [TestCase("0123456789abcdef0123456789abcdef01234567")]
+    [Theory]
+    [InlineData("0000000000000000000000000000000000000000")]
+    [InlineData("0102030405060708091011121314151617181920")]
+    [InlineData("0123456789abcdef0123456789abcdef01234567")]
     public void Parse_handles_valid_hashes(string sha1)
     {
         ObjectId.Parse(sha1).ToString().Should().Be(sha1.ToLower());
     }
 
-    [TestCase("00000000000000000000000000000000000000")]
-    [TestCase("000000000000000000000000000000000000000")]
-    [TestCase("01020304050607080910111213141516171819200")]
-    [TestCase("010203040506070809101112131415161718192001")]
-    [TestCase("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")]
-    [TestCase("  0000000000000000000000000000000000000000  ")]
+    [Theory]
+    [InlineData("00000000000000000000000000000000000000")]
+    [InlineData("000000000000000000000000000000000000000")]
+    [InlineData("01020304050607080910111213141516171819200")]
+    [InlineData("010203040506070809101112131415161718192001")]
+    [InlineData("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")]
+    [InlineData("  0000000000000000000000000000000000000000  ")]
     public void Parse_throws_for_invalid_hashes(string sha1)
     {
         ((Action)(() => ObjectId.Parse(sha1))).Should().Throw<FormatException>();
     }
 
-    [TestCase("0000000000000000000000000000000000000000")]
-    [TestCase("0102030405060708091011121314151617181920")]
-    [TestCase("0123456789abcdef0123456789abcdef01234567")]
+    [Theory]
+    [InlineData("0000000000000000000000000000000000000000")]
+    [InlineData("0102030405060708091011121314151617181920")]
+    [InlineData("0123456789abcdef0123456789abcdef01234567")]
     public void IsValid_identifies_valid_hashes(string sha1)
     {
         ObjectId.IsValid(sha1).Should().BeTrue();
     }
 
-    [TestCase("00000000000000000000000000000000000000")]
-    [TestCase("000000000000000000000000000000000000000")]
-    [TestCase("01020304050607080910111213141516171819200")]
-    [TestCase("010203040506070809101112131415161718192001")]
-    [TestCase("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")]
-    [TestCase("  0000000000000000000000000000000000000000  ")]
+    [Theory]
+    [InlineData("00000000000000000000000000000000000000")]
+    [InlineData("000000000000000000000000000000000000000")]
+    [InlineData("01020304050607080910111213141516171819200")]
+    [InlineData("010203040506070809101112131415161718192001")]
+    [InlineData("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")]
+    [InlineData("  0000000000000000000000000000000000000000  ")]
     public void IsValid_identifies_invalid_hashes(string sha1)
     {
         ObjectId.IsValid(sha1).Should().BeFalse();
     }
 
-    [TestCase("0000000000000000000000000000000000000000", 0)]
-    [TestCase("0000000000000000000000000000000000000000__", 0)]
-    [TestCase("_0102030405060708091011121314151617181920", 1)]
-    [TestCase("_0102030405060708091011121314151617181920_", 1)]
-    [TestCase("__0102030405060708091011121314151617181920", 2)]
-    [TestCase("__0102030405060708091011121314151617181920__", 2)]
+    [Theory]
+    [InlineData("0000000000000000000000000000000000000000", 0)]
+    [InlineData("0000000000000000000000000000000000000000__", 0)]
+    [InlineData("_0102030405060708091011121314151617181920", 1)]
+    [InlineData("_0102030405060708091011121314151617181920_", 1)]
+    [InlineData("__0102030405060708091011121314151617181920", 2)]
+    [InlineData("__0102030405060708091011121314151617181920__", 2)]
     public void Parse_with_offset_handles_valid_hashes(string sha1, int offset)
     {
         ObjectId.Parse(sha1.Substring(offset, 40)).ToString().Should().Be(sha1.Substring(offset, 40));
     }
 
-    [Test]
+    [Fact]
     public void ParseFromRegexCapture()
     {
         ObjectId objectId = ObjectId.Random();
@@ -108,43 +116,43 @@ public sealed partial class ObjectIdTests
         ((Action)(() => ObjectId.Parse(str, ShaXYZRegex.Match(str)))).Should().Throw<FormatException>();
     }
 
-    [Test]
+    [Fact]
     public void WorkTreeId_has_expected_value()
     {
         ObjectId.WorkTreeId.ToString().Should().Be("1111111111111111111111111111111111111111");
     }
 
-    [Test]
+    [Fact]
     public void IndexId_has_expected_value()
     {
         ObjectId.IndexId.ToString().Should().Be("2222222222222222222222222222222222222222");
     }
 
-    [Test]
+    [Fact]
     public void CombinedDiffId_has_expected_value()
     {
         ObjectId.CombinedDiffId.ToString().Should().Be("3333333333333333333333333333333333333333");
     }
 
-    [Test]
+    [Fact]
     public void WorkTreeId_is_artificial()
     {
         ObjectId.WorkTreeId.IsArtificial.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void IndexId_is_artificial()
     {
         ObjectId.IndexId.IsArtificial.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void CombinedDiffId_is_artificial()
     {
         ObjectId.CombinedDiffId.IsArtificial.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Equivalent_ids_are_equal()
     {
         ObjectId.Parse("0102030405060708091011121314151617181920").Should().Be(ObjectId.Parse("0102030405060708091011121314151617181920"));
@@ -164,7 +172,7 @@ public sealed partial class ObjectIdTests
         ObjectId.Parse(GitRevision.CombinedDiffGuid).Should().Be(ObjectId.CombinedDiffId);
     }
 
-    [Test]
+    [Fact]
     public void Different_ids_are_not_equal()
     {
         ObjectId.Parse("0102030405060708091011121314151617181920").Should().NotBe(ObjectId.Parse("0000000000000000000000000000000000000000"));
@@ -172,7 +180,7 @@ public sealed partial class ObjectIdTests
         ObjectId.IndexId.Should().NotBe(ObjectId.WorkTreeId);
     }
 
-    [Test]
+    [Fact]
     public void Equivalent_ids_have_equal_hash_codes()
     {
         ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode().Should().Be(ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode());
@@ -184,7 +192,7 @@ public sealed partial class ObjectIdTests
         ObjectId.IndexId.GetHashCode().Should().Be(ObjectId.IndexId.GetHashCode());
     }
 
-    [Test]
+    [Fact]
     public void Different_ids_have_different_hash_codes()
     {
         ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode().Should().NotBe(ObjectId.Parse("0000000000000000000000000000000000000000").GetHashCode());
@@ -195,11 +203,12 @@ public sealed partial class ObjectIdTests
     private const string NonHexAscii = "0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz";
     private const string HexAscii = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
 
-    [TestCase(HexAscii, 0, "000102030405060708090a0b0c0d0e0f10111213")]
-    [TestCase(HexAscii, 1, "00102030405060708090a0b0c0d0e0f101112131")]
-    [TestCase(HexAscii, 2, "0102030405060708090a0b0c0d0e0f1011121314")]
-    [TestCase(HexAscii, 3, "102030405060708090a0b0c0d0e0f10111213141")]
-    [TestCase(HexAscii, 26, "0d0e0f101112131415161718191a1b1c1d1e1f20")]
+    [Theory]
+    [InlineData(HexAscii, 0, "000102030405060708090a0b0c0d0e0f10111213")]
+    [InlineData(HexAscii, 1, "00102030405060708090a0b0c0d0e0f101112131")]
+    [InlineData(HexAscii, 2, "0102030405060708090a0b0c0d0e0f1011121314")]
+    [InlineData(HexAscii, 3, "102030405060708090a0b0c0d0e0f10111213141")]
+    [InlineData(HexAscii, 26, "0d0e0f101112131415161718191a1b1c1d1e1f20")]
     public void TryParse_works_as_expected(string source, int offset, [CanBeNull] string? expected)
     {
         byte[] sourceBytes = Encoding.ASCII.GetBytes(source);
@@ -212,7 +221,8 @@ public sealed partial class ObjectIdTests
         }
     }
 
-    [TestCase(NonHexAscii, 0, null)]
+    [Theory]
+    [InlineData(NonHexAscii, 0, null)]
     public void TryParse_returns_false_zero_with_illegal_input(string source, int offset, [CanBeNull] string? expected)
     {
         byte[] sourceBytes = Encoding.ASCII.GetBytes(source);
@@ -220,7 +230,7 @@ public sealed partial class ObjectIdTests
         objectId.IsZero.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void TryParse_returns_false_when_array_null()
     {
         ObjectId.TryParse(default, out ObjectId objectId).Should().BeFalse();
@@ -229,7 +239,7 @@ public sealed partial class ObjectIdTests
         objectId.IsZero.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void TryParse_returns_false_when_bounds_check_fails()
     {
         byte[] bytes = new byte[ObjectId.Sha1CharCount];
@@ -238,7 +248,7 @@ public sealed partial class ObjectIdTests
         objectId.IsZero.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void ToShortString()
     {
         const string s = "0102030405060708091011121314151617181920";
@@ -253,7 +263,7 @@ public sealed partial class ObjectIdTests
         ((Action)(() => id.ToShortString(ObjectId.Sha1CharCount + 1))).Should().Throw<ArgumentOutOfRangeException>();
     }
 
-    [Test]
+    [Fact]
     public void Equals_using_operator()
     {
         string objectIdString = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -263,9 +273,10 @@ public sealed partial class ObjectIdTests
         (ObjectId.Parse(objectIdString) != ObjectId.Random()).Should().BeTrue();
     }
 
-    [TestCase("0102030405060708091011121314151617181920")]
-    [TestCase("abcdefabcdefabcdefabcdefabcdefabcdefabcd")]
-    [TestCase("0000000000000000000000000000000000000000")]
+    [Theory]
+    [InlineData("0102030405060708091011121314151617181920")]
+    [InlineData("abcdefabcdefabcdefabcdefabcdefabcdefabcd")]
+    [InlineData("0000000000000000000000000000000000000000")]
     public void WriteTo_writes_full_hex(string sha1)
     {
         ObjectId id = ObjectId.Parse(sha1);
@@ -275,7 +286,7 @@ public sealed partial class ObjectIdTests
         new string(buffer).Should().Be(sha1);
     }
 
-    [Test]
+    [Fact]
     public void WriteTo_returns_false_when_destination_too_small()
     {
         ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
@@ -284,7 +295,7 @@ public sealed partial class ObjectIdTests
         id.WriteTo(buffer).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void WriteTo_writes_into_larger_buffer()
     {
         const string sha1 = "abcdefabcdefabcdefabcdefabcdefabcdefabcd";
@@ -297,8 +308,9 @@ public sealed partial class ObjectIdTests
         buffer[40].Should().Be('X');
     }
 
-    [TestCase("0102030405060708091011121314151617181920")]
-    [TestCase("abcdefabcdefabcdefabcdefabcdefabcdefabcd")]
+    [Theory]
+    [InlineData("0102030405060708091011121314151617181920")]
+    [InlineData("abcdefabcdefabcdefabcdefabcdefabcdefabcd")]
     public void ISpanFormattable_writes_hex(string sha1)
     {
         ObjectId id = ObjectId.Parse(sha1);
@@ -311,7 +323,7 @@ public sealed partial class ObjectIdTests
         new string(buffer).Should().Be(sha1);
     }
 
-    [Test]
+    [Fact]
     public void ISpanFormattable_returns_false_when_destination_too_small()
     {
         ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
@@ -323,7 +335,7 @@ public sealed partial class ObjectIdTests
         charsWritten.Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void ISpanFormattable_works_with_interpolation()
     {
         const string sha1 = "0102030405060708091011121314151617181920";
@@ -334,7 +346,7 @@ public sealed partial class ObjectIdTests
         result.Should().Be(sha1);
     }
 
-    [Test]
+    [Fact]
     public void CompareTo_returns_zero_for_equal_ids()
     {
         ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
@@ -342,7 +354,7 @@ public sealed partial class ObjectIdTests
         id.CompareTo(ObjectId.Parse("0102030405060708091011121314151617181920")).Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void CompareTo_returns_positive_for_zero()
     {
         ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
@@ -350,7 +362,7 @@ public sealed partial class ObjectIdTests
         id.CompareTo(default).Should().BePositive();
     }
 
-    [Test]
+    [Fact]
     public void CompareTo_respects_ordering()
     {
         ObjectId lower = ObjectId.Parse("0000000000000000000000000000000000000001");
@@ -360,7 +372,8 @@ public sealed partial class ObjectIdTests
         higher.CompareTo(lower).Should().BePositive();
     }
 
-    [TestCase("0123456789abcdef0123456789abcdef01234567")]
+    [Theory]
+    [InlineData("0123456789abcdef0123456789abcdef01234567")]
     public void TryParse_bytes_roundtrips_correctly(string sha1)
     {
         byte[] asciiBytes = Encoding.ASCII.GetBytes(sha1);
@@ -369,7 +382,7 @@ public sealed partial class ObjectIdTests
         id.ToString().Should().Be(sha1);
     }
 
-    [Test]
+    [Fact]
     public void TryParse_bytes_rejects_uppercase()
     {
         byte[] asciiBytes = Encoding.ASCII.GetBytes("ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD");

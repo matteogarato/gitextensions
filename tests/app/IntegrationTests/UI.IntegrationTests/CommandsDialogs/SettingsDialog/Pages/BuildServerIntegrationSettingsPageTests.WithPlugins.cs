@@ -9,18 +9,16 @@ using GitUI.CommandsDialogs.SettingsDialog.Pages;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using Microsoft.VisualStudio.Composition;
+using Xunit;
 
 namespace UITests.CommandsDialogs.SettingsDialog.Pages;
 
-[Apartment(ApartmentState.STA)]
-public class BuildServerIntegrationSettingsPageTests_WithPlugins
+public class BuildServerIntegrationSettingsPageTests_WithPlugins : System.IDisposable
 {
     private ReferenceRepository _referenceRepository = null!;
     private MockHost _form = null!;
     private BuildServerIntegrationSettingsPage _settingsPage = null!;
-
-    [SetUp]
-    public void SetUp()
+    public BuildServerIntegrationSettingsPageTests_WithPlugins()
     {
         _referenceRepository = new ReferenceRepository();
         TestComposition composition = TestComposition.Empty
@@ -30,15 +28,14 @@ public class BuildServerIntegrationSettingsPageTests_WithPlugins
         ManagedExtensibility.SetTestExportProvider(mefExportProvider);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _settingsPage.Dispose();
         _form.Dispose();
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void BuildServerType_should_contain_discovered_build_server_plugins()
     {
         RunFormTest(
@@ -52,7 +49,7 @@ public class BuildServerIntegrationSettingsPageTests_WithPlugins
           });
     }
 
-    [Test]
+    [WinFormsFact]
     public void BuildServerType_should_toggle_plugin_settings_controls()
     {
         RunFormTest(
@@ -113,5 +110,10 @@ public class BuildServerIntegrationSettingsPageTests_WithPlugins
         {
             throw new NotImplementedException();
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

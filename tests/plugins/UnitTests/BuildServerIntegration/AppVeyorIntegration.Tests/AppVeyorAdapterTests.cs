@@ -6,6 +6,7 @@ using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using NSubstitute;
+using Xunit;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -15,7 +16,7 @@ public class AppVeyorAdapterTests
 {
     private const string _projectId = "account/repo";
 
-    [Test]
+    [Fact]
     public void Should_return_no_build_Info_When_Api_Json_is_empty()
     {
         IEnumerable<AppVeyorBuildInfo> buildInfo = new AppVeyorAdapter().ExtractBuildInfo(_projectId, string.Empty);
@@ -24,14 +25,14 @@ public class AppVeyorAdapterTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    [Test]
+    [Fact]
     public async Task Should_return_a_build_Info_When_Json_content_is_the_one_of_a_pull_request_build()
     {
         await Verifier.Verify(BuildBuildInfoForFile("AppVeyorResult_pull_request_build.json")).UseDirectory("ApprovedFiles");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    [Test]
+    [Fact]
     public async Task Should_return_a_build_Info_When_Json_content_is_the_one_of_a_master_build()
     {
         await Verifier.Verify(BuildBuildInfoForFile("AppVeyorResult_master.json")).UseDirectory("ApprovedFiles");

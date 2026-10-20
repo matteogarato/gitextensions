@@ -3,26 +3,22 @@ using GitCommands;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls.RevisionGrid;
+using Xunit;
 
 namespace GitExtensions.UITests.UserControls.RevisionGrid;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class RevisionGridToolTipProviderTests
+public class RevisionGridToolTipProviderTests : System.IDisposable, IClassFixture<RevisionGridToolTipProviderTestsFixture>
 {
     // Created once for each test
     private ReferenceRepository _referenceRepository = null!;
     private GitUICommands _commands = null!;
 
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public RevisionGridToolTipProviderTests(RevisionGridToolTipProviderTestsFixture fixture)
     {
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar.
-        AppSettings.ShowAuthorAvatarColumn = false;
+        InitializeTest();
     }
 
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
         _referenceRepository.CreateCommit("Commit1", "Commit1");
@@ -31,13 +27,12 @@ public class RevisionGridToolTipProviderTests
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Hide_should_not_shorten_or_extend_the_display_duration()
     {
         RunProviderTest(provider =>
@@ -52,7 +47,7 @@ public class RevisionGridToolTipProviderTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Clear_should_forget_the_cell_the_tooltip_was_built_for()
     {
         RunProviderTest(provider =>
@@ -84,5 +79,19 @@ public class RevisionGridToolTipProviderTests
 
                 testDriver(revisionGrid.GetTestAccessor().ToolTipProvider);
             });
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class RevisionGridToolTipProviderTestsFixture
+{
+    public RevisionGridToolTipProviderTestsFixture()
+    {
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar.
+        AppSettings.ShowAuthorAvatarColumn = false;
     }
 }

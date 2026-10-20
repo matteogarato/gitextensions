@@ -6,15 +6,13 @@ using NSubstitute;
 
 namespace GitUITests;
 
-[Apartment(ApartmentState.STA)]
 public sealed class RepositoryHistoryUIServiceTests
 {
     private RepositoryHistoryUIService _service = null!;
     private IRepositoryCurrentBranchNameCache _branchNameCache = null!;
     private IInvalidRepositoryRemover _invalidRepositoryRemover = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryHistoryUIServiceTests()
     {
         _branchNameCache = Substitute.For<IRepositoryCurrentBranchNameCache>();
         _invalidRepositoryRemover = Substitute.For<IInvalidRepositoryRemover>();
@@ -22,7 +20,7 @@ public sealed class RepositoryHistoryUIServiceTests
         _service = new RepositoryHistoryUIService(Substitute.For<IGitExecutorProvider>(), _branchNameCache, _invalidRepositoryRemover);
     }
 
-    [Test]
+    [StaFact]
     public void PopulateRecentRepositoriesMenu_should_add_new_item()
     {
         using ToolStripMenuItem containerMenu = new();
@@ -36,7 +34,7 @@ public sealed class RepositoryHistoryUIServiceTests
         containerMenu.DropDownItems.Count.Should().Be(1);
     }
 
-    [Test]
+    [StaFact]
     public void AddRecentRepositories_should_set_properties_correctly()
     {
         using ToolStripMenuItem containerMenu = new();
@@ -53,10 +51,11 @@ public sealed class RepositoryHistoryUIServiceTests
         item.ToolTipText.Should().BeEmpty();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("master")]
-    [TestCase("(no branch)")]
+    [StaTheory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("master")]
+    [InlineData("(no branch)")]
     public void AddRecentRepositories_should_show_branch_correctly(string? branch)
     {
         _branchNameCache.GetCachedBranchName(Arg.Any<string>()).Returns(string.IsNullOrWhiteSpace(branch) ? null : branch);
@@ -80,7 +79,7 @@ public sealed class RepositoryHistoryUIServiceTests
         }
     }
 
-    [Test]
+    [StaFact]
     public void ChangeWorkingDir_should_promt_user_to_delete_invalid_repo()
     {
         using ToolStripMenuItem containerMenu = new();
@@ -97,7 +96,7 @@ public sealed class RepositoryHistoryUIServiceTests
         _invalidRepositoryRemover.Received(1).ShowDeleteInvalidRepositoryDialog(path);
     }
 
-    [Test]
+    [StaFact]
     public void PopulateFavouriteRepositoriesMenu_should_order_favourites_alphabetically()
     {
         using ToolStripMenuItem tsmiFavouriteRepositories = new();

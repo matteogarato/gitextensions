@@ -5,33 +5,30 @@ using GitExtensions.Extensibility.Git;
 using GitExtensions.UITests;
 using GitUI;
 using NSubstitute;
+using Xunit;
 
 namespace UITests.UserControls;
 
-[Apartment(ApartmentState.STA)]
-public sealed class PatchGridTests
+public sealed class PatchGridTests : System.IDisposable
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
 
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public PatchGridTests()
     {
         _referenceRepository = new ReferenceRepository();
 
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RebasePatchesBuiltAccordingToGitRebaseFiles_EnsureRebaseFileFormatWithGit()
     {
         RunPatchGridTest(patchGrid =>
@@ -73,7 +70,7 @@ public sealed class PatchGridTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RebasePatchesBuiltAccordingToGitRebaseFiles()
     {
         RunPatchGridTest(patchGrid =>
@@ -151,6 +148,11 @@ pick {commitToDoPicked.RebaseLine}");
 
                 await runTestAsync(patchGrid);
             });
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }
 

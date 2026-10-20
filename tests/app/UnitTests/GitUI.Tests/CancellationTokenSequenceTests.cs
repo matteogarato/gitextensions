@@ -3,7 +3,7 @@
 namespace GitUITests;
 public sealed class CancellationTokenSequenceTests
 {
-    [Test]
+    [Fact]
     public void Next_cancels_previous_token()
     {
         CancellationTokenSequence sequence = new();
@@ -18,7 +18,7 @@ public sealed class CancellationTokenSequenceTests
         token2.IsCancellationRequested.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void Next_throws_if_disposed()
     {
         CancellationTokenSequence sequence = new();
@@ -28,7 +28,7 @@ public sealed class CancellationTokenSequenceTests
         ((Action)(() => sequence.Next())).Should().Throw<OperationCanceledException>();
     }
 
-    [Test]
+    [Fact]
     public void Cancel_cancels_previous_token()
     {
         CancellationTokenSequence sequence = new();
@@ -42,7 +42,7 @@ public sealed class CancellationTokenSequenceTests
         token.IsCancellationRequested.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Cancel_is_idempotent()
     {
         CancellationTokenSequence sequence = new();
@@ -57,7 +57,7 @@ public sealed class CancellationTokenSequenceTests
         sequence.CancelCurrent();
     }
 
-    [Test]
+    [Fact]
     public void Cancel_does_not_throw_if_no_token_yet_issued()
     {
         CancellationTokenSequence sequence = new();
@@ -65,7 +65,7 @@ public sealed class CancellationTokenSequenceTests
         sequence.CancelCurrent();
     }
 
-    [Test]
+    [Fact]
     public void Dispose_cancels_previous_token()
     {
         CancellationTokenSequence sequence = new();
@@ -79,7 +79,7 @@ public sealed class CancellationTokenSequenceTests
         token.IsCancellationRequested.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Dispose_is_idempotent()
     {
         CancellationTokenSequence sequence = new();
@@ -92,7 +92,7 @@ public sealed class CancellationTokenSequenceTests
         sequence.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Dispose_does_not_throw_if_no_token_yet_issued()
     {
         CancellationTokenSequence sequence = new();
@@ -100,7 +100,7 @@ public sealed class CancellationTokenSequenceTests
         sequence.Dispose();
     }
 
-    [Test]
+    [Fact]
     public async Task Concurrent_callers_to_Next_only_result_in_one_non_cancelled_token_being_issued()
     {
         const int loopCount = 1000;
@@ -120,7 +120,7 @@ public sealed class CancellationTokenSequenceTests
             .Select(i => Task.Run(() => ThreadMethod(i)))];
 
         Task allTasks = Task.WhenAll(tasks);
-        Task completed = await Task.WhenAny(allTasks, Task.Delay(TimeSpan.FromSeconds(10)));
+        Task completed = await Task.WhenAny(allTasks, Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
 
         completed.Should().Be(allTasks, "Test should have completed within a reasonable amount of time");
 
@@ -131,7 +131,7 @@ public sealed class CancellationTokenSequenceTests
         // Assume hyper threading, so halve logical processors (could use WMI or P/Invoke for more robust answer)
         if (logicalProcessorCount <= 2)
         {
-            Assert.Inconclusive("This test requires more than one physical processor to run.");
+            throw Xunit.Sdk.SkipException.ForSkip("This test requires more than one physical processor to run.");
         }
 
         return;

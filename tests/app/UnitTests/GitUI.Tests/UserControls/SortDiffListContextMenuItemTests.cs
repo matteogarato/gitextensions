@@ -4,28 +4,25 @@ using NSubstitute;
 
 namespace GitUITests.UserControls;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class SortDiffListContextMenuItemTests
+[Culture("en-US")]
+public class SortDiffListContextMenuItemTests : IDisposable
 {
     private SortDiffListContextMenuItem _itemUnderTest = null!;
     private IDiffListSortService _testingSortService = null!;
 
-    [SetUp]
-    public void Setup()
+    public SortDiffListContextMenuItemTests()
     {
         _testingSortService = Substitute.For<IDiffListSortService>();
         _testingSortService.DiffListSorting.Returns(DiffListSortType.FilePath);
         _itemUnderTest = new SortDiffListContextMenuItem(_testingSortService);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _itemUnderTest.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Should_show_all_sort_options()
     {
         _itemUnderTest.HasDropDownItems.Should().BeTrue();
@@ -39,10 +36,10 @@ public class SortDiffListContextMenuItemTests
         AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[5], "File s&tatus - flat", DiffListSortType.FileStatusFlat);
     }
 
-    [Test]
-    [TestCase(DiffListSortType.FilePath)]
-    [TestCase(DiffListSortType.FileExtension)]
-    [TestCase(DiffListSortType.FileStatus)]
+    [Theory]
+    [InlineData(DiffListSortType.FilePath)]
+    [InlineData(DiffListSortType.FileExtension)]
+    [InlineData(DiffListSortType.FileStatus)]
     public void Only_the_current_sort_option_is_selected(DiffListSortType sortType)
     {
         // assert the default setup is selected and then change it.
@@ -56,7 +53,7 @@ public class SortDiffListContextMenuItemTests
         AssertOnlyCheckedItemIs(sortType);
     }
 
-    [Test]
+    [Fact]
     public void Clicking_an_item_sets_sort_in_service()
     {
         foreach (ToolStripMenuItem item in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>())

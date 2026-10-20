@@ -8,13 +8,12 @@ public partial class SplitterManagerTest
     private const int _designTimeSplitterWidth = 100;
     private const int _designTimeSplitterDistance = 40;
 
-    [SetUp]
-    public void SetupTest()
+    public SplitterManagerTest()
     {
         _settings = new MemorySettings();
     }
 
-    [Test]
+    [Fact]
     public void ForNoFixedPanel_WhenWidthChanges_DistanceChangesEvenly()
     {
         // arrange
@@ -43,8 +42,9 @@ public partial class SplitterManagerTest
         }
     }
 
-    [TestCase(100)]
-    [TestCase(-100)]
+    [Theory]
+    [InlineData(100)]
+    [InlineData(-100)]
     public void ForFixedPanel1_WhenWidthChanges_DistanceDoesNotChange(int deltaWidth)
     {
         // arrange
@@ -74,8 +74,9 @@ public partial class SplitterManagerTest
         }
     }
 
-    [TestCase(100)]
-    [TestCase(-100)]
+    [Theory]
+    [InlineData(100)]
+    [InlineData(-100)]
     public void ForFixedPanel2_WhenWidthChanges_DistanceChangesAlong(int deltaWidth)
     {
         // arrange
@@ -108,8 +109,9 @@ public partial class SplitterManagerTest
         }
     }
 
-    [TestCase(true)]
-    [TestCase(false)]
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void DistanceDoesNotChangeWhenGoesBelowPanel1MinSize(bool applyMinSize)
     {
         // arrange
@@ -156,8 +158,9 @@ public partial class SplitterManagerTest
         }
     }
 
-    [TestCase(true)]
-    [TestCase(false)]
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void DistanceDoesNotChangeWhenGoesBelowPanel2MinSize(bool applyMinSize)
     {
         // arrange
@@ -201,7 +204,7 @@ public partial class SplitterManagerTest
         }
     }
 
-    [Test]
+    [Fact]
     public void RestoreSplitters_WhenNoSavedSettings_ShouldUseDefaultDistance()
     {
         // arrange
@@ -226,7 +229,7 @@ public partial class SplitterManagerTest
         _settings.GetInt(splitterData.DistanceSettingsKey).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void RestoreSplitters_WhenNoSavedSettings_ShouldIgnoreInvalidDefaultDistance()
     {
         // arrange
@@ -251,7 +254,7 @@ public partial class SplitterManagerTest
         _settings.GetInt(splitterData.DistanceSettingsKey).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void RestoreSplitters_WhenPrevSettingsSizeIsZero_ShouldIgnoreDefaultDistance()
     {
         // arrange

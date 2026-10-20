@@ -3,21 +3,19 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests.Git;
-partial class CommandsTests
+public partial class CommandsTests : IDisposable
 {
     private string _tempDir = null!;
     private string _gitDir = null!;
 
-    [SetUp]
-    public void SetUp()
+    public CommandsTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         _gitDir = Path.Combine(_tempDir, ".git");
         Directory.CreateDirectory(_gitDir);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         if (Directory.Exists(_tempDir))
         {
@@ -25,7 +23,7 @@ partial class CommandsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetSelectedBranch_should_return_branch_name_from_HEAD_file()
     {
         IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
@@ -39,7 +37,7 @@ partial class CommandsTests
         branch.Should().Be("main");
     }
 
-    [Test]
+    [Fact]
     public void GetSelectedBranch_should_return_detached_branch_when_HEAD_is_detached()
     {
         IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
@@ -53,7 +51,7 @@ partial class CommandsTests
         branch.Should().Be("(no branch)");
     }
 
-    [Test]
+    [Fact]
     public void GetSelectedBranch_should_return_empty_if_HEAD_file_missing()
     {
         MockExecutable executable = new();
@@ -70,7 +68,7 @@ partial class CommandsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetSelectedBranch_should_fallback_to_git_command_when_reftable_repo()
     {
         MockExecutable executable = new();
@@ -86,7 +84,7 @@ partial class CommandsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetSelectedBranch_should_return_detached_branch_when_command_fails_and_emptyIfDetached_false()
     {
         MockExecutable executable = new();
@@ -102,7 +100,7 @@ partial class CommandsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetSelectedBranch_should_return_empty_when_command_fails_and_emptyIfDetached_true()
     {
         MockExecutable executable = new();

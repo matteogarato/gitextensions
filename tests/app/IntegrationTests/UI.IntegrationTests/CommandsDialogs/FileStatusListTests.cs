@@ -4,18 +4,16 @@ using GitUI;
 using GitUI.UserControls;
 using GitUIPluginInterfaces;
 using NSubstitute;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FileStatusListTests
+public class FileStatusListTests : System.IDisposable
 {
     // Created once for each test
     private Form _form = null!;
     private FileStatusList _fileStatusList = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FileStatusListTests()
     {
         ServiceContainer serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
         IGitModule module = Substitute.For<IGitModule>();
@@ -32,14 +30,13 @@ public class FileStatusListTests
         _form.Show(); // must be visible to be able to change the focus
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _fileStatusList.Dispose();
         _form.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void SelectAll_should_expand_folders_and_focus_the_first_node()
     {
         const int folderCount = 4;
@@ -60,7 +57,7 @@ public class FileStatusListTests
         tree.UpdateSuspended.Should().BeFalse();
     }
 
-    [Test]
+    [WinFormsFact]
     public void ItemSelections()
     {
         FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
@@ -253,10 +250,16 @@ public class FileStatusListTests
         _fileStatusList.SelectedItems.Items().Should().BeEquivalentTo(new List<GitItemStatus> { itemAt0 });
     }
 
-    [Test]
+    [WinFormsTheory]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    [InlineData("", true)]
+    [InlineData("", false)]
+    [InlineData("x", true)]
+    [InlineData("x", false)]
     public void Test_FilterWatermarkLabelVisibility_on_FilterVisibleChange(
-        [Values(null, "", "x")] string? filterText,
-        [Values(true, false)] bool filterFocused)
+        string? filterText,
+        bool filterFocused)
     {
         FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
 
@@ -271,7 +274,7 @@ public class FileStatusListTests
         accessor.FilterWatermarkLabelVisible.Should().Be(!filterFocused && string.IsNullOrEmpty(filterText));
     }
 
-    [Test]
+    [WinFormsFact]
     public void Test_FilterWatermarkLabelVisibility_on_Focus()
     {
         FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
@@ -289,9 +292,10 @@ public class FileStatusListTests
         accessor.FilterWatermarkLabelVisible.Should().BeTrue();
     }
 
-    [TestCase(null, false)]
-    [TestCase("", false)]
-    [TestCase("\\.cs", true)]
+    [WinFormsTheory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("\\.cs", true)]
     public void Test_StoreFilter_valid(string? regex, bool active)
     {
         FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
@@ -307,7 +311,7 @@ public class FileStatusListTests
         accessor.DeleteFilterButton.Visible.Should().Be(active);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Test_StoreFilter_invalid()
     {
         const string validRegex = "\\.cs";
@@ -327,5 +331,10 @@ public class FileStatusListTests
     {
         accessor.FilterComboBox.BackColor.Should().Be(expectedColor);
         accessor.Filter?.ToString().Should().Be(expectedRegex);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

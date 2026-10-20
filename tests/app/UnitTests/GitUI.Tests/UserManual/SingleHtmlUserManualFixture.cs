@@ -3,8 +3,9 @@
 namespace GitUITests.UserManual;
 public class SingleHtmlUserManualFixture
 {
-    [TestCase((string?)null)]
-    [TestCase("merge-conflicts")]
+    [Theory]
+    [InlineData((string?)null)]
+    [InlineData("merge-conflicts")]
     public void GetUrl(string? anchor)
     {
         SingleHtmlUserManual sut = new(anchor!);

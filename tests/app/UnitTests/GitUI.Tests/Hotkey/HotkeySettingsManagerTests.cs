@@ -9,8 +9,7 @@ public class HotkeySettingsManagerTests
 {
     private HotkeySettingsManager _settingsManager = null!;
 
-    [SetUp]
-    public void SetUp()
+    public HotkeySettingsManagerTests()
     {
         IScriptsManager scriptsManager = Substitute.For<IScriptsManager>();
         scriptsManager.GetScripts().Returns([]);
@@ -18,7 +17,7 @@ public class HotkeySettingsManagerTests
         _settingsManager = new(scriptsManager);
     }
 
-    [Test]
+    [Fact]
     public void MergeEqualSettings()
     {
         // arrange
@@ -32,7 +31,7 @@ public class HotkeySettingsManagerTests
         defaultHotkeySettingsArray.SequenceEqual(expected).Should().BeTrue();
     }
 
-    public void SequenceEqualOnDifferentSettings()
+    internal void SequenceEqualOnDifferentSettings()
     {
         HotkeySettings[] defaultHotkeySettingsArray = CreateHotkeySettings(2);
         HotkeySettings[] loadedHotkeySettingsArray = CreateHotkeySettings(2);
@@ -41,7 +40,7 @@ public class HotkeySettingsManagerTests
         defaultHotkeySettingsArray.SequenceEqual(loadedHotkeySettingsArray).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void SequenceEqualOnEqualSettings()
     {
         HotkeySettings[] defaultHotkeySettingsArray = CreateHotkeySettings(2);
@@ -50,7 +49,7 @@ public class HotkeySettingsManagerTests
         defaultHotkeySettingsArray.SequenceEqual(loadedHotkeySettingsArray).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void MergeLoadedSettings()
     {
         // arrange
@@ -64,7 +63,7 @@ public class HotkeySettingsManagerTests
         defaultHotkeySettingsArray.SequenceEqual(loadedHotkeySettingsArray).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void MergeLoadedDiffSizeSettings()
     {
         // arrange
@@ -80,7 +79,7 @@ public class HotkeySettingsManagerTests
         defaultHotkeySettingsArray.SequenceEqual(expected).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public async Task Can_save_settings()
     {
         string? originalHotkeys = AppSettings.SerializedHotkeys;

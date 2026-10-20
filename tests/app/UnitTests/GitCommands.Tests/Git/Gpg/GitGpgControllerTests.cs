@@ -15,8 +15,7 @@ public class GitGpgControllerTests
     private GitGpgController _gpgController = null!;
     private MockExecutable _executable = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitGpgControllerTests()
     {
         _executable = new MockExecutable();
         _module = Substitute.For<IGitModule>();
@@ -24,14 +23,15 @@ public class GitGpgControllerTests
         _gpgController = new GitGpgController(() => _module);
     }
 
-    [TestCase(CommitStatus.GoodSignature, "G")]
-    [TestCase(CommitStatus.SignatureError, "B")]
-    [TestCase(CommitStatus.SignatureError, "U")]
-    [TestCase(CommitStatus.SignatureError, "X")]
-    [TestCase(CommitStatus.SignatureError, "Y")]
-    [TestCase(CommitStatus.SignatureError, "R")]
-    [TestCase(CommitStatus.MissingPublicKey, "E")]
-    [TestCase(CommitStatus.NoSignature, "N")]
+    [Theory]
+    [InlineData(CommitStatus.GoodSignature, "G")]
+    [InlineData(CommitStatus.SignatureError, "B")]
+    [InlineData(CommitStatus.SignatureError, "U")]
+    [InlineData(CommitStatus.SignatureError, "X")]
+    [InlineData(CommitStatus.SignatureError, "Y")]
+    [InlineData(CommitStatus.SignatureError, "R")]
+    [InlineData(CommitStatus.MissingPublicKey, "E")]
+    [InlineData(CommitStatus.NoSignature, "N")]
     public async Task Validate_GetRevisionCommitSignatureStatusAsync(CommitStatus expected, string gitCmdReturn)
     {
         ObjectId objectId = ObjectId.Random();
@@ -51,20 +51,21 @@ public class GitGpgControllerTests
         actual.Should().Be(expected);
     }
 
-    [TestCase]
+    [Fact]
     public void Validate_GetRevisionCommitSignatureStatusAsync_null_revision()
     {
         ((Func<Task>)(() => _gpgController.GetRevisionCommitSignatureStatusAsync(null!))).Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [TestCase]
+    [Fact]
     public void Validate_GetRevisionTagSignatureStatusAsync_null_revision()
     {
         ((Func<Task>)(() => _gpgController.GetRevisionTagSignatureStatusAsync(null!))).Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [TestCase(TagStatus.NoTag, 0)]
-    [TestCase(TagStatus.Many, 2)]
+    [Theory]
+    [InlineData(TagStatus.NoTag, 0)]
+    [InlineData(TagStatus.Many, 2)]
     public async Task Validate_GetRevisionTagSignatureStatusAsync(TagStatus tagStatus, int numberOfTags)
     {
         ObjectId objectId = ObjectId.Random();
@@ -83,9 +84,10 @@ public class GitGpgControllerTests
         actual.Should().Be(tagStatus);
     }
 
-    [TestCase(TagStatus.OneGood, "GOODSIG ... VALIDSIG ...")]
-    [TestCase(TagStatus.TagNotSigned, "error: no signature found")]
-    [TestCase(TagStatus.NoPubKey, "NO_PUBKEY ...")]
+    [Theory]
+    [InlineData(TagStatus.OneGood, "GOODSIG ... VALIDSIG ...")]
+    [InlineData(TagStatus.TagNotSigned, "error: no signature found")]
+    [InlineData(TagStatus.NoPubKey, "NO_PUBKEY ...")]
     public async Task Validate_GetRevisionTagSignatureStatusAsync_one_tag(TagStatus tagStatus, string gitCmdReturn)
     {
         ObjectId objectId = ObjectId.Random();
@@ -106,7 +108,8 @@ public class GitGpgControllerTests
         actual.Should().Be(tagStatus);
     }
 
-    [TestCase("return string")]
+    [Theory]
+    [InlineData("return string")]
     public void Validate_GetCommitVerificationMessage(string returnString)
     {
         ObjectId objectId = ObjectId.Random();
@@ -125,23 +128,24 @@ public class GitGpgControllerTests
         actual.Should().Be(returnString);
     }
 
-    [TestCase]
+    [Fact]
     public void Validate_GetCommitVerificationMessage_null_revision()
     {
         Action act = () => _gpgController.GetCommitVerificationMessage(null!);
         act.Should().Throw<ArgumentNullException>();
     }
 
-    [TestCase]
+    [Fact]
     public void Validate_GetTagVerifyMessage_null_revision()
     {
         Action act = () => _gpgController.GetTagVerifyMessage(null!);
         act.Should().Throw<ArgumentNullException>();
     }
 
-    [TestCase(0, "")]
-    [TestCase(1, "TagName")]
-    [TestCase(2, "FirstTag\r\nFirstTag\r\n\r\nSecondTag\r\nSecondTag\r\n\r\n")]
+    [Theory]
+    [InlineData(0, "")]
+    [InlineData(1, "TagName")]
+    [InlineData(2, "FirstTag\r\nFirstTag\r\n\r\nSecondTag\r\nSecondTag\r\n\r\n")]
     public void Validate_GetTagVerifyMessage(int usefulTagRefNumber, string expected)
     {
         ObjectId objectId = ObjectId.Random();

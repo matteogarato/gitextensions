@@ -1,27 +1,22 @@
 ﻿using GitCommands.Config;
 
 namespace GitCommandsTests.Settings;
-internal sealed class ConfigSectionTests
+public sealed class ConfigSectionTests
 {
     private static readonly string _keyName = Guid.NewGuid().ToString();
     private static readonly string _sectionName = Guid.NewGuid().ToString();
 
-    private static ConfigSection _configSection = null!;
+    private ConfigSection _configSection = null!;
 
-    [SetUp]
-    public void SetUp()
+    public ConfigSectionTests()
     {
         _configSection = new ConfigSection(_sectionName, forceCaseSensitive: true);
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        _configSection = null!;
-    }
-
-    [Test]
-    public void should_remove_setting([Values(null, "")] string? noValue)
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void should_remove_setting(string? noValue)
     {
         string value = Guid.NewGuid().ToString();
         string defaultValue = Guid.NewGuid().ToString();

@@ -8,28 +8,25 @@ using NSubstitute;
 
 namespace GitUITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormOpenDirectoryTests
+public class FormOpenDirectoryTests : IDisposable
 {
     // Created once for the fixture
     private static readonly IGitExecutorProvider _executorProvider = new GitExecutorProvider(new GitDirectoryResolver());
     private ReferenceRepository _referenceRepository = null!;
     private ILocalRepositoryManager _localRepositoryManager = null!;
 
-    [SetUp]
-    public void Setup()
+    public FormOpenDirectoryTests()
     {
         _referenceRepository = new ReferenceRepository();
         _localRepositoryManager = Substitute.For<ILocalRepositoryManager>();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [StaFact]
     public void OpenGitRepository_should_return_null_if_directory_not_exist()
     {
         string path = @"C:\some\directory\that\does\not\exist\at\all";
@@ -38,7 +35,7 @@ public class FormOpenDirectoryTests
         _localRepositoryManager.DidNotReceive().AddAsMostRecentAsync(Arg.Any<string>());
     }
 
-    [Test]
+    [StaFact]
     public void OpenGitRepository_should_return_null_if_not_valid_git_repo()
     {
         // Path.GetTempPath returns a path with the trailing slash
@@ -49,7 +46,7 @@ public class FormOpenDirectoryTests
         _localRepositoryManager.DidNotReceive().AddAsMostRecentAsync(Arg.Any<string>());
     }
 
-    [Test]
+    [StaFact]
     public void OpenGitRepository_should_not_throw_if_path_not_end_with_slash()
     {
         // Path.GetTempPath returns a path with the trailing slash
@@ -61,7 +58,7 @@ public class FormOpenDirectoryTests
         ((Action)(() => FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager))).Should().NotThrow();
     }
 
-    [Test]
+    [StaFact]
     public void OpenGitRepository_should_return_module_For_valid_git_repo()
     {
         // Path.GetTempPath returns a path with the trailing slash

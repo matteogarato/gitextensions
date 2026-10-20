@@ -5,16 +5,16 @@ public class GitConfigSettingsPageControllerTests
 {
     private GitConfigSettingsPageController _controller = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitConfigSettingsPageControllerTests()
     {
         _controller = new GitConfigSettingsPageController();
     }
 
-    [TestCase(null, null)]
-    [TestCase(null, "")]
-    [TestCase("", null)]
-    [TestCase("", "")]
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(null, "")]
+    [InlineData("", null)]
+    [InlineData("", "")]
     public void GetInitialDirectory_CalculateInitialDirectory_should_return_ProgramFiles_if_path_and_toolPreferredPath_unset(string? path, string? toolPreferredPath)
     {
         string expected = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
@@ -22,7 +22,7 @@ public class GitConfigSettingsPageControllerTests
         _controller.GetInitialDirectory(path!, toolPreferredPath!).Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void GetInitialDirectory_CalculateInitialDirectory_should_return_directory_for_supplied_path()
     {
         string tempFolder = @"c:\";

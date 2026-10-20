@@ -3,7 +3,7 @@
 namespace GitUITests.Infrastructure;
 public sealed class PlinkTests
 {
-    [Test]
+    [Fact]
     public void TestGetPlinkCompatibleUrl_Incompatible()
     {
         // Test urls that are incompatible and need to be changed
@@ -27,7 +27,7 @@ public sealed class PlinkTests
         outUrl.Should().Be(expectUrl);
     }
 
-    [Test]
+    [Fact]
     public void TestGetPlinkCompatibleUrl_Compatible()
     {
         // Test urls that are already compatible, these shouldn't be changed
@@ -44,7 +44,7 @@ public sealed class PlinkTests
         outUrl.Should().Be("\"" + inUrl + "\"");
     }
 
-    [Test]
+    [Fact]
     public void TestGetPlinkCompatibleUrl_NoPlink()
     {
         // Test urls that are no valid uris, these should be ignored
@@ -91,7 +91,7 @@ public sealed class PlinkTests
         outUrl.Should().Be("\"" + inUrl + "\"");
     }
 
-    [Test]
+    [Fact]
     public void TestGetPlinkCompatibleUrl_Invalid()
     {
         // Test urls that are no valid uris, these should be ignored

@@ -4,25 +4,24 @@ using CommonTestUtils;
 using GitExtensions.Extensibility.BuildServerIntegration;
 using GitExtensions.Extensibility.Git;
 using JenkinsIntegration;
+using Xunit;
 
 namespace JenkinsIntegrationTests;
-public class JenkinsAdapterTests
+public class JenkinsAdapterTests : IDisposable
 {
-    private JenkinsAdapter _adapter = null!;
+    private readonly JenkinsAdapter _adapter;
 
-    [SetUp]
-    public void SetUp()
+    public JenkinsAdapterTests()
     {
         _adapter = new JenkinsAdapter();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _adapter.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void CreateBuildInfo_should_parse_successful_freestyle_build()
     {
         JsonNode json = LoadMockJson("JenkinsResult_freestyle_success.json");
@@ -38,7 +37,7 @@ public class JenkinsAdapterTests
         result.CommitHashList[0].ToString().Should().Be("d4295d591a45c67d812aa1c4fa17b6a0f2ea3114");
     }
 
-    [Test]
+    [Fact]
     public void CreateBuildInfo_should_parse_failed_build()
     {
         JsonNode json = LoadMockJson("JenkinsResult_freestyle_failure.json");
@@ -53,7 +52,7 @@ public class JenkinsAdapterTests
         result.CommitHashList[0].ToString().Should().Be("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0");
     }
 
-    [Test]
+    [Fact]
     public void CreateBuildInfo_should_parse_running_build()
     {
         JsonNode json = LoadMockJson("JenkinsResult_freestyle_running.json");
@@ -65,7 +64,7 @@ public class JenkinsAdapterTests
         result.Duration.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void CreateBuildInfo_should_parse_build_with_test_results()
     {
         JsonNode json = LoadMockJson("JenkinsResult_with_tests.json");
@@ -79,7 +78,7 @@ public class JenkinsAdapterTests
         result.Description.Should().Contain("5 skipped");
     }
 
-    [Test]
+    [Fact]
     public void CreateBuildInfo_should_parse_build_with_multiple_branches()
     {
         JsonNode json = LoadMockJson("JenkinsResult_with_branches.json");
@@ -91,7 +90,7 @@ public class JenkinsAdapterTests
         result.CommitHashList[0].ToString().Should().Be("e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4");
     }
 
-    [Test]
+    [Fact]
     public void CreateBuildInfo_should_set_start_date_from_timestamp()
     {
         JsonNode json = LoadMockJson("JenkinsResult_freestyle_success.json");

@@ -6,7 +6,8 @@ using GitUI.NBugReports;
 namespace GitUITests.NBugReports;
 public sealed class BugReportInvokerTests
 {
-    [Test, TestCaseSource(typeof(TestExceptions), nameof(TestExceptions.TestCases))]
+    [Theory]
+    [MemberData(nameof(TestExceptions.TestCases), MemberType = typeof(TestExceptions))]
     public void Append(Exception exception, string expectedRootError, string expectedText)
     {
         StringBuilder text = exception.GetExceptionInfo();
@@ -15,11 +16,12 @@ public sealed class BugReportInvokerTests
         text.ToString().Should().Be(expectedText);
     }
 
-    [TestCase("Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found.", "vcruntime140_cor3.dll")]
-    [TestCase("Unable to load DLL 'user32.dll': File not found.", "user32.dll")]
-    [TestCase("Unable to load DLL 'my.custom.dll' for some reason", "my.custom.dll")]
-    [TestCase("No quotes in this message", "No quotes in this message")] // fallback case
-    [TestCase("'only_one_quote", "'only_one_quote")] // fallback case
+    [Theory]
+    [InlineData("Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found.", "vcruntime140_cor3.dll")]
+    [InlineData("Unable to load DLL 'user32.dll': File not found.", "user32.dll")]
+    [InlineData("Unable to load DLL 'my.custom.dll' for some reason", "my.custom.dll")]
+    [InlineData("No quotes in this message", "No quotes in this message")] // fallback case
+    [InlineData("'only_one_quote", "'only_one_quote")] // fallback case
     public void DllNameExtraction_should_extract_dll_name_from_message(string message, string expectedDllName)
     {
         // The logic being tested (as implemented in ReportFailedToLoadAnAssembly):
@@ -58,31 +60,52 @@ public class TestExceptions
     private const string _directory = "directory";
     private const int _exitCode = 128;
 
-    public static IEnumerable TestCases
+    public static IEnumerable<object[]> TestCases
     {
         get
         {
-            yield return new TestCaseData(new Exception(_messageOuter),
+            yield return new object[]
+            {
+                new Exception(_messageOuter),
                 _messageOuter,
-                "");
-            yield return new TestCaseData(new Exception(_messageOuter, new Exception(_messageMiddle)),
+                ""
+            };
+
+            yield return new object[]
+            {
+                new Exception(_messageOuter, new Exception(_messageMiddle)),
                 _messageMiddle,
-                "");
-            yield return new TestCaseData(new Exception(_messageOuter, new Exception(_messageMiddle, new Exception(_messageInner))),
+                ""
+            };
+
+            yield return new object[]
+            {
+                new Exception(_messageOuter, new Exception(_messageMiddle, new Exception(_messageInner))),
                 _messageInner,
-                "");
-            yield return new TestCaseData(new UserExternalOperationException(_context,
-                new ExternalOperationException(_command, _arguments, _directory, _exitCode, new Exception(_messageOuter, new Exception(_messageInner)))),
+                ""
+            };
+
+            yield return new object[]
+            {
+                new UserExternalOperationException(
+                    _context,
+                    new ExternalOperationException(_command, _arguments, _directory, _exitCode, new Exception(_messageOuter, new Exception(_messageInner)))),
                 _messageInner,
                 $"{_context}{Environment.NewLine}"
                 + $"Exit code: {_exitCode}{Environment.NewLine}"
                 + $"Command: {_command}{Environment.NewLine}"
                 + $"Arguments: {_arguments}{Environment.NewLine}"
-                + $"Working directory: {_directory}{Environment.NewLine}");
-            yield return new TestCaseData(new UserExternalOperationException(context: null!,
-                new ExternalOperationException(null, null, null, null, new Exception(_messageInner))),
+                + $"Working directory: {_directory}{Environment.NewLine}"
+            };
+
+            yield return new object[]
+            {
+                new UserExternalOperationException(
+                    context: null!,
+                    new ExternalOperationException(null, null, null, null, new Exception(_messageInner))),
                 _messageInner,
-                "");
+                ""
+            };
         }
     }
 }

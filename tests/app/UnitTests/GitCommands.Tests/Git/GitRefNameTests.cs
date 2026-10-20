@@ -4,7 +4,7 @@ namespace GitCommandsTests.Git;
 
 public sealed class GitRefNameTests
 {
-    [Test]
+    [Fact]
     public void GetFullBranchNameTest()
     {
         GitRefName.GetFullBranchName(null).Should().Be(null);
@@ -18,7 +18,7 @@ public sealed class GitRefNameTests
         GitRefName.GetFullBranchName("refs/tags/my-tag").Should().Be("refs/tags/my-tag");
     }
 
-    [Test]
+    [Fact]
     public void GetRemoteName()
     {
         GitRefName.GetRemoteName("refs/remotes/foo/master").Should().Be("foo");
@@ -31,7 +31,7 @@ public sealed class GitRefNameTests
         GitRefName.GetRemoteName("refs/tags/1.0.0", remotes).Should().Be("");
     }
 
-    [Test]
+    [Fact]
     public void GetRemoteBranch()
     {
         GitRefName.GetRemoteBranch("refs/remotes/foo/master").Should().Be("master");
@@ -41,7 +41,7 @@ public sealed class GitRefNameTests
         GitRefName.GetRemoteBranch("short").Should().Be("");
     }
 
-    [Test]
+    [Fact]
     public void GetFullBranchName()
     {
         GitRefName.GetFullBranchName("foo").Should().Be("refs/heads/foo");
@@ -56,7 +56,7 @@ public sealed class GitRefNameTests
         GitRefName.GetFullBranchName(null).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void IsRemoteHead()
     {
         GitRefName.IsRemoteHead("refs/remotes/origin/HEAD").Should().BeTrue();

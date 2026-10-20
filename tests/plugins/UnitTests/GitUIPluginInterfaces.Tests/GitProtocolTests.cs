@@ -1,16 +1,18 @@
 ﻿using GitUIPluginInterfaces.RepositoryHosts;
+using Xunit;
 
 namespace GitUIPluginInterfacesTests;
 public class GitProtocolTests
 {
-    [TestCase("https://github.com/gitextensions/gitextensions.git", true)]
-    [TestCase("htTps://github.com/gitextensions/gitextensions.git", true)]
-    [TestCase("HTTPS://github.com/gitextensions/gitextensions.git", true)]
-    [TestCase("http://github.com/gitextensions/gitextensions.git", true)]
-    [TestCase("https_github.com/gitextensions/gitextensions.git", false)]
-    [TestCase("ssh://git@github.com/gitextensions/gitextensions.git", false)]
-    [TestCase("git@github.com/gitextensions/gitextensions.git", false)]
-    [TestCase("github.com/gitextensions/gitextensions.git", false)]
+    [Theory]
+    [InlineData("https://github.com/gitextensions/gitextensions.git", true)]
+    [InlineData("htTps://github.com/gitextensions/gitextensions.git", true)]
+    [InlineData("HTTPS://github.com/gitextensions/gitextensions.git", true)]
+    [InlineData("http://github.com/gitextensions/gitextensions.git", true)]
+    [InlineData("https_github.com/gitextensions/gitextensions.git", false)]
+    [InlineData("ssh://git@github.com/gitextensions/gitextensions.git", false)]
+    [InlineData("git@github.com/gitextensions/gitextensions.git", false)]
+    [InlineData("github.com/gitextensions/gitextensions.git", false)]
     public void IsUrlUsingHttp(string url, bool expected)
     {
         url.IsUrlUsingHttp().Should().Be(expected);

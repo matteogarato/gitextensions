@@ -6,17 +6,16 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.Settings;
-internal sealed class SettingTests
+public sealed class SettingTests : IDisposable
 {
     private const string SettingsFileContent = @"<?xml version=""1.0"" encoding=""utf-8""?><dictionary />";
 
-    private static readonly TempFileCollection _tempFiles = new();
-    private static string _settingFilePath = null!;
-    private static GitExtSettingsCache _gitExtSettingsCache = null!;
-    private static DistributedSettings _settingContainer = null!;
+    private readonly TempFileCollection _tempFiles = new();
+    private string _settingFilePath = null!;
+    private GitExtSettingsCache _gitExtSettingsCache = null!;
+    private DistributedSettings _settingContainer = null!;
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
+    public SettingTests()
     {
         _settingFilePath = _tempFiles.AddExtension(".settings");
         _tempFiles.AddFile(_settingFilePath + ".backup", keepFile: false);
@@ -27,8 +26,7 @@ internal sealed class SettingTests
         _settingContainer = new DistributedSettings(lowerPriority: null, _gitExtSettingsCache, SettingLevel.Unknown);
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         _gitExtSettingsCache.Dispose();
         ((IDisposable)_tempFiles).Dispose();
@@ -36,8 +34,8 @@ internal sealed class SettingTests
 
     #region Setting
 
-    [Test]
-    [TestCaseSource(nameof(CreateCases))]
+    [Theory]
+    [MemberData(nameof(CreateCases))]
     public void Should_create_setting<T>(T settingDefault)
         where T : struct
     {
@@ -54,8 +52,8 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCaseSource(nameof(SaveCases))]
+    [Theory]
+    [MemberData(nameof(SaveCases))]
     public void Should_save_setting<T>(T settingDefault, T value)
         where T : struct
     {
@@ -89,8 +87,8 @@ internal sealed class SettingTests
         storedValue.Should().Be(value);
     }
 
-    [Test]
-    [TestCaseSource(nameof(CreateCases))]
+    [Theory]
+    [MemberData(nameof(CreateCases))]
     public void Should_return_default_value_for_setting_if_value_not_exist<T>(T settingDefault)
         where T : struct
     {
@@ -108,8 +106,8 @@ internal sealed class SettingTests
         storedValue.Should().Be(settingDefault);
     }
 
-    [Test]
-    [TestCaseSource(nameof(CreateCases))]
+    [Theory]
+    [MemberData(nameof(CreateCases))]
     public void Should_return_default_value_for_setting_if_value_is_incorrect<T>(T settingDefault)
         where T : struct
     {
@@ -147,8 +145,8 @@ internal sealed class SettingTests
 
     #region String Setting
 
-    [Test]
-    [TestCaseSource(nameof(CreateStringCases))]
+    [Theory]
+    [MemberData(nameof(CreateStringCases))]
     public void Should_create_string_setting(string settingDefault)
     {
         settingDefault ??= string.Empty;
@@ -166,8 +164,8 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCaseSource(nameof(SaveStringCases))]
+    [Theory]
+    [MemberData(nameof(SaveStringCases))]
     public void Should_save_string_setting(string? settingDefault, string? value)
     {
         settingDefault ??= string.Empty;
@@ -201,10 +199,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCaseSource(nameof(SaveStringCases))]
+    [Theory]
+    [MemberData(nameof(SaveStringCases))]
     public void Should_save_nullable_string_setting(string? settingDefault, string? value)
     {
+        _ = settingDefault;
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
         AppSettingsPath settingsPath = new(pathName);
@@ -236,7 +235,7 @@ internal sealed class SettingTests
 
     #region Bool Setting
 
-    [Test]
+    [Fact]
     public void Should_create_nullable_bool_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -250,10 +249,10 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Should_save_nullable_bool_setting(bool? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -269,8 +268,10 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    public void Should_return_default_value_for_bool_setting_if_value_not_exist([Values] bool defaultValue)
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_return_default_value_for_bool_setting_if_value_not_exist(bool defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -284,8 +285,10 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_bool_setting_if_value_is_incorrect([Values] bool defaultValue)
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_return_default_value_for_bool_setting_if_value_is_incorrect(bool defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -315,9 +318,9 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Should_create_bool_setting(bool defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -333,11 +336,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(false, false)]
-    [TestCase(false, true)]
-    [TestCase(true, false)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
     public void Should_save_bool_setting(bool defaultValue, bool value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -368,11 +371,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase("true", true)]
-    [TestCase("True", true)]
-    [TestCase("false", false)]
-    [TestCase("False", false)]
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("True", true)]
+    [InlineData("false", false)]
+    [InlineData("False", false)]
     public void Should_read_bool_setting_case_insensitively(string storedValue, bool expected)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -403,11 +406,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase("TRUE", false)]
-    [TestCase("FALSE", true)]
-    [TestCase("1", false)]
-    [TestCase("yes", true)]
+    [Theory]
+    [InlineData("TRUE", false)]
+    [InlineData("FALSE", true)]
+    [InlineData("1", false)]
+    [InlineData("yes", true)]
     public void Should_return_default_for_bool_setting_if_stored_value_is_unrecognized(string storedValue, bool defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -438,9 +441,9 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase(false, "false")]
-    [TestCase(true, "true")]
+    [Theory]
+    [InlineData(false, "false")]
+    [InlineData(true, "true")]
     public void Should_store_bool_setting_as_lowercase_string(bool value, string expectedStoredString)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -471,11 +474,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase("true", true)]
-    [TestCase("True", true)]
-    [TestCase("false", false)]
-    [TestCase("False", false)]
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("True", true)]
+    [InlineData("false", false)]
+    [InlineData("False", false)]
     public void Should_read_nullable_bool_setting_case_insensitively(string storedValue, bool? expected)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -506,11 +509,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase("TRUE")]
-    [TestCase("FALSE")]
-    [TestCase("1")]
-    [TestCase("yes")]
+    [Theory]
+    [InlineData("TRUE")]
+    [InlineData("FALSE")]
+    [InlineData("1")]
+    [InlineData("yes")]
     public void Should_return_null_for_nullable_bool_setting_if_stored_value_is_unrecognized(string storedValue)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -541,10 +544,10 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Should_save_nullable_bool_setting_as_string(bool? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -575,10 +578,10 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    [TestCase(false, "false")]
-    [TestCase(true, "true")]
-    [TestCase(null, null)]
+    [Theory]
+    [InlineData(false, "false")]
+    [InlineData(true, "true")]
+    [InlineData(null, null)]
     public void Should_store_nullable_bool_setting_as_lowercase_string(bool? value, string? expectedStoredString)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -613,7 +616,7 @@ internal sealed class SettingTests
 
     #region Char Setting
 
-    [Test]
+    [Fact]
     public void Should_create_char_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -629,11 +632,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(char.MinValue)]
-    [TestCase(' ')]
-    [TestCase(char.MaxValue)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(char.MinValue)]
+    [InlineData(' ')]
+    [InlineData(char.MaxValue)]
     public void Should_save_nullable_char_setting(char? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -649,8 +652,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    public void Should_return_default_value_for_char_setting_if_value_not_exist([Values('\0', ' ', '\uFFFF')] char defaultValue)
+    [Theory]
+    [InlineData('\0')]
+    [InlineData(' ')]
+    [InlineData('\uFFFF')]
+    public void Should_return_default_value_for_char_setting_if_value_not_exist(char defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -664,8 +670,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_char_setting_if_value_is_incorrect([Values('\0', ' ', '\uFFFF')] char defaultValue)
+    [Theory]
+    [InlineData('\0')]
+    [InlineData(' ')]
+    [InlineData('\uFFFF')]
+    public void Should_return_default_value_for_char_setting_if_value_is_incorrect(char defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -699,7 +708,7 @@ internal sealed class SettingTests
 
     #region Byte Setting
 
-    [Test]
+    [Fact]
     public void Should_create_nullable_byte_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -715,11 +724,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(byte.MinValue)]
-    [TestCase(byte.MaxValue)]
-    [TestCase(0)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(byte.MinValue)]
+    [InlineData(byte.MaxValue)]
+    [InlineData(0)]
     public void Should_save_nullable_byte_setting(byte? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -735,8 +744,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    public void Should_return_default_value_for_byte_setting_if_value_not_exist([Values(0, 1, 255)] byte defaultValue)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(255)]
+    public void Should_return_default_value_for_byte_setting_if_value_not_exist(byte defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -750,8 +762,11 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_byte_setting_if_value_is_incorrect([Values(0, 1, 255)] byte defaultValue)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(255)]
+    public void Should_return_default_value_for_byte_setting_if_value_is_incorrect(byte defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -785,7 +800,7 @@ internal sealed class SettingTests
 
     #region Int Setting
 
-    [Test]
+    [Fact]
     public void Should_create_nullable_int_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -799,11 +814,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(int.MinValue)]
-    [TestCase(int.MaxValue)]
-    [TestCase(0)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(int.MinValue)]
+    [InlineData(int.MaxValue)]
+    [InlineData(0)]
     public void Should_save_nullable_int_setting(int? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -819,8 +834,13 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    public void Should_return_default_value_for_int_setting_if_value_not_exist([Values(int.MinValue, -1, 0, 1, int.MaxValue)] int defaultValue)
+    [Theory]
+    [InlineData(int.MinValue)]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(int.MaxValue)]
+    public void Should_return_default_value_for_int_setting_if_value_not_exist(int defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -834,8 +854,13 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_int_setting_if_value_is_incorrect([Values(int.MinValue, -1, 0, 1, int.MaxValue)] int defaultValue)
+    [Theory]
+    [InlineData(int.MinValue)]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(int.MaxValue)]
+    public void Should_return_default_value_for_int_setting_if_value_is_incorrect(int defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -869,7 +894,7 @@ internal sealed class SettingTests
 
     #region Float Setting
 
-    [Test]
+    [Fact]
     public void Should_create_nullable_float_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -883,11 +908,11 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(float.MinValue)]
-    [TestCase(float.MaxValue)]
-    [TestCase(0f)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(float.MinValue)]
+    [InlineData(float.MaxValue)]
+    [InlineData(0f)]
     public void Should_save_nullable_float_setting(float? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -903,8 +928,10 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    public void Should_return_default_value_for_float_setting_if_value_not_exist([Values(0f, .1f)] float defaultValue)
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(.1f)]
+    public void Should_return_default_value_for_float_setting_if_value_not_exist(float defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -918,8 +945,10 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_float_setting_if_value_is_incorrect([Values(0f, .1f)] float defaultValue)
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(.1f)]
+    public void Should_return_default_value_for_float_setting_if_value_is_incorrect(float defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -953,7 +982,7 @@ internal sealed class SettingTests
 
     #region Enum Setting
 
-    [Test]
+    [Fact]
     public void Should_create_nullable_enum_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -969,10 +998,10 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(TestEnum.First)]
-    [TestCase(TestEnum.Second)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(TestEnum.First)]
+    [InlineData(TestEnum.Second)]
     public void Should_save_nullable_enum_setting(TestEnum? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -988,10 +1017,10 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
-    [TestCase(null)]
-    [TestCase(TestEnum.First)]
-    [TestCase(TestEnum.Second)]
+    [Theory]
+    [InlineData(null)]
+    [InlineData(TestEnum.First)]
+    [InlineData(TestEnum.Second)]
     public void Should_save_nullable_enum_setting_as_string(TestEnum? value)
     {
         string pathName = Guid.NewGuid().ToString();
@@ -1025,8 +1054,10 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_enum_setting_if_value_not_exist([Values] TestEnum defaultValue)
+    [Theory]
+    [InlineData(TestEnum.First)]
+    [InlineData(TestEnum.Second)]
+    public void Should_return_default_value_for_enum_setting_if_value_not_exist(TestEnum defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -1040,8 +1071,10 @@ internal sealed class SettingTests
         });
     }
 
-    [Test]
-    public void Should_return_default_value_for_enum_setting_if_value_is_incorrect([Values] TestEnum defaultValue)
+    [Theory]
+    [InlineData(TestEnum.First)]
+    [InlineData(TestEnum.Second)]
+    public void Should_return_default_value_for_enum_setting_if_value_is_incorrect(TestEnum defaultValue)
     {
         string pathName = Guid.NewGuid().ToString();
         string settingName = Guid.NewGuid().ToString();
@@ -1081,7 +1114,7 @@ internal sealed class SettingTests
 
     #region Struct Setting
 
-    [Test]
+    [Fact]
     public void Should_create_nullable_struct_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -1095,7 +1128,7 @@ internal sealed class SettingTests
         setting.FullPath.Should().Be($"{pathName}.{settingName}");
     }
 
-    [Test]
+    [Fact]
     public void Should_save_nullable_struct_setting()
     {
         string pathName = Guid.NewGuid().ToString();
@@ -1253,7 +1286,7 @@ internal sealed class SettingTests
 
     #region Test Cases
 
-    private static IEnumerable<object[]> CreateCases()
+    public static IEnumerable<object[]> CreateCases()
     {
         foreach (object value in Values())
         {
@@ -1261,7 +1294,7 @@ internal sealed class SettingTests
         }
     }
 
-    private static IEnumerable<object[]> SaveCases()
+    public static IEnumerable<object[]> SaveCases()
     {
         foreach (object settingDefault in Values())
         {
@@ -1275,14 +1308,14 @@ internal sealed class SettingTests
         }
     }
 
-    private static IEnumerable<object[]> CreateStringCases()
+    public static IEnumerable<object[]> CreateStringCases()
     {
         yield return new object[] { null! };
         yield return new object[] { string.Empty };
         yield return new object[] { "_" };
     }
 
-    private static IEnumerable<object[]> SaveStringCases()
+    public static IEnumerable<object[]> SaveStringCases()
     {
         yield return new object[] { null!, null! };
         yield return new object[] { null!, string.Empty };

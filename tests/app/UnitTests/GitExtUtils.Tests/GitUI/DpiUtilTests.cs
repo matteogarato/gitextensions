@@ -3,7 +3,7 @@
 namespace GitExtUtilsTests.GitUI;
 public sealed class DpiUtilTests
 {
-    [Test]
+    [StaFact]
     public void Scale_with_ceiling_false_should_use_round()
     {
         // The actual DPI values are system-dependent, so we test the rounding behavior
@@ -18,7 +18,7 @@ public sealed class DpiUtilTests
         result.Should().BeGreaterThanOrEqualTo(0);
     }
 
-    [Test]
+    [StaFact]
     public void Scale_with_ceiling_true_should_use_ceiling()
     {
         int result = DpiUtil.Scale(1, ceiling: true);
@@ -26,8 +26,25 @@ public sealed class DpiUtilTests
         result.Should().BeGreaterThan(0);
     }
 
-    [Test]
-    public void Scale_default_parameter_should_use_round([Range(0, 16)] int value)
+    [StaTheory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    [InlineData(9)]
+    [InlineData(10)]
+    [InlineData(11)]
+    [InlineData(12)]
+    [InlineData(13)]
+    [InlineData(14)]
+    [InlineData(15)]
+    [InlineData(16)]
+    public void Scale_default_parameter_should_use_round(int value)
     {
         int resultDefault = DpiUtil.Scale(value);
         int resultExplicit = DpiUtil.Scale(value, ceiling: false);
@@ -35,8 +52,9 @@ public sealed class DpiUtilTests
         resultExplicit.Should().Be(resultDefault);
     }
 
-    [TestCase(0, false, 0)]
-    [TestCase(0, true, 0)]
+    [StaTheory]
+    [InlineData(0, false, 0)]
+    [InlineData(0, true, 0)]
     public void Scale_with_zero_should_return_zero(int input, bool ceiling, int expected)
     {
         int result = DpiUtil.Scale(input, ceiling: ceiling);
@@ -44,8 +62,9 @@ public sealed class DpiUtilTests
         result.Should().Be(expected);
     }
 
-    [TestCase(-5, false)]
-    [TestCase(-5, true)]
+    [StaTheory]
+    [InlineData(-5, false)]
+    [InlineData(-5, true)]
     public void Scale_with_negative_value_should_work(int input, bool ceiling)
     {
         // Negative values should be scaled correctly

@@ -31,6 +31,7 @@
       <Directory Id="$(var.PlatformProgramFilesFolder)">
         <Directory Id="INSTALLDIR" Name="$(var.InstallName)">
           <Directory Id="PluginsDir" Name="Plugins" />
+          <Directory Id="AvaloniaAppDir" Name="Avalonia" />
           <Directory Id="DictionariesDir" Name="Dictionaries" />
           <Directory Id="TranslationsDir" Name="Translation" />
           <Directory Id="DiffScriptsDir" Name="Diff-Scripts" />
@@ -818,9 +819,10 @@
     <ComponentGroup Id="Component.PluginResources" />
     <DirectoryRef Id="ProgramMenuFolder">
       <Component Id="GitExtensions.newstartmenu" Guid="*">
-        <Shortcut Id="GitExtensions.newstartmenu" Name="$(var.ProductName)" Description="$(var.ProductName)" Icon="gitextensions.ico" Target="[INSTALLDIR]GitExtensions.exe" WorkingDirectory="INSTALLDIR">
+        <Shortcut Id="GitExtensions.newstartmenu" Name="$(var.ProductName)" Description="$(var.ProductName)" Icon="gitextensions.ico" Target="[INSTALLDIR]Avalonia\GitExtensions.Avalonia.exe" WorkingDirectory="INSTALLDIR">
           <ShortcutProperty Key="System.AppUserModel.ID" Value="$(var.InstallName)" />
         </Shortcut>
+        <Shortcut Id="GitExtensions.classicstartmenu" Name="$(var.ProductName) (Classic)" Description="$(var.ProductName) (Windows Forms)" Icon="gitextensions.ico" Target="[INSTALLDIR]GitExtensions.exe" WorkingDirectory="INSTALLDIR" />
         <RegistryValue Root="HKCU" Key="$(var.InstalledRegKey)" Name="GitExtensions.newstartmenu" Value="" Type="string" KeyPath="yes" />
       </Component>
     </DirectoryRef>
@@ -832,7 +834,7 @@
     </DirectoryRef>
     <DirectoryRef Id="DesktopFolder">
       <Component Id="GitExtensions.desktop" Guid="*">
-        <Shortcut Id="GitExtensions.desktop" Name="$(var.ProductName)" Description="$(var.ProductName)" Icon="gitextensions.ico" Target="[INSTALLDIR]GitExtensions.exe" WorkingDirectory="INSTALLDIR" />
+        <Shortcut Id="GitExtensions.desktop" Name="$(var.ProductName)" Description="$(var.ProductName)" Icon="gitextensions.ico" Target="[INSTALLDIR]Avalonia\GitExtensions.Avalonia.exe" WorkingDirectory="INSTALLDIR" />
         <RegistryValue Root="HKCU" Key="$(var.InstalledRegKey)" Name="GitExtensions.desktop" Value="" Type="string" KeyPath="yes" />
         <RemoveFolder Id="GitExtensions.desktop" On="uninstall" />
       </Component>
@@ -842,6 +844,7 @@
       <ComponentGroupRef Id="Component.ConEmuFiles" />
       <ComponentGroupRef Id="Component.Themes" />
       <ComponentGroupRef Id="Component.Translation" />
+      <ComponentGroupRef Id="AvaloniaAppFiles" />
       <ComponentRef Id="AdysTech.CredentialManager.dll" />
       <ComponentRef Id="AppInsights.WindowsDesktop.dll" />
       <ComponentRef Id="Ben.Demystifier.dll" />
@@ -899,6 +902,7 @@
       <ComponentRef Id="InstallDir.reg" />
       <ComponentRef Id="GitExtSshAskPass.exe" />
       <ComponentRef Id="GitExtensions.newstartmenu" />
+      <ComponentRef Id="GitExtensions.classicstartmenu" />
       <ComponentRef Id="GitExtensions.startmenu" />
       <!-- Plugin Manager build artifacts -->
       <ComponentRef Id="GitExtensions.PluginManager.dll" />
@@ -1201,7 +1205,7 @@
         <ComponentRef Id="Protocol.github_mac" />
       </Feature>
     </Feature>
-    <CustomAction Id="LaunchFile" FileKey="GitExtensions.exe" ExeCommand="" Return="asyncNoWait" />
+    <CustomAction Id="LaunchFile" FileKey="GitExtensionsAvaloniaExe" ExeCommand="" Return="asyncNoWait" />
     <UI />
     <InstallExecuteSequence>
       <Custom Action="LaunchFile" After="InstallFinalize">( NOT Installed ) AND ( LAUNCH = "1" )</Custom>

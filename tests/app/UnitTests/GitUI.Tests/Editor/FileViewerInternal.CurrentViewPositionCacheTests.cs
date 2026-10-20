@@ -4,28 +4,26 @@ using ICSharpCode.TextEditor;
 
 namespace GitUITests.Editor;
 
-[Apartment(ApartmentState.STA)]
-public class CurrentViewPositionCacheTests
+public class CurrentViewPositionCacheTests : IDisposable
 {
     private FileViewerInternal _fileViewerInternal = null!;
     private FileViewerInternal.CurrentViewPositionCache _viewPositionCache = null!;
 
-    [SetUp]
-    public void Setup()
+    public CurrentViewPositionCacheTests()
     {
         _fileViewerInternal = new FileViewerInternal();
 
         _viewPositionCache = new FileViewerInternal.CurrentViewPositionCache(_fileViewerInternal);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _fileViewerInternal.Dispose();
     }
 
-    [TestCase(null)]
-    [TestCase("a")]
+    [StaTheory]
+    [InlineData(null)]
+    [InlineData("a")]
     public void Capture_should_not_change_capture_if_less_then_two_lines(string? text)
     {
         FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
@@ -46,7 +44,7 @@ public class CurrentViewPositionCacheTests
         test.ViewPosition.Should().Be(existingViewPosition);
     }
 
-    [Test]
+    [StaFact]
     public void Capture_should_capture_current_position_if_ShowLineNumbers_true_start()
     {
         FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
@@ -64,7 +62,7 @@ public class CurrentViewPositionCacheTests
         test.ViewPosition.TotalNumberOfLines.Should().Be(4);
     }
 
-    [Test]
+    [StaFact]
     public void Capture_should_capture_current_position_if_ShowLineNumbers_true_scrolled()
     {
         FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
@@ -85,7 +83,7 @@ public class CurrentViewPositionCacheTests
         test.ViewPosition.TotalNumberOfLines.Should().Be(36);
     }
 
-    [Test]
+    [StaFact]
     public void Capture_should_capture_current_position_if_ShowLineNumbers_false_without_margin()
     {
         FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
@@ -107,7 +105,7 @@ public class CurrentViewPositionCacheTests
         test.ViewPosition.TotalNumberOfLines.Should().Be(36);
     }
 
-    [Test]
+    [StaFact]
     public void Capture_should_capture_current_position_and_calculate_active_line_if_ShowLineNumbers_false_with_line_margin()
     {
         FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
@@ -136,7 +134,7 @@ public class CurrentViewPositionCacheTests
         test.ViewPosition.TotalNumberOfLines.Should().Be(23);
     }
 
-    [Test]
+    [StaFact]
     public void Restore_should_restore_current_position()
     {
         FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
@@ -252,9 +250,9 @@ index 7ac22add9..77aa0364a 100644
 --- a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs
 +++ b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs
 @@ -46,23 +46,24 @@ private void InitializeComponent()
-             // 
+             //
              // panel1
-             // 
+             //
 -            panel1.AutoSize = true;
              panel1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
 +            panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;

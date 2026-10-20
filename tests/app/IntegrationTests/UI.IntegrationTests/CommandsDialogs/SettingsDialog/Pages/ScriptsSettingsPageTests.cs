@@ -11,19 +11,17 @@ using GitUI.CommandsDialogs.SettingsDialog.Pages;
 using GitUI.ScriptsEngine;
 using GitUIPluginInterfaces;
 using NSubstitute;
+using Xunit;
 
 namespace UITests.CommandsDialogs.SettingsDialog.Pages;
 
-[Apartment(ApartmentState.STA)]
-public class ScriptsSettingsPageTests
+public class ScriptsSettingsPageTests : System.IDisposable
 {
     private ReferenceRepository _referenceRepository = null!;
     private ServiceContainer _serviceContainer = null!;
     private MockHost _form = null!;
     private ScriptsSettingsPage _settingsPage = null!;
-
-    [SetUp]
-    public void SetUp()
+    public ScriptsSettingsPageTests()
     {
         _referenceRepository = new ReferenceRepository();
 
@@ -39,8 +37,7 @@ public class ScriptsSettingsPageTests
         _serviceContainer.AddService(scriptsManager);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _settingsPage.Dispose();
         _form.Dispose();
@@ -48,7 +45,7 @@ public class ScriptsSettingsPageTests
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Committing_a_pending_grid_edit_while_rebinding_after_an_Icon_change_should_not_crash()
     {
         RunFormTest(
@@ -151,5 +148,10 @@ public class ScriptsSettingsPageTests
         {
             throw new NotImplementedException();
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

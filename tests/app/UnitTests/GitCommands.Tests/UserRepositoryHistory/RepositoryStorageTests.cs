@@ -8,22 +8,22 @@ public class RepositoryStorageTests
     private IRepositorySerialiser<Repository> _repositorySerialiser = null!;
     private RepositoryStorage _repositoryStorage = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryStorageTests()
     {
         _repositorySerialiser = Substitute.For<IRepositorySerialiser<Repository>>();
         _repositoryStorage = new RepositoryStorage(_repositorySerialiser);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void Load_should_throw_if_key_null(string? key)
     {
         ((Action)(() => _repositoryStorage.Load(key!))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void Load_should_return_empty_collection_if_settings_value_null()
     {
         IReadOnlyList<Repository> repositories = _repositoryStorage.Load("a");
@@ -31,7 +31,7 @@ public class RepositoryStorageTests
         repositories.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void Load_should_return_empty_collection_if_failed_to_deserialise()
     {
         _repositorySerialiser.Deserialize(Arg.Any<string>()).Returns(x => null);
@@ -41,7 +41,7 @@ public class RepositoryStorageTests
         repositories.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void Load_should_return_collection()
     {
         AppSettings.SetString("a", "repos");
@@ -65,15 +65,16 @@ public class RepositoryStorageTests
         repositories.Should().BeSameAs(history);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void Save_should_throw_if_key_null(string? key)
     {
         ((Action)(() => _repositoryStorage.Save(key!, null!))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void Save_should_throw_if_repositories_null()
     {
         ((Action)(() => _repositoryStorage.Save("a", null!))).Should().Throw<ArgumentNullException>();

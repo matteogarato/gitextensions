@@ -7,7 +7,7 @@ namespace GitCommandsTests.Settings;
 ///  Tests for <see cref="DistributedSettings"/> built with the same layering as
 ///  <c>CommonLogic</c>, where each level uses its own independent settings file.
 /// </summary>
-internal sealed class DistributedSettingsTests
+public sealed class DistributedSettingsTests : IDisposable
 {
     private const string _emptySettingsFileContent = """<?xml version="1.0" encoding="utf-8"?><dictionary />""";
     private const string _testSettingName = "test.setting";
@@ -26,8 +26,7 @@ internal sealed class DistributedSettingsTests
     private DistributedSettings _localSettings = null!;
     private DistributedSettings _effectiveSettings = null!;
 
-    [SetUp]
-    public void SetUp()
+    public DistributedSettingsTests()
     {
         _globalFilePath = Path.GetTempFileName();
         _distributedFilePath = Path.GetTempFileName();
@@ -40,8 +39,7 @@ internal sealed class DistributedSettingsTests
         CreateLayeredSettings();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _globalCache.Dispose();
         _distributedCache.Dispose();
@@ -91,7 +89,7 @@ internal sealed class DistributedSettingsTests
         }
     }
 
-    [Test]
+    [Fact]
     public async Task GetValue_on_effective_should_return_null_when_no_level_has_value()
     {
         _effectiveSettings.GetValue(_testSettingName).Should().BeNull();
@@ -100,9 +98,10 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.GetValue_null_when_no_level_has_value");
     }
 
-    [Test]
-    public async Task GetValue_on_effective_should_return_global_value_when_only_global_is_set(
-        [Values("", _globalValue)] string effectiveValue)
+    [Theory]
+    [InlineData("")]
+    [InlineData(_globalValue)]
+    public async Task GetValue_on_effective_should_return_global_value_when_only_global_is_set(string effectiveValue)
     {
         _globalSettings.SetValue(_testSettingName, effectiveValue);
 
@@ -112,10 +111,12 @@ internal sealed class DistributedSettingsTests
             .UseFileName($"DistributedSettingsTests.GetValue_global_when_only_global_is_set_{effectiveValue}");
     }
 
-    [Test]
-    public async Task GetValue_on_effective_should_return_distributed_value_overriding_global(
-        [Values(null, _globalValue)] string? globalValue,
-        [Values("", _distributedValue)] string effectiveValue)
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData(null, _distributedValue)]
+    [InlineData(_globalValue, "")]
+    [InlineData(_globalValue, _distributedValue)]
+    public async Task GetValue_on_effective_should_return_distributed_value_overriding_global(string? globalValue, string effectiveValue)
     {
         _globalSettings.SetValue(_testSettingName, globalValue);
         _distributedSettings.SetValue(_testSettingName, effectiveValue);
@@ -126,11 +127,16 @@ internal sealed class DistributedSettingsTests
             .UseFileName($"DistributedSettingsTests.GetValue_distributed_overriding_global_{globalValue ?? "null"}_{effectiveValue}");
     }
 
-    [Test]
-    public async Task GetValue_on_effective_should_return_local_value_overriding_distributed_and_global(
-        [Values(null, _globalValue)] string? globalValue,
-        [Values(null, _distributedValue)] string? distributedValue,
-        [Values("", _localValue)] string effectiveValue)
+    [Theory]
+    [InlineData(null, null, "")]
+    [InlineData(null, null, _localValue)]
+    [InlineData(null, _distributedValue, "")]
+    [InlineData(null, _distributedValue, _localValue)]
+    [InlineData(_globalValue, null, "")]
+    [InlineData(_globalValue, null, _localValue)]
+    [InlineData(_globalValue, _distributedValue, "")]
+    [InlineData(_globalValue, _distributedValue, _localValue)]
+    public async Task GetValue_on_effective_should_return_local_value_overriding_distributed_and_global(string? globalValue, string? distributedValue, string effectiveValue)
     {
         _globalSettings.SetValue(_testSettingName, globalValue);
         _distributedSettings.SetValue(_testSettingName, distributedValue);
@@ -142,7 +148,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName($"DistributedSettingsTests.GetValue_local_overriding_{globalValue ?? "null"}_{distributedValue ?? "null"}_{effectiveValue}");
     }
 
-    [Test(Description = "If this test should fail, it can be removed because SetValue on effective is not used.")]
+    [Fact(DisplayName = "If this test should fail, it can be removed because SetValue on effective is not used.")]
     public async Task SetValue_on_effective_should_write_to_global_when_no_level_has_value()
     {
         // When no level has an explicit value, effective delegates to global (the lowest level).
@@ -156,7 +162,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.SetValue_writes_to_global_when_no_level_has_value");
     }
 
-    [Test(Description = "If this test should fail, it can be removed because SetValue on effective is not used.")]
+    [Fact(DisplayName = "If this test should fail, it can be removed because SetValue on effective is not used.")]
     public async Task SetValue_on_effective_should_write_to_local_when_distributed_has_a_different_value()
     {
         // When distributed has an explicit value the effective-level write goes to local
@@ -173,7 +179,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.SetValue_writes_to_local_when_distributed_differs");
     }
 
-    [Test(Description = "If this test should fail, it can be removed because SetValue on effective is not used.")]
+    [Fact(DisplayName = "If this test should fail, it can be removed because SetValue on effective is not used.")]
     public async Task SetValue_on_effective_should_not_write_to_local_when_distributed_has_same_value()
     {
         // When distributed already has the same value, no write is needed at the local level.
@@ -188,7 +194,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.SetValue_no_write_to_local_when_distributed_same");
     }
 
-    [Test]
+    [Fact]
     public async Task GetValue_on_each_level_should_be_independent()
     {
         _globalSettings.SetValue(_testSettingName, _globalValue);
@@ -203,7 +209,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.GetValue_each_level_independent");
     }
 
-    [Test]
+    [Fact]
     public async Task SetValue_null_on_each_level_should_be_independent()
     {
         _globalSettings.SetValue(_testSettingName, _globalValue);
@@ -227,7 +233,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.global_null");
     }
 
-    [Test]
+    [Fact]
     public async Task SetValue_modified_on_each_level_should_be_independent()
     {
         _globalSettings.SetValue(_testSettingName, _globalValue);
@@ -257,7 +263,7 @@ internal sealed class DistributedSettingsTests
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.local_modified");
     }
 
-    [Test]
+    [Fact]
     public async Task GetValue_on_effective_level_shall_return_inherited_right_after_load()
     {
         _effectiveSettings.GetValue(_testSettingName).Should().BeNull();

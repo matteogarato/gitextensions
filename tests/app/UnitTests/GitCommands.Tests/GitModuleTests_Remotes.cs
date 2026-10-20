@@ -8,7 +8,7 @@ namespace GitCommandsTests;
 
 partial class GitModuleTests
 {
-    [Test]
+    [Fact]
     public void AddRemote()
     {
         const string name = "foo";
@@ -32,7 +32,7 @@ partial class GitModuleTests
         _gitModule.AddRemote(null, path).Should().Be("Please enter a name.");
     }
 
-    [Test]
+    [Fact]
     public void RemoveRemote()
     {
         const string remoteName = "foo";
@@ -50,7 +50,7 @@ partial class GitModuleTests
         _gitModule.GetSettings("reload local settings, too");
     }
 
-    [Test]
+    [Fact]
     public void RenameRemote()
     {
         const string oldName = "foo";
@@ -69,8 +69,9 @@ partial class GitModuleTests
         _gitModule.GetSettings("reload local settings, too");
     }
 
-    [TestCase("ignorenopush\tgit@github.com:drewnoakes/gitextensions.git (fetch)")]
-    [TestCase("ignorenopull\tgit@github.com:drewnoakes/gitextensions.git (push)")]
+    [Theory]
+    [InlineData("ignorenopush\tgit@github.com:drewnoakes/gitextensions.git (fetch)")]
+    [InlineData("ignorenopull\tgit@github.com:drewnoakes/gitextensions.git (push)")]
     public async Task GetRemotes_should_throw_if_not_pairs(string line)
     {
         using (_executable.StageOutput("remote -v", line))
@@ -80,7 +81,7 @@ partial class GitModuleTests
         }
     }
 
-    [Test]
+    [Fact]
     public async Task GetRemotes_should_parse_correctly_configured_remotes()
     {
         string[] lines =
@@ -154,7 +155,7 @@ partial class GitModuleTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetRemoteNames()
     {
         string[] lines = ["RussKie", "origin", "upstream", "asymmetrical", "with-space"];
@@ -167,7 +168,7 @@ partial class GitModuleTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetRemoteColors_should_return_cached_colors()
     {
         const string origin = nameof(origin);
@@ -204,7 +205,7 @@ partial class GitModuleTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetRemoteColors_should_reload_colors_after_reset()
     {
         const string origin = nameof(origin);
@@ -256,7 +257,7 @@ partial class GitModuleTests
         }
     }
 
-    [Test]
+    [Fact]
     public void ResetRemoteColors_should_clear_cached_colors()
     {
         const string origin = nameof(origin);

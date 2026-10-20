@@ -58,6 +58,6 @@ parsed into models → UI updates and `RepoChangedNotifier` fires.
 - Files **MUST** use CRLF endings and follow StyleCop + [.editorconfig](../../../.editorconfig).
 - Changing UI strings/controls **MUST** update `English.xlf` via `update-loc.cmd` (CI fails otherwise).
 - Changes under `GitExtensions.Extensibility/` affect the **plugin interface version** — note in commit message.
-- Tests: NUnit + `NSubstitute` + `AwesomeAssertions`; test names use snake_case suffix.
+- Tests: xUnit v3 + `NSubstitute` + `AwesomeAssertions`; test names use snake_case suffix.
 
 **Next:** for anything beyond this anchor, load [docs-index.md](../docs-index.md) and follow a reading chain.

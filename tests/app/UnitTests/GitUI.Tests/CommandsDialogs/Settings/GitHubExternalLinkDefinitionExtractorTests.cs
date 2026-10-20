@@ -4,11 +4,12 @@ using GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 namespace GitUITests.CommandsDialogs.Settings;
 public class GitHubExternalLinkDefinitionExtractorTests
 {
-    [TestCase("https://github.com/owner/repo.git")]
-    [TestCase("http://github.com/owner/repo.git")]
-    [TestCase("https://github.com/owner/repo")]
-    [TestCase("ssh://git@github.com/owner/repo.git")]
-    [TestCase("git@github.com/owner/repo.git")]
+    [Theory]
+    [InlineData("https://github.com/owner/repo.git")]
+    [InlineData("http://github.com/owner/repo.git")]
+    [InlineData("https://github.com/owner/repo")]
+    [InlineData("ssh://git@github.com/owner/repo.git")]
+    [InlineData("git@github.com/owner/repo.git")]
     public void Should_get_link_definitions(string url)
     {
         IList<ExternalLinkDefinition> externalLinkDefinitions = new GitHubExternalLinkDefinitionExtractor().GetDefinitions(url);
@@ -23,7 +24,7 @@ public class GitHubExternalLinkDefinitionExtractorTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Should_get_link_definitions_When_no_remote_url_provided()
     {
         IList<ExternalLinkDefinition> externalLinkDefinitions = new GitHubExternalLinkDefinitionExtractor().GetDefinitions(null!);

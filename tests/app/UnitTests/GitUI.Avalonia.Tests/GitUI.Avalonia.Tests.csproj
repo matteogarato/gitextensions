@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Cross-platform Avalonia tests; part of GitExtensions.Avalonia.slnx only, so the
+         Windows Forms solution and its pipelines are unaffected. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <UseWindowsForms>false</UseWindowsForms>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <_AvaloniaHostIsMusl Condition="$([System.String]::Copy('$(NETCoreSdkRuntimeIdentifier)').Contains('musl'))">true</_AvaloniaHostIsMusl>
+    <_AvaloniaHostIsX64 Condition="$([System.String]::Copy('$(NETCoreSdkRuntimeIdentifier)').EndsWith('-x64'))">true</_AvaloniaHostIsX64>
+    <_AvaloniaHostIsArm64 Condition="$([System.String]::Copy('$(NETCoreSdkRuntimeIdentifier)').EndsWith('-arm64'))">true</_AvaloniaHostIsArm64>
+
+    <!-- Use portable Linux RIDs because distro-specific apphost packs are not published. -->
+    <RuntimeIdentifier Condition="'$(_AvaloniaHostIsMusl)' == 'true' and '$(_AvaloniaHostIsX64)' == 'true'">linux-musl-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(_AvaloniaHostIsMusl)' == 'true' and '$(_AvaloniaHostIsArm64)' == 'true'">linux-musl-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(_AvaloniaHostIsX64)' == 'true'">linux-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(_AvaloniaHostIsArm64)' == 'true'">linux-arm64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- CommonAssemblyInfo.cs declares SupportedOSPlatform("windows7.0"), which the test framework
+         translates into a Windows-only platform requirement for every test: on Linux the
+         whole assembly is silently discovered as empty. This project is cross-platform. -->
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" />
+    <!-- Skia renderer for the golden-image tests: rendered frames are captured and
+         compared against the images in GoldenImages/. -->
+    <PackageReference Include="Avalonia.Skia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\LaneNodeLocatorTests.cs" Link="Graph\LaneNodeLocatorTests.cs" />
+    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\LaneInfoProviderTests.cs" Link="Graph\LaneInfoProviderTests.cs" />
+    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\RevisionGraphRowTests.cs" Link="Graph\RevisionGraphRowTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\app\GitExtensions.Avalonia\GitExtensions.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>

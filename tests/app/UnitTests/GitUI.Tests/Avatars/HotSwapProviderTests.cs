@@ -2,7 +2,7 @@
 using NSubstitute;
 
 namespace GitUITests.Avatars;
-public class HotSwapProviderTests
+public class HotSwapProviderTests : IDisposable
 {
     private const int _size = 16;
     private const string _email = "a@a.a";
@@ -15,13 +15,12 @@ public class HotSwapProviderTests
         _img = new Bitmap(_size, _size);
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         _img.Dispose();
     }
 
-    [Test]
+    [Fact]
     public async Task Returns_null_if_no_provider_is_set()
     {
         HotSwapAvatarProvider provider = new();
@@ -29,7 +28,7 @@ public class HotSwapProviderTests
         image.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public async Task Returns_the_same_image_as_the_wrapped_provider()
     {
         HotSwapAvatarProvider provider = new();

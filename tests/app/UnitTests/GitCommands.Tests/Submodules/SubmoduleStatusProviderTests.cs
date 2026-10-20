@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using CommonTestUtils;
 using GitCommands;
 using GitCommands.Git;
@@ -7,13 +8,10 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Submodules;
-
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-
-[Parallelizable]
-internal class SubmoduleStatusProviderTests
+public class SubmoduleStatusProviderTests : IDisposable
 {
+    private readonly CultureInfo _currentCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _currentUICulture = CultureInfo.CurrentUICulture;
     private GitModuleTestHelper _repo1 = null!;
     private GitModuleTestHelper _repo2 = null!;
     private GitModuleTestHelper _repo3 = null!;
@@ -27,9 +25,11 @@ internal class SubmoduleStatusProviderTests
 
     private ISubmoduleStatusProvider _provider = null!;
 
-    [SetUp]
-    public void SetUp()
+    public SubmoduleStatusProviderTests()
     {
+        CultureInfo.CurrentCulture = new("en-US");
+        CultureInfo.CurrentUICulture = new("en-US");
+
         // NB: A previous iteration of this test fixture did reuse the repositories across all of the tests, initializing them only once.
         //     This saved about 5 seconds in the overall test run, but it was at the cost of test isolation.
 
@@ -59,17 +59,23 @@ internal class SubmoduleStatusProviderTests
         _provider = new SubmoduleStatusProvider(new GitExecutorProvider(new GitDirectoryResolver()));
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
-        _provider.Dispose();
-        _repo1.Dispose();
-        _repo2.Dispose();
-        _repo3.Dispose();
+        try
+        {
+            _provider.Dispose();
+            _repo1.Dispose();
+            _repo2.Dispose();
+            _repo3.Dispose();
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = _currentCulture;
+            CultureInfo.CurrentUICulture = _currentUICulture;
+        }
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task UpdateSubmoduleStructure_valid_result_for_top_module()
     {
         SubmoduleInfoResult result = await SubmoduleTestHelpers.UpdateSubmoduleStructureAndWaitForResultAsync(_provider, _repo1Module);
@@ -83,8 +89,7 @@ internal class SubmoduleStatusProviderTests
         result.OurSubmodules.Should().BeEquivalentTo(result.AllSubmodules);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task UpdateSubmoduleStructure_valid_result_for_first_nested_submodule()
     {
         SubmoduleInfoResult result = await SubmoduleTestHelpers.UpdateSubmoduleStructureAndWaitForResultAsync(_provider, _repo2Module);
@@ -99,8 +104,7 @@ internal class SubmoduleStatusProviderTests
         result.OurSubmodules.Select(info => info.Path).Should().ContainSingle(_repo3Module.WorkingDir);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task UpdateSubmoduleStructure_valid_result_for_second_nested_submodule()
     {
         SubmoduleInfoResult result = await SubmoduleTestHelpers.UpdateSubmoduleStructureAndWaitForResultAsync(_provider, _repo3Module);
@@ -114,8 +118,7 @@ internal class SubmoduleStatusProviderTests
         result.OurSubmodules.Select(info => info.Path).Should().BeEmpty();
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_first_nested_module_change()
     {
         IGitModule currentModule = _repo1Module;
@@ -147,8 +150,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_first_nested_module_commit()
     {
         IGitModule currentModule = _repo1Module;
@@ -177,12 +179,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.Status.Should().Be(SubmoduleStatus.Unknown);
 
         // Revert the change
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_first_nested_module_change_commit()
     {
         IGitModule currentModule = _repo1Module;
@@ -213,12 +214,11 @@ internal class SubmoduleStatusProviderTests
 
         // Revert the change
         File.Delete(Path.Combine(_repo2Module.WorkingDir, "test.txt"));
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_second_nested_module_change()
     {
         IGitModule currentModule = _repo1Module;
@@ -252,8 +252,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_first_nested_module_commit_second_nested_module_change()
     {
         IGitModule currentModule = _repo1Module;
@@ -296,12 +295,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.Status.Should().Be(SubmoduleStatus.Unknown);
 
         // Revert the change
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_second_nested_module_commit()
     {
         IGitModule currentModule = _repo1Module;
@@ -331,12 +329,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.Status.Should().Be(SubmoduleStatus.Unknown);
 
         // Revert the change
-        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_top_module_change()
     {
         IGitModule currentModule = _repo1Module;
@@ -368,8 +365,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_top_module_commit()
     {
         IGitModule currentModule = _repo1Module;
@@ -395,12 +391,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.Should().BeNull();
 
         // Revert the change
-        _repo1Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo1Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_first_nested_module_with_top_module_changes()
     {
         IGitModule currentModule = _repo2Module;
@@ -430,8 +425,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_first_nested_module_with_second_nested_module_changes()
     {
         IGitModule currentModule = _repo2Module;
@@ -464,8 +458,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_first_nested_module_with_second_nested_module_commit()
     {
         IGitModule currentModule = _repo2Module;
@@ -494,12 +487,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.IsDirty.Should().BeTrue();
 
         // Revert the change
-        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_second_nested_module_with_second_nested_module_changes()
     {
         IGitModule currentModule = _repo3Module;
@@ -530,8 +522,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_second_nested_module_with_second_nested_module_commit()
     {
         IGitModule currentModule = _repo3Module;
@@ -555,12 +546,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.Should().BeNull();
 
         // Revert the change
-        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_second_nested_module_with_first_nested_module_commit()
     {
         IGitModule currentModule = _repo3Module;
@@ -584,13 +574,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.Should().BeNull();
 
         // Revert the change
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [Ignore("Delays tests with 15s without much value in the test")]
-    [NonParallelizable]
-    [Test]
+    [Fact(Skip = "Delays tests with 15s without much value in the test")]
     public async Task Submodule_status_changes_for_top_module_with_no_forced_changes()
     {
         IGitModule currentModule = _repo1Module;
@@ -624,8 +612,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_top_module_with_top_module_changes()
     {
         IGitModule currentModule = _repo1Module;
@@ -653,8 +640,7 @@ internal class SubmoduleStatusProviderTests
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_second_nested_module_with_first_nested_module_prechanges()
     {
         IGitModule currentModule = _repo3Module;
@@ -672,12 +658,11 @@ internal class SubmoduleStatusProviderTests
         result.TopProject!.Detailed!.IsDirty.Should().BeTrue();
 
         // Revert the change
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_second_nested_module_with_prechanges_noupdate()
     {
         IGitModule currentModule = _repo3Module;
@@ -699,17 +684,16 @@ internal class SubmoduleStatusProviderTests
         result.TopProject!.Detailed.Should().BeNull();
 
         // Revert the change
-        _repo1Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo1Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         File.Delete(Path.Combine(_repo1Module.WorkingDir, "test.txt"));
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         File.Delete(Path.Combine(_repo2Module.WorkingDir, "test.txt"));
-        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo3Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         File.Delete(Path.Combine(_repo3Module.WorkingDir, "test.txt"));
         await CheckRevertedStatus(result);
     }
 
-    [NonParallelizable]
-    [Test]
+    [Fact]
     public async Task Submodule_status_changes_for_second_nested_module_with_first_nested_module_precommit()
     {
         IGitModule currentModule = _repo3Module;
@@ -738,7 +722,7 @@ internal class SubmoduleStatusProviderTests
         result.TopProject.Detailed.IsDirty.Should().BeTrue();
 
         // Revert the change
-        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false);
+        _repo2Module.GitExecutable.Execute(@"checkout HEAD^", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
         File.Delete(Path.Combine(_repo3Module.WorkingDir, "test.txt"));
         await CheckRevertedStatus(result);
     }

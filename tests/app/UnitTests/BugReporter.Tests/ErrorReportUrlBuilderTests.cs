@@ -1,20 +1,29 @@
-﻿using BugReporter;
+﻿using System.Globalization;
+using BugReporter;
 using BugReporter.Serialization;
 
 namespace BugReporterTests;
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public sealed class ErrorReportUrlBuilderTests
+public sealed class ErrorReportUrlBuilderTests : IDisposable
 {
-    private ErrorReportUrlBuilder _builder = null!;
+    private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
+    private readonly ErrorReportUrlBuilder _builder;
 
-    [SetUp]
-    public void Setup()
+    public ErrorReportUrlBuilderTests()
     {
+        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentCulture = testCulture;
+        CultureInfo.CurrentUICulture = testCulture;
         _builder = new ErrorReportUrlBuilder();
     }
 
-    [Test]
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUICulture;
+    }
+
+    [Fact]
     public void Build_should_throw_ANE_if_exception_null()
     {
         ((Action)(() => _builder.Build(exception: null!, exceptionInfo: null!, environmentInfo: null!, additionalInfo: null)))
@@ -35,7 +44,7 @@ DPI 288dpi (300% scaling)".Replace("\r\n", "\n");
         return (exception, exceptionInfo: null, environmentInfo, additionalInfo);
     }
 
-    [Test]
+    [Fact]
     public void Build_should_serialize_exception_into_url()
     {
         (SerializableException exception, string? exceptionInfo, string environmentInfo, string additionalInfo) bd = BuildData();
@@ -43,7 +52,7 @@ DPI 288dpi (300% scaling)".Replace("\r\n", "\n");
         url.Should().Be("template=bug_report.yml&labels=type%3A%20NBug&about=Git%20Extensions%203.4.3.9999%0ABuild%20d4b0f48%0AGit%202.27.0.windows.1%0AMicrosoft%20Windows%20NT%2010.0.19041.0%0A.NET%20Framework%204.8.4360.0%0ADPI%20288dpi%20%28300%25%20scaling%29&description=%60%60%60%0ASystem.Exception%3A%20OPPS%21%0D%0A%20---%3E%20System.ApplicationException%3A%20BAM%21%0D%0A%20---%3E%20System.DivideByZeroException%3A%20BOOM%21%0D%0A%20%20%20---%20End%20of%20inner%20exception%20stack%20trace%20---%0D%0A%20%20%20---%20End%20of%20inner%20exception%20stack%20trace%20---%0A%60%60%60%0A%0AI%20was%20just%20trying%20out%20a%20bunch%20of%20stuff%2C%20not%20sure%20what%20is%20the%20cause.%20Could%20just%20as%20well%20be%20an%20issue%20with%20Git.%20I%20cannot%20provide%20the%20specific%20Repo%20I%20used.%20Hope%20I%27m%20not%20wasting%20your%20time.%0A");
     }
 
-    [Test]
+    [Fact]
     public void CopyText_should_format_text()
     {
         (SerializableException exception, string? exceptionInfo, string environmentInfo, string additionalInfo) bd = BuildData();

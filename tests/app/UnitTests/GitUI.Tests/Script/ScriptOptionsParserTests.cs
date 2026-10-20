@@ -13,16 +13,14 @@ using NSubstitute;
 
 namespace GitUITests.Script;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
+[Culture("en-US")]
 public class ScriptOptionsParserTests
 {
     private IGitUICommands _commands = null!;
     private IGitModule _module = null!;
     private IScriptOptionsProvider _scriptOptionsProvider = null!;
 
-    [SetUp]
-    public void Setup()
+    public ScriptOptionsParserTests()
     {
         _module = Substitute.For<IGitModule>();
         _scriptOptionsProvider = Substitute.For<IScriptOptionsProvider>();
@@ -31,7 +29,7 @@ public class ScriptOptionsParserTests
         _commands.Module.Returns(_module);
     }
 
-    [Test]
+    [Fact]
     public void Contains_should_throw_if_arguments_null()
     {
         ((Action)(() => ScriptOptionsParser.Contains(null!, null!))).Should()
@@ -39,7 +37,7 @@ public class ScriptOptionsParserTests
             .WithMessage("Value cannot be null. (Parameter 'arguments')");
     }
 
-    [Test]
+    [Fact]
     public void Contains_should_throw_if_option_null()
     {
         ((Action)(() => ScriptOptionsParser.Contains("", null!))).Should()
@@ -47,18 +45,19 @@ public class ScriptOptionsParserTests
             .WithMessage("Value cannot be null. (Parameter 'option')");
     }
 
-    [TestCase("", "", true)]
-    [TestCase("", " ", true)]
-    [TestCase(" ", "", true)]
-    [TestCase(" ", " ", true)]
-    [TestCase("{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", "sBranch", true)]
-    [TestCase("{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", "zeBranch", false)]
+    [Theory]
+    [InlineData("", "", true)]
+    [InlineData("", " ", true)]
+    [InlineData(" ", "", true)]
+    [InlineData(" ", " ", true)]
+    [InlineData("{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", "sBranch", true)]
+    [InlineData("{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", "zeBranch", false)]
     public void Contains_should_return_expected(string? arguments, string option, bool expected)
     {
         ScriptOptionsParser.Contains(arguments!, option).Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void DependsOnSelectedRevision_should_throw_if_option_null()
     {
         ((Action)(() => ScriptOptionsParser.DependsOnSelectedRevision(null!))).Should()
@@ -66,41 +65,41 @@ public class ScriptOptionsParserTests
             .WithMessage("Value cannot be null. (Parameter 'option')");
     }
 
-    [TestCase("", false)]
-    [TestCase(" ", false)]
-    [TestCase("\t", false)]
-    [TestCase("s", true)]
-    [TestCase("sBranch", true)]
-    [TestCase("zeBranch", false)]
+    [Theory]
+    [InlineData("", false)]
+    [InlineData(" ", false)]
+    [InlineData("\t", false)]
+    [InlineData("s", true)]
+    [InlineData("sBranch", true)]
+    [InlineData("zeBranch", false)]
     public void DependsOnSelectedRevision_should_return_expected(string option, bool expected)
     {
         ScriptOptionsParser.DependsOnSelectedRevision(option).Should().Be(expected);
     }
 
-    [TestCase("", false, "")]
-    [TestCase("", true, "")]
-    [TestCase(" ", false, "")]
-    [TestCase(" ", true, "")]
-    [TestCase("\t", false, "")]
-    [TestCase("\t", true, "")]
-    [TestCase("a", false, "{a}")]
-    [TestCase("a", true, "{{a}}")]
-    [TestCase(" a", false, "{a}")]
-    [TestCase(" a", true, "{{a}}")]
-    [TestCase("a ", false, "{a}")]
-    [TestCase("a ", true, "{{a}}")]
-    [TestCase(" a ", false, "{a}")]
-    [TestCase(" a ", true, "{{a}}")]
-    [TestCase(" a\ta ", false, "{a\ta}")]
-    [TestCase(" a\ta ", true, "{{a\ta}}")]
-    [TestCase(" a\ta ", false, "{a\ta}")]
-    [TestCase(" a\ta ", true, "{{a\ta}}")]
+    [Theory]
+    [InlineData("", false, "")]
+    [InlineData("", true, "")]
+    [InlineData(" ", false, "")]
+    [InlineData(" ", true, "")]
+    [InlineData("\t", false, "")]
+    [InlineData("\t", true, "")]
+    [InlineData("a", false, "{a}")]
+    [InlineData("a", true, "{{a}}")]
+    [InlineData(" a", false, "{a}")]
+    [InlineData(" a", true, "{{a}}")]
+    [InlineData("a ", false, "{a}")]
+    [InlineData("a ", true, "{{a}}")]
+    [InlineData(" a ", false, "{a}")]
+    [InlineData(" a ", true, "{{a}}")]
+    [InlineData(" a\ta ", false, "{a\ta}")]
+    [InlineData(" a\ta ", true, "{{a\ta}}")]
     public void CreateOption_returns_expected(string option, bool quoted, string expected)
     {
         ScriptOptionsParser.GetTestAccessor().CreateOption(option, quoted).Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void GetCurrentRevision_should_return_null_if_bare_or_empty_repo()
     {
         // bare repo has no current checkout, empty repo has no commits
@@ -112,7 +111,7 @@ public class ScriptOptionsParserTests
         result.Should().Be(null);
     }
 
-    [Test]
+    [Fact]
     public void GetCurrentRevision_should_return_expected_if_current_revision_has_no_refs()
     {
         GitRevision revision = new(ObjectId.IndexId);
@@ -124,7 +123,7 @@ public class ScriptOptionsParserTests
         result.Should().Be(revision);
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_throw_if_module_null()
     {
         ((Action)(() => ScriptOptionsParser.Parse(arguments: "bla", uiCommands: null!, owner: null!, _scriptOptionsProvider))).Should()
@@ -132,10 +131,11 @@ public class ScriptOptionsParserTests
             .WithMessage("Value cannot be null. (Parameter 'uiCommands')");
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase(" ")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
     public void Parse_should_return_without_process_if_arguments_unset(string? arguments)
     {
         (string? arguments, bool abort) result = ScriptOptionsParser.Parse(arguments, uiCommands: null!, owner: null!, _scriptOptionsProvider);
@@ -144,7 +144,7 @@ public class ScriptOptionsParserTests
         result.abort.Should().Be(false);
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_return_unmodified_arguments_if_no_options_matched()
     {
         const string arguments = "{openUrl} https://gitlab.com{zeDefaultRemotePathFromUrl}/tree/{zeBranch}";
@@ -155,7 +155,7 @@ public class ScriptOptionsParserTests
         result.abort.Should().Be(false);
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_c_arguments()
     {
         const string Subject = "line1";
@@ -174,7 +174,7 @@ public class ScriptOptionsParserTests
         result.abort.Should().Be(false);
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_s_arguments()
     {
         const string Subject = "line1";
@@ -195,7 +195,7 @@ public class ScriptOptionsParserTests
         result.abort.Should().Be(false);
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolves_cDefaultRemotePathFromUrl_currentRemote_unset()
     {
         string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
@@ -208,7 +208,7 @@ public class ScriptOptionsParserTests
         result.Should().Be("{openUrl} https://gitlab.com/tree/{sBranch}");
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_cDefaultRemotePathFromUrl_currentRemote_set()
     {
         string currentRemote = "myRemote";
@@ -224,7 +224,7 @@ public class ScriptOptionsParserTests
         result.Should().Be("{openUrl} https://gitlab.com/gitlabhq/gitlabhq/tree/{sBranch}");
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_sRemotePathFromUrl_selectedRemotes_empty()
     {
         List<string> noSelectedRemotes = [];
@@ -239,7 +239,7 @@ public class ScriptOptionsParserTests
         result.Should().Be("{openUrl} https://gitlab.com/tree/{sBranch}");
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_sRemotePathFromUrl_currentRemote_set()
     {
         string currentRemote = "myRemote";
@@ -256,10 +256,21 @@ public class ScriptOptionsParserTests
         result.Should().Be("{openUrl} https://gitlab.com/gitlabhq/gitlabhq/tree/{sBranch}");
     }
 
-    [Test]
-    public void ParseScriptArguments_resolve_sRemoteBranch(
-        [Values("", "origin", "upstream", "remote")] string remoteName,
-        [Values("", "branch", "feature/branch")] string branchName)
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("", "branch")]
+    [InlineData("", "feature/branch")]
+    [InlineData("origin", "")]
+    [InlineData("origin", "branch")]
+    [InlineData("origin", "feature/branch")]
+    [InlineData("upstream", "")]
+    [InlineData("upstream", "branch")]
+    [InlineData("upstream", "feature/branch")]
+    [InlineData("remote", "")]
+    [InlineData("remote", "branch")]
+    [InlineData("remote", "feature/branch")]
+
+    public void ParseScriptArguments_resolve_sRemoteBranch(string remoteName, string branchName)
     {
         string option = "sRemoteBranch";
         string branch = remoteName + '/' + branchName;
@@ -275,10 +286,21 @@ public class ScriptOptionsParserTests
         result.Should().Be(branch);
     }
 
-    [Test]
-    public void ParseScriptArguments_resolve_sRemoteBranchName(
-        [Values("", "origin", "upstream", "remote")] string remoteName,
-        [Values("", "branch", "feature/branch")] string branchName)
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("", "branch")]
+    [InlineData("", "feature/branch")]
+    [InlineData("origin", "")]
+    [InlineData("origin", "branch")]
+    [InlineData("origin", "feature/branch")]
+    [InlineData("upstream", "")]
+    [InlineData("upstream", "branch")]
+    [InlineData("upstream", "feature/branch")]
+    [InlineData("remote", "")]
+    [InlineData("remote", "branch")]
+    [InlineData("remote", "feature/branch")]
+
+    public void ParseScriptArguments_resolve_sRemoteBranchName(string remoteName, string branchName)
     {
         string option = "sRemoteBranchName";
         string branch = remoteName + '/' + branchName;
@@ -294,10 +316,21 @@ public class ScriptOptionsParserTests
         result.Should().Be(branchName);
     }
 
-    [Test]
-    public void ParseScriptArguments_resolve_cRemoteBranch(
-        [Values("", "origin", "upstream", "remote")] string remoteName,
-        [Values("", "branch", "feature/branch")] string branchName)
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("", "branch")]
+    [InlineData("", "feature/branch")]
+    [InlineData("origin", "")]
+    [InlineData("origin", "branch")]
+    [InlineData("origin", "feature/branch")]
+    [InlineData("upstream", "")]
+    [InlineData("upstream", "branch")]
+    [InlineData("upstream", "feature/branch")]
+    [InlineData("remote", "")]
+    [InlineData("remote", "branch")]
+    [InlineData("remote", "feature/branch")]
+
+    public void ParseScriptArguments_resolve_cRemoteBranch(string remoteName, string branchName)
     {
         string option = "cRemoteBranch";
         string branch = remoteName + '/' + branchName;
@@ -313,10 +346,21 @@ public class ScriptOptionsParserTests
         result.Should().Be(branch);
     }
 
-    [Test]
-    public void ParseScriptArguments_resolve_cRemoteBranchName(
-        [Values("", "origin", "upstream", "remote")] string remoteName,
-        [Values("", "branch", "feature/branch")] string branchName)
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("", "branch")]
+    [InlineData("", "feature/branch")]
+    [InlineData("origin", "")]
+    [InlineData("origin", "branch")]
+    [InlineData("origin", "feature/branch")]
+    [InlineData("upstream", "")]
+    [InlineData("upstream", "branch")]
+    [InlineData("upstream", "feature/branch")]
+    [InlineData("remote", "")]
+    [InlineData("remote", "branch")]
+    [InlineData("remote", "feature/branch")]
+
+    public void ParseScriptArguments_resolve_cRemoteBranchName(string remoteName, string branchName)
     {
         string option = "cRemoteBranchName";
         string branch = remoteName + '/' + branchName;
@@ -332,7 +376,7 @@ public class ScriptOptionsParserTests
         result.Should().Be(branchName);
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_RepoName()
     {
         const string option = "RepoName";
@@ -356,7 +400,7 @@ public class ScriptOptionsParserTests
         result.Should().Be(dirName);
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_HEAD_with_checkedout_branch_name()
     {
         string option = "HEAD";
@@ -373,7 +417,7 @@ public class ScriptOptionsParserTests
         result.Should().Be(branchName);
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_HEAD_with_detached_head_hash()
     {
         string option = "HEAD";
@@ -390,7 +434,7 @@ public class ScriptOptionsParserTests
         result.Should().Be(detachedHeadHash);
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_QuotedWithBackslashAtEnd()
     {
         _module.WorkingDir.Returns("C:\\test path with whitespaces\\");
@@ -400,7 +444,7 @@ public class ScriptOptionsParserTests
         result.Should().Be("\"C:\\test path with whitespaces\\\\\" \"C:\\test path with whitespaces\\\"");
     }
 
-    [Test]
+    [Fact]
     public void ParseScriptArguments_resolve_StringWithDoubleQuotes()
     {
         GitRevision gitRevision = new(ObjectId.Random())
@@ -415,7 +459,7 @@ public class ScriptOptionsParserTests
         result.Should().Be("test string with \"double quotes\" and escaped \\\"double quotes\\\"");
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_resolve_IScriptOptionsProvider_options()
     {
         const string option1 = nameof(option1);

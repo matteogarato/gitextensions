@@ -1,14 +1,14 @@
 ﻿namespace GitUITests;
 public sealed class LinqExtensionsTests
 {
-    [Test]
+    [Fact]
     public void AsReadOnlyList_returns_singleton_empty()
     {
         new HashSet<int>().AsReadOnlyList().Should().BeSameAs(Array.Empty<int>());
         new Dictionary<int, int>().Values.AsReadOnlyList().Should().BeSameAs(Array.Empty<int>());
     }
 
-    [Test]
+    [Fact]
     public void AsReadOnlyList_copies_to_new_list_if_required()
     {
         HashSet<int> set = [1, 2, 3];
@@ -16,7 +16,7 @@ public sealed class LinqExtensionsTests
         set.AsReadOnlyList().Should().Equal(new[] { 1, 2, 3 });
     }
 
-    [Test]
+    [Fact]
     public void AsReadOnlyList_returns_object_unchanged_when_has_required_interface()
     {
         Test([]);
@@ -37,7 +37,7 @@ public sealed class LinqExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void IndexOf()
     {
         int[] ints = [0, 1, 2, 3];

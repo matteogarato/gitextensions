@@ -1,35 +1,37 @@
 ﻿using GitExtensions.Plugins.ReleaseNotesGenerator;
+using Xunit;
 
 namespace ReleaseNotesGeneratorTests;
 public class GitLogLineParserTests
 {
-    private IGitLogLineParser _parser = null!;
+    private readonly IGitLogLineParser _parser;
 
-    [SetUp]
-    public void Setup()
+    public GitLogLineParserTests()
     {
         _parser = new GitLogLineParser();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("    ")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("    ")]
     public void Parse_line_should_return_null(string? line)
     {
         _parser.Parse(line!).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void Parse_line_should_return_null_non_matching_line()
     {
         string line = "234_42sfsd@asfkmsa askflsak ";
         _parser.Parse(line).Should().BeNull();
     }
 
-    [TestCase("0824@RevisionDiffProvider Release tests", "0824", "RevisionDiffProvider Release tests")]
-    [TestCase("0824e058c@RevisionDiffProvider Release tests", "0824e058c", "RevisionDiffProvider Release tests")]
-    [TestCase("0824e058c0123@RevisionDiffProvider Release tests", "0824e058c0123", "RevisionDiffProvider Release tests")]
-    [TestCase("0824e058c@RevisionDiffProvider@ Release tests", "0824e058c", "RevisionDiffProvider@ Release tests")]
+    [Theory]
+    [InlineData("0824@RevisionDiffProvider Release tests", "0824", "RevisionDiffProvider Release tests")]
+    [InlineData("0824e058c@RevisionDiffProvider Release tests", "0824e058c", "RevisionDiffProvider Release tests")]
+    [InlineData("0824e058c0123@RevisionDiffProvider Release tests", "0824e058c0123", "RevisionDiffProvider Release tests")]
+    [InlineData("0824e058c@RevisionDiffProvider@ Release tests", "0824e058c", "RevisionDiffProvider@ Release tests")]
     public void Parse_line_should_parse_correctly(string? line, string expectedHash, string expectedMessage)
     {
         LogLine? logLine = _parser.Parse(line!);
@@ -39,13 +41,13 @@ public class GitLogLineParserTests
         logLine.MessageLines[0].Should().Be(expectedMessage);
     }
 
-    [Test]
+    [Fact]
     public void Parse_lines_should_return_empty_list_if_null()
     {
         _parser.Parse((string[])null!).Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void Parse_lines_should_parse_correctly()
     {
         string log = @"7895ec59f@Merge remote-tracking branch 'gitextensions/master' into feature-4157/n4031-compare-arificial-commits

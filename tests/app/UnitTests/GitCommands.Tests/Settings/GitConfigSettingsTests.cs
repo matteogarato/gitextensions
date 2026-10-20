@@ -8,26 +8,23 @@ using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Settings;
 
-[TestFixture]
-public sealed class GitConfigSettingsTests
+public sealed class GitConfigSettingsTests : IDisposable
 {
     private const string _globalConfigList = "config list --global --includes --null";
 
     private MockExecutable _executable = new();
 
-    [SetUp]
-    public void SetUp()
+    public GitConfigSettingsTests()
     {
         _executable = new MockExecutable();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _executable.Verify();
     }
 
-    [Test]
+    [Fact]
     public void GetValue_returns_the_value_of_a_unique_setting()
     {
         GitConfigSettings settings = CreateGlobalSettings($"{SettingKeyString.UserName}\nBase Name\0");
@@ -35,7 +32,7 @@ public sealed class GitConfigSettingsTests
         settings.GetValue(SettingKeyString.UserName).Should().Be("Base Name");
     }
 
-    [Test]
+    [Fact]
     public void GetValue_returns_the_last_value_when_a_conditional_include_overrides_it()
     {
         // "git config list --global --includes" yields the value of the including config file first
@@ -50,7 +47,7 @@ public sealed class GitConfigSettingsTests
         settings.GetValue(SettingKeyString.UserEmail).Should().Be("work@example.com");
     }
 
-    [Test]
+    [Fact]
     public void GetValue_returns_null_for_an_unset_setting()
     {
         GitConfigSettings settings = CreateGlobalSettings($"{SettingKeyString.UserName}\nBase Name\0");
@@ -58,7 +55,7 @@ public sealed class GitConfigSettingsTests
         settings.GetValue(SettingKeyString.UserEmail).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void GetValues_still_returns_all_values_of_a_multi_value_setting()
     {
         GitConfigSettings settings = CreateGlobalSettings(
@@ -68,7 +65,7 @@ public sealed class GitConfigSettingsTests
         settings.GetValue(SettingKeyString.CredentialHelper).Should().Be("cache");
     }
 
-    [Test]
+    [Fact]
     public void SetValue_to_the_effective_value_of_a_multi_value_setting_is_a_no_op()
     {
         GitConfigSettings settings = CreateGlobalSettings(
@@ -78,7 +75,7 @@ public sealed class GitConfigSettingsTests
         settings.SetValue(SettingKeyString.UserName, "Work Name");
     }
 
-    [Test]
+    [Fact]
     public void SetValue_to_a_different_value_of_a_multi_value_setting_throws()
     {
         GitConfigSettings settings = CreateGlobalSettings(
@@ -109,10 +106,9 @@ public sealed class GitConfigSettingsTests
     ///  <br/>The tests above encode our assumption about what "git config list --includes" emits;
     ///  these verify that assumption against git itself.
     /// </summary>
-    [TestFixture]
     public sealed class IntegrationTests
     {
-        [Test]
+        [Fact]
         public void GetValue_returns_the_included_value_when_a_conditional_include_overrides_it()
         {
             using GitModuleTestHelper helper = new();
@@ -122,7 +118,7 @@ public sealed class GitConfigSettingsTests
             settings.GetValue(SettingKeyString.UserEmail).Should().Be("included@example.com");
         }
 
-        [Test]
+        [Fact]
         public void GetValue_agrees_with_git_config_get_when_a_conditional_include_overrides_it()
         {
             using GitModuleTestHelper helper = new();
@@ -135,7 +131,7 @@ public sealed class GitConfigSettingsTests
             settings.GetValue(SettingKeyString.UserName).Should().Be(gitAnswer);
         }
 
-        [Test]
+        [Fact]
         public void GetValues_returns_the_including_value_before_the_included_one()
         {
             using GitModuleTestHelper helper = new();

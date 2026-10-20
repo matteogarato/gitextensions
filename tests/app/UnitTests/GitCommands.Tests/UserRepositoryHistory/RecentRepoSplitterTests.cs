@@ -11,7 +11,7 @@ public class RecentRepoSplitterTests
     private static readonly string repoNotAnchoredPath = @"C:\this\is\a\repo_not_anchored_path\";
 
     #region Shortening strategy
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_use_most_significant_folder_as_caption()
     {
         List<Repository> history =
@@ -33,7 +33,7 @@ public class RecentRepoSplitterTests
         recentRepoList.Should().ContainSingle();
     }
 
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_not_shorten_as_caption()
     {
         List<Repository> history =
@@ -55,7 +55,7 @@ public class RecentRepoSplitterTests
         recentRepoList.Should().ContainSingle();
     }
 
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_not_shorten_but_handle_user_folder_as_caption()
     {
         List<Repository> history =
@@ -77,7 +77,7 @@ public class RecentRepoSplitterTests
         recentRepoList.Should().ContainSingle();
     }
 
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_display_middle_dots_in_caption()
     {
         // Warning: Able to shorten only an existing folder path
@@ -104,7 +104,7 @@ public class RecentRepoSplitterTests
     #endregion
 
     #region Split repositories
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_split_depending_anchor()
     {
         List<Repository> history =
@@ -136,7 +136,7 @@ public class RecentRepoSplitterTests
         recentRepoList[3].Caption.Should().Be("repo_not_anchored_path");
     }
 
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_split_depending_anchor_and_sort_alphabetically()
     {
         List<Repository> history =
@@ -169,7 +169,7 @@ public class RecentRepoSplitterTests
         recentRepoList[3].Caption.Should().Be("repo_not_anchored_path");
     }
 
-    [Test]
+    [Fact]
     public void SplitRecentRepos_Should_split_depending_anchor_and_sort_alphabetically_Hiding_Top_Repo_In_Recent_list()
     {
         List<Repository> history =

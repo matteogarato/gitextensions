@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using NUnit.Framework;
+using Xunit;
 
 namespace CommonTestUtils;
 

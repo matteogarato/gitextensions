@@ -7,19 +7,17 @@ using Microsoft.VisualStudio.Threading;
 
 namespace GitCommandsTests;
 
-public sealed class ExecutableTests
+public sealed class ExecutableTests : IDisposable
 {
-    [SetUp]
-    public void SetUp()
+    public ExecutableTests()
     {
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
     }
 
-    [Test]
+    [Fact]
     public async Task Process_shall_be_killed_on_cancellation()
     {
         TimeSpan cancelDelay = TimeSpan.FromSeconds(1);
@@ -34,7 +32,7 @@ public sealed class ExecutableTests
         DateTime startedAt = DateTime.Now;
 
         // cancel after delay
-        await Task.Delay(cancelDelay);
+        await Task.Delay(cancelDelay, TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         // the process is killed on dispose but not before
@@ -60,7 +58,7 @@ public sealed class ExecutableTests
         (cmd?.Exception?.Message).Should().Be("Process killed");
     }
 
-    [Test]
+    [Fact]
     public async Task WaitForProcessExitAsync_shall_return_latest_after_timeout()
     {
         TimeSpan halfRuntime = TimeSpan.FromSeconds(3);
@@ -69,7 +67,7 @@ public sealed class ExecutableTests
 
         // start a process running for seconds
         IExecutable executable = new Executable("ping.exe");
-        using IProcess process = executable.Start($"-n {(halfRuntime.TotalSeconds * 2) + 1} 127.0.0.1");
+        using IProcess process = executable.Start($"-n {(halfRuntime.TotalSeconds * 2) + 1} 127.0.0.1", cancellationToken: TestContext.Current.CancellationToken);
 
         // wait for process exit, but cancel the wait while the process is still running
         using CancellationTokenSource cts = new();
@@ -94,8 +92,10 @@ public sealed class ExecutableTests
         durationExit.Should().BeGreaterThan(1.5 * halfRuntime).And.BeLessThan(2.5 * halfRuntime);
     }
 
-    [Test]
-    public async Task ExecuteAsync_shall_return_latest_after_timeout([Values("cmd.exe", "ping.exe")] string exeFile)
+    [Theory]
+    [InlineData("cmd.exe")]
+    [InlineData("ping.exe")]
+    public async Task ExecuteAsync_shall_return_latest_after_timeout(string exeFile)
     {
         const int cancelDelay = 1000;
         const int exitDelay = cancelDelay;
@@ -127,9 +127,9 @@ public sealed class ExecutableTests
 
         _ = ThreadHelper.JoinableTaskFactory.RunAsync(ExecuteAsync, JoinableTaskCreationOptions.LongRunning);
 
-        await Task.Delay(cancelDelay);
+        await Task.Delay(cancelDelay, TestContext.Current.CancellationToken);
         await cancellationTokenSource.CancelAsync();
-        await Task.Delay(exitDelay);
+        await Task.Delay(exitDelay, TestContext.Current.CancellationToken);
 
         exception.Should().NotBeNull();
         exception.GetType().Should().Be<OperationCanceledException>();

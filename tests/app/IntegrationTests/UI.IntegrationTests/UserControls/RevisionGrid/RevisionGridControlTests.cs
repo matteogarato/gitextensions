@@ -5,12 +5,11 @@ using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUIPluginInterfaces;
+using Xunit;
 
 namespace GitExtensions.UITests.UserControls.RevisionGrid;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class RevisionGridControlTests
+public class RevisionGridControlTests : System.IDisposable, IClassFixture<RevisionGridControlTestsFixture>
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
@@ -21,17 +20,12 @@ public class RevisionGridControlTests
     // Created once for each test
     private GitUICommands _commands = null!;
 
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public RevisionGridControlTests(RevisionGridControlTestsFixture fixture)
     {
-        // There is no need to restore the original AppSettings because AppSettings is routed to a temp folder.
-
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar.
-        AppSettings.ShowAuthorAvatarColumn = false;
+        InitializeTest();
     }
 
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
         _initialCommit = _referenceRepository.CommitHash!;
@@ -50,13 +44,12 @@ public class RevisionGridControlTests
         AppSettings.RevisionGraphShowArtificialCommits = true;
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Assert_default_filter_related_settings()
     {
         AppSettings.ShowReflogReferences.Value = false;
@@ -104,7 +97,7 @@ public class RevisionGridControlTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void View_reflects_applied_branch_filter()
     {
         AppSettings.ShowReflogReferences.Value = false;
@@ -146,7 +139,7 @@ public class RevisionGridControlTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void View_reflects_reset_branch_filter()
     {
         AppSettings.ShowReflogReferences.Value = false;
@@ -184,8 +177,10 @@ public class RevisionGridControlTests
             });
     }
 
-    [Test]
-    public void ToggleBetweenArtificialAndHeadCommits_no_empty([Values(false, true)] bool showGitStatusForArtificialCommits)
+    [WinFormsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToggleBetweenArtificialAndHeadCommits_no_empty(bool showGitStatusForArtificialCommits)
     {
         File.WriteAllText(Path.Combine(_referenceRepository.Module.WorkingDir, "new.txt"), "new");
         File.WriteAllText(Path.Combine(_referenceRepository.Module.WorkingDir, "stage.txt"), "staged");
@@ -220,8 +215,10 @@ public class RevisionGridControlTests
             });
     }
 
-    [Test]
-    public void ToggleBetweenArtificialAndHeadCommits_no_workdir_change([Values(false, true)] bool showGitStatusForArtificialCommits)
+    [WinFormsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToggleBetweenArtificialAndHeadCommits_no_workdir_change(bool showGitStatusForArtificialCommits)
     {
         File.WriteAllText(Path.Combine(_referenceRepository.Module.WorkingDir, "stage.txt"), "staged");
         _referenceRepository.Module.StageFile("stage.txt");
@@ -257,8 +254,10 @@ public class RevisionGridControlTests
             });
     }
 
-    [Test]
-    public void ToggleBetweenArtificialAndHeadCommits_no_index_change([Values(false, true)] bool showGitStatusForArtificialCommits)
+    [WinFormsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToggleBetweenArtificialAndHeadCommits_no_index_change(bool showGitStatusForArtificialCommits)
     {
         File.WriteAllText(Path.Combine(_referenceRepository.Module.WorkingDir, "new.txt"), "new");
 
@@ -292,8 +291,10 @@ public class RevisionGridControlTests
             });
     }
 
-    [Test]
-    public void ToggleBetweenArtificialAndHeadCommits_no_change([Values(false, true)] bool showGitStatusForArtificialCommits)
+    [WinFormsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToggleBetweenArtificialAndHeadCommits_no_change(bool showGitStatusForArtificialCommits)
     {
         RunToggleBetweenArtificialAndHeadCommitsTest(
             showGitStatusForArtificialCommits,
@@ -413,5 +414,21 @@ public class RevisionGridControlTests
     private static void WaitForRevisionsToBeLoaded(RevisionGridControl revisionGridControl)
     {
         UITest.ProcessUntil("Loading Revisions", () => revisionGridControl.GetTestAccessor().IsDataLoadComplete);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class RevisionGridControlTestsFixture
+{
+    public RevisionGridControlTestsFixture()
+    {
+        // There is no need to restore the original AppSettings because AppSettings is routed to a temp folder.
+
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar.
+        AppSettings.ShowAuthorAvatarColumn = false;
     }
 }

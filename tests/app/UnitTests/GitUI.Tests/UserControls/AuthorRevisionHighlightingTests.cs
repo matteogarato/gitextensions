@@ -7,12 +7,12 @@ using GitUIPluginInterfaces;
 using NSubstitute;
 
 namespace GitUITests.UserControls;
-internal class AuthorRevisionHighlightingTests
+public class AuthorRevisionHighlightingTests
 {
     private const string ExpectedAuthorEmail1 = "doe1@example.org";
     private const string ExpectedAuthorEmail2 = "doe2@example.org";
 
-    [Test]
+    [Fact]
     public void AuthorEmailToHighlight_should_be_null_when_no_revision_change_processed_yet()
     {
         AuthorRevisionHighlighting sut = new();
@@ -20,7 +20,7 @@ internal class AuthorRevisionHighlightingTests
         sut.AuthorEmailToHighlight.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void When_multiple_revisions_selected_Then_ProcessSelectionChange_should_return_NoAction()
     {
         AuthorRevisionHighlighting sut = new();
@@ -36,7 +36,7 @@ internal class AuthorRevisionHighlightingTests
         action.Should().Be(false);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_multiple_revisions_selected_Then_AuthorEmailToHighlight_should_not_change()
     {
         AuthorRevisionHighlighting sut = new();
@@ -54,7 +54,7 @@ internal class AuthorRevisionHighlightingTests
         sut.AuthorEmailToHighlight.Should().Be(ExpectedAuthorEmail1);
     }
 
-    [Test]
+    [Fact]
     public void Given_no_previously_selected_revision_When_single_revision_selected_Then_ProcessSelectionChange_should_return_RefreshUserInterface()
     {
         AuthorRevisionHighlighting sut = new();
@@ -65,7 +65,7 @@ internal class AuthorRevisionHighlightingTests
         action.Should().Be(true);
     }
 
-    [Test]
+    [Fact]
     public void Given_no_previously_selected_revision_When_single_revision_selected_Then_AuthorEmailToHighlight_should_change()
     {
         AuthorRevisionHighlighting sut = new();
@@ -76,7 +76,7 @@ internal class AuthorRevisionHighlightingTests
         sut.AuthorEmailToHighlight.Should().Be(ExpectedAuthorEmail1);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_single_revision_with_same_author_email_selected_Then_ProcessSelectionChange_should_return_NoAction()
     {
         AuthorRevisionHighlighting sut = new();
@@ -88,7 +88,7 @@ internal class AuthorRevisionHighlightingTests
         action.Should().Be(false);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_single_revision_with_same_author_email_selected_Then_AuthorEmailToHighlight_should_not_change()
     {
         AuthorRevisionHighlighting sut = new();
@@ -100,7 +100,7 @@ internal class AuthorRevisionHighlightingTests
         sut.AuthorEmailToHighlight.Should().Be(ExpectedAuthorEmail1);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_single_revision_with_different_author_email_selected_Then_ProcessSelectionChange_should_return_RefreshUserInterface()
     {
         AuthorRevisionHighlighting sut = new();
@@ -112,7 +112,7 @@ internal class AuthorRevisionHighlightingTests
         action.Should().Be(true);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_single_revision_with_different_author_email_selected_Then_AuthorEmailToHighlight_should_change()
     {
         AuthorRevisionHighlighting sut = new();
@@ -124,7 +124,7 @@ internal class AuthorRevisionHighlightingTests
         sut.AuthorEmailToHighlight.Should().Be(ExpectedAuthorEmail2);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_no_revision_selected_Then_ProcessSelectionChange_should_return_RefreshUserInterface()
     {
         AuthorRevisionHighlighting sut = new();
@@ -137,7 +137,7 @@ internal class AuthorRevisionHighlightingTests
         action.Should().Be(true);
     }
 
-    [Test]
+    [Fact]
     public void Given_previously_selected_revision_When_no_revision_selected_Then_AuthorEmailToHighlight_should_be_value_of_current_user_email_setting()
     {
         AuthorRevisionHighlighting sut = new();
@@ -150,7 +150,7 @@ internal class AuthorRevisionHighlightingTests
         sut.AuthorEmailToHighlight.Should().Be(ExpectedAuthorEmail2);
     }
 
-    [Test]
+    [Fact]
     public void IsHighlighted_should_return_false_if_revision_is_null()
     {
         AuthorRevisionHighlighting sut = new();
@@ -158,9 +158,10 @@ internal class AuthorRevisionHighlightingTests
         sut.IsHighlighted(null).Should().BeFalse();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void IsHighlighted_should_return_false_if_revision_AuthorEmail_is_null_or_whitespace(string? authorEmail)
     {
         AuthorRevisionHighlighting sut = new();
@@ -168,12 +169,13 @@ internal class AuthorRevisionHighlightingTests
         sut.IsHighlighted(new GitRevision(ObjectId.Random()) { AuthorEmail = authorEmail }).Should().BeFalse();
     }
 
-    [TestCase("a@a.aaa", "a@a.aaa", true)]
-    [TestCase("A@A.aaa", "a@a.aaa", true)]
-    [TestCase("b@A.aaa", "a@a.aaa", false)]
-    [TestCase("a@a.aaa", null, false)]
-    [TestCase("a@a.aaa", "", false)]
-    [TestCase("a@a.aaa", "\t", false)]
+    [Theory]
+    [InlineData("a@a.aaa", "a@a.aaa", true)]
+    [InlineData("A@A.aaa", "a@a.aaa", true)]
+    [InlineData("b@A.aaa", "a@a.aaa", false)]
+    [InlineData("a@a.aaa", null, false)]
+    [InlineData("a@a.aaa", "", false)]
+    [InlineData("a@a.aaa", "\t", false)]
     public void IsHighlighted_should_return_true_if_revision_AuthorEmail_matches_AuthorEmailToHighlight(string? authorEmail, string? highlightEmail, bool expected)
     {
         GitModule currentModule = NewModule();

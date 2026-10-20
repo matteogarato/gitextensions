@@ -6,27 +6,30 @@ using GitUIPluginInterfaces;
 
 namespace GitUITests.UserControls;
 
-public class FileStatusListSorterTests
+public class FileStatusListSorterTests : IDisposable
 {
-    [SetUp]
-    public void SetUp()
+    public FileStatusListSorterTests()
     {
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
     }
 
-    [Test]
+    [Fact]
     public void Compare_should_not_compare_path_separator()
     {
         FileStatusList.StatusSorter.TestAccessor.Compare("dir/sub/file", "dir.ext/file").Should().Be(-1);
         FileStatusList.StatusSorter.TestAccessor.Compare("dir.ext/file", "dir/sub/file").Should().Be(+1);
     }
 
-    [Test]
-    public async Task Sort_should_first_add_folders_then_files([Values] bool flat, [Values] bool mergeSingleItemsWithFolder)
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+
+    public async Task Sort_should_first_add_folders_then_files(bool flat, bool mergeSingleItemsWithFolder)
     {
         const string oldFolder = "oldfolder/of/renamed/file/";
         GitItemStatus[] statuses =
@@ -60,7 +63,7 @@ public class FileStatusListSorterTests
         await Verify(Serialize(rootNode).ToString());
     }
 
-    [Test]
+    [Fact]
     public async Task Sort_should_not_split_folders()
     {
         GitItemStatus[] statuses =
@@ -76,8 +79,11 @@ public class FileStatusListSorterTests
         await Verify(Serialize(rootNode).ToString());
     }
 
-    [Test]
-    public async Task Sort_should_not_merge_single_file_with_root_node([Values] bool flat)
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+
+    public async Task Sort_should_not_merge_single_file_with_root_node(bool flat)
     {
         GitItemStatus[] statuses =
         [
@@ -89,8 +95,11 @@ public class FileStatusListSorterTests
         await Verify(Serialize(rootNode).ToString());
     }
 
-    [Test]
-    public async Task Sort_should_optionally_create_subfolder_nodes_for_single_files([Values] bool mergeSingleItemsWithFolder)
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+
+    public async Task Sort_should_optionally_create_subfolder_nodes_for_single_files(bool mergeSingleItemsWithFolder)
     {
         GitItemStatus[] statuses =
         [
@@ -104,17 +113,18 @@ public class FileStatusListSorterTests
         await Verify(Serialize(rootNode).ToString());
     }
 
-    [TestCase("", "", "")]
-    [TestCase("a", "a", "a")]
-    [TestCase("a", "b", "")]
-    [TestCase("a", "ab", "")]
-    [TestCase("a", "a/b", "a")]
-    [TestCase("a", "a/b/c", "a")]
-    [TestCase("a/b", "a/bc", "a")]
-    [TestCase("a/b", "a/b", "a/b")]
-    [TestCase("a/b", "a/b/c", "a/b")]
-    [TestCase("a/b/cc", "a/b/ccd", "a/b")]
-    [TestCase("a/b/cc", "a/b/cc/de", "a/b/cc")]
+    [Theory]
+    [InlineData("", "", "")]
+    [InlineData("a", "a", "a")]
+    [InlineData("a", "b", "")]
+    [InlineData("a", "ab", "")]
+    [InlineData("a", "a/b", "a")]
+    [InlineData("a", "a/b/c", "a")]
+    [InlineData("a/b", "a/bc", "a")]
+    [InlineData("a/b", "a/b", "a/b")]
+    [InlineData("a/b", "a/b/c", "a/b")]
+    [InlineData("a/b/cc", "a/b/ccd", "a/b")]
+    [InlineData("a/b/cc", "a/b/cc/de", "a/b/cc")]
     public void GetCommonPath(string a, string b, string expected)
     {
         FileStatusList.StatusSorter.TestAccessor.GetCommonPath(a, b).Should().Be(expected);

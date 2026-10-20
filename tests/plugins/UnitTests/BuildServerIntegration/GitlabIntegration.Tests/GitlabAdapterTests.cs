@@ -7,17 +7,17 @@ using GitExtensions.Plugins.GitlabIntegration.ApiClient.Models;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Xunit;
 
 namespace GitlabIntegrationTests;
-internal class GitlabAdapterTests
+public class GitlabAdapterTests : IDisposable
 {
-    private GitlabAdapter _target = null!;
+    private readonly GitlabAdapter _target;
 
-    private IScheduler _scheduler = null!;
-    private IGitlabApiClient _apiClient = null!;
+    private readonly IScheduler _scheduler;
+    private readonly IGitlabApiClient _apiClient;
 
-    [SetUp]
-    public void SetUp()
+    public GitlabAdapterTests()
     {
         _apiClient = Substitute.For<IGitlabApiClient>();
 
@@ -30,14 +30,13 @@ internal class GitlabAdapterTests
         _target.Initialize(Substitute.For<IBuildServerWatcher>(), new MemorySettings(), () => { });
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _target.Dispose();
         _apiClient.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Should_dispose_api_client()
     {
         _apiClient.Dispose();
@@ -45,7 +44,7 @@ internal class GitlabAdapterTests
         _apiClient.Received(1).Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Should_load_empty_collection()
     {
         PagedResponse<GitlabPipeline> pagedResponse = new()
@@ -68,7 +67,7 @@ internal class GitlabAdapterTests
         result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Should_load_single_element_with_correct_attributes()
     {
         PagedResponse<GitlabPipeline> pagedResponse = new()
@@ -97,7 +96,7 @@ internal class GitlabAdapterTests
         result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Should_load_single_running_build()
     {
         PagedResponse<GitlabPipeline> pagedResponse = new()
@@ -126,7 +125,7 @@ internal class GitlabAdapterTests
         result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Should_load_two_pages_with_three_elements()
     {
         PagedResponse<GitlabPipeline> firstPagedResponse = new()
@@ -178,7 +177,7 @@ internal class GitlabAdapterTests
         result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Should_not_pass_duplicating_builds()
     {
         PagedResponse<GitlabPipeline> firstPagedResponse = new()
@@ -229,7 +228,7 @@ internal class GitlabAdapterTests
         result.Should().BeEquivalentTo(expected, o => o.Using<BuildInfo>(new BuildInfoEqualityComparer()));
     }
 
-    [Test]
+    [Fact]
     public void Should_load_finished_running_and_finished_builds()
     {
         // Request finished builds
@@ -313,10 +312,11 @@ internal class GitlabAdapterTests
         result.Should().BeEquivalentTo(secondExpected, o => o.Using<BuildInfo>(new BuildInfoEqualityComparer()));
     }
 
-    [TestCase(3, null, 3)]
-    [TestCase(3, 2, 2)]
-    [TestCase(null, null, 3)]
-    [TestCase(null, 2, 2)]
+    [Theory]
+    [InlineData(3, null, 3)]
+    [InlineData(3, 2, 2)]
+    [InlineData(null, null, 3)]
+    [InlineData(null, 2, 2)]
     public void Should_respect_page_limit(int? totalPages, int? pagesLimit, int expectedPages)
     {
         MemorySettings settings = new();
@@ -375,8 +375,7 @@ internal class GitlabAdapterTests
         result.Should().HaveCount(expectedPages);
     }
 
-    [Test]
-    [Ignore("Settings check should be added first. Otherwise, System.UnauthorizedAccessException : Attempted to perform an unauthorized operation.")]
+    [Fact(Skip = "Settings check should be added first. Otherwise, System.UnauthorizedAccessException : Attempted to perform an unauthorized operation.")]
     public void Should_handle_unauthorized_access_exception()
     {
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())

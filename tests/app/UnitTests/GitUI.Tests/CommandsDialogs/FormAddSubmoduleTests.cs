@@ -22,22 +22,26 @@ public class FormAddSubmoduleTests
     // Created once for each test
     private MockExecutable _gitExecutable = null!;
 
-    [SetUp]
-    public void SetUp()
+    public FormAddSubmoduleTests()
     {
         _gitExecutable = new MockExecutable();
     }
 
-    [Test]
-    public void LoadRemoteRepoBranches_NoUrl([Values(null, "", " ")] string? url)
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+
+    public void LoadRemoteRepoBranches_NoUrl(string? url)
     {
         FormAddSubmodule.TestAccessor.LoadRemoteRepoBranches(_gitExecutable, url!)
             .Should().BeEmpty();
     }
 
-    [TestCase("git@github.com:gitextensions/gitextensions.git", "\"git@github.com:gitextensions/gitextensions.git\"")]
-    [TestCase("https://github.com/gitextensions/gitextensions.git", "\"https://github.com/gitextensions/gitextensions.git\"")]
-    [TestCase("C:\\Repo", "\"C:/Repo\"")]
+    [Theory]
+    [InlineData("git@github.com:gitextensions/gitextensions.git", "\"git@github.com:gitextensions/gitextensions.git\"")]
+    [InlineData("https://github.com/gitextensions/gitextensions.git", "\"https://github.com/gitextensions/gitextensions.git\"")]
+    [InlineData("C:\\Repo", "\"C:/Repo\"")]
     public void LoadRemoteRepoBranches_Url(string? url, string encodedUrl)
     {
         using IDisposable _ = MockupGitOutput(Heads, encodedUrl);
@@ -45,7 +49,7 @@ public class FormAddSubmoduleTests
             .Should().BeEquivalentTo(_branches);
     }
 
-    [Test]
+    [Fact]
     public void LoadRemoteRepoBranches_GitWarnings()
     {
         using IDisposable _ = MockupGitOutput($"warning: this\n{Heads}\nwarning: or that");
@@ -53,7 +57,7 @@ public class FormAddSubmoduleTests
             .Should().BeEquivalentTo(_branches);
     }
 
-    [Test]
+    [Fact]
     public void LoadRemoteRepoBranches_GitError()
     {
         using IDisposable _ = MockupGitOutput("error: no such repo");

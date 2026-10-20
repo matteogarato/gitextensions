@@ -1,25 +1,31 @@
 ﻿using GitExtensions.Plugins.DeleteUnusedBranches;
+using Xunit;
 
 namespace DeleteUnusedBranchesTests;
 public class GitBranchOutputCommandParserTests
 {
-    private GitBranchOutputCommandParser _parser = null!;
+    private readonly GitBranchOutputCommandParser _parser;
 
-    [SetUp]
-    public void Setup()
+    public GitBranchOutputCommandParserTests()
     {
         _parser = new GitBranchOutputCommandParser();
     }
 
-    [Test]
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    [InlineData("", true)]
+    [InlineData("", false)]
+    [InlineData("   ", true)]
+    [InlineData("   ", false)]
     public void GetBranchNames_should_return_empty_list(
-        [Values(null, "", "   ")] string? commandOutput,
-        [Values(true, false)] bool isRemote)
+        string? commandOutput,
+        bool isRemote)
     {
         _parser.GetBranchNames(commandOutput!, isRemote).Should().BeEmpty();
     }
 
-    [TestCase]
+    [Fact]
     public void GetBranchNames_should_return_parse_correctly()
     {
         string commandOutput = @"  feature/branch-1
@@ -37,7 +43,7 @@ public class GitBranchOutputCommandParserTests
                .BeEquivalentTo("feature/branch-1", "fix/branch-2", "master", "+_valid_branch_name_starting_with_+", "space/after", "symbolic_ref");
     }
 
-    [TestCase]
+    [Fact]
     public void GetBranchNames_parse_for_remote()
     {
         string commandOutput = @"  just_remote_that_should_not_occur_but_is_tested
@@ -54,7 +60,7 @@ public class GitBranchOutputCommandParserTests
                .BeEquivalentTo("just_remote_that_should_not_occur_but_is_tested", "myremote/mybranch", "other_remote/+_valid_branch_name_starting_with_+", "+remote/+branch+", "space/after", "origin/symbolic_ref");
     }
 
-    [TestCase]
+    [Fact]
     public void GetBranchNames_should_support_worktrees()
     {
         string commandOutput = @"+ branch_in_worktree

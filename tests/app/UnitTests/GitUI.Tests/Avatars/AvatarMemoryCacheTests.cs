@@ -4,21 +4,19 @@ using NSubstitute;
 namespace GitUITests.Avatars;
 public sealed class AvatarMemoryCacheTests : AvatarCacheTestBase
 {
-    public override void SetUp()
+    public AvatarMemoryCacheTests()
     {
-        base.SetUp();
-
         _cache = new AvatarMemoryCache(_inner, capacity: 3);
     }
 
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_calls_inner_the_first_time()
     {
         await MissAsync(_email1, _name1, _img1);
         await HitAsync(_email1, _name1, _img1);
     }
 
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_calls_inner_when_not_present_in_cache()
     {
         await MissAsync(_email1, _name1, _img1);
@@ -34,7 +32,7 @@ public sealed class AvatarMemoryCacheTests : AvatarCacheTestBase
         await HitAsync(_email4, _name4, _img4);
     }
 
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_cleans_oldest_images()
     {
         // Populate the cache with three images, so that it is full
@@ -55,7 +53,7 @@ public sealed class AvatarMemoryCacheTests : AvatarCacheTestBase
         await MissAsync(_email3, _name3, _img3);
     }
 
-    [Test]
+    [Fact]
     public async Task ClearCacheAsync_must_not_dispose_an_image_it_handed_out()
     {
         // Own the image instead of reusing one of the shared ones, which the cache would dispose

@@ -3,12 +3,12 @@
 namespace GitUITests.Avatars;
 public class CustomAvatarTemplateFormatter
 {
-    [Test]
-    [TestCase("Hallo {val1} test {val2}.", "Demo1", "Demo2", "Hallo Demo1 test Demo2.")]
-    [TestCase("Hallo {val1} test {val2.", "Demo1", "Demo2", "Hallo Demo1 test ")]
-    [TestCase("Hallo {unknown} test {val2}.", "Demo1", "Demo2", "Hallo  test Demo2.")]
-    [TestCase("{val1}{val1}{val2}{val1}{val1}", "-", ".", "--.--")]
-    [TestCase("{val1} + {val2}", "{val1}", "{val2}", "{val1} + {val2}")]
+    [Theory]
+    [InlineData("Hallo {val1} test {val2}.", "Demo1", "Demo2", "Hallo Demo1 test Demo2.")]
+    [InlineData("Hallo {val1} test {val2.", "Demo1", "Demo2", "Hallo Demo1 test ")]
+    [InlineData("Hallo {unknown} test {val2}.", "Demo1", "Demo2", "Hallo  test Demo2.")]
+    [InlineData("{val1}{val1}{val2}{val1}{val1}", "-", ".", "--.--")]
+    [InlineData("{val1} + {val2}", "{val1}", "{val2}", "{val1} + {val2}")]
     public void Given_test_cases_render_as_expected(string template, string val1, string val2, string expectation)
     {
         Func<(string val1, string val2), string> formatter = TemplateFormatter.Create(template, ValueMappingProvider);
@@ -17,7 +17,7 @@ public class CustomAvatarTemplateFormatter
         result.Should().Be(expectation);
     }
 
-    [Test]
+    [Fact]
     public void Formatter_can_be_reused_with_different_inputs()
     {
         Func<(string val1, string val2), string> formatter = TemplateFormatter.Create("Example {val1} Template {val2}", ValueMappingProvider);

@@ -128,7 +128,7 @@ For example:
   pass. **NEVER** rely on CI as the first place a change is tested — pushing untested changes wastes CI compute and
   hides failures behind slow feedback. If a change cannot be tested locally (e.g. an architecture-specific path),
   say so explicitly and state what was and was not verified.
-* We use NUnit SDK.
+* Unit and integration tests use xUnit v3, NSubstitute, and AwesomeAssertions.
 * Do not emit "Act", "Arrange" or "Assert" comments.
 * The test names must follow snake-casing in the suffix BUT keeping the methods under test intact.
   For example, a test for a method "MyMethod" should be named as "MyMethod_should_return_expected".

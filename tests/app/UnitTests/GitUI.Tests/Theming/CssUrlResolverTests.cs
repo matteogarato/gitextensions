@@ -8,7 +8,7 @@ public class CssUrlResolverTests
     private const string PreinstalledThemesMockPath = "pre-installed\\themes";
     private const string UserDefinedThemesMockPath = "app-data\\themes";
 
-    [Test]
+    [Fact]
     public void Should_resolve_to_preinstalled_themes_directory_by_default()
     {
         ThemeCssUrlResolver resolver = new(CreateMockThemePathProvider());
@@ -16,7 +16,7 @@ public class CssUrlResolverTests
         resolvedPath.Should().Be(Path.Combine(PreinstalledThemesMockPath, "bright.css"));
     }
 
-    [Test]
+    [Fact]
     public void Should_resolve_to_user_defined_themes_directory_When_url_starts_with_macro()
     {
         ThemeCssUrlResolver resolver = new(CreateMockThemePathProvider());

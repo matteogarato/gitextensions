@@ -3,10 +3,11 @@
 namespace GitExtUtilsTests;
 public class Win32ApiTests
 {
-    [Test]
+    [Theory]
+    [MemberData(nameof(PointCoordinates))]
     public void LParam_to_Point_restores_original_point(
-        [Values(short.MinValue, -1, 0, 1, short.MaxValue)] short x,
-        [Values(short.MinValue, -1, 0, 1, short.MaxValue)] short y)
+        short x,
+        short y)
     {
         Point point = ToLParam(x, y).ToPoint();
 
@@ -14,15 +15,31 @@ public class Win32ApiTests
         point.Y.Should().Be(y);
     }
 
-    [Test]
+    [Theory]
+    [MemberData(nameof(PointCoordinates))]
     public void LParam_to_point_in_ICSharpCode_restores_original_point(
-        [Values(short.MinValue, -1, 0, 1, short.MaxValue)] short x,
-        [Values(short.MinValue, -1, 0, 1, short.MaxValue)] short y)
+        short x,
+        short y)
     {
         Point point = ICSharpCode.TextEditor.Util.Win32Util.ToPoint(ToLParam(x, y));
 
         point.X.Should().Be(x);
         point.Y.Should().Be(y);
+    }
+
+    public static IEnumerable<object[]> PointCoordinates
+    {
+        get
+        {
+            short[] coordinateValues = [short.MinValue, -1, 0, 1, short.MaxValue];
+            foreach (short x in coordinateValues)
+            {
+                foreach (short y in coordinateValues)
+                {
+                    yield return new object[] { x, y };
+                }
+            }
+        }
     }
 
     private static IntPtr ToLParam(short x, short y) =>

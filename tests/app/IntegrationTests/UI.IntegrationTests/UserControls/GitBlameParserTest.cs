@@ -3,40 +3,13 @@ using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls;
 using GitUIPluginInterfaces;
+using Xunit;
 
 namespace GitUITests.UserControls;
 
-public sealed class GitBlameParserTest
+public sealed class GitBlameParserTest : IClassFixture<GitBlameParserTestFixture>
 {
-    // Track the original setting value
-    private bool _useHistogramDiffAlgorithm;
-    private bool _detectCopyInFileOnBlame;
-    private bool _detectCopyInAllOnBlame;
-    private bool _ignoreWhitespaceOnBlame;
-
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        _useHistogramDiffAlgorithm = AppSettings.UseHistogramDiffAlgorithm;
-        _detectCopyInFileOnBlame = AppSettings.DetectCopyInFileOnBlame;
-        _detectCopyInAllOnBlame = AppSettings.DetectCopyInAllOnBlame;
-        _ignoreWhitespaceOnBlame = AppSettings.IgnoreWhitespaceOnBlame;
-        AppSettings.UseHistogramDiffAlgorithm = false;
-        AppSettings.DetectCopyInFileOnBlame = false;
-        AppSettings.DetectCopyInAllOnBlame = false;
-        AppSettings.IgnoreWhitespaceOnBlame = true;
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.UseHistogramDiffAlgorithm = _useHistogramDiffAlgorithm;
-        AppSettings.DetectCopyInFileOnBlame = _detectCopyInFileOnBlame;
-        AppSettings.DetectCopyInAllOnBlame = _detectCopyInAllOnBlame;
-        AppSettings.IgnoreWhitespaceOnBlame = _ignoreWhitespaceOnBlame;
-    }
-
-    [Test]
+    [Fact]
     public void GetOriginalLineInPreviousCommit()
     {
         // Simulate "Blame previous revision" on line 2281
@@ -65,5 +38,34 @@ public sealed class GitBlameParserTest
         int GetOriginalLineInPreviousCommit(int blamedLineNumber)
             => new GitBlameParser(() => gitModule)
                     .GetOriginalLineInPreviousCommit(selectedBlamedRevision, "GitUI/CommandsDialogs/FormBrowse.cs", blamedLineNumber);
+    }
+}
+
+public sealed class GitBlameParserTestFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _useHistogramDiffAlgorithm;
+    private bool _detectCopyInFileOnBlame;
+    private bool _detectCopyInAllOnBlame;
+    private bool _ignoreWhitespaceOnBlame;
+
+    public GitBlameParserTestFixture()
+    {
+        _useHistogramDiffAlgorithm = AppSettings.UseHistogramDiffAlgorithm;
+        _detectCopyInFileOnBlame = AppSettings.DetectCopyInFileOnBlame;
+        _detectCopyInAllOnBlame = AppSettings.DetectCopyInAllOnBlame;
+        _ignoreWhitespaceOnBlame = AppSettings.IgnoreWhitespaceOnBlame;
+        AppSettings.UseHistogramDiffAlgorithm = false;
+        AppSettings.DetectCopyInFileOnBlame = false;
+        AppSettings.DetectCopyInAllOnBlame = false;
+        AppSettings.IgnoreWhitespaceOnBlame = true;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.UseHistogramDiffAlgorithm = _useHistogramDiffAlgorithm;
+        AppSettings.DetectCopyInFileOnBlame = _detectCopyInFileOnBlame;
+        AppSettings.DetectCopyInAllOnBlame = _detectCopyInAllOnBlame;
+        AppSettings.IgnoreWhitespaceOnBlame = _ignoreWhitespaceOnBlame;
     }
 }

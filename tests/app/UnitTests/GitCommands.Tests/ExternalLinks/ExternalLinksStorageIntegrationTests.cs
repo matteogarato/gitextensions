@@ -9,15 +9,15 @@ public class ExternalLinksStorageIntegrationTests
 {
     private ExternalLinksStorage _externalLinksStorage = null!;
 
-    [SetUp]
-    public void Setup()
+    public ExternalLinksStorageIntegrationTests()
     {
         _externalLinksStorage = new ExternalLinksStorage();
     }
 
-    [TestCase("level1_repogit_GitExtensions", 1)]
-    [TestCase("level2_repodist_GitExtensions", 3)]
-    [TestCase("level3_roaming_GitExtensions", 1)]
+    [Theory]
+    [InlineData("level1_repogit_GitExtensions", 1)]
+    [InlineData("level2_repodist_GitExtensions", 3)]
+    [InlineData("level3_roaming_GitExtensions", 1)]
     public void Can_load_settings(string fileName, int expected)
     {
         string content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.{fileName}.settings.xml");
@@ -31,7 +31,7 @@ public class ExternalLinksStorageIntegrationTests
         definitions.Should().HaveCount(expected);
     }
 
-    [Test]
+    [Fact]
     public async Task Can_save_settings()
     {
         using GitModuleTestHelper testHelper = new();

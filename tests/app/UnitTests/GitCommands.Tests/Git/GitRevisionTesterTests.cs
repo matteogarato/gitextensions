@@ -15,8 +15,7 @@ public class GitRevisionTesterTests
     private IFullPathResolver _fullPathResolver = null!;
     private GitRevisionTester _tester = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitRevisionTesterTests()
     {
         _file = Substitute.For<FileBase>();
         _fileSystem = Substitute.For<IFileSystem>();
@@ -26,13 +25,13 @@ public class GitRevisionTesterTests
         _tester = new GitRevisionTester(_fullPathResolver, _fileSystem);
     }
 
-    [Test]
+    [Fact]
     public void AllFirstAreParentsToSelected_should_return_false_if_parents_null()
     {
         _tester.AllFirstAreParentsToSelected(null, null).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void AllFirstAreParentsToSelected_should_return_false_if_no_parents_contains_any_of_selected_items()
     {
         ObjectId[] firstSelected = [ObjectId.IndexId, ObjectId.Random()];
@@ -45,7 +44,7 @@ public class GitRevisionTesterTests
         _tester.AllFirstAreParentsToSelected(firstSelected, selectedRevision).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void AllFirstAreParentsToSelected_should_return_true_if_all_parents_contains_all_of_selected_items()
     {
         ObjectId parent1 = ObjectId.Random();
@@ -65,13 +64,13 @@ public class GitRevisionTesterTests
         _tester.AllFirstAreParentsToSelected(firstSelected2, selectedRevision2).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void LocalExists_should_should_return_false_if_items_null()
     {
         _tester.AnyLocalFileExists(null).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void LocalExists_should_return_true_if_any_items_not_tracked()
     {
         IEnumerable<GitItemStatus> selectedItemsWithParent = new List<GitItemStatus>
@@ -82,7 +81,7 @@ public class GitRevisionTesterTests
         _tester.AnyLocalFileExists(selectedItemsWithParent).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void LocalExists_should_return_true_if_file_exists()
     {
         IEnumerable<GitItemStatus> selectedItemsWithParent = new List<GitItemStatus>
@@ -97,7 +96,7 @@ public class GitRevisionTesterTests
         _tester.AnyLocalFileExists(selectedItemsWithParent).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void LocalExists_should_return_false_if_none_of_locally_tracked_items_have_files()
     {
         IEnumerable<GitItemStatus> selectedItemsWithParent = new List<GitItemStatus>
@@ -112,22 +111,24 @@ public class GitRevisionTesterTests
         _tester.AnyLocalFileExists(selectedItemsWithParent).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void Matches_should_not_throw_if_revision_null()
     {
         _tester.Matches(null, null!).Should().BeFalse();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void Matches_should_not_throw_if_criteria_null_or_empty(string? criteria)
     {
         _tester.Matches(new GitRevision(ObjectId.Random()), criteria!).Should().BeFalse();
     }
 
-    [TestCase("myname")]
-    [TestCase("myName")]
+    [Theory]
+    [InlineData("myname")]
+    [InlineData("myName")]
     public void Matches_should_match_name(string? criteria)
     {
         IGitRef gitRef = Substitute.For<IGitRef>();
@@ -137,10 +138,11 @@ public class GitRevisionTesterTests
         _tester.Matches(revision, criteria!).Should().BeTrue();
     }
 
-    [TestCase("001122", true)]
-    [TestCase("", false)]
-    [TestCase("0", false)]
-    [TestCase("012", false)]
+    [Theory]
+    [InlineData("001122", true)]
+    [InlineData("", false)]
+    [InlineData("0", false)]
+    [InlineData("012", false)]
     public void Matches_should_match_guid(string? criteria, bool expected)
     {
         IGitRef gitRef = Substitute.For<IGitRef>();
@@ -151,37 +153,37 @@ public class GitRevisionTesterTests
         _tester.Matches(revision, criteria!).Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public async Task ReverseSelection_expected_changes_none()
     {
         await Verifier.VerifyJson(JsonSerializer.Serialize(new GitItemStatus("file1").InvertStatus()));
     }
 
-    [Test]
+    [Fact]
     public async Task ReverseSelection_expected_changes_renamed()
     {
         await Verifier.VerifyJson(JsonSerializer.Serialize(new GitItemStatus("file1") { IsRenamed = true, OldName = "file2" }.InvertStatus()));
     }
 
-    [Test]
+    [Fact]
     public async Task ReverseSelection_expected_changes_new()
     {
         await Verifier.VerifyJson(JsonSerializer.Serialize(new GitItemStatus("file1") { IsNew = true }.InvertStatus()));
     }
 
-    [Test]
+    [Fact]
     public async Task ReverseSelection_expected_changes_deleted()
     {
         await Verifier.VerifyJson(JsonSerializer.Serialize(new GitItemStatus("file1") { IsDeleted = true }.InvertStatus()));
     }
 
-    [Test]
+    [Fact]
     public async Task ReverseSelection_expected_changes_unmerged()
     {
         await Verifier.VerifyJson(JsonSerializer.Serialize(new GitItemStatus("file1") { IsUnmerged = true }.InvertStatus()));
     }
 
-    [Test]
+    [Fact]
     public async Task ReverseSelection_expected_changes_getdefaults()
     {
         await Verifier.VerifyJson(JsonSerializer.Serialize(GitItemStatus.GetDefaultStatus("file1").InvertStatus()));

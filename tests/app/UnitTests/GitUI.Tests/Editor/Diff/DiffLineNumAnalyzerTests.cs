@@ -6,10 +6,9 @@ using ICSharpCode.TextEditor;
 
 namespace GitUITests.Editor.Diff;
 
-[Apartment(ApartmentState.STA)]
-public class DiffLineNumAnalyzerTests
+public class DiffLineNumAnalyzerTests : IDisposable
 {
-    private static readonly string _testDataDir = Path.Combine(TestContext.CurrentContext.TestDirectory, "Editor", "Diff");
+    private static readonly string _testDataDir = Path.Combine(AppContext.BaseDirectory, "Editor", "Diff");
     private readonly string _sampleDiff;
     private readonly string _sampleAddedDiff;
     private readonly string _sampleRemovedDiff;
@@ -46,13 +45,12 @@ public class DiffLineNumAnalyzerTests
         }
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         _textEditor.Dispose();
     }
 
-    [Test]
+    [StaFact]
     public void CanGetHeaders()
     {
         _textEditor.Text = _sampleDiff;
@@ -66,7 +64,7 @@ public class DiffLineNumAnalyzerTests
         }
     }
 
-    [Test]
+    [StaFact]
     public void CanGetContextLines()
     {
         _textEditor.Text = _sampleDiff;
@@ -95,7 +93,7 @@ public class DiffLineNumAnalyzerTests
         result.DiffLines[25].RightLineNumber.Should().Be(40);
     }
 
-    [Test]
+    [StaFact]
     public void CanGetMinusLines()
     {
         _textEditor.Text = _sampleDiff;
@@ -114,7 +112,7 @@ public class DiffLineNumAnalyzerTests
         result.DiffLines[21].RightLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum);
     }
 
-    [Test]
+    [StaFact]
     public void CanGetPlusLines()
     {
         _textEditor.Text = _sampleDiff;
@@ -138,7 +136,7 @@ public class DiffLineNumAnalyzerTests
         result.DiffLines[22].RightLineNumber.Should().Be(37);
     }
 
-    [Test]
+    [StaFact]
     public void CanGetLineNumbersForCombinedDiff()
     {
         _textEditor.Text = _sampleCombinedDiff;
@@ -171,7 +169,7 @@ public class DiffLineNumAnalyzerTests
         result.DiffLines[38].LineType.Should().Be(DiffLineType.Plus);
     }
 
-    [Test]
+    [StaFact]
     public void CanGetAddedMovedDiffInfo()
     {
         GitCommands.Settings.DiffDisplayAppearance theme = AppSettings.DiffDisplayAppearance.Value;
@@ -294,7 +292,7 @@ public class DiffLineNumAnalyzerTests
         AppSettings.DiffDisplayAppearance.Value = theme;
     }
 
-    [Test]
+    [StaFact]
     public void CanGetRemovedMovedDiffInfo()
     {
         GitCommands.Settings.DiffDisplayAppearance theme = AppSettings.DiffDisplayAppearance.Value;
@@ -366,7 +364,7 @@ public class DiffLineNumAnalyzerTests
         AppSettings.DiffDisplayAppearance.Value = theme;
     }
 
-    [Test]
+    [StaFact]
     public void CanGetGitWordDiffInfo()
     {
         GitCommands.Settings.DiffDisplayAppearance theme = AppSettings.DiffDisplayAppearance.Value;
@@ -421,7 +419,7 @@ public class DiffLineNumAnalyzerTests
         AppSettings.DiffDisplayAppearance.Value = theme;
     }
 
-    [Test]
+    [StaFact]
     public void CanGetDifftasticInfo()
     {
         string text = _sampleDifftastic;

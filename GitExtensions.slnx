@@ -72,6 +72,7 @@
     <Project Path="src/app/BugReporter/BugReporter.csproj" />
     <Project Path="src/app/GitCommands/GitCommands.csproj" />
     <Project Path="src/app/GitExtensions.Extensibility/GitExtensions.Extensibility.csproj" />
+    <Project Path="src/app/GitExtensions.Shims.WinForms/GitExtensions.Shims.WinForms.csproj" />
     <Project Path="src/app/GitExtensions/GitExtensions.csproj">
       <BuildDependency Project="externals/conemu-inside/ConEmuWinForms/ConEmuWinForms.csproj" />
       <BuildDependency Project="externals/Git.hub/Git.hub/Git.hub.csproj" />
@@ -95,7 +96,9 @@
       <BuildDependency Project="src/plugins/Statistics/GitImpact/GitExtensions.Plugins.GitImpact.csproj" />
       <BuildDependency Project="src/plugins/Statistics/GitStatistics/GitExtensions.Plugins.GitStatistics.csproj" />
     </Project>
+    <Project Path="src/app/GitExtensions.Avalonia/GitExtensions.Avalonia.csproj" />
     <Project Path="src/app/GitExtUtils/GitExtUtils.csproj" />
+    <Project Path="src/app/GitUI.Avalonia/GitUI.Avalonia.csproj" />
     <Project Path="src/app/GitUI/GitUI.csproj" />
     <Project Path="src/app/ResourceManager/ResourceManager.csproj" />
   </Folder>
@@ -143,6 +146,7 @@
     <Project Path="tests/app/UnitTests/GitCommands.Tests/GitCommands.Tests.csproj" />
     <Project Path="tests/app/UnitTests/GitExtensions.Extensibility.Tests/GitExtensions.Extensibility.Tests.csproj" />
     <Project Path="tests/app/UnitTests/GitExtUtils.Tests/GitExtUtils.Tests.csproj" />
+    <Project Path="tests/app/UnitTests/GitUI.Avalonia.Tests/GitUI.Avalonia.Tests.csproj" />
     <Project Path="tests/app/UnitTests/GitUI.Tests/GitUI.Tests.csproj" />
     <Project Path="tests/app/UnitTests/ResourceManager.Tests/ResourceManager.Tests.csproj" />
   </Folder>

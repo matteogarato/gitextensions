@@ -5,13 +5,12 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Git;
-public sealed class GitModuleWorktreeTests
+public sealed class GitModuleWorktreeTests : IDisposable
 {
     private GitModule _gitModule = null!;
     private MockExecutable _executable = null!;
 
-    [SetUp]
-    public void SetUp()
+    public GitModuleWorktreeTests()
     {
         // Clear the static GitVersion cache so the mock executable is always queried for --version.
         GitVersion.ResetVersion();
@@ -20,13 +19,12 @@ public sealed class GitModuleWorktreeTests
         _gitModule = GetGitModuleWithExecutable(_executable);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _executable.Verify();
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_parse_single_worktree_with_branch()
     {
         string output = string.Join('\0',
@@ -48,7 +46,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_parse_detached_head()
     {
         string output = string.Join('\0',
@@ -68,7 +66,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_parse_bare_repo()
     {
         string output = string.Join('\0',
@@ -87,7 +85,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_parse_multiple_worktrees()
     {
         string output = string.Join('\0',
@@ -114,7 +112,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_mark_only_the_first_worktree_as_the_main_one()
     {
         // git always reports the main worktree first, and refuses to remove it. Deleting its
@@ -141,7 +139,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_handle_path_with_spaces()
     {
         string output = string.Join('\0',
@@ -160,7 +158,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_strip_refs_heads_prefix_from_branch()
     {
         string output = string.Join('\0',
@@ -177,7 +175,7 @@ public sealed class GitModuleWorktreeTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetWorktrees_should_return_empty_list_for_empty_output()
     {
         using (_executable.StageOutput("worktree list --porcelain -z", ""))

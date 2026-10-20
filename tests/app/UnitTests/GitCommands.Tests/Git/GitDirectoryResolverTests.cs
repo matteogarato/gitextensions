@@ -15,8 +15,7 @@ public class GitDirectoryResolverTests
     private IFileSystem _fileSystem = null!;
     private GitDirectoryResolver _resolver = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitDirectoryResolverTests()
     {
         _gitFile = Path.Combine(_workingDir, ".git");
         _gitWorkingDir = _gitFile.EnsureTrailingPathSeparator();
@@ -32,21 +31,22 @@ public class GitDirectoryResolverTests
         _resolver = new GitDirectoryResolver(_fileSystem);
     }
 
-    [Test]
+    [Fact]
     public void Resolve_should_throw_if_path_is_null()
     {
         ((Action)(() => _resolver.Resolve(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [TestCase("")]
-    [TestCase(" ")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
     public void Resolve_should_return_empty_string_if_working_dir_is_empty(string workingDir)
     {
         _resolver.Resolve(workingDir).Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void Resolve_should_return_original_path_if_git_file_or_folder_absent()
     {
         _directory.Exists(_gitWorkingDir).Returns(false);
@@ -55,7 +55,7 @@ public class GitDirectoryResolverTests
         _resolver.Resolve(_workingDir).Should().Be(_workingDir);
     }
 
-    [Test]
+    [Fact]
     public void Resolve_should_return_path_to_git_folder_if_present()
     {
         _directory.Exists(_gitWorkingDir).Returns(true);
@@ -64,8 +64,7 @@ public class GitDirectoryResolverTests
         _resolver.Resolve(_workingDir).Should().Be(_gitWorkingDir);
     }
 
-    [Platform(Include = "Win")]
-    [Test]
+    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
     public void Resolve_should_return_path_from_git_file_if_present()
     {
         _file.Exists(_gitFile).Returns(true);
@@ -76,7 +75,7 @@ public class GitDirectoryResolverTests
         _directory.DidNotReceive().Exists(_gitWorkingDir);
     }
 
-    [Test]
+    [Fact]
     public void Resolve_should_return_resolved_full_path_from_git_file_if_present()
     {
         _file.Exists(_gitFile).Returns(true);
@@ -87,8 +86,7 @@ public class GitDirectoryResolverTests
         _directory.DidNotReceive().Exists(_gitWorkingDir);
     }
 
-    [Platform(Include = "Win")]
-    [Test]
+    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
     public void Resolve_should_reconstruct_wsl_unc_path_for_posix_gitdir_in_linked_worktree()
     {
         // Regression test for #13272: committing from a linked worktree in a WSL repo.
@@ -109,8 +107,7 @@ public class GitDirectoryResolverTests
         _directory.DidNotReceive().Exists(gitFile.EnsureTrailingPathSeparator());
     }
 
-    [Platform(Include = "Win")]
-    [Test]
+    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
     public void Resolve_should_map_wsl_mnt_path_to_windows_drive()
     {
         // A /mnt/<drive> path (WSL view of a Windows drive) must map back to the drive letter.
@@ -124,8 +121,7 @@ public class GitDirectoryResolverTests
             .Should().Be(@"C:\dev\repo\.git\worktrees\ACTIVE\");
     }
 
-    [Platform(Include = "Win")]
-    [Test]
+    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
     public void Resolve_should_return_unc_gitdir_path_unchanged()
     {
         // A fully qualified UNC gitdir path is already usable and must be returned as-is.
@@ -136,7 +132,7 @@ public class GitDirectoryResolverTests
             .Should().Be(@"\\wsl$\Ubuntu\home\user\source\MyRepo\.git\worktrees\ACTIVE\");
     }
 
-    [Test]
+    [Fact]
     public void Resolve_non_bare_repository_real_filesystem()
     {
         _resolver = new GitDirectoryResolver();
@@ -144,7 +140,7 @@ public class GitDirectoryResolverTests
         _resolver.Resolve(helper.Module.WorkingDir).Should().Be(helper.Module.WorkingDirGitDir);
     }
 
-    [Test]
+    [Fact]
     public void Resolve_submodule_real_filesystem()
     {
         using GitModuleTestHelper helper = new();

@@ -4,7 +4,7 @@ namespace GitCommandsTests;
 
 public sealed class GitRevisionTests
 {
-    [Test]
+    [Fact]
     public void Should_validate_full_sha1_correctly()
     {
         GitRevision.IsFullSha1Hash("0000000000000000000000000000000000000000").Should().BeTrue();

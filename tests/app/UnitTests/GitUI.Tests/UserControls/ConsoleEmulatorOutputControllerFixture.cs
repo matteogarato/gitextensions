@@ -6,7 +6,7 @@ using GitUI.ConsoleEmulation.ConEmu;
 namespace GitUITests.UserControls;
 public class ConsoleEmulatorOutputControllerFixture
 {
-    [Test]
+    [Fact]
     public void FilterOutConsoleCommandLine_NoFlush()
     {
         string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
@@ -28,7 +28,7 @@ public class ConsoleEmulatorOutputControllerFixture
         received.Should().Be(string.Empty);
     }
 
-    [Test]
+    [Fact]
     public void FilterOutConsoleCommandLine_Flush()
     {
         string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
@@ -51,7 +51,7 @@ public class ConsoleEmulatorOutputControllerFixture
         received.Should().Be(outputData);
     }
 
-    [Test]
+    [Fact]
     public void PercentageOutput()
     {
         string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
@@ -96,7 +96,7 @@ public class ConsoleEmulatorOutputControllerFixture
         received.Should().Equal(expectedData);
     }
 
-    [Test]
+    [Fact]
     public void CRLFInOutput()
     {
         string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";

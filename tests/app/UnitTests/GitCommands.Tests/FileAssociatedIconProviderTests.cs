@@ -9,8 +9,7 @@ public class FileAssociatedIconProviderTests
     private IFileSystem _fileSystem = null!;
     private FileAssociatedIconProvider _iconProvider = null!;
 
-    [SetUp]
-    public void Setup()
+    public FileAssociatedIconProviderTests()
     {
         _file = Substitute.For<FileBase>();
         _fileSystem = Substitute.For<IFileSystem>();
@@ -19,20 +18,21 @@ public class FileAssociatedIconProviderTests
         _iconProvider.ResetCache();
     }
 
-    [TestCase(null, null)]
-    [TestCase("", "")]
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
     public void Get_should_return_null_if_path_null_or_empty(string? workingDirectory, string? relativeFilePath)
     {
         _iconProvider.Get(workingDirectory!, relativeFilePath!).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void Get_should_return_null_for_extensionless_file()
     {
         _iconProvider.Get(@"c:\folder", "file").Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void Get_if_file_does_not_exist_create_temp()
     {
         const string folder = @"c:\non_existent_folder";
@@ -45,7 +45,7 @@ public class FileAssociatedIconProviderTests
         _file.Received(1).WriteAllText(tempPath, string.Empty);
     }
 
-    [Test]
+    [Fact]
     public void Get_if_temp_file_cant_be_delete_ignore()
     {
         const string folder = @"c:\non_existent_folder";
@@ -60,7 +60,7 @@ public class FileAssociatedIconProviderTests
         _file.Received(1).WriteAllText(tempPath, string.Empty);
     }
 
-    [Test]
+    [Fact]
     public void Get_should_add_entry_for_extension_once()
     {
         _iconProvider = new FileAssociatedIconProvider(); // use real file system

@@ -1,7 +1,7 @@
 ﻿using GitUI.UserControls;
 
 namespace GitUITests.UserControls;
-public class TreeViewExtensionsTests
+public class TreeViewExtensionsTests : IDisposable
 {
     private TreeView _treeView = null!;
     private TreeNode _root = null!;
@@ -13,8 +13,7 @@ public class TreeViewExtensionsTests
     private TreeNode _b3 = null!;
     private TreeNode _b2_1 = null!;
 
-    [SetUp]
-    public void Setup()
+    public TreeViewExtensionsTests()
     {
         _treeView = new TreeView();
 
@@ -31,20 +30,19 @@ public class TreeViewExtensionsTests
         _b2_1 = _b2.Nodes.Add("B_2_1");
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _treeView.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void GetExpandedNodesState_should_return_no_expanded_nodes()
     {
         HashSet<string> expandedNodes = _root.GetExpandedNodesState();
         expandedNodes.Count.Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void GetExpandedNodesState_should_return_one_expanded_node()
     {
         _b.Expand();
@@ -53,7 +51,7 @@ public class TreeViewExtensionsTests
         expandedNodes.Contains(@"Root\B").Should().Be(true);
     }
 
-    [Test]
+    [Fact]
     public void GetExpandedNodesState_should_return_all_expanded_nodes()
     {
         _root.ExpandAll();
@@ -61,7 +59,7 @@ public class TreeViewExtensionsTests
         expandedNodes.Count.Should().Be(8);
     }
 
-    [Test]
+    [Fact]
     public void RestoreExpandedNodesState_should_restore_no_nodes()
     {
         HashSet<string> expandedNodes = [];
@@ -71,7 +69,7 @@ public class TreeViewExtensionsTests
         expandedNodesPost.Count.Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void RestoreExpandedNodesState_should_restore_one_node()
     {
         HashSet<string> expandedNodes = [@"Root\B"];
@@ -82,7 +80,7 @@ public class TreeViewExtensionsTests
         expandedNodes.Contains(@"Root\B").Should().Be(true);
     }
 
-    [Test]
+    [Fact]
     public void RestoreExpandedNodesState_should_restore_all_nodes()
     {
         HashSet<string> expandedNodes =
@@ -104,7 +102,7 @@ public class TreeViewExtensionsTests
         expandedNodesPost.Should().BeEquivalentTo(expandedNodes);
     }
 
-    [Test]
+    [Fact]
     public void GetFullNamePath_should_return_node_names_if_set()
     {
         // Only override the names for 2 of the 4 nodes
@@ -113,8 +111,7 @@ public class TreeViewExtensionsTests
         _b2_1.GetFullNamePath().Should().Be(@"Root\B_Name\B_2\B_2_1_Name");
     }
 
-    [Test]
-    [Apartment(ApartmentState.STA)]
+    [StaFact]
     public void ScrollLeftMost_should_not_throw_for_a_disposed_treeView()
     {
         TreeView treeView = new();
@@ -124,8 +121,7 @@ public class TreeViewExtensionsTests
         ((Action)(() => treeView.ScrollLeftMost())).Should().NotThrow();
     }
 
-    [Test]
-    [Apartment(ApartmentState.STA)]
+    [StaFact]
     public void ScrollLeftMost_should_not_create_the_handle()
     {
         using TreeView treeView = new();
@@ -135,7 +131,7 @@ public class TreeViewExtensionsTests
         treeView.IsHandleCreated.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ScrollLeftMost_should_not_throw_for_null()
     {
         ((Action)(() => ((TreeView?)null).ScrollLeftMost())).Should().NotThrow();

@@ -2,40 +2,38 @@
 using GitCommands.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormPushTests
+public class FormPushTests : System.IDisposable
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
 
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FormPushTests()
     {
         _referenceRepository = new ReferenceRepository();
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
     // Note: the DataBindings between ForcePushTags and ForcePushBranches or ckForceWithLease (depending on Git version) do not function in this test environment
-    [TestCase(false, false, false, ForcePushOptions.DoNotForce)]
-    [TestCase(false, true, false, ForcePushOptions.Force)]
-    [TestCase(false, false, true, ForcePushOptions.Force)] // ForcePushTag requires normal force as with-lease is not allowed for tags
-    [TestCase(false, true, true, ForcePushOptions.Force)]
-    [TestCase(true, false, false, ForcePushOptions.ForceWithLease)] // would be ForcePushOptions.DoNotForce if DataBindings were working
-    [TestCase(true, true, false, ForcePushOptions.Force)]
-    [TestCase(true, false, true, ForcePushOptions.Force)] // ForcePushBranches and ForcePushTags take precedence over ckForceWithLease
-    [TestCase(true, true, true, ForcePushOptions.Force)] // ForcePushBranches and ForcePushTags take precedence over ckForceWithLease
+    [WinFormsTheory]
+    [InlineData(false, false, false, ForcePushOptions.DoNotForce)]
+    [InlineData(false, true, false, ForcePushOptions.Force)]
+    [InlineData(false, false, true, ForcePushOptions.Force)] // ForcePushTag requires normal force as with-lease is not allowed for tags
+    [InlineData(false, true, true, ForcePushOptions.Force)]
+    [InlineData(true, false, false, ForcePushOptions.ForceWithLease)] // would be ForcePushOptions.DoNotForce if DataBindings were working
+    [InlineData(true, true, false, ForcePushOptions.Force)]
+    [InlineData(true, false, true, ForcePushOptions.Force)] // ForcePushBranches and ForcePushTags take precedence over ckForceWithLease
+    [InlineData(true, true, true, ForcePushOptions.Force)] // ForcePushBranches and ForcePushTags take precedence over ckForceWithLease
     public void Should_choose_correct_force_push_option_for_checkbox_state(
         bool forcePushBranchWithLeaseChecked, bool forcePushBranchChecked, bool forcePushTagChecked, ForcePushOptions forcePushOption)
     {
@@ -71,5 +69,10 @@ public class FormPushTests
                 _commands.StartPushDialog(owner: null, pushOnShow: false, forceWithLease: false, out _).Should().BeFalse();
             },
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

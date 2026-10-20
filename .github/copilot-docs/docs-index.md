@@ -39,7 +39,7 @@ Use this to route a question to the right layer/doc and the right part of the co
 | Windows Explorer shell integration | L2 | `src/native/GitExtensionsShellEx/` |
 | Build / installer | L2 | `Setup/`, `eng/`, `src/native/build.proj` |
 | CI / release pipelines | L2 | `.github/workflows/` (`_app-build-core`, `app-build`, `app-release`) |
-| Tests | L2 | `tests/` (NUnit, NSubstitute, AwesomeAssertions) |
+| Tests | L2 | `tests/` (xUnit v3, NSubstitute, AwesomeAssertions) |
 | Submodules | L2/L3 | `src/app/GitCommands/Submodules/`, `GitCommands/Git/SubmoduleHelpers.cs` |
 
 ## Reading Chains (ordered — read top to bottom, then verify against code)

@@ -8,8 +8,7 @@ public sealed class FilteredGitRefsProviderTests
 {
     private IGitModule _module = null!;
 
-    [SetUp]
-    public void Setup()
+    public FilteredGitRefsProviderTests()
     {
         _module = Substitute.For<IGitModule>();
     }
@@ -32,7 +31,7 @@ public sealed class FilteredGitRefsProviderTests
         return gitRef;
     }
 
-    [Test]
+    [Fact]
     public void FilteredGitRefsProviderTest()
     {
         IGitRef[] refs =

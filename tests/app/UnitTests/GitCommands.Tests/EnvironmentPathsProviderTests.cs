@@ -8,8 +8,7 @@ public class EnvironmentPathsProviderTests
     private IEnvironmentAbstraction _environment = null!;
     private IEnvironmentPathsProvider _provider = null!;
 
-    [SetUp]
-    public void Setup()
+    public EnvironmentPathsProviderTests()
     {
         _separator = Path.PathSeparator.ToString();
 
@@ -17,7 +16,7 @@ public class EnvironmentPathsProviderTests
         _provider = new EnvironmentPathsProvider(_environment);
     }
 
-    [Test]
+    [Fact]
     public void GetEnvironmentValidPaths()
     {
         string pathVariable = string.Join(_separator, GetValidPaths().Concat(GetInvalidPaths()));
@@ -28,7 +27,7 @@ public class EnvironmentPathsProviderTests
         validPaths.ToArray().Should().Equal(GetValidPaths().ToArray());
     }
 
-    [Test]
+    [Fact]
     public void GetEnvironmentValidPaths_quoted()
     {
         IEnumerable<string> paths = GetValidPaths().Concat(GetInvalidPaths());
@@ -41,14 +40,14 @@ public class EnvironmentPathsProviderTests
         validPaths.ToArray().Should().Equal(GetValidPaths().ToArray());
     }
 
-    [Platform(Include = "Win")]
-    [TestCase("\\\\my-pc\\Work\\GitExtensions\\", true)]
-    [TestCase("C:\\Work\\GitExtensions\\", true)]
-    [TestCase("C:\\Work\\", true)]
-    [TestCase("C:\\", true)]
-    [TestCase("C:", true)]
-    [TestCase("", false)]
-    [TestCase("\"C:\\Work\\GitExtensions\\", false)]
+    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [InlineData("\\\\my-pc\\Work\\GitExtensions\\", true)]
+    [InlineData("C:\\Work\\GitExtensions\\", true)]
+    [InlineData("C:\\Work\\", true)]
+    [InlineData("C:\\", true)]
+    [InlineData("C:", true)]
+    [InlineData("", false)]
+    [InlineData("\"C:\\Work\\GitExtensions\\", false)]
     public void IsValidPath(string given, bool expected)
     {
         EnvironmentPathsProvider.IsValidPath(given).Should().Be(expected);

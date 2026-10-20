@@ -55,6 +55,9 @@ Specifically:
 - Be accompanied by unit tests
 - Be consistent with the current code style
   Most style guides etc are referred to in [Copilot instructions](https://github.com/gitextensions/gitextensions/blob/master/.github/copilot-instructions.md).
+  See also the [code style and quality guide](docs/development/code-style.md).
+  Coverage progress is tracked in the [production coverage inventory](docs/testing/coverage-inventory.md)
+  and [measured coverage report](docs/testing/coverage-report.md).
 
 When filing a pull request, you should be prepared to answer questions about your changes
 and to perform additional work on the changes in response to review feedback.

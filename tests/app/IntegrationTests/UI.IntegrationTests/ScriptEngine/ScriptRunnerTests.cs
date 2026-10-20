@@ -11,12 +11,11 @@ using GitUI.ScriptsEngine;
 using GitUIPluginInterfaces;
 using NSubstitute;
 using ResourceManager;
+using Xunit;
 
 namespace GitExtensions.UITests.ScriptEngine;
-[Apartment(ApartmentState.STA)]
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class ScriptRunnerTests
+[UseCulture("en-US")]
+public class ScriptRunnerTests : System.IDisposable
 {
     // The scripts available during the tests are created by ScriptManager's GetDefaultScripts().
     // We will adapt the script named "Example" for the needs of the test cases in this file.
@@ -35,9 +34,7 @@ public class ScriptRunnerTests
     private MockForm _mockForm = null!;
     private IGitModule _module = null!;
     private IGitUICommands _commands = null!;
-
-    [SetUp]
-    public void Setup()
+    public ScriptRunnerTests()
     {
         ScriptsManager scriptsManager = new();
         scriptsManager.GetScripts();
@@ -70,14 +67,15 @@ public class ScriptRunnerTests
         }
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
-    public void RunScript_without_command_shall_return_false([Values(null, "")] string? command)
+    [WinFormsTheory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void RunScript_without_command_shall_return_false(string? command)
     {
         _exampleScript.Command = command;
 
@@ -86,7 +84,7 @@ public class ScriptRunnerTests
         result.Should().BeFalse();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_without_arguments_shall_succeed()
     {
         _exampleScript.Command = "{git}";
@@ -97,7 +95,7 @@ public class ScriptRunnerTests
         result.Should().BeTrue();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_with_arguments_without_options_shall_succeed()
     {
         _exampleScript.Command = "{git}";
@@ -108,7 +106,7 @@ public class ScriptRunnerTests
         result.Should().BeTrue();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_with_arguments_with_c_option_shall_succeed()
     {
         _exampleScript.Command = "cmd";
@@ -122,7 +120,7 @@ public class ScriptRunnerTests
         result.Should().BeTrue();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_with_arguments_with_c_option_without_revision_shall_display_error_and_return_false()
     {
         _exampleScript.Command = "cmd";
@@ -138,7 +136,7 @@ public class ScriptRunnerTests
         ex.And.WorkingDirectory.Should().Be(_module.WorkingDir);
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_with_arguments_with_s_option_without_RevisionGrid_shall_display_error_and_return_false()
     {
         _exampleScript.Command = "cmd";
@@ -154,7 +152,7 @@ public class ScriptRunnerTests
         ex.And.WorkingDirectory.Should().Be(_module.WorkingDir);
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_with_arguments_with_s_option_with_RevisionGrid_without_selection_shall_display_error_and_return_false()
     {
         _exampleScript.Command = "cmd";
@@ -179,7 +177,7 @@ public class ScriptRunnerTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RunScript_with_arguments_with_s_option_with_RevisionGrid_with_selection_shall_succeed()
     {
         _exampleScript.Command = "cmd";
@@ -236,5 +234,10 @@ public class ScriptRunnerTests
 
         public IntPtr Handle { get; }
         public IGitUICommands UICommands { get; }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

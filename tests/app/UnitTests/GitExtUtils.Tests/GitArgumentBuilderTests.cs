@@ -4,19 +4,19 @@ using GitExtUtils;
 namespace GitExtUtilsTests;
 public sealed class GitArgumentBuilderTests
 {
-    [Test]
+    [Fact]
     public void Command_with_one_argument()
     {
         new GitArgumentBuilder("foo") { "--bar" }.ToString().Should().Be("foo --bar");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_no_arguments()
     {
         new GitArgumentBuilder("foo").ToString().Should().Be("foo");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_default_config_item()
     {
         GitArgumentBuilder args = new("log")
@@ -27,7 +27,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c log.showsignature=false log -n 1");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_custom_config_item()
     {
         GitArgumentBuilder args = new("foo")
@@ -38,7 +38,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c bar=baz foo");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_custom_config_item_quoted()
     {
         GitArgumentBuilder args = new("foo")
@@ -49,7 +49,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c bar=\"baz bax\" foo");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_custom_config_item_already_quoted()
     {
         GitArgumentBuilder args = new("foo")
@@ -60,7 +60,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c bar=\"baz bax\" foo");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_custom_config_item_and_argument()
     {
         GitArgumentBuilder args = new("foo")
@@ -72,7 +72,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c bar=baz foo --arg");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_custom_config_item_defined_after_argument()
     {
         GitArgumentBuilder args = new("foo")
@@ -84,7 +84,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c bar=baz foo --arg");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_default_and_custom_config_items()
     {
         GitArgumentBuilder args = new("log")
@@ -96,7 +96,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c log.showsignature=false -c bar=baz log -n 1");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_default_and_custom_config_items_and_argument()
     {
         GitArgumentBuilder args = new("log")
@@ -108,7 +108,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c log.showsignature=false -c bar=baz log -n 1");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_config_item_that_overrides_default()
     {
         GitArgumentBuilder args = new("log")
@@ -120,7 +120,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c log.showsignature=true log -n 1");
     }
 
-    [Test]
+    [Fact]
     public void Command_with_config_item_that_overrides_default_different_case()
     {
         GitArgumentBuilder args = new("log")
@@ -132,7 +132,7 @@ public sealed class GitArgumentBuilderTests
         args.ToString().Should().Be("-c LOG.showSIGNATURE=true log -n 1");
     }
 
-    [Test]
+    [Fact]
     public void Throws_for_invalid_command_strings()
     {
         ((Action)(() => new GitArgumentBuilder(null!))).Should().Throw<ArgumentNullException>();

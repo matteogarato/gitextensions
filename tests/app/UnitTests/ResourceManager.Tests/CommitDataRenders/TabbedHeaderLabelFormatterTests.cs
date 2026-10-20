@@ -5,21 +5,21 @@ public class TabbedHeaderLabelFormatterTests
 {
     private TabbedHeaderLabelFormatter _formatter = null!;
 
-    [SetUp]
-    public void Setup()
+    public TabbedHeaderLabelFormatterTests()
     {
         _formatter = new TabbedHeaderLabelFormatter();
     }
 
-    [TestCase(null, 10, ":		")]
-    [TestCase("", 10, ":		")]
-    [TestCase("", 16, ":			")]
-    [TestCase(" ", 10, " :		")]
-    [TestCase("a", 10, "a:		")]
-    [TestCase("a", 8, "a:	")]
-    [TestCase("abc", 1, "abc:")]
-    [TestCase("John Doe <John.Doe@test.com>", 38, "John Doe &lt;John.Doe@test.com&gt;:")]
-    [TestCase("John Doe <John.Doe@test.com>", 40, "John Doe &lt;John.Doe@test.com&gt;:	")]
+    [Theory]
+    [InlineData(null, 10, ":		")]
+    [InlineData("", 10, ":		")]
+    [InlineData("", 16, ":			")]
+    [InlineData(" ", 10, " :		")]
+    [InlineData("a", 10, "a:		")]
+    [InlineData("a", 8, "a:	")]
+    [InlineData("abc", 1, "abc:")]
+    [InlineData("John Doe <John.Doe@test.com>", 38, "John Doe &lt;John.Doe@test.com&gt;:")]
+    [InlineData("John Doe <John.Doe@test.com>", 40, "John Doe &lt;John.Doe@test.com&gt;:	")]
     public void FormatLabel_should_render_correctly(string? given, int desiredLength, string expected)
     {
         _formatter.FormatLabel(given!, desiredLength).Should().Be(expected);

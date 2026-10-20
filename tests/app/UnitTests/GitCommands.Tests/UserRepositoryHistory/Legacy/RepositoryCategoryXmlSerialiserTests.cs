@@ -10,19 +10,18 @@ public class RepositoryCategorySerialiserTests
 {
     private RepositoryCategoryXmlSerialiser _repositoryXmlSerialiser = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryCategorySerialiserTests()
     {
         _repositoryXmlSerialiser = new RepositoryCategoryXmlSerialiser();
     }
 
-    [Test]
+    [Fact]
     public void Deserialize_should_throw_if_null()
     {
         ((Action)(() => _repositoryXmlSerialiser.Deserialize(null!))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void Deserialize_should_load_legacy_categorised_repositories()
     {
         string xml = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.CategorisedRepositories01.xml");
@@ -51,14 +50,14 @@ public class RepositoryCategorySerialiserTests
         categorisedHistory![1].Repositories![0].Anchor.Should().Be("Pinned");
     }
 
-    [Test]
+    [Fact]
     public void Serialize_must_fail_as_not_supported()
     {
         ((Action)(() => ((Current.IRepositorySerialiser<RepositoryCategory>)_repositoryXmlSerialiser).Serialize(null!))).Should().Throw<NotSupportedException>();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    [Test]
+    [Fact]
     public async Task Verify_backwards_compatibility_of_object_graph()
     {
         List<RepositoryCategory> surrogate =

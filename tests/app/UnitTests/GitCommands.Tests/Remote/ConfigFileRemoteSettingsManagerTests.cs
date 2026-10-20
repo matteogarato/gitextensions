@@ -1,4 +1,5 @@
-﻿using CommonTestUtils;
+﻿using System.Globalization;
+using CommonTestUtils;
 using GitCommands.Config;
 using GitCommands.Remotes;
 using GitExtensions.Extensibility;
@@ -6,23 +7,32 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests.Remote;
-
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-internal class ConfigFileRemoteSettingsManagerTests
+public class ConfigFileRemoteSettingsManagerTests : IDisposable
 {
+    private CultureInfo _currentCulture = null!;
+    private CultureInfo _currentUICulture = null!;
     private IGitModule _module = null!;
     private IConfigFileRemoteSettingsManager _remotesManager = null!;
 
-    [SetUp]
-    public void Setup()
+    public ConfigFileRemoteSettingsManagerTests()
     {
+        _currentCulture = CultureInfo.CurrentCulture;
+        _currentUICulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentCulture = new("en-US");
+        CultureInfo.CurrentUICulture = new("en-US");
+
         _module = Substitute.For<IGitModule>();
 
         _remotesManager = new ConfigFileRemoteSettingsManager(() => _module);
     }
 
-    [Test]
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _currentCulture;
+        CultureInfo.CurrentUICulture = _currentUICulture;
+    }
+
+    [Fact]
     public void LoadRemotes_should_not_throw_if_module_is_null()
     {
         _module = null!;
@@ -30,7 +40,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         ((Action)(() => _remotesManager.LoadRemotes(true))).Should().NotThrow();
     }
 
-    [Test]
+    [Fact]
     public void LoadRemotes_should_not_populate_remotes_if_none()
     {
         _module.GetRemoteNames().Returns(x => []);
@@ -43,7 +53,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.DidNotReceive().GetSettings(Arg.Any<string>());
     }
 
-    [Test]
+    [Fact]
     public void LoadRemotes_should_not_populate_remotes_if_those_are_null_or_whitespace()
     {
         _module.GetRemoteNames().Returns(x => new[] { null!, "", " ", "    ", "\t" });
@@ -56,8 +66,9 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.DidNotReceive().GetSettings(Arg.Any<string>());
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void LoadRemotes_should_populate_remotes_if_any(bool loadDisabled)
     {
         const string remoteName1 = "name1";
@@ -84,14 +95,14 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(count).GetSettings(ConfigFileRemoteSettingsManager.DisabledSectionPrefix + string.Format(SettingKeyString.RemotePush, remoteName2));
     }
 
-    [Test]
+    [Fact]
     public void RemoveRemote_should_throw_if_remote_is_null()
     {
         ((Action)(() => _remotesManager.RemoveRemote(null!))).Should().Throw<ArgumentNullException>()
             .WithMessage("Value cannot be null. (Parameter 'remote')");
     }
 
-    [Test]
+    [Fact]
     public void RemoveRemote_success()
     {
         ConfigFileRemote remote = new() { Name = "bla" };
@@ -101,7 +112,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(1).RemoveRemote(remote.Name);
     }
 
-    [Test]
+    [Fact]
     public void SaveRemote_should_throw_if_remoteName_is_null_or_empty()
     {
         ((Action)(() => _remotesManager.SaveRemote(null, null!, "b", "c", "d", "e", "f"))).Should().Throw<ArgumentNullException>()
@@ -112,7 +123,7 @@ internal class ConfigFileRemoteSettingsManagerTests
             .WithMessage("The value cannot be an empty string or composed entirely of whitespace. (Parameter 'remoteName')");
     }
 
-    [Test]
+    [Fact]
     public void SaveRemote_null_remote_should_invoke_AddRemote_and_require_update()
     {
         const string remoteName = "a";
@@ -127,7 +138,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(1).AddRemote(remoteName, remoteUrl);
     }
 
-    [Test]
+    [Fact]
     public void SaveRemote_null_remote_should_set_settings()
     {
         const string remoteName = "a";
@@ -149,7 +160,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(1).UnsetSetting(string.Format(SettingKeyString.RemoteColor, remoteName));
     }
 
-    [Test]
+    [Fact]
     public void SaveRemote_populated_remote_should_invoke_RenameRemote_if_remoteName_mismatch_no_update_required()
     {
         const string remoteName = "a";
@@ -165,7 +176,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(1).RenameRemote(gitRemote.Name, remoteName);
     }
 
-    [Test]
+    [Fact]
     public void SaveRemote_populated_remote_should_require_update_if_remoteUrl_mismatch()
     {
         const string remoteName = "a";
@@ -181,12 +192,13 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(1).RenameRemote(gitRemote.Name, remoteName);
     }
 
-    [TestCase(null, null, null, null, null)]
-    [TestCase("a", null, null, null, null)]
-    [TestCase("a", "b", null, null, null)]
-    [TestCase("a", "b", "c", null, null)]
-    [TestCase("a", "b", "c", "d", null)]
-    [TestCase("a", "b", "c", "d", "e")]
+    [Theory]
+    [InlineData(null, null, null, null, null)]
+    [InlineData("a", null, null, null, null)]
+    [InlineData("a", "b", null, null, null)]
+    [InlineData("a", "b", "c", null, null)]
+    [InlineData("a", "b", "c", "d", null)]
+    [InlineData("a", "b", "c", "d", "e")]
     public void SaveRemote_should_update_settings(string? remoteUrl, string? remotePushUrl, string? remotePuttySshKey, string? remoteColor, string? remotePrefix)
     {
         ConfigFileRemote remote = new() { Name = "bla", Url = remoteUrl };
@@ -211,14 +223,14 @@ internal class ConfigFileRemoteSettingsManagerTests
         Ensure(SettingKeyString.RemotePuttySshKey, remotePuttySshKey!);
     }
 
-    [Test]
+    [Fact]
     public void SetRemoteState_should_throw_if_remote_is_null()
     {
         ((Action)(() => _remotesManager.ToggleRemoteState(null!, false))).Should().Throw<ArgumentNullException>()
             .WithMessage("Value cannot be null. (Parameter 'remoteName')");
     }
 
-    [Test]
+    [Fact]
     public void SetRemoteState_should_do_nothing_if_section_not_found()
     {
         _module.GetAllLocalSettings().Returns(x => []);
@@ -230,8 +242,9 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.DidNotReceive().RemoveConfigSection(Arg.Any<string>());
     }
 
-    [TestCase("name1", false)]
-    [TestCase("name2", true)]
+    [Theory]
+    [InlineData("name1", false)]
+    [InlineData("name2", true)]
     public void SetRemoteState_should_call_ToggleRemoteState(string remoteName, bool remoteDisabled)
     {
         (string Setting, string Value)[] settings = [("-remote.name1.dummy-name1", "dummy value 1"), ("remote.name2.dummy-name2", "dummy value 2")];
@@ -250,7 +263,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _module.Received(1).SetSetting(setting, value, append: true);
     }
 
-    [Test]
+    [Fact]
     public void GetDisabledRemotes_returns_disabled_remotes_only()
     {
         string enabledRemoteName = "enabledRemote";
@@ -270,7 +283,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         disabledRemoteNames[0].Should().Be(disabledRemoteName);
     }
 
-    [Test]
+    [Fact]
     public void GetEnabledRemoteNames_returns_enabled_remotes_only()
     {
         string enabledRemoteName = "enabledRemote";
@@ -286,7 +299,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         enabledRemoteNames[0].Should().Be(enabledRemoteName);
     }
 
-    [Test]
+    [Fact]
     public void EnabledRemoteExists_returns_true_for_enabled_remotes_only()
     {
         string enabledRemoteName = "enabledRemote";
@@ -301,7 +314,7 @@ internal class ConfigFileRemoteSettingsManagerTests
         _remotesManager.EnabledRemoteExists(disabledRemoteName).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void DisabledRemoteExists_returns_true_for_disabled_remotes_only()
     {
         string enabledRemoteName = "enabledRemote";
@@ -316,23 +329,25 @@ internal class ConfigFileRemoteSettingsManagerTests
         _remotesManager.DisabledRemoteExists(enabledRemoteName).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void GetDefaultPushRemote_returns_null_for_no_remote_branch()
     {
         ConfigFileRemote remote = new() { Push = [] };
         _remotesManager.GetDefaultPushRemote(remote, "BranchName").Should().BeNull();
     }
 
-    [TestCase("BranchName", "BranchName")]
-    [TestCase("BranchName", "dev/me/BranchName")]
+    [Theory]
+    [InlineData("BranchName", "BranchName")]
+    [InlineData("BranchName", "dev/me/BranchName")]
     public void GetDefaultPushRemote_returns_value_for_mapped_remote_branch(string branchName, string pushToBranch)
     {
         ConfigFileRemote remote = new() { Push = [$"refs/heads/{branchName}:refs/heads/{pushToBranch}"] };
         _remotesManager.GetDefaultPushRemote(remote, branchName).Should().Be(pushToBranch);
     }
 
-    [TestCase("BranchName", "*")]
-    [TestCase("BranchName", "dev/me/*")]
+    [Theory]
+    [InlineData("BranchName", "*")]
+    [InlineData("BranchName", "dev/me/*")]
     public void GetDefaultPushRemote_returns_value_for_wildcard_mapped_remote_branch(string branchName, string pushToBranch)
     {
         ConfigFileRemote remote = new() { Push = [$"refs/heads/*:refs/heads/{pushToBranch}"] };
@@ -341,7 +356,7 @@ internal class ConfigFileRemoteSettingsManagerTests
 
     public class IntegrationTests
     {
-        [Test]
+        [Fact]
         public void ToggleRemoteState_should_not_fail_if_activate_repeatedly()
         {
             using GitModuleTestHelper helper = new();
@@ -358,7 +373,7 @@ internal class ConfigFileRemoteSettingsManagerTests
             helper.Module.GetSettings("reload local settings, too");
         }
 
-        [Test]
+        [Fact]
         public void ToggleRemoteState_should_not_fail_if_deactivate_repeatedly()
         {
             using GitModuleTestHelper helper = new();

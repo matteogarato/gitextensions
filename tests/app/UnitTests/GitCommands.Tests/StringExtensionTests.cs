@@ -1,182 +1,195 @@
 ﻿namespace GitCommandsTests;
 public sealed class StringExtensionTests
 {
-    [TestCase(null, 10, "")]
-    [TestCase("Hello", 10, "Hello")]
-    [TestCase("Hello", 5, "Hello")]
-    [TestCase("Hello", 4, "H...")]
-    [TestCase("Hello", 3, "...")]
-    [TestCase("Hello", 2, "He")]
+    [Theory]
+    [InlineData(null, 10, "")]
+    [InlineData("Hello", 10, "Hello")]
+    [InlineData("Hello", 5, "Hello")]
+    [InlineData("Hello", 4, "H...")]
+    [InlineData("Hello", 3, "...")]
+    [InlineData("Hello", 2, "He")]
     public void ShortenTo_works_as_expected(string? s, int length, string expected)
     {
         s.ShortenTo(length).Should().Be(expected);
     }
 
-    [TestCase("Hello World", "Hello", true)]
-    [TestCase("Hello World", " ", true)]
-    [TestCase("Hello World", "World", true)]
-    [TestCase("Hello World", "", true)]
-    [TestCase("Hello World", "Hi", false)]
-    [TestCase("Hello World", "ldi", false)]
+    [Theory]
+    [InlineData("Hello World", "Hello", true)]
+    [InlineData("Hello World", " ", true)]
+    [InlineData("Hello World", "World", true)]
+    [InlineData("Hello World", "", true)]
+    [InlineData("Hello World", "Hi", false)]
+    [InlineData("Hello World", "ldi", false)]
     public void Contains_works_as_expected(string str, string other, bool expected)
     {
         str.Contains(other, StringComparison.InvariantCultureIgnoreCase).Should().Be(expected);
     }
 
-    [TestCase("ABCDEFG", "ABC", "DEFG")]
-    [TestCase("ABCDEFG", "AB", "CDEFG")]
-    [TestCase("ABCDEFG", "A", "BCDEFG")]
-    [TestCase("ABCDEFG", "", "ABCDEFG")]
-    [TestCase("ABCDEFG", "XYZ", "ABCDEFG")]
-    [TestCase("AB", "ABCD", "AB")]
+    [Theory]
+    [InlineData("ABCDEFG", "ABC", "DEFG")]
+    [InlineData("ABCDEFG", "AB", "CDEFG")]
+    [InlineData("ABCDEFG", "A", "BCDEFG")]
+    [InlineData("ABCDEFG", "", "ABCDEFG")]
+    [InlineData("ABCDEFG", "XYZ", "ABCDEFG")]
+    [InlineData("AB", "ABCD", "AB")]
     public void RemovePrefix_works_as_expected(string str, string prefix, string expected)
     {
         str.RemovePrefix(prefix).Should().Be(expected);
     }
 
-    [TestCase("ABCDEFG", "EFG", "ABCD")]
-    [TestCase("ABCDEFG", "FG", "ABCDE")]
-    [TestCase("ABCDEFG", "G", "ABCDEF")]
-    [TestCase("ABCDEFG", "", "ABCDEFG")]
-    [TestCase("ABCDEFG", "XYZ", "ABCDEFG")]
-    [TestCase("CD", "ABCD", "CD")]
-    [TestCase("", "ABCD", "")]
-    [TestCase("ABCD", "", "ABCD")]
+    [Theory]
+    [InlineData("ABCDEFG", "EFG", "ABCD")]
+    [InlineData("ABCDEFG", "FG", "ABCDE")]
+    [InlineData("ABCDEFG", "G", "ABCDEF")]
+    [InlineData("ABCDEFG", "", "ABCDEFG")]
+    [InlineData("ABCDEFG", "XYZ", "ABCDEFG")]
+    [InlineData("CD", "ABCD", "CD")]
+    [InlineData("", "ABCD", "")]
+    [InlineData("ABCD", "", "ABCD")]
     public void RemoveSuffix_works_as_expected(string str, string prefix, string expected)
     {
         str.RemoveSuffix(prefix).Should().Be(expected);
     }
 
-    [TestCase("ABCDEFG", 'A', "")]
-    [TestCase("ABCDEFG", 'B', "A")]
-    [TestCase("ABCDEFG", 'C', "AB")]
-    [TestCase("ABCDEFG", 'D', "ABC")]
-    [TestCase("ABCDEFG", 'E', "ABCD")]
-    [TestCase("ABCDEFG", 'Z', "ABCDEFG")]
-    [TestCase("", 'Z', "")]
-    [TestCase("A", 'A', "")]
+    [Theory]
+    [InlineData("ABCDEFG", 'A', "")]
+    [InlineData("ABCDEFG", 'B', "A")]
+    [InlineData("ABCDEFG", 'C', "AB")]
+    [InlineData("ABCDEFG", 'D', "ABC")]
+    [InlineData("ABCDEFG", 'E', "ABCD")]
+    [InlineData("ABCDEFG", 'Z', "ABCDEFG")]
+    [InlineData("", 'Z', "")]
+    [InlineData("A", 'A', "")]
     public void SubstringUntil_works_as_expected(string str, char c, string expected)
     {
         str.SubstringUntil(c).Should().Be(expected);
     }
 
-    [TestCase("ABCABC", 'A', "ABC")]
-    [TestCase("ABCABC", 'B', "ABCA")]
-    [TestCase("ABCABC", 'C', "ABCAB")]
-    [TestCase("ABCABC", 'Z', "ABCABC")]
-    [TestCase("", 'Z', "")]
-    [TestCase("A", 'A', "")]
-    [TestCase("AAAA", 'A', "AAA")]
+    [Theory]
+    [InlineData("ABCABC", 'A', "ABC")]
+    [InlineData("ABCABC", 'B', "ABCA")]
+    [InlineData("ABCABC", 'C', "ABCAB")]
+    [InlineData("ABCABC", 'Z', "ABCABC")]
+    [InlineData("", 'Z', "")]
+    [InlineData("A", 'A', "")]
+    [InlineData("AAAA", 'A', "AAA")]
     public void SubstringUntilLast_works_as_expected(string str, char c, string expected)
     {
         str.SubstringUntilLast(c).Should().Be(expected);
     }
 
-    [TestCase("ABCDEFG", 'A', "BCDEFG")]
-    [TestCase("ABCDEFG", 'B', "CDEFG")]
-    [TestCase("ABCDEFG", 'C', "DEFG")]
-    [TestCase("ABCDEFG", 'Z', "ABCDEFG")]
-    [TestCase("", 'Z', "")]
-    [TestCase("A", 'A', "")]
-    [TestCase("ABBA", 'A', "BBA")]
+    [Theory]
+    [InlineData("ABCDEFG", 'A', "BCDEFG")]
+    [InlineData("ABCDEFG", 'B', "CDEFG")]
+    [InlineData("ABCDEFG", 'C', "DEFG")]
+    [InlineData("ABCDEFG", 'Z', "ABCDEFG")]
+    [InlineData("", 'Z', "")]
+    [InlineData("A", 'A', "")]
+    [InlineData("ABBA", 'A', "BBA")]
     public void SubstringAfter_char_works_as_expected(string str, char c, string expected)
     {
         str.SubstringAfter(c).Should().Be(expected);
     }
 
-    [TestCase("ABCDEFG", "A", "BCDEFG")]
-    [TestCase("ABCDEFG", "AB", "CDEFG")]
-    [TestCase("ABCDEFG", "B", "CDEFG")]
-    [TestCase("ABCDEFG", "C", "DEFG")]
-    [TestCase("ABCDEFG", "Z", "ABCDEFG")]
-    [TestCase("", "Z", "")]
-    [TestCase("A", "A", "")]
-    [TestCase("ABBA", "A", "BBA")]
+    [Theory]
+    [InlineData("ABCDEFG", "A", "BCDEFG")]
+    [InlineData("ABCDEFG", "AB", "CDEFG")]
+    [InlineData("ABCDEFG", "B", "CDEFG")]
+    [InlineData("ABCDEFG", "C", "DEFG")]
+    [InlineData("ABCDEFG", "Z", "ABCDEFG")]
+    [InlineData("", "Z", "")]
+    [InlineData("A", "A", "")]
+    [InlineData("ABBA", "A", "BBA")]
     public void SubstringAfter_string_works_as_expected(string str, string? s, string expected)
     {
         str.SubstringAfter(s!).Should().Be(expected);
     }
 
-    [TestCase("ABCABC", 'A', "BC")]
-    [TestCase("ABCABC", 'B', "C")]
-    [TestCase("ABCABC", 'C', "")]
-    [TestCase("ABCDEFG", 'A', "BCDEFG")]
-    [TestCase("ABCDEFG", 'B', "CDEFG")]
-    [TestCase("ABCDEFG", 'C', "DEFG")]
-    [TestCase("ABCDEFG", 'Z', "ABCDEFG")]
-    [TestCase("", 'Z', "")]
-    [TestCase("A", 'A', "")]
-    [TestCase("ABBA", 'A', "")]
+    [Theory]
+    [InlineData("ABCABC", 'A', "BC")]
+    [InlineData("ABCABC", 'B', "C")]
+    [InlineData("ABCABC", 'C', "")]
+    [InlineData("ABCDEFG", 'A', "BCDEFG")]
+    [InlineData("ABCDEFG", 'B', "CDEFG")]
+    [InlineData("ABCDEFG", 'C', "DEFG")]
+    [InlineData("ABCDEFG", 'Z', "ABCDEFG")]
+    [InlineData("", 'Z', "")]
+    [InlineData("A", 'A', "")]
+    [InlineData("ABBA", 'A', "")]
     public void SubstringAfterLast_char_works_as_expected(string str, char c, string expected)
     {
         str.SubstringAfterLast(c).Should().Be(expected);
     }
 
-    [TestCase("ABCABC", "A", "BC")]
-    [TestCase("ABCABC", "B", "C")]
-    [TestCase("ABCABC", "C", "")]
-    [TestCase("ABCDEFG", "A", "BCDEFG")]
-    [TestCase("ABCDEFG", "AB", "CDEFG")]
-    [TestCase("ABCDEFG", "B", "CDEFG")]
-    [TestCase("ABCDEFG", "BCD", "EFG")]
-    [TestCase("ABCDEFG", "C", "DEFG")]
-    [TestCase("ABCDEFG", "Z", "ABCDEFG")]
-    [TestCase("", "Z", "")]
-    [TestCase("A", "A", "")]
-    [TestCase("ABBA", "A", "")]
+    [Theory]
+    [InlineData("ABCABC", "A", "BC")]
+    [InlineData("ABCABC", "B", "C")]
+    [InlineData("ABCABC", "C", "")]
+    [InlineData("ABCDEFG", "A", "BCDEFG")]
+    [InlineData("ABCDEFG", "AB", "CDEFG")]
+    [InlineData("ABCDEFG", "B", "CDEFG")]
+    [InlineData("ABCDEFG", "BCD", "EFG")]
+    [InlineData("ABCDEFG", "C", "DEFG")]
+    [InlineData("ABCDEFG", "Z", "ABCDEFG")]
+    [InlineData("", "Z", "")]
+    [InlineData("A", "A", "")]
+    [InlineData("ABBA", "A", "")]
     public void SubstringAfterLast_string_works_as_expected(string str, string? s, string expected)
     {
         str.SubstringAfterLast(s!).Should().Be(expected);
     }
 
-    [TestCase("/usr/bin", false, "/usr/bin")]
-    [TestCase("/usr/bin", true, "/usr/bin")]
-    [TestCase("\\usr\\bin", false, "\\\\usr\\\\bin")]
-    [TestCase("\\usr\\bin", true, "\\usr\\bin")]
-    [TestCase("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe", true, "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe")]
-    [TestCase("echo \"Hello world\"", false, "echo \\\"Hello world\\\"")]
-    [TestCase("echo \"Hello world\"", true, "echo \"\"Hello world\"\"")]
-    [TestCase("echo \'Hello world\'", false, "echo \\\'Hello world\\\'")]
-    [TestCase("echo \'Hello world\'", true, "echo \'Hello world\'")]
-    [TestCase("cmd /c \"echo \\\"Hello world\\\"\"", false, "cmd /c \\\"echo \\\\\\\"Hello world\\\\\\\"\\\"")]
-    [TestCase("cmd /c \"echo \\\"Hello world\\\"\"", true, "cmd /c \"\"echo \\\"\"Hello world\\\"\"\"\"")]
-    [TestCase("cmd /c \"echo \"\"Hello world\"\"\"", false, "cmd /c \\\"echo \\\"\\\"Hello world\\\"\\\"\\\"")]
-    [TestCase("cmd /c \"echo \"\"Hello world\"\"\"", true, "cmd /c \"\"echo \"\"\"\"Hello world\"\"\"\"\"\"")]
+    [Theory]
+    [InlineData("/usr/bin", false, "/usr/bin")]
+    [InlineData("/usr/bin", true, "/usr/bin")]
+    [InlineData("\\usr\\bin", false, "\\\\usr\\\\bin")]
+    [InlineData("\\usr\\bin", true, "\\usr\\bin")]
+    [InlineData("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe", true, "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe")]
+    [InlineData("echo \"Hello world\"", false, "echo \\\"Hello world\\\"")]
+    [InlineData("echo \"Hello world\"", true, "echo \"\"Hello world\"\"")]
+    [InlineData("echo \'Hello world\'", false, "echo \\\'Hello world\\\'")]
+    [InlineData("echo \'Hello world\'", true, "echo \'Hello world\'")]
+    [InlineData("cmd /c \"echo \\\"Hello world\\\"\"", false, "cmd /c \\\"echo \\\\\\\"Hello world\\\\\\\"\\\"")]
+    [InlineData("cmd /c \"echo \\\"Hello world\\\"\"", true, "cmd /c \"\"echo \\\"\"Hello world\\\"\"\"\"")]
+    [InlineData("cmd /c \"echo \"\"Hello world\"\"\"", false, "cmd /c \\\"echo \\\"\\\"Hello world\\\"\\\"\\\"")]
+    [InlineData("cmd /c \"echo \"\"Hello world\"\"\"", true, "cmd /c \"\"echo \"\"\"\"Hello world\"\"\"\"\"\"")]
     public void EscapeForCommandLine_works_as_expected(string? s, bool forWindows, string expected)
     {
         s!.EscapeForCommandLine(forWindows).Should().Be(expected);
     }
 
-    [TestCase(null, null)]
-    [TestCase("", "")]
-    [TestCase(" \"", "\" \\\"\"")]
-    [TestCase("\"\"", "\"\"")]
-    [TestCase("file", "\"file\"")]
-    [TestCase("\"file", "\"file")]
-    [TestCase("\"file\"", "\"file\"")]
-    [TestCase("file with spaces", "\"file with spaces\"")]
-    [TestCase("\"file with spaces", "\"file with spaces")]
-    [TestCase("\"file with spaces\"", "\"file with spaces\"")]
-    [TestCase("wei\"rd", "\"wei\\\"rd\"")]
-    [TestCase("\"wei\"rd\"", "\"wei\"rd\"")]
-    [TestCase("weird\"", "\"weird\\\"\"")]
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
+    [InlineData(" \"", "\" \\\"\"")]
+    [InlineData("\"\"", "\"\"")]
+    [InlineData("file", "\"file\"")]
+    [InlineData("\"file", "\"file")]
+    [InlineData("\"file\"", "\"file\"")]
+    [InlineData("file with spaces", "\"file with spaces\"")]
+    [InlineData("\"file with spaces", "\"file with spaces")]
+    [InlineData("\"file with spaces\"", "\"file with spaces\"")]
+    [InlineData("wei\"rd", "\"wei\\\"rd\"")]
+    [InlineData("\"wei\"rd\"", "\"wei\"rd\"")]
+    [InlineData("weird\"", "\"weird\\\"\"")]
 
     public void QuoteIfUnquotedAndNE(string? str, string? expected)
     {
         str.QuoteIfNotQuotedAndNE().Should().Be(expected);
     }
 
-    [TestCase(null, null)]
-    [TestCase("", "")]
-    [TestCase("\"", "\"")]
-    [TestCase("\"\"", "")]
-    [TestCase("\" \"\"", " \"")]
-    [TestCase("\" \\\"", " \\")]
-    [TestCase("\" \\\"\"", " \\\"")]
-    [TestCase("\"file\"", "file")]
-    [TestCase("\"file", "\"file")]
-    [TestCase("file\"", "file\"")]
-    [TestCase("\"file with spaces\"", "file with spaces")]
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
+    [InlineData("\"", "\"")]
+    [InlineData("\"\"", "")]
+    [InlineData("\" \"\"", " \"")]
+    [InlineData("\" \\\"", " \\")]
+    [InlineData("\" \\\"\"", " \\\"")]
+    [InlineData("\"file\"", "file")]
+    [InlineData("\"file", "\"file")]
+    [InlineData("file\"", "file\"")]
+    [InlineData("\"file with spaces\"", "file with spaces")]
 
     public void RemoveQuotes(string? str, string? expected)
     {

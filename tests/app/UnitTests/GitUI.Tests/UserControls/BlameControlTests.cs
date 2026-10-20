@@ -10,10 +10,8 @@ using NSubstitute;
 
 namespace GitUITests.UserControls;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-[Apartment(ApartmentState.STA)]
-public class BlameControlTests
+[Culture("en-US")]
+public class BlameControlTests : IDisposable
 {
     private BlameControl _blameControl = null!;
     private GitBlameLine _gitBlameLine = null!;
@@ -23,8 +21,7 @@ public class BlameControlTests
     private const string _fileName1 = "A.txt";
     private const string _fileName2 = "B.txt";
 
-    [SetUp]
-    public void SetUp()
+    public BlameControlTests()
     {
         GitBlameCommit blameCommit1 = new(
             ObjectId.Random(),
@@ -84,18 +81,18 @@ public class BlameControlTests
         _blameControl.UICommandsSource = uiCommandsSource;
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _blameControl.Dispose();
         _referenceRepository.Dispose();
     }
 
-    [TestCase(true, true, true, true, "author1 - 3/22/2010 - fileName.txt")]
-    [TestCase(true, true, true, false, "3/22/2010 - author1 - fileName.txt")]
-    [TestCase(false, true, true, false, "author1 - fileName.txt")]
-    [TestCase(true, false, true, false, "3/22/2010 - fileName.txt")]
-    [TestCase(true, true, false, false, "3/22/2010 - author1")]
+    [StaTheory]
+    [InlineData(true, true, true, true, "author1 - 3/22/2010 - fileName.txt")]
+    [InlineData(true, true, true, false, "3/22/2010 - author1 - fileName.txt")]
+    [InlineData(false, true, true, false, "author1 - fileName.txt")]
+    [InlineData(true, false, true, false, "3/22/2010 - fileName.txt")]
+    [InlineData(true, true, false, false, "3/22/2010 - author1")]
     public void BuildAuthorLine_When_FilePath_IsDifferent(bool showAuthorDate, bool showAuthor, bool showFilePath, bool displayAuthorFirst, string expectedResult)
     {
         StringBuilder line = new();
@@ -106,7 +103,7 @@ public class BlameControlTests
         line.ToString().Should().StartWith(expectedResult);
     }
 
-    [Test]
+    [StaFact]
     public void BuildAuthorLine_When_FilePath_Is_Identic()
     {
         StringBuilder line = new();
@@ -117,7 +114,7 @@ public class BlameControlTests
         line.ToString().Should().StartWith("3/22/2010 - author1");
     }
 
-    [Test]
+    [StaFact]
     public void BuildAuthorLine_DoNotPadIfNotNeeded()
     {
         StringBuilder line = new();
@@ -128,7 +125,7 @@ public class BlameControlTests
         line.ToString().Should().StartWith("author1");
     }
 
-    [Test]
+    [StaFact]
     public void BuildBlameContents_WithDateAndTime()
     {
         bool originalValue = AppSettings.BlameShowAuthorTime;
@@ -155,7 +152,7 @@ public class BlameControlTests
         }
     }
 
-    [Test]
+    [StaFact]
     public void BuildBlameContents_WithDateButNotTime()
     {
         bool originalValue = AppSettings.BlameShowAuthorTime;
@@ -197,7 +194,7 @@ public class BlameControlTests
         }
     }
 
-    [Test]
+    [StaFact]
     public void CalculateBlameGutterData_When_date_is_older_than_artificial_old_boundary_Then_it_defines_first_age_bucket_and_so_falls_into_it()
     {
         // Given
@@ -212,7 +209,7 @@ public class BlameControlTests
         blameEntries[0].AgeBucketIndex.Should().Be(0);
     }
 
-    [Test]
+    [StaFact]
     public void CalculateBlameGutterData_When_date_is_newer_than_artificial_old_boundary_Then_it_falls_in_a_later_age_bucket()
     {
         // Given
@@ -226,7 +223,7 @@ public class BlameControlTests
         blameEntries[0].AgeBucketIndex.Should().Be(3);
     }
 
-    [Test]
+    [StaFact]
     public void CalculateBlameGutterData_When_date_is_DateMin_Then_it_falls_in_a_first_age_bucket()
     {
         // Given
@@ -240,7 +237,7 @@ public class BlameControlTests
         blameEntries[1].AgeBucketIndex.Should().Be(0);
     }
 
-    [Test]
+    [StaFact]
     public void CalculateBlameGutterData_When_all_dates_are_DateMin_Then_they_falls_in_a_first_age_bucket()
     {
         // Given
@@ -255,7 +252,7 @@ public class BlameControlTests
         blameEntries[1].AgeBucketIndex.Should().Be(0);
     }
 
-    [Test]
+    [StaFact]
     public void CalculateBlameGutterData_When_dates_just_after_age_bucket_limit_Then_One_date_in_each_age_bucket()
     {
         // Given
@@ -286,7 +283,7 @@ public class BlameControlTests
         blameEntries[7].AgeBucketIndex.Should().Be(6);
     }
 
-    [Test]
+    [StaFact]
     public async Task BlameControlShouldStayOnLineIfInputOtherThanFileIsChanged()
     {
         GitRevision rev3 = new(ObjectId.Parse(_commit3));
@@ -319,7 +316,7 @@ public class BlameControlTests
         _blameControl.GetTestAccessor().BlameFile.CurrentFileLine.Should().Be(3);
     }
 
-    [Test]
+    [StaFact]
     public async Task BlameControlShouldGoToFirstLineIfFileNameIsChanged()
     {
         GitRevision rev3 = new(ObjectId.Parse(_commit3));
@@ -352,7 +349,7 @@ public class BlameControlTests
         _blameControl.GetTestAccessor().BlameFile.CurrentFileLine.Should().Be(3);
     }
 
-    [Test]
+    [StaFact]
     public async Task BlameControlShouldStayOnLineIfNullLineInput()
     {
         GitRevision rev1 = new(ObjectId.Parse(_referenceRepository.CommitHash!));
@@ -369,7 +366,7 @@ public class BlameControlTests
         _blameControl.GetTestAccessor().BlameFile.CurrentFileLine.Should().Be(3);
     }
 
-    [Test]
+    [StaFact]
     public async Task BlameControlShouldGotoRequestedLineAtStartAndIfReloaded()
     {
         GitRevision rev1 = new(ObjectId.Parse(_referenceRepository.CommitHash!));

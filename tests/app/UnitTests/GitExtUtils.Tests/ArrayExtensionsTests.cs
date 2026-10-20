@@ -3,7 +3,7 @@
 namespace GitExtUtilsTests;
 public sealed class ArrayExtensionsTests
 {
-    [Test]
+    [Fact]
     public void Subsequence()
     {
         int[] nums = [.. Enumerable.Range(0, 10)];
@@ -18,7 +18,7 @@ public sealed class ArrayExtensionsTests
         nums.Subsequence(9, 0).Should().Equal(Array.Empty<int>());
     }
 
-    [Test]
+    [Fact]
     public void Append()
     {
         new[] { 0 }.Append(1).Should().Equal(new[] { 0, 1 });

@@ -5,13 +5,12 @@ public class GitCommandCacheTest
 {
     private CommandCache _cache = null!;
 
-    [SetUp]
-    public void SetUp()
+    public GitCommandCacheTest()
     {
         _cache = new CommandCache();
     }
 
-    [Test]
+    [Fact]
     public void TestAdd()
     {
         string output = "Git result";
@@ -23,14 +22,14 @@ public class GitCommandCacheTest
         expectedCachedCommand.SequenceEqual(_cache.GetCachedCommands()).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void TestAddCannotCache()
     {
         _cache.Add(null, null!, null!);
         _cache.GetCachedCommands().Any().Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void TestTryGet()
     {
         string originalOutput = "Another Git result";
@@ -43,7 +42,7 @@ public class GitCommandCacheTest
         originalError.Should().Be(cachedError);
     }
 
-    [Test]
+    [Fact]
     public void TestTryGetFails()
     {
         _cache.TryGet(null, out string? output, out string? error).Should().BeFalse();

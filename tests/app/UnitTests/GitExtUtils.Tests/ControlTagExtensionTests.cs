@@ -3,7 +3,7 @@
 namespace GitExtUtilsTests;
 public class ControlTagExtensionTests
 {
-    [Test]
+    [StaFact]
     public void Multiple_values_can_be_set()
     {
         using Control control = new();
@@ -17,7 +17,7 @@ public class ControlTagExtensionTests
         control.GetTag<float>().Should().Be(2f);
     }
 
-    [Test]
+    [StaFact]
     public void When_tag_field_is_occupied_GetTag_returns_default()
     {
         using Control control = new()
@@ -29,7 +29,7 @@ public class ControlTagExtensionTests
         control.GetTag<int>().Should().Be(default(int));
     }
 
-    [Test]
+    [StaFact]
     public void When_tag_field_is_occupied_SetTag_replaces_existing_tag()
     {
         using Control control = new()
@@ -43,7 +43,7 @@ public class ControlTagExtensionTests
         control.GetTag<int>().Should().Be(1);
     }
 
-    [Test]
+    [StaFact]
     public void When_another_type_is_stored_at_key_GetTag_return_default()
     {
         using Control control = new();

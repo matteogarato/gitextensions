@@ -1,7 +1,7 @@
 ﻿using GitUI.Avatars;
 
 namespace GitUITests.Avatars;
-public class StaticImageAvatarProviderTests
+public class StaticImageAvatarProviderTests : IDisposable
 {
     private const int _size = 64;
 
@@ -15,13 +15,12 @@ public class StaticImageAvatarProviderTests
         _img = new Bitmap(_size, _size);
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         _img.Dispose();
     }
 
-    [Test]
+    [Fact]
     public async Task Original_image_is_returned_if_size_matches()
     {
         StaticImageAvatarProvider provider = new(_img);
@@ -31,7 +30,7 @@ public class StaticImageAvatarProviderTests
         result.Should().BeSameAs(_img);
     }
 
-    [Test]
+    [Fact]
     public async Task Resized_images_are_cached_and_same_instance_is_returned_on_second_call()
     {
         StaticImageAvatarProvider provider = new(_img);

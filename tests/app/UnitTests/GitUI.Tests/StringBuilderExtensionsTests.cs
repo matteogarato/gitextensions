@@ -5,12 +5,13 @@ namespace GitUITests;
 
 public sealed class StringBuilderExtensionsTests
 {
-    [TestCase("foo", "foo")]
-    [TestCase("\"foo bar\"", "foo bar")]
-    [TestCase("\"foo\tbar\"", "foo\tbar")]
-    [TestCase("\"foo bar\"", "\"foo bar\"")]
-    [TestCase("\"\"", "")]
-    [TestCase("\" \"", " ")]
+    [Theory]
+    [InlineData("foo", "foo")]
+    [InlineData("\"foo bar\"", "foo bar")]
+    [InlineData("\"foo\tbar\"", "foo\tbar")]
+    [InlineData("\"foo bar\"", "\"foo bar\"")]
+    [InlineData("\"\"", "")]
+    [InlineData("\" \"", " ")]
     public void AppendQuoted(string expected, string source)
     {
         new StringBuilder().AppendQuoted(source).ToString().Should().Be(expected);

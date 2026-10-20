@@ -15,7 +15,7 @@ public class ReleaseVersionTests
         return configFile.GetAsString();
     }
 
-    [Test]
+    [Fact]
     public void CheckForReleaseCandidatesTest()
     {
         Version currentVersion = new(2, 47);
@@ -31,7 +31,7 @@ public class ReleaseVersionTests
         updates.Select(rv => rv.ApplicationVersion).Should().Equal(expectedVersions);
     }
 
-    [Test]
+    [Fact]
     public void CheckForMajorReleasesTest()
     {
         Version currentVersion = new(2, 47);
@@ -45,7 +45,7 @@ public class ReleaseVersionTests
         updates.Select(rv => rv.ApplicationVersion).Should().Equal(expectedVersions);
     }
 
-    [Test]
+    [Fact]
     public void CheckForNoMajorReleasesTest()
     {
         Version currentVersion = new(2, 48);

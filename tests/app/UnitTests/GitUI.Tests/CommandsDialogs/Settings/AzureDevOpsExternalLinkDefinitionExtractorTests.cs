@@ -4,10 +4,11 @@ using GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 namespace GitUITests.CommandsDialogs.Settings;
 public class AzureDevOpsExternalLinkDefinitionExtractorTests
 {
-    [TestCase("https://owner@dev.azure.com/owner/project/_git/repo")]
-    [TestCase("git@ssh.dev.azure.com:v3/owner/project/repo")]
-    [TestCase("https://owner.visualstudio.com/project/_git/repo")]
-    [TestCase("owner@vs-ssh.visualstudio.com:v3/owner/project/repo")]
+    [Theory]
+    [InlineData("https://owner@dev.azure.com/owner/project/_git/repo")]
+    [InlineData("git@ssh.dev.azure.com:v3/owner/project/repo")]
+    [InlineData("https://owner.visualstudio.com/project/_git/repo")]
+    [InlineData("owner@vs-ssh.visualstudio.com:v3/owner/project/repo")]
     public void Should_get_link_definitions_When_successfuly_parsing_remote_url(string url)
     {
         IList<ExternalLinkDefinition> externalLinkDefinitions = new AzureDevopsExternalLinkDefinitionExtractor().GetDefinitions(url);
@@ -22,7 +23,7 @@ public class AzureDevOpsExternalLinkDefinitionExtractorTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Should_get_link_definitions_When_no_remote_url_provided()
     {
         IList<ExternalLinkDefinition> externalLinkDefinitions = new AzureDevopsExternalLinkDefinitionExtractor().GetDefinitions(null!);

@@ -2,34 +2,32 @@
 
 namespace GitUITests.UserControls;
 
-[Apartment(ApartmentState.STA)]
-public class InteractiveGitActionControlTests
+public class InteractiveGitActionControlTests : IDisposable
 {
     private InteractiveGitActionControl _control = null!;
     private InteractiveGitActionControl.TestAccessor _accessor;
 
-    [SetUp]
-    public void SetUp()
+    public InteractiveGitActionControlTests()
     {
         _control = new InteractiveGitActionControl();
         _accessor = _control.GetTestAccessor();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _control.Dispose();
     }
 
-    [TestCase(InteractiveGitActionControl.GitAction.Rebase, false)]
-    [TestCase(InteractiveGitActionControl.GitAction.Rebase, true)]
-    [TestCase(InteractiveGitActionControl.GitAction.Merge, false)]
-    [TestCase(InteractiveGitActionControl.GitAction.Merge, true)]
-    [TestCase(InteractiveGitActionControl.GitAction.Patch, false)]
-    [TestCase(InteractiveGitActionControl.GitAction.Patch, true)]
-    [TestCase(InteractiveGitActionControl.GitAction.Bisect, false)]
-    [TestCase(InteractiveGitActionControl.GitAction.None, false)]
-    [TestCase(InteractiveGitActionControl.GitAction.None, true)]
+    [StaTheory]
+    [InlineData(InteractiveGitActionControl.GitAction.Rebase, false)]
+    [InlineData(InteractiveGitActionControl.GitAction.Rebase, true)]
+    [InlineData(InteractiveGitActionControl.GitAction.Merge, false)]
+    [InlineData(InteractiveGitActionControl.GitAction.Merge, true)]
+    [InlineData(InteractiveGitActionControl.GitAction.Patch, false)]
+    [InlineData(InteractiveGitActionControl.GitAction.Patch, true)]
+    [InlineData(InteractiveGitActionControl.GitAction.Bisect, false)]
+    [InlineData(InteractiveGitActionControl.GitAction.None, false)]
+    [InlineData(InteractiveGitActionControl.GitAction.None, true)]
     public void SetState(InteractiveGitActionControl.GitAction action, bool conflicts)
     {
         _accessor.SetGitAction(action, conflicts);

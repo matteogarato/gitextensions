@@ -3,27 +3,19 @@
 namespace GitUITests.Theming;
 public class ThemePersistenceTests
 {
-    private static IEnumerable<TestCaseData> ColorFormatCases()
+    public static IEnumerable<object[]> ColorFormatCases()
     {
-        yield return new TestCaseData(Color.FromArgb(red: 255, green: 0, blue: 0))
-        {
-            ExpectedResult = "#ff0000"
-        };
+        yield return [Color.FromArgb(red: 255, green: 0, blue: 0), "#ff0000"];
 
-        yield return new TestCaseData(Color.FromArgb(red: 0, green: 255, blue: 0))
-        {
-            ExpectedResult = "#00ff00"
-        };
+        yield return [Color.FromArgb(red: 0, green: 255, blue: 0), "#00ff00"];
 
-        yield return new TestCaseData(Color.FromArgb(red: 0, green: 0, blue: 255))
-        {
-            ExpectedResult = "#0000ff"
-        };
+        yield return [Color.FromArgb(red: 0, green: 0, blue: 255), "#0000ff"];
     }
 
-    [Test, TestCaseSource(nameof(ColorFormatCases))]
-    public string Should_format_color_in_css_rgb_hex_format(Color color)
+    [Theory]
+    [MemberData(nameof(ColorFormatCases))]
+    public void Should_format_color_in_css_rgb_hex_format(Color color, string expected)
     {
-        return ThemePersistence.TestAccessor.FormatColor(color);
+        ThemePersistence.TestAccessor.FormatColor(color).Should().Be(expected);
     }
 }

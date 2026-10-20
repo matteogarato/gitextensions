@@ -6,7 +6,7 @@ namespace GitCommandsTests.Git;
 
 public sealed class GitRefTests
 {
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_true_when_tracking_remote()
     {
         string remoteBranchShortName = "remote_branch";
@@ -18,7 +18,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(remoteBranchRef).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_false_when_remote_is_null()
     {
         IGitRef localBranchRef = SetupLocalBranchWithATrackingReference("remote_branch", "origin");
@@ -26,7 +26,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(null).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_false_when_tracking_another_remote()
     {
         string remoteBranchShortName = "remote_branch";
@@ -37,7 +37,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(remoteBranchRef).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_false_when_tracking_another_remote_branch()
     {
         IGitRef localBranchRef = SetupLocalBranchWithATrackingReference("one_remote_branch", "origin");
@@ -47,7 +47,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(remoteBranchRef).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_false_when_supposedly_local_branch_is_a_remote_ref()
     {
         IGitRef localBranchRef = SetupRemoteRef("a_remote_branch", "origin");
@@ -57,7 +57,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(remoteBranchRef).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_false_when_supposedly_remote_branch_is_a_local_ref()
     {
         IGitRef localBranchRef = SetupLocalBranchWithATrackingReference("a_remote_branch", "origin");
@@ -67,7 +67,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(remoteBranchRef).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void IsTrackingRemote_should_return_false_when_local_branch_is_tracking_nothing()
     {
         IGitModule localGitModule = Substitute.For<IGitModule>();
@@ -80,7 +80,7 @@ public sealed class GitRefTests
         localBranchRef.IsTrackingRemote(remoteBranchRef).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void Remote_Should_prefix_LocalName_for_Name()
     {
         string remoteName = "origin";
@@ -91,7 +91,7 @@ public sealed class GitRefTests
         name.Should().Be(remoteBranchRef.LocalName);
     }
 
-    [Test]
+    [Fact]
     public void If_Remote_is_not_prefix_of_Name_then_LocalName_should_return_Name()
     {
         // Not standard behavior but seem to occur for git-svn

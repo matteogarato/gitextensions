@@ -1,52 +1,45 @@
-﻿using System.Collections;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using GitUI;
 using Microsoft.VisualStudio.Threading;
-using NUnit.Framework;
-using NUnit.Framework.Interfaces;
+using Xunit;
+using Xunit.v3;
 
 namespace CommonTestUtils;
 
-[AttributeUsage(AttributeTargets.Assembly)]
-public sealed class ConfigureJoinableTaskFactoryAttribute : Attribute, ITestAction
+/// <summary>
+///  Configures <see cref="ThreadHelper.JoinableTaskContext"/> around each test and joins pending operations afterwards.
+///  Apply it at assembly level. Tests that need the main thread must run on an STA thread (e.g. <c>[StaFact]</c>).
+/// </summary>
+[AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method)]
+public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttribute
 {
-    private DenyExecutionSynchronizationContext? _denyExecutionSynchronizationContext;
-    private HangReporter? _hangReporter;
-    private ExceptionDispatchInfo? _threadException;
+    // xUnit creates a new attribute instance per access, so the state shared between Before and After must be static.
+    // Tests using the joinable task context must not run in parallel, so a single slot is sufficient.
+    private static DenyExecutionSynchronizationContext? _denyExecutionSynchronizationContext;
+    private static HangReporter? _hangReporter;
+    private static ExceptionDispatchInfo? _threadException;
 
-    public ActionTargets Targets => ActionTargets.Test;
-
-    public ConfigureJoinableTaskFactoryAttribute()
+    static ConfigureJoinableTaskFactoryAttribute()
     {
         Application.ThreadException += HandleApplicationThreadException;
     }
 
-    public void BeforeTest(ITest test)
+    public override void Before(MethodInfo methodUnderTest, IXunitTest test)
     {
         ThreadHelper.HasJoinableTaskContext.Should().BeFalse("Tests with joinable tasks must not be run in parallel!");
 
-        IList? apartmentState = null;
-        for (ITest? scope = test; scope is not null; scope = scope.Parent)
-        {
-            apartmentState = scope.Properties[nameof(ApartmentState)];
-            if (apartmentState.Count > 0)
-            {
-                break;
-            }
-        }
-
-        if (!apartmentState!.Contains(ApartmentState.STA))
+        if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
         {
             _denyExecutionSynchronizationContext = new DenyExecutionSynchronizationContext(SynchronizationContext.Current);
             ThreadHelper.JoinableTaskContext = new JoinableTaskContext(_denyExecutionSynchronizationContext.MainThread, _denyExecutionSynchronizationContext);
             return;
         }
 
-        Thread.CurrentThread.GetApartmentState().Should().Be(ApartmentState.STA);
+        _denyExecutionSynchronizationContext = null;
 
         // This form is created to obtain a UI synchronization context only.
         using (new Form())
@@ -57,7 +50,7 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : Attribute, ITestActi
         }
     }
 
-    public void AfterTest(ITest test)
+    public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
         try
         {
@@ -101,15 +94,23 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : Attribute, ITestActi
         }
         finally
         {
-            // Reset _threadException to null, and throw if it was set during the current test.
-            Interlocked.Exchange(ref _threadException, null)?.Throw();
+            try
+            {
+                // Deferred clean-up (e.g. temp repositories) must run only after all pending operations were joined above.
+                Epilogue.ExecuteAfterTestActions();
+            }
+            finally
+            {
+                // Reset _threadException to null, and throw if it was set during the current test.
+                Interlocked.Exchange(ref _threadException, null)?.Throw();
+            }
         }
     }
 
-    private void HandleApplicationThreadException(object? sender, ThreadExceptionEventArgs e)
+    private static void HandleApplicationThreadException(object? sender, ThreadExceptionEventArgs e)
         => StoreThreadException(e.Exception);
 
-    private void StoreThreadException(Exception ex)
+    private static void StoreThreadException(Exception ex)
     {
         if (_threadException is not null)
         {

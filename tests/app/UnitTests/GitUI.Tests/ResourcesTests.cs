@@ -9,7 +9,7 @@ using GitUI.Properties;
 namespace GitUITests;
 public class ResourcesTests
 {
-    [Test]
+    [Fact]
     public void PngResources_ShouldNotContainDPIInformation()
     {
         // arrange
@@ -33,7 +33,7 @@ public class ResourcesTests
         }
     }
 
-    [Test]
+    [Fact]
     public void ShouldCorrectlyIdentifyPngSections()
     {
         // arrange

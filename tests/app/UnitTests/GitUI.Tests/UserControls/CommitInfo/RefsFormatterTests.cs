@@ -12,20 +12,19 @@ public class RefsFormatterTests
     private ILinkFactory _linkFactory = null!;
     private RefsFormatter _refsFormatter = null!;
 
-    [SetUp]
-    public void SetUp()
+    public RefsFormatterTests()
     {
         _linkFactory = new LinkFactory();
         _refsFormatter = new RefsFormatter(_linkFactory);
     }
 
-    [Test]
+    [Fact]
     public void LinkFactoryNull()
     {
         ((Action)(() => new RefsFormatter(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void RefsNull()
     {
         _refsFormatter.FormatBranches(branches: null, showAsLinks: true, limit: true)
@@ -35,8 +34,13 @@ public class RefsFormatterTests
             .Should().Be(string.Empty);
     }
 
-    [Test]
-    public void Empty([Values(true, false)] bool showAsLinks, [Values(true, false)] bool limit)
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+
+    public void Empty(bool showAsLinks, bool limit)
     {
         IReadOnlyList<string> refs = new List<string>();
 
@@ -47,8 +51,25 @@ public class RefsFormatterTests
             .Should().Be(GitUI.TranslatedStrings.ContainedInNoTag);
     }
 
-    [Test]
-    public void LimitNotExceededOrNotLimited([Values(1, 2, 3, 9, 10, 11, 12, 13)] int count, [Values(true, false)] bool showAsLinks)
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(1, false)]
+    [InlineData(2, true)]
+    [InlineData(2, false)]
+    [InlineData(3, true)]
+    [InlineData(3, false)]
+    [InlineData(9, true)]
+    [InlineData(9, false)]
+    [InlineData(10, true)]
+    [InlineData(10, false)]
+    [InlineData(11, true)]
+    [InlineData(11, false)]
+    [InlineData(12, true)]
+    [InlineData(12, false)]
+    [InlineData(13, true)]
+    [InlineData(13, false)]
+
+    public void LimitNotExceededOrNotLimited(int count, bool showAsLinks)
     {
         bool limit = count <= 12;
         IReadOnlyList<string> refs = _refs.Take(count).ToList();
@@ -66,8 +87,11 @@ public class RefsFormatterTests
                          + formattedTags.Join(Environment.NewLine));
     }
 
-    [Test]
-    public void LimitExceeded([Values(true, false)] bool showAsLinks)
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+
+    public void LimitExceeded(bool showAsLinks)
     {
         IEnumerable<string> formattedBranches = _refs.Take(10).Select(r => FormatRef(r, "branch", showAsLinks));
         IEnumerable<string> formattedTags = _refs.Take(10).Select(r => FormatRef(r, "tag", showAsLinks));

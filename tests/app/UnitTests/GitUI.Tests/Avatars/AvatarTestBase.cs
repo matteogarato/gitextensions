@@ -4,7 +4,7 @@ using NSubstitute;
 
 namespace GitUITests.Avatars;
 
-public abstract class AvatarTestBase
+public abstract class AvatarTestBase : IDisposable
 {
     protected const int _size = 16;
 
@@ -30,18 +30,17 @@ public abstract class AvatarTestBase
     protected IAvatarProvider _cache = null!;
     protected IAvatarCacheCleaner _cacheCleaner => (_cache as IAvatarCacheCleaner)!;
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
+    public AvatarTestBase()
     {
         _img1 = new Bitmap(_size, _size);
         _img2 = new Bitmap(_size, _size);
         _img3 = new Bitmap(_size, _size);
         _img4 = new Bitmap(_size, _size);
         _imgGenerated = new Bitmap(_size, _size);
+        InitializeAvatarProvider();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         _img1.Dispose();
         _img2.Dispose();
@@ -50,8 +49,7 @@ public abstract class AvatarTestBase
         _imgGenerated.Dispose();
     }
 
-    [SetUp]
-    public virtual void SetUp()
+    private void InitializeAvatarProvider()
     {
         _inner = Substitute.For<IAvatarProvider>();
 

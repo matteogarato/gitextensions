@@ -3,22 +3,19 @@ using GitExtensions.Extensibility.Translations.Xliff;
 using GitUI;
 
 namespace GitUITests;
-public sealed class TranslationTest
+public sealed class TranslationTest : IDisposable
 {
-    [SetUp]
-    public void SetUp()
+    public TranslationTest()
     {
         GitModuleForm.IsUnitTestActive = true;
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         GitModuleForm.IsUnitTestActive = false;
     }
 
-    [Test]
-    [Apartment(ApartmentState.STA)]
+    [StaFact]
     public void CreateInstanceOfClass()
     {
         UserEnvironmentInformation.Initialise("0123456789012345678901234567890123456789", isDirty: false);

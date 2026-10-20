@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:gitui="clr-namespace:GitUI"
+        xmlns:editor="clr-namespace:GitUI.Editor"
+        xmlns:commitinfo="clr-namespace:GitUI.CommitInfo"
+        xmlns:leftpanel="clr-namespace:GitUI.LeftPanel"
+        x:Class="GitUI.CommandsDialogs.FormBrowse"
+        Width="1280" Height="800"
+        Title="Git Extensions">
+  <DockPanel>
+    <Menu x:Name="mainMenuStrip" DockPanel.Dock="Top">
+      <MenuItem x:Name="repositoryToolStripMenuItem" Header="_Repository">
+        <MenuItem x:Name="openToolStripMenuItem" Header="&amp;Open..." />
+        <Separator />
+        <MenuItem x:Name="refreshToolStripMenuItem" Header="_Refresh" />
+      </MenuItem>
+      <MenuItem x:Name="commandsToolStripMenuItem" Header="_Commands">
+        <MenuItem x:Name="fetchAllToolStripMenuItem" Header="Fetch _all" />
+      </MenuItem>
+      <MenuItem x:Name="viewToolStripMenuItem">
+        <MenuItem x:Name="lightThemeMenuItem" ToggleType="Radio" GroupName="ApplicationTheme" />
+        <MenuItem x:Name="darkThemeMenuItem" ToggleType="Radio" GroupName="ApplicationTheme" />
+      </MenuItem>
+    </Menu>
+    <StackPanel DockPanel.Dock="Top" Margin="8,6" Spacing="2">
+      <TextBlock x:Name="lblRepoPath" FontWeight="SemiBold" />
+      <ScrollViewer MaxHeight="72" VerticalScrollBarVisibility="Auto">
+        <TextBlock x:Name="lblStatus" FontFamily="monospace" Opacity="0.7" TextWrapping="Wrap" />
+      </ScrollViewer>
+    </StackPanel>
+    <Border x:Name="operationStatusPanel" DockPanel.Dock="Top" IsVisible="False" Margin="8,0,8,8" Padding="8"
+            BorderBrush="DarkGoldenrod" BorderThickness="1">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="lblOperationStatus" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+          <Button x:Name="btnContinueRebase" IsVisible="False" />
+          <Button x:Name="btnContinueMerge" IsVisible="False" />
+          <Button x:Name="btnContinuePatch" IsVisible="False" />
+          <Button x:Name="btnSkipRebase" IsVisible="False" />
+          <Button x:Name="btnAbortRebase" IsVisible="False" />
+          <Button x:Name="btnAbortMerge" IsVisible="False" />
+          <Button x:Name="btnAbortPatch" IsVisible="False" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid ColumnDefinitions="240,4,*" Margin="8,0,8,8">
+      <leftpanel:RepoObjectsTree x:Name="repoObjectsTree" Grid.Column="0" />
+      <GridSplitter Grid.Column="1" Background="Transparent" ResizeDirection="Columns" />
+      <Grid Grid.Column="2" RowDefinitions="3*,4,2*">
+      <gitui:RevisionGridControl x:Name="RevisionGrid" Grid.Row="0" />
+      <GridSplitter Grid.Row="1" Background="Transparent" ResizeDirection="Rows" />
+      <Grid Grid.Row="2" ColumnDefinitions="380,4,*">
+        <Grid Grid.Column="0" RowDefinitions="Auto,*">
+          <commitinfo:CommitInfo x:Name="CommitInfo" Grid.Row="0" MaxHeight="180" />
+          <TabControl x:Name="fileListTabs" Grid.Row="1">
+            <TabItem x:Name="commitFilesTab">
+              <gitui:FileStatusList x:Name="fileStatusList" />
+            </TabItem>
+            <TabItem x:Name="workingTreeTab">
+              <gitui:WorkingTreePanel x:Name="workingTreePanel" />
+            </TabItem>
+          </TabControl>
+        </Grid>
+        <GridSplitter Grid.Column="1" Background="Transparent" ResizeDirection="Columns" />
+        <editor:FileViewer x:Name="fileViewer" Grid.Column="2" />
+      </Grid>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</Window>

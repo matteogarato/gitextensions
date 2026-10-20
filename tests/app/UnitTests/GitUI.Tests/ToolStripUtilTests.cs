@@ -3,7 +3,7 @@
 namespace GitUITests;
 public sealed class ToolStripUtilTests
 {
-    [Test]
+    [Fact]
     public void FindToolStripItems()
     {
         using ToolStrip root = new()

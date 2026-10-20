@@ -1,17 +1,18 @@
-﻿using GitCommands;
-using NUnit.Framework;
-using NUnit.Framework.Interfaces;
+using GitCommands;
+using Xunit;
 
 namespace CommonTestUtils;
 
-[AttributeUsage(AttributeTargets.Assembly)]
-public sealed class TestAppSettingsAttribute : Attribute, ITestAction
+/// <summary>
+///  Assembly fixture that sets up <see cref="AppSettings"/> once before the first test of an assembly
+///  and disposes them after the last one. Register it with
+///  <c>[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]</c> in each consuming test assembly.
+/// </summary>
+public sealed class TestAppSettingsFixture : IDisposable
 {
     private readonly Semaphore _semaphore = new(initialCount: 1, maximumCount: 1, "GitExtensionsTestAssemblySerializer");
 
-    public ActionTargets Targets => ActionTargets.Suite;
-
-    public void BeforeTest(ITest test)
+    public TestAppSettingsFixture()
     {
         _semaphore.WaitOne();
 
@@ -32,10 +33,22 @@ public sealed class TestAppSettingsAttribute : Attribute, ITestAction
         AppSettings.SettingsContainer.SettingsCache.Save();
     }
 
-    public void AfterTest(ITest test)
+    public void Dispose()
     {
-        AppSettings.SettingsContainer.SettingsCache.Dispose();
-
-        _semaphore.Release();
+        try
+        {
+            Epilogue.ExecuteAfterSuiteActions();
+        }
+        finally
+        {
+            try
+            {
+                AppSettings.SettingsContainer.SettingsCache.Dispose();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
     }
 }

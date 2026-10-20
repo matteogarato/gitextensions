@@ -11,7 +11,7 @@ namespace GitCommandsTests.Config;
 /// The ConfigFile class should respond the same as "git config".
 /// Since .gitconfig is often hidden, also make sure this is tested.
 /// </summary>
-public class ConfigFileTest
+public class ConfigFileTest : IDisposable
 {
     private GitModule _module = null!;
 
@@ -65,7 +65,7 @@ public class ConfigFileTest
         configFile.GetValue(key, string.Empty).Should().NotBe(expectedValue, "ConfigFile");
     }
 
-    [Test]
+    [Fact]
     public void TestWithInvalidFileName()
     {
         // TEST DATA
@@ -79,7 +79,7 @@ public class ConfigFileTest
         configFile.Should().NotBeNull();
     }
 
-    [Test]
+    [Fact]
     public void TestWithNonexistentFile()
     {
         try
@@ -93,7 +93,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void TestSave()
     {
         ConfigFile configFile = new(GetConfigFileName());
@@ -114,7 +114,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void TestSetValueNonExisting()
     {
         ConfigFile configFile = new(GetConfigFileName());
@@ -131,7 +131,7 @@ public class ConfigFileTest
         CheckValueIsEqual(configFile, "section1.key2", "section1key2");
     }
 
-    [Test]
+    [Fact]
     public void TestSetValueExisting()
     {
         ConfigFile configFile = new(GetConfigFileName());
@@ -145,7 +145,7 @@ public class ConfigFileTest
         CheckValueIsEqual(configFile, "section.key", "section.keyoverwrite");
     }
 
-    [Test]
+    [Fact]
     public void TestSetValueSectionWithDotNonExisting()
     {
         ConfigFile configFile = new(GetConfigFileName());
@@ -162,7 +162,7 @@ public class ConfigFileTest
         CheckValueIsEqual(configFile, "submodule.test.test2.path2", "submodule.test.test2.path2");
     }
 
-    [Test]
+    [Fact]
     public void TestSetValueSectionWithDotExisting()
     {
         ConfigFile configFile = new(GetConfigFileName());
@@ -180,7 +180,7 @@ public class ConfigFileTest
         CheckValueIsEqual(configFile, "submodule.test.test2.path2", "submodule.test.test2.path2");
     }
 
-    [Test]
+    [Fact]
     public void TestGetValue()
     {
         // TEST DATA
@@ -195,14 +195,14 @@ public class ConfigFileTest
         CheckValueIsEqual(configFile, "section3.subsection.key3", "value3");
     }
 
-    [Test]
+    [Fact]
     public void TestWithNullSettings()
     {
         ConfigFile file = new(GetConfigFileName());
         ((Action)(() => file.GetValue(null!, null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void TestWithHiddenFile()
     {
         // TEST DATA
@@ -235,7 +235,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void RandomTestCase1()
     {
         // TEST DATA
@@ -281,7 +281,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void RandomTestCase2()
     {
         // TEST DATA
@@ -336,7 +336,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void NewLineTest()
     {
         // TEST DATA
@@ -388,7 +388,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void CommentsTest()
     {
         // TEST DATA
@@ -423,7 +423,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void EscapedSectionTest()
     {
         // TEST DATA
@@ -445,7 +445,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void SpacesInSubSectionTest()
     {
         // TEST DATA
@@ -479,7 +479,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void CaseSensitive()
     {
         // create test data
@@ -526,7 +526,7 @@ public class ConfigFileTest
         }
     }
 
-    [Test]
+    [Fact]
     public void TwoSections_ValueInTheLast()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
@@ -542,7 +542,7 @@ public class ConfigFileTest
         actual.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void TwoSections_ValueInTheFirst()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
@@ -558,7 +558,7 @@ public class ConfigFileTest
         actual.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void TwoSections_ValueInBoth()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
@@ -575,7 +575,7 @@ public class ConfigFileTest
         actual.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void TwoSections_ValueInBoth_GetValues()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
@@ -592,7 +592,7 @@ public class ConfigFileTest
         expected.SequenceEqual(actual).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void SquareBracketInValue()
     {
         StringBuilder content = new();
@@ -608,7 +608,7 @@ public class ConfigFileTest
         actual.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void SquareBracketInSectionName()
     {
         StringBuilder content = new();
@@ -627,8 +627,7 @@ public class ConfigFileTest
     /// <summary>
     /// Always delete the test config file after each test.
     /// </summary>
-    [TearDown]
-    public void Cleanup()
+    public void Dispose()
     {
         if (File.Exists(GetConfigFileName()))
         {

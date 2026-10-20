@@ -1,0 +1,177 @@
+name: Linux Build
+
+# Avalonia/Linux port: builds the cross-platform (net10.0) flavor of the
+# tier projects on Linux, plus their net10.0-windows flavor as a compile check.
+# Kept as a separate workflow file so upstream merges never conflict on CI configuration.
+
+on:
+  push:
+    branches:
+      - master
+      - 'release/**'
+      - Avalonia_Port
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: linux-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/heads/release/') }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-linux:
+    name: Build (net10.0 tiers)
+    runs-on: ubuntu-latest
+    # The Avalonia port must never block the Windows Forms pipelines: report failures as
+    # annotations without failing the check.
+    continue-on-error: true
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        submodules: recursive
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+        restore-keys: |
+          nuget-${{ runner.os }}-
+
+    - name: Show tool versions
+      run: |
+        dotnet --version
+        git --version
+
+    - name: Restore local .NET tools
+      run: dotnet tool restore
+
+    - name: Build shim assembly
+      run: dotnet build src/app/GitExtensions.Shims.WinForms/GitExtensions.Shims.WinForms.csproj
+
+    - name: Build tiers (net10.0)
+      run: |
+        dotnet build src/app/GitExtensions.Extensibility/GitExtensions.Extensibility.csproj -f net10.0
+        dotnet build src/app/GitExtUtils/GitExtUtils.csproj -f net10.0
+        dotnet build src/plugins/GitUIPluginInterfaces/GitUIPluginInterfaces.csproj -f net10.0
+        dotnet build src/app/GitCommands/GitCommands.csproj -f net10.0
+        dotnet build src/app/ResourceManager/ResourceManager.csproj -f net10.0
+
+    - name: Build Avalonia app
+      run: dotnet build src/app/GitExtensions.Avalonia/GitExtensions.Avalonia.csproj
+
+    - name: Build WinFormsToAxaml tool
+      run: dotnet build eng/tools/WinFormsToAxaml/WinFormsToAxaml.csproj
+
+    - name: Run Avalonia headless tests
+      run: dotnet test tests/app/UnitTests/GitUI.Avalonia.Tests/GitUI.Avalonia.Tests.csproj --collect:"XPlat Code Coverage" --settings:tests/coverlet.runsettings
+
+    - name: Generate coverage reports
+      if: always()
+      shell: bash
+      run: |
+        mapfile -t reports < <(find artifacts/Debug/TestsResults -type f -name coverage.opencover.xml ! -path '*/In/*' -print)
+        if [ "${#reports[@]}" -eq 0 ]; then
+          echo "::error::No Coverlet Cobertura reports were produced."
+          exit 1
+        fi
+
+        report_list=$(IFS=';'; echo "${reports[*]}")
+        dotnet tool run reportgenerator -- "-reports:$report_list" "-targetdir:artifacts/Debug/Coverage" "-reporttypes:Html;Cobertura;TextSummary"
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: avalonia-coverage-${{ github.sha }}
+        path: |
+          artifacts/Debug/Coverage/**
+          artifacts/Debug/TestsResults/*/coverage.*
+        if-no-files-found: error
+        retention-days: 7
+
+    - name: Install X11 smoke-test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes xvfb libfontconfig1 libice6 libsm6 libx11-6 libxext6 libxrender1
+
+    - name: Publish framework-dependent Linux application
+      run: >
+        dotnet publish src/app/GitExtensions.Avalonia/GitExtensions.Avalonia.csproj
+        --configuration Release
+        --runtime linux-x64
+        --self-contained false
+        -p:UseAppHost=true
+        --output "${{ runner.temp }}/GitExtensions-Avalonia-linux-x64"
+
+    - name: Smoke-test published application outside the checkout
+      shell: bash
+      run: |
+        set -euo pipefail
+        publish_dir="${{ runner.temp }}/GitExtensions-Avalonia-linux-x64"
+        app="$publish_dir/GitExtensions.Avalonia"
+        test -x "$app"
+        if ldd "$app" | grep -q "not found"; then
+          ldd "$app"
+          exit 1
+        fi
+        for native_library in "$publish_dir"/*.so; do
+          test -e "$native_library" || continue
+          if ldd "$native_library" | grep -q "not found"; then
+            ldd "$native_library"
+            exit 1
+          fi
+        done
+
+        smoke_dir="$(mktemp -d "${RUNNER_TEMP}/avalonia-linux-smoke.XXXXXX")"
+        repository="$smoke_dir/repository ü"
+        mkdir -p "$repository/src" "$smoke_dir/config"
+        git -C "$repository" init --quiet
+        git -C "$repository" config user.name "Avalonia Linux smoke test"
+        git -C "$repository" config user.email "avalonia-linux-smoke@example.invalid"
+        printf 'published Linux smoke test\n' > "$repository/src/file ü.txt"
+        git -C "$repository" add -- "src/file ü.txt"
+        git -C "$repository" commit --quiet -m "initial smoke test"
+
+        set +e
+        timeout --signal=TERM 12s xvfb-run -a env \
+          XDG_CONFIG_HOME="$smoke_dir/config" \
+          "$app" browse "$repository"
+        status=$?
+        set -e
+        if [ "$status" -ne 124 ]; then
+          printf 'Published application exited before the smoke-test timeout (status %s).\n' "$status"
+          exit 1
+        fi
+
+        test -s "$smoke_dir/config/GitExtensions/GitExtensions/GitExtensions.settings"
+
+    - name: Upload framework-dependent Linux publish
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: GitExtensions-Avalonia-linux-x64-${{ github.sha }}
+        path: ${{ runner.temp }}/GitExtensions-Avalonia-linux-x64/
+        if-no-files-found: error
+        retention-days: 7
+
+    - name: Build tiers (net10.0-windows compile check)
+      run: |
+        dotnet build src/app/GitExtensions.Extensibility/GitExtensions.Extensibility.csproj -f net10.0-windows
+        dotnet build src/app/GitExtUtils/GitExtUtils.csproj -f net10.0-windows
+        dotnet build src/plugins/GitUIPluginInterfaces/GitUIPluginInterfaces.csproj -f net10.0-windows
+        dotnet build src/app/GitCommands/GitCommands.csproj -f net10.0-windows
+        dotnet build src/app/ResourceManager/ResourceManager.csproj -f net10.0-windows

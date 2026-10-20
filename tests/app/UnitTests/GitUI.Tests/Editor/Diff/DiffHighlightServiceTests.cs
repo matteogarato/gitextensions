@@ -7,10 +7,9 @@ using ICSharpCode.TextEditor.Document;
 
 namespace GitUITests.Editor.Diff;
 
-[Apartment(ApartmentState.STA)]
 public class DiffHighlightServiceTests
 {
-    [Test]
+    [StaFact]
     public void GetDifferenceMarkers_should_dim_identical_parts_at_begin_and_end()
     {
         const string identicalPartBefore = "identical_part_before_";
@@ -45,7 +44,7 @@ public class DiffHighlightServiceTests
         string GetText(ISegment line) => (line == removedLine ? removedLineText : addedLineText)[beginOffset..];
     }
 
-    [Test]
+    [StaFact]
     public void GetDifferenceMarkers_should_add_anchor_markers()
     {
         const string deletion = nameof(deletion);
@@ -87,12 +86,12 @@ public class DiffHighlightServiceTests
         string GetText(ISegment line) => (line == removedLine ? removedLineText : addedLineText)[beginOffset..];
     }
 
-    [Test]
+    [StaFact]
     public async Task MarkInlineGap()
     {
         using TextEditorControl textEditor = new();
         DiffViewerLineNumberControl diffViewerLineNumber = new(textEditor.ActiveTextAreaControl.TextArea);
-        string testDataDir = Path.Combine(TestContext.CurrentContext.TestDirectory, "Editor", "Diff");
+        string testDataDir = Path.Combine(AppContext.BaseDirectory, "Editor", "Diff");
         string text = File.ReadAllText(Path.Combine(testDataDir, "gaps.diff"));
 
         // ensure that the test doesn't fail if the local Git configuration has core.autocrlf enabled

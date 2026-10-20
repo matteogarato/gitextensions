@@ -1,9 +1,10 @@
 ﻿using GitUIPluginInterfaces;
+using Xunit;
 
 namespace GitUIPluginInterfacesTests;
 public class ManagedExtensibilityTests
 {
-    [TestCase]
+    [Fact]
     public void ThrowWhenUserPluginsPathAlreadyInitialized()
     {
         ManagedExtensibility.SetUserPluginsPath("A");

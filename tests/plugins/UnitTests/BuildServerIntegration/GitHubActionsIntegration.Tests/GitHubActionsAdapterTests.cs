@@ -6,22 +6,21 @@ using GitExtensions.Plugins.GitHubActionsIntegration.ApiClient;
 using GitExtensions.Plugins.GitHubActionsIntegration.ApiClient.Models;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using NSubstitute;
+using Xunit;
 
 namespace GitHubActionsIntegrationTests;
-internal class GitHubActionsAdapterTests
+public class GitHubActionsAdapterTests : IDisposable
 {
     private const string TestSha1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private const string TestSha2 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private const string TestSha3 = "cccccccccccccccccccccccccccccccccccccccc";
 
-    private GitHubActionsAdapter _target = null!;
+    private readonly GitHubActionsAdapter _target;
     private readonly IScheduler _scheduler = ImmediateScheduler.Instance;
-    private IGitHubActionsApiClient _apiClient = null!;
+    private readonly IGitHubActionsApiClient _apiClient;
+    private readonly IGitHubActionsApiClientFactory _apiClientFactory;
 
-    private IGitHubActionsApiClientFactory _apiClientFactory = null!;
-
-    [SetUp]
-    public void SetUp()
+    public GitHubActionsAdapterTests()
     {
         _apiClient = Substitute.For<IGitHubActionsApiClient>();
         _apiClient.BaseUrl.Returns("https://api.github.com/repos/owner/repo");
@@ -39,20 +38,19 @@ internal class GitHubActionsAdapterTests
         _target.Initialize(Substitute.For<IBuildServerWatcher>(), settings, () => { });
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _target.Dispose();
         _apiClient.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void UniqueKey_should_return_base_url()
     {
         _target.UniqueKey.Should().Be("https://api.github.com/repos/owner/repo");
     }
 
-    [Test]
+    [Fact]
     public void Initialize_should_use_owner_and_repo_from_settings()
     {
         GitHubActionsAdapter adapter = new(_apiClientFactory);
@@ -70,7 +68,7 @@ internal class GitHubActionsAdapterTests
             Arg.Any<string?>());
     }
 
-    [Test]
+    [Fact]
     public void Initialize_should_not_create_client_when_owner_is_missing()
     {
         IGitHubActionsApiClientFactory freshFactory = Substitute.For<IGitHubActionsApiClientFactory>();
@@ -88,7 +86,7 @@ internal class GitHubActionsAdapterTests
             Arg.Any<string?>());
     }
 
-    [Test]
+    [Fact]
     public void GetFinishedBuildsSince_should_return_empty_when_no_runs()
     {
         GitHubActionsWorkflowRunsResponse emptyResponse = new()
@@ -106,7 +104,7 @@ internal class GitHubActionsAdapterTests
         _apiClient.Received(1).GetWorkflowRunsAsync(false, Arg.Any<DateTime?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void GetFinishedBuildsSince_should_return_single_build()
     {
         DateTime now = DateTime.UtcNow;
@@ -142,7 +140,7 @@ internal class GitHubActionsAdapterTests
         result[0].Id.Should().Be("1");
     }
 
-    [Test]
+    [Fact]
     public void GetRunningBuilds_should_return_in_progress_builds()
     {
         DateTime now = DateTime.UtcNow;
@@ -177,7 +175,7 @@ internal class GitHubActionsAdapterTests
         result[0].Status.Should().Be(BuildStatus.InProgress);
     }
 
-    [Test]
+    [Fact]
     public void GetFinishedBuildsSince_should_not_emit_duplicates_for_same_sha()
     {
         DateTime now = DateTime.UtcNow;
@@ -212,7 +210,7 @@ internal class GitHubActionsAdapterTests
         secondResult.Should().BeEmpty("duplicate SHA should be filtered out");
     }
 
-    [Test]
+    [Fact]
     public void GetFinishedBuildsSince_should_update_when_sha_has_newer_timestamp()
     {
         DateTime now = DateTime.UtcNow;

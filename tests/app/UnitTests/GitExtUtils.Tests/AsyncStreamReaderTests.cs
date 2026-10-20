@@ -1,27 +1,18 @@
 ﻿using System.Threading.Channels;
 using GitExtUtils;
 using GitUI;
-using Microsoft.VisualStudio.Threading;
 
 namespace GitCommandsTests;
 public sealed class AsyncStreamReaderTests
 {
-    [SetUp]
-    public void Setup()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task AsyncStreamReader(int repetition)
     {
-        ThreadHelper.JoinableTaskContext = new JoinableTaskContext();
-    }
+        repetition.Should().BeInRange(0, 2);
 
-    [TearDown]
-    public void TearDown()
-    {
-        ThreadHelper.JoinableTaskContext = null!;
-    }
-
-    [Test]
-    [Repeat(3)]
-    public async Task AsyncStreamReader()
-    {
         const int millisecondsDelayForAsyncNotification = 50;
         const int millisecondsDelayForPartialLine = 500;
 
@@ -44,62 +35,62 @@ public sealed class AsyncStreamReaderTests
         AsyncStreamReader asyncStreamReader = new(streamReaderMock, notify: text => notifiedTexts.Add(text));
 
         streamReaderMock.Inject(blockOfEndedLines);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([line1, line2]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject(blockOfLinesWithoutEnd);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([line1, line2]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
-        await Task.Delay(millisecondsDelayForPartialLine);
+        await Task.Delay(millisecondsDelayForPartialLine, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([prompt]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject(input);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([input]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject("");
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
-        await Task.Delay(millisecondsDelayForPartialLine);
+        await Task.Delay(millisecondsDelayForPartialLine, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject(progress1);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
-        await Task.Delay(millisecondsDelayForPartialLine);
+        await Task.Delay(millisecondsDelayForPartialLine, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([progress1]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject(progress2);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
         streamReaderMock.Inject(progress3);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([progress2]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
         streamReaderMock.Inject(partialLine);
-        await Task.Delay(millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([progress3]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.EndOfStream = true;
         int start = Environment.TickCount;
-        await asyncStreamReader.WaitUntilEofAsync(cancellationToken: default);
+        await asyncStreamReader.WaitUntilEofAsync(cancellationToken: TestContext.Current.CancellationToken);
         int delay = Environment.TickCount - start;
         delay.Should().BeLessThan(millisecondsDelayForAsyncNotification);
         expectedTexts.AddRange([partialLine]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject(blockOfEndedLines);
-        await Task.Delay(millisecondsDelayForPartialLine + millisecondsDelayForAsyncNotification);
+        await Task.Delay(millisecondsDelayForPartialLine + millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
         expectedTexts.AddRange([]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
     }

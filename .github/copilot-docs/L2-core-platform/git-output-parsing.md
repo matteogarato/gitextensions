@@ -42,6 +42,6 @@ produces immutable, reusable models for the rest of the app.
 - **ALWAYS** parse `-z` / `--porcelain` output, not human-readable output (which changes across git versions/locales).
 - Keep parsing **inside** these parser classes; model types must not parse text themselves.
 - Split on the first delimiter only when values can contain spaces (paths, ref names).
-- Cover new parsing with unit tests using recorded git output (`Verify.NUnit` snapshots where useful).
+- Cover new parsing with unit tests using recorded git output (`Verify.XunitV3` snapshots where useful).
 
 **Next:** [git-module](git-module.md) for who calls these parsers.

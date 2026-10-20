@@ -3,48 +3,26 @@ using GitCommands;
 using GitCommands.Remotes;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class FormBrowse_LeftPanel_RemotesTests
+public class FormBrowse_LeftPanel_RemotesTests : System.IDisposable, IClassFixture<FormBrowse_LeftPanel_RemotesTestsFixture>
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
-
-    // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
 
     // Created once for each test
     private GitUICommands _commands = null!;
     private IConfigFileRemoteSettingsManager _remotesManager = null!;
     private static readonly string[] RemoteNames = ["remote1", "remote5", "remote3", "remote4", "remote2"];
 
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public FormBrowse_LeftPanel_RemotesTests(FormBrowse_LeftPanel_RemotesTestsFixture fixture)
     {
-        // Remember the current settings...
-        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // Stop loading custom diff tools
-        AppSettings.ShowAvailableDiffTools = false;
-
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
-        AppSettings.ShowAuthorAvatarColumn = false;
+        InitializeTest();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-    }
-
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
@@ -57,13 +35,12 @@ public class FormBrowse_LeftPanel_RemotesTests
         _remotesManager = new ConfigFileRemoteSettingsManager(() => _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_load_active_remotes()
     {
         RunRepoObjectsTreeTest(
@@ -77,7 +54,7 @@ public class FormBrowse_LeftPanel_RemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_order_active_remotes_alphabetically()
     {
         RunRepoObjectsTreeTest(
@@ -93,7 +70,7 @@ public class FormBrowse_LeftPanel_RemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_order_should_not_display_inactive_if_none()
     {
         RunRepoObjectsTreeTest(
@@ -107,7 +84,7 @@ public class FormBrowse_LeftPanel_RemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_order_should_display_inactive_if_present()
     {
         // setup
@@ -124,7 +101,7 @@ public class FormBrowse_LeftPanel_RemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_order_should_display_inactive_after_active_nodes()
     {
         // setup
@@ -141,7 +118,7 @@ public class FormBrowse_LeftPanel_RemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_order_inactive_remotes_alphabetically()
     {
         // setup
@@ -197,5 +174,36 @@ public class FormBrowse_LeftPanel_RemotesTests
         UITest.RunForm(
             showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class FormBrowse_LeftPanel_RemotesTestsFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _originalShowAuthorAvatarColumn;
+    private bool _showAvailableDiffTools;
+
+    public FormBrowse_LeftPanel_RemotesTestsFixture()
+    {
+        // Remember the current settings...
+        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // Stop loading custom diff tools
+        AppSettings.ShowAvailableDiffTools = false;
+
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+        AppSettings.ShowAuthorAvatarColumn = false;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }
 }

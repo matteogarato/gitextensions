@@ -22,7 +22,7 @@ description/keyword triggers.
 | [pr-creation](pr-creation/SKILL.md) | Execution | Branch naming, conventional-commit messages, and the pre-PR checklist. | done |
 | [add-translation-strings](add-translation-strings/SKILL.md) | Execution | Runbook for adding/changing UI strings and regenerating `English.xlf` via `update-loc.cmd`. | done |
 | [add-winforms-dialog](add-winforms-dialog/SKILL.md) | Execution | Runbook for adding a new Form/control following naming + designer conventions. | done |
-| [run-tests](run-tests/SKILL.md) | Execution | Build and run the NUnit suite; interpret failures. | done |
+| [run-tests](run-tests/SKILL.md) | Execution | Build and run the xUnit suite; interpret failures. | done |
 
 ## Authoring rules
 

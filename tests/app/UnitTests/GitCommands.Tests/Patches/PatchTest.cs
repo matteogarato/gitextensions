@@ -1,9 +1,9 @@
 ﻿using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Patches;
-internal class PatchTest
+public class PatchTest
 {
-    [Test]
+    [Fact]
     public void TestPatchConstructor()
     {
         Patch patch = new("header", "index", PatchFileType.Text, "A", "B", PatchChangeType.NewFile, "text");

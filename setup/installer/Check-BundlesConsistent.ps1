@@ -1,12 +1,18 @@
 [CmdletBinding()]
 Param(
-    [string] $publishedPath
+    [string] $publishedPath,
+    [string] $avaloniaWxsPath
 )
 
 [xml]$productWxs = Get-Content $PSScriptRoot/Product.wxs;
 
 [array] $components = @();
-$components += ($productWxs.Wix.Product.DirectoryRef).Component.File.Source;
+$components += $productWxs.SelectNodes("//*[local-name()='File']") | ForEach-Object { $_.Source };
+if ($avaloniaWxsPath -and (Test-Path $avaloniaWxsPath))
+{
+    [xml]$avaloniaWxs = Get-Content $avaloniaWxsPath;
+    $components += $avaloniaWxs.SelectNodes("//*[local-name()='File']") | ForEach-Object { $_.Source };
+}
 
 $missingItems = @();
 Get-ChildItem -Path $publishedPath -Recurse | `
@@ -43,4 +49,3 @@ if ($missingItems) {
     Write-Host "[ERROR] Items not declared in Product.wxs:`r`n`t$items" -ForegroundColor Red
     exit -1;
 }
-

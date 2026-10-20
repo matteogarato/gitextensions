@@ -4,7 +4,7 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.Settings;
-internal sealed class BuildServerSettingsTests
+public sealed class BuildServerSettingsTests : IDisposable
 {
     private GitModuleTestHelper _testHelper = null!;
     private DistributedSettings _userRoaming = null!;
@@ -15,8 +15,7 @@ internal sealed class BuildServerSettingsTests
     private string _repoDistributedConfigFilePath = null!;
     private string _repoLocalConfigFilePath = null!;
 
-    [SetUp]
-    public void Setup()
+    public BuildServerSettingsTests()
     {
         _testHelper = new GitModuleTestHelper();
 
@@ -33,8 +32,7 @@ internal sealed class BuildServerSettingsTests
         _effective = new DistributedSettings(lowerPriority: _repoLocal, new GitExtSettingsCache(settingsFilePath: null!), SettingLevel.Effective);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _userRoaming.SettingsCache.Dispose();
         _repoDistributed.SettingsCache.Dispose();
@@ -43,7 +41,7 @@ internal sealed class BuildServerSettingsTests
         _testHelper.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void UserRoaming_settings_should_return_expected()
     {
         // Explicitly set
@@ -57,7 +55,7 @@ internal sealed class BuildServerSettingsTests
         ((SettingsPath)settingsSource).PathFor("").Should().Be("BuildServer.Azure DevOps and Team Foundation Server (since TFS2015).");
     }
 
-    [Test]
+    [Fact]
     public void RepoDistributed_settings_should_return_expected()
     {
         // No explicit settings, inheriting from the repo local
@@ -73,8 +71,9 @@ internal sealed class BuildServerSettingsTests
         ((SettingsPath)settingsSource).PathFor("").Should().Be("BuildServer.AppVeyor.");
     }
 
-    [TestCase(true)]
-    [TestCase(false)]
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void RepoLocalAndEffective_settings_should_return_expected(bool isLocal)
     {
         SettingsSource source = isLocal ? _repoLocal : _effective;

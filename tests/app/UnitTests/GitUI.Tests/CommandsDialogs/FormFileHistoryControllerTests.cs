@@ -6,15 +6,15 @@ public sealed class FormFileHistoryControllerTests
 {
     private FormFileHistoryController _controller = null!;
 
-    [SetUp]
-    public void Setup()
+    public FormFileHistoryControllerTests()
     {
         _controller = new FormFileHistoryController();
     }
 
-    [TestCase(@"Does not exist")]
-    [TestCase("")]
-    [TestCase(" ")]
+    [Theory]
+    [InlineData(@"Does not exist")]
+    [InlineData("")]
+    [InlineData(" ")]
     public void TryGetExactPathName_Should_return_null_on_not_existing_file(string path)
     {
         string lowercasePath = path.ToLower();
@@ -24,7 +24,7 @@ public sealed class FormFileHistoryControllerTests
         exactPath.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void TryGetExactPathName_Should_handle_network_path()
     {
         string path = @"\\" + Environment.MachineName.ToLower() + @"\c$\Windows\System32";
@@ -37,10 +37,11 @@ public sealed class FormFileHistoryControllerTests
         exactPath.Should().Be(path);
     }
 
-    [TestCase("Folder1\\file1.txt", true, true)]
-    [TestCase("FOLDER1\\file1.txt", true, false)]
-    [TestCase("fOLDER1\\file1.txt", true, false)]
-    [TestCase("Folder2\\file1.txt", false, false)]
+    [Theory]
+    [InlineData("Folder1\\file1.txt", true, true)]
+    [InlineData("FOLDER1\\file1.txt", true, false)]
+    [InlineData("fOLDER1\\file1.txt", true, false)]
+    [InlineData("Folder2\\file1.txt", false, false)]
     public void TryGetExactPathName_should_check_if_path_matches_case(string relativePath, bool isResolved, bool doesMatch)
     {
         using GitModuleTestHelper repo = new();

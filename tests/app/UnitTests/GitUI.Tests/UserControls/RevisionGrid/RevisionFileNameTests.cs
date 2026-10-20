@@ -7,15 +7,13 @@ using GitUI;
 using NSubstitute;
 
 namespace GitUITests.UserControls.RevisionGrid;
-[Apartment(ApartmentState.STA)]
-public class RevisionFileNameTests
+public class RevisionFileNameTests : IDisposable
 {
     private RevisionGridControl _revisionGridControl = null!;
     private MockExecutable _executable = null!;
     private IGitCommandRunner _commandRunner = null!;
 
-    [SetUp]
-    public void SetUp()
+    public RevisionFileNameTests()
     {
         _revisionGridControl = new RevisionGridControl();
         _executable = new MockExecutable();
@@ -38,14 +36,14 @@ public class RevisionFileNameTests
         _revisionGridControl.FilePathByObjectId = [];
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _revisionGridControl.Dispose();
     }
 
-    [TestCase("17b2a8777e43dff588284c9661206c97ccb6cf8e", "a.txt")]
-    [TestCase("83ec7c0a516f00b67aa9915d8e673a26510c2eed", "b.txt")]
+    [StaTheory]
+    [InlineData("17b2a8777e43dff588284c9661206c97ccb6cf8e", "a.txt")]
+    [InlineData("83ec7c0a516f00b67aa9915d8e673a26510c2eed", "b.txt")]
     public void GetRevisionFileName_should_query_git_and_return_file_name(string objectId, string expectedFileName)
     {
         const string path = "a.txt";

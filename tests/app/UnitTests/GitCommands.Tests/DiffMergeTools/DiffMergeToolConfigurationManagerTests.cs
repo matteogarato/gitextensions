@@ -18,8 +18,7 @@ public class DiffMergeToolConfigurationManagerTests
     private const string MergeToolKey = "merge.guitool";
     private const string MergeToolNoGuiKey = "merge.tool";
 
-    [SetUp]
-    public void Setup()
+    public DiffMergeToolConfigurationManagerTests()
     {
         _fileSettings = Substitute.For<IConfigValueStore>();
 
@@ -30,7 +29,7 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.GetValue(SettingKeyString.MergeToolNoGuiKey).Returns(MergeToolNameNoGui);
     }
 
-    [Test]
+    [Fact]
     public void Check_that_application_toolkey_is_same_as_test_constant()
     {
         // Test cases requires constants, test that they are equal
@@ -39,33 +38,34 @@ public class DiffMergeToolConfigurationManagerTests
         SettingKeyString.MergeToolNoGuiKey.Should().Be(MergeToolNoGuiKey);
     }
 
-    [Test]
+    [Fact]
     public void ConfiguredDiffTool_should_return_null_if_config_file_unset()
     {
         new DiffMergeToolConfigurationManager(() => null).ConfiguredDiffTool.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void ConfiguredDiffTool_should_return_value_in_config_file()
     {
         _configurationManager.ConfiguredDiffTool.Should().Be(DiffToolName);
     }
 
-    [Test]
+    [Fact]
     public void ConfiguredMergeTool_should_return_null_if_config_file_unset()
     {
         new DiffMergeToolConfigurationManager(() => null).ConfiguredMergeTool.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void ConfiguredMergeTool_should_return_value_in_config_file()
     {
         _configurationManager.ConfiguredMergeTool.Should().Be(GitVersion.Current.SupportGuiMergeTool ? MergeToolName : MergeToolNameNoGui);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void ConfigureDiffMergeTool_should_return_if_tool_unset(string? toolName)
     {
         using (new NoAssertContext())
@@ -76,7 +76,7 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string>());
     }
 
-    [Test]
+    [Fact]
     public void ConfigureDiffMergeTool_should_return_if_file_unset()
     {
         _fileSettings = null!;
@@ -84,8 +84,9 @@ public class DiffMergeToolConfigurationManagerTests
         _configurationManager.ConfigureDiffMergeTool("bla", DiffMergeToolType.Diff, "", "");
     }
 
-    [TestCase("bla", DiffMergeToolType.Diff, @"c:\some\path\to the tool\MyTool.exe", "--wait --diff \"$LOCAL\" \"$REMOTE\"", DiffToolKey, "difftool.bla.path", "difftool.bla.cmd")]
-    [TestCase("bla", DiffMergeToolType.Merge, @"c:\some\path\to the tool\MyTool.exe", "--wait \"$MERGED\"", MergeToolKey, "mergetool.bla.path", "mergetool.bla.cmd")]
+    [Theory]
+    [InlineData("bla", DiffMergeToolType.Diff, @"c:\some\path\to the tool\MyTool.exe", "--wait --diff \"$LOCAL\" \"$REMOTE\"", DiffToolKey, "difftool.bla.path", "difftool.bla.cmd")]
+    [InlineData("bla", DiffMergeToolType.Merge, @"c:\some\path\to the tool\MyTool.exe", "--wait \"$MERGED\"", MergeToolKey, "mergetool.bla.path", "mergetool.bla.cmd")]
     public void ConfigureDiffMergeTool_should_configure_tool(string? toolName, DiffMergeToolType toolType, string toolPath, string toolCommand,
         string expectedValueKey, string expectedPathKey, string expectedCommandKey)
     {
@@ -97,9 +98,10 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.Received(1).SetValue(expectedCommandKey, toolCommand.ToPosixPath());
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void GetToolCommand_should_return_empty_if_toolName_unset(string? toolName)
     {
         _fileSettings.GetValue(Arg.Any<string>()).Returns("");
@@ -108,8 +110,9 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.Received(0).GetValue(Arg.Any<string>());
     }
 
-    [TestCase("bla", DiffMergeToolType.Diff, "difftool.bla.cmd")]
-    [TestCase("bla", DiffMergeToolType.Merge, "mergetool.bla.cmd")]
+    [Theory]
+    [InlineData("bla", DiffMergeToolType.Diff, "difftool.bla.cmd")]
+    [InlineData("bla", DiffMergeToolType.Merge, "mergetool.bla.cmd")]
     public void GetToolCommand_should_return_command_for_toolName_if_set(string? toolName, DiffMergeToolType toolType, string expectedValueKey)
     {
         string command = "--wait --diff \"$LOCAL\" \"$REMOTE\"";
@@ -120,15 +123,16 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.Received(1).GetValue(expectedValueKey);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void LoadDiffMergeToolConfig_should_throw_if_toolName_unset(string? toolName)
     {
         ((Action)(() => _configurationManager.LoadDiffMergeToolConfig(toolName!, ""))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void LoadDiffMergeToolConfig_should_create_tool_config_with_userSuppliedPath_if_tool_unregistered()
     {
         DiffMergeToolConfiguration config = _configurationManager.LoadDiffMergeToolConfig("bla", @"c:\some\path\to the tool\bla.exe");
@@ -140,9 +144,10 @@ public class DiffMergeToolConfigurationManagerTests
         config.MergeCommand.Should().BeEmpty();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void LoadDiffMergeToolConfig_should_create_tool_config_if_tool_unregistered(string? userSuppliedPath)
     {
         DiffMergeToolConfiguration config = _configurationManager.LoadDiffMergeToolConfig("bla", userSuppliedPath);
@@ -154,7 +159,7 @@ public class DiffMergeToolConfigurationManagerTests
         config.MergeCommand.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void LoadDiffMergeToolConfig_should_create_tool_config_if_tool_unregistered_but_exists_path()
     {
         DiffMergeToolConfiguration config = _configurationManager.LoadDiffMergeToolConfig("notepad", null);
@@ -166,7 +171,7 @@ public class DiffMergeToolConfigurationManagerTests
         config.MergeCommand.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void LoadDiffMergeToolConfig_should_load_tool_config_if_tool_registered()
     {
         SemanticMerge tool = new();
@@ -192,9 +197,10 @@ public class DiffMergeToolConfigurationManagerTests
         }
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void GetToolPath_should_return_empty_if_toolName_unset(string? toolName)
     {
         _fileSettings.GetValue(Arg.Any<string>()).Returns("");
@@ -203,8 +209,9 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.Received(0).GetValue(Arg.Any<string>());
     }
 
-    [TestCase("bla", DiffMergeToolType.Diff, "difftool.bla.path")]
-    [TestCase("bla", DiffMergeToolType.Merge, "mergetool.bla.path")]
+    [Theory]
+    [InlineData("bla", DiffMergeToolType.Diff, "difftool.bla.path")]
+    [InlineData("bla", DiffMergeToolType.Merge, "mergetool.bla.path")]
     public void GetToolPath_should_return_command_for_toolName_if_set(string? toolName, DiffMergeToolType toolType, string expectedValueKey)
     {
         string toolPath = @"c:\some\path\to the tool\MyTool.exe";
@@ -215,8 +222,9 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.Received(1).GetValue(expectedValueKey);
     }
 
-    [TestCase(DiffMergeToolType.Diff, DiffToolKey, "difftool")]
-    [TestCase(DiffMergeToolType.Merge, MergeToolKey, "mergetool")]
+    [Theory]
+    [InlineData(DiffMergeToolType.Diff, DiffToolKey, "difftool")]
+    [InlineData(DiffMergeToolType.Merge, MergeToolKey, "mergetool")]
     public void GetInfo(DiffMergeToolType toolType, string expectedToolKey, string expectedPrefix)
     {
         (string toolKey, string prefix) info = _configurationManager.GetTestAccessor().GetInfo(toolType);
@@ -225,7 +233,7 @@ public class DiffMergeToolConfigurationManagerTests
         info.prefix.Should().Be(expectedPrefix);
     }
 
-    [Test]
+    [Fact]
     public void GetToolSetting_should_return_empty_if_toolName_is_empty()
     {
         _fileSettings.GetValue(Arg.Any<string>()).Returns(string.Empty);
@@ -236,8 +244,9 @@ public class DiffMergeToolConfigurationManagerTests
         _fileSettings.Received(1).GetValue(SettingKeyString.DiffToolKey);
     }
 
-    [TestCase(DiffMergeToolType.Diff, "difftool")]
-    [TestCase(DiffMergeToolType.Merge, "mergetool")]
+    [Theory]
+    [InlineData(DiffMergeToolType.Diff, "difftool")]
+    [InlineData(DiffMergeToolType.Merge, "mergetool")]
     public void GetToolSetting_should_load_setting_for_requested_toolName(DiffMergeToolType toolType, string expectedPrefix)
     {
         string? settings = _configurationManager.GetTestAccessor().GetToolSetting(DiffToolName, toolType, "customSuffix");

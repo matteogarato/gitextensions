@@ -3,50 +3,25 @@ using GitCommands;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.LeftPanel;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class FormBrowse_LeftPanelTests
+public class FormBrowse_LeftPanelTests : System.IDisposable, IClassFixture<FormBrowse_LeftPanelTestsFixture>
 {
     private const string RemoteName = "remote1";
-
-    // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
 
     // Created once for each test
     private ReferenceRepository _remoteReferenceRepository = null!;
     private ReferenceRepository _referenceRepository = null!;
     private GitUICommands _commands = null!;
 
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public FormBrowse_LeftPanelTests(FormBrowse_LeftPanelTestsFixture fixture)
     {
-        // Remember the current settings...
-        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // Stop loading custom diff tools
-        AppSettings.ShowAvailableDiffTools = false;
-
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
-        AppSettings.ShowAuthorAvatarColumn = false;
-
-        AppSettings.RepoObjectsTreeShowTags = true;
-        AppSettings.RepoObjectsTreeShowStashes = true;
+        InitializeTest();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-    }
-
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _remoteReferenceRepository = new ReferenceRepository();
 
@@ -66,14 +41,13 @@ public class FormBrowse_LeftPanelTests
         _referenceRepository.CreateCommit("head commit");
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _remoteReferenceRepository.Dispose();
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Branch_and_tag_context_menu_should_show_Sort_By_entry()
     {
         RunRepoObjectsTreeTest(contextMenu =>
@@ -137,5 +111,39 @@ public class FormBrowse_LeftPanelTests
         UITest.RunForm(
             showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class FormBrowse_LeftPanelTestsFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _originalShowAuthorAvatarColumn;
+    private bool _showAvailableDiffTools;
+
+    public FormBrowse_LeftPanelTestsFixture()
+    {
+        // Remember the current settings...
+        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // Stop loading custom diff tools
+        AppSettings.ShowAvailableDiffTools = false;
+
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+        AppSettings.ShowAuthorAvatarColumn = false;
+
+        AppSettings.RepoObjectsTreeShowTags = true;
+        AppSettings.RepoObjectsTreeShowStashes = true;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }
 }

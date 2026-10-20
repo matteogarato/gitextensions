@@ -4,7 +4,7 @@ using GitExtensions.Extensibility.Git;
 namespace GitCommandsTests.Git;
 public class GitBlameCommitTests
 {
-    [Test]
+    [Fact]
     public void TestToString()
     {
         DateTime committerTime = DateTime.Now;
@@ -38,7 +38,7 @@ public class GitBlameCommitTests
         commit.ToString().Should().Be(str.ToString());
     }
 
-    [Test]
+    [Fact]
     public void ToString_When_Not_Null_Returns_Output()
     {
         DateTime committerTime = DateTime.Now;
@@ -74,7 +74,7 @@ public class GitBlameCommitTests
         commit.ToString(summaryBuilder).Should().Be(str.ToString());
     }
 
-    [Test]
+    [Fact]
     public void ToString_When_Null_Returns_Input()
     {
         DateTime committerTime = DateTime.Now;

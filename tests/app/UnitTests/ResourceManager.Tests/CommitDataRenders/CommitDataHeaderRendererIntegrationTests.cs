@@ -1,21 +1,25 @@
-﻿using GitExtensions.Extensibility.Git;
+﻿using System.Globalization;
+using GitExtensions.Extensibility.Git;
 using GitUIPluginInterfaces;
 using ResourceManager;
 using ResourceManager.CommitDataRenders;
 
 namespace ResourceManagerTests.CommitDataRenders;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class CommitDataHeaderRendererIntegrationTests
+public class CommitDataHeaderRendererIntegrationTests : IDisposable
 {
+    private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
     private CommitData _data = null!;
     private CommitDataHeaderRenderer _rendererTabs = null!;
     private CommitDataHeaderRenderer _rendererSpaces = null!;
 
-    [SetUp]
-    public void Setup()
+    public CommitDataHeaderRendererIntegrationTests()
     {
+        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentCulture = testCulture;
+        CultureInfo.CurrentUICulture = testCulture;
+
         ObjectId commitId = ObjectId.Random();
         ObjectId parentId1 = ObjectId.Random();
         ObjectId parentId2 = ObjectId.Random();
@@ -41,7 +45,13 @@ public class CommitDataHeaderRendererIntegrationTests
         _rendererSpaces = new CommitDataHeaderRenderer(new MonospacedHeaderLabelFormatter(), new DateFormatter(), new MonospacedHeaderRenderStyleProvider(), new LinkFactory());
     }
 
-    [Test]
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUICulture;
+    }
+
+    [Fact]
     public void Render_with_tabs_and_links()
     {
         string expectedHeader = "Author:		<a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
@@ -62,7 +72,7 @@ public class CommitDataHeaderRendererIntegrationTests
         result.Should().Be(expectedHeader);
     }
 
-    [Test]
+    [Fact]
     public void Render_with_tabs_no_links()
     {
         string expectedHeader = "Author:		<a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
@@ -83,7 +93,7 @@ public class CommitDataHeaderRendererIntegrationTests
         result.Should().Be(expectedHeader);
     }
 
-    [Test]
+    [Fact]
     public void Render_with_spaces_with_links()
     {
         string expectedHeader = "Author:      <a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
@@ -104,7 +114,7 @@ public class CommitDataHeaderRendererIntegrationTests
         result.Should().Be(expectedHeader);
     }
 
-    [Test]
+    [Fact]
     public void Render_with_spaces_no_links()
     {
         string expectedHeader = "Author:      <a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
@@ -125,7 +135,7 @@ public class CommitDataHeaderRendererIntegrationTests
         result.Should().Be(expectedHeader);
     }
 
-    [Test]
+    [Fact]
     public void RenderPlain_with_tabs()
     {
         string expectedHeader = "Author:		John Doe (Acme Inc) <John.Doe@test.com>" + Environment.NewLine +
@@ -139,7 +149,7 @@ public class CommitDataHeaderRendererIntegrationTests
         result.Should().Be(expectedHeader);
     }
 
-    [Test]
+    [Fact]
     public void RenderPlain_with_spaces()
     {
         string expectedHeader = "Author:      John Doe (Acme Inc) <John.Doe@test.com>" + Environment.NewLine +

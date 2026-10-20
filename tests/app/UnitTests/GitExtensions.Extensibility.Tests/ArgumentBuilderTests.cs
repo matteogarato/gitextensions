@@ -3,7 +3,7 @@
 namespace GitExtUtilsTests;
 public sealed class ArgumentBuilderTests
 {
-    [Test]
+    [Fact]
     public void Adds_simple_parameters()
     {
         Test(
@@ -36,7 +36,7 @@ public sealed class ArgumentBuilderTests
         }
     }
 
-    [Test]
+    [Fact]
     public void IsEmpty()
     {
         ArgumentBuilder builder = [];
@@ -46,7 +46,7 @@ public sealed class ArgumentBuilderTests
         builder.IsEmpty.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void Length()
     {
         ArgumentBuilder builder = [];
@@ -61,13 +61,14 @@ public sealed class ArgumentBuilderTests
         builder.GetTestAccessor().Arguments.Length.Should().Be(expectedLength + /* 'test ' */5);
     }
 
-    [TestCase(new[] { (string?)null }, 0, "")]
-    [TestCase(new[] { "" }, 0, "")]
-    [TestCase(new[] { "", null }, 0, "")]
-    [TestCase(new[] { "test" }, 4, "test")]
-    [TestCase(new[] { "test", "test" }, 9, "test test")]
-    [TestCase(new[] { "", "test" }, 4, "test")]
-    [TestCase(new[] { "test", null, "test" }, 9, "test test")]
+    [Theory]
+    [InlineData(new[] { (string?)null }, 0, "")]
+    [InlineData(new[] { "" }, 0, "")]
+    [InlineData(new[] { "", null }, 0, "")]
+    [InlineData(new[] { "test" }, 4, "test")]
+    [InlineData(new[] { "test", "test" }, 9, "test test")]
+    [InlineData(new[] { "", "test" }, 4, "test")]
+    [InlineData(new[] { "test", null, "test" }, 9, "test test")]
     public void Add(string[] args, int expectedLength, string expected)
     {
         ArgumentBuilder builder = [.. args];

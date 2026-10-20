@@ -4,22 +4,19 @@ using GitUI.CommandsDialogs;
 
 namespace GitUITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class RevisionGpgInfoControlTests
+public class RevisionGpgInfoControlTests : IDisposable
 {
-    [SetUp]
-    public void Setup()
+    public RevisionGpgInfoControlTests()
     {
         GitModuleForm.IsUnitTestActive = true;
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         GitModuleForm.IsUnitTestActive = false;
     }
 
-    [Test]
+    [StaFact]
     public void Commit_must_not_be_reported_as_unsigned_before_it_was_verified()
     {
         using RevisionGpgInfoControl control = new();
@@ -27,7 +24,7 @@ public class RevisionGpgInfoControlTests
         control.GetTestAccessor().CommitGpgInfoText.Should().Be(TranslatedStrings.LoadingData);
     }
 
-    [Test]
+    [StaFact]
     public void DisplayVerificationPending_must_drop_the_result_of_the_previous_revision()
     {
         using RevisionGpgInfoControl control = new();
@@ -40,7 +37,7 @@ public class RevisionGpgInfoControlTests
         accessor.CommitSignPictureVisible.Should().BeFalse();
     }
 
-    [Test]
+    [StaFact]
     public void DisplayGpgInfo_must_report_an_unsigned_commit_once_it_was_verified()
     {
         using RevisionGpgInfoControl control = new();

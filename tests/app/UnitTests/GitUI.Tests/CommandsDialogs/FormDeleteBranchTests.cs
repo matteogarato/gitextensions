@@ -9,7 +9,7 @@ public sealed class FormDeleteBranchTests
     private const string LinkedWorktreePath = @"C:\repos\feature";
     private const string SecondLinkedWorktreePath = @"C:\repos\hotfix";
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_return_empty_when_no_branches_match()
     {
         IGitRef[] branches = [CreateBranch("unrelated")];
@@ -27,7 +27,7 @@ public sealed class FormDeleteBranchTests
         result.LinkedWorktreeBranches.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_classify_branch_in_main_worktree()
     {
         IGitRef masterRef = CreateBranch("master");
@@ -47,7 +47,7 @@ public sealed class FormDeleteBranchTests
         result.HasDeletedWorktrees.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_classify_branch_in_linked_worktree()
     {
         IGitRef featureRef = CreateBranch("feature");
@@ -67,7 +67,7 @@ public sealed class FormDeleteBranchTests
         result.HasDeletedWorktrees.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_skip_current_worktree()
     {
         IGitRef featureRef = CreateBranch("feature");
@@ -86,7 +86,7 @@ public sealed class FormDeleteBranchTests
         result.MainWorktreeBranches.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_detect_deleted_worktrees()
     {
         IGitRef staleRef = CreateBranch("stale-branch");
@@ -105,7 +105,7 @@ public sealed class FormDeleteBranchTests
         result.MainWorktreeBranches.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_not_flag_deleted_worktrees_for_unrelated_branches()
     {
         IGitRef[] branches = [CreateBranch("unrelated")];
@@ -121,7 +121,7 @@ public sealed class FormDeleteBranchTests
         result.HasDeletedWorktrees.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_skip_detached_and_bare_worktrees()
     {
         IGitRef[] branches = [CreateBranch("any")];
@@ -139,7 +139,7 @@ public sealed class FormDeleteBranchTests
         result.HasDeletedWorktrees.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_handle_mixed_scenario()
     {
         IGitRef masterRef = CreateBranch("master");
@@ -165,7 +165,7 @@ public sealed class FormDeleteBranchTests
         result.HasDeletedWorktrees.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ClassifyWorktreeBranches_should_be_case_insensitive_on_paths()
     {
         IGitRef featureRef = CreateBranch("feature");

@@ -27,10 +27,33 @@ public class ThemeLoaderTests
     private const string MockAppThemesDirectory = "c:\\gitextensions\\themes";
     private const string MockUserThemesDirectory = "c:\\appdata\\gitextensions\\themes";
 
-    [Test]
-    public void Should_load_any_themable_system_color(
-        [ValueSource(nameof(ThemableSystemColorNames))] KnownColor colorName,
-        [ValueSource(nameof(TestColorValues))] Color testColorValue)
+    public static IEnumerable<object[]> AnyThemableSystemColorCases =>
+        ThemableSystemColorNames.SelectMany(
+            colorName => TestColorValues.Select(testColorValue => new object[] { colorName, testColorValue }));
+
+    public static IEnumerable<object[]> AnyAppColorCases =>
+        AppColorNames.SelectMany(
+            colorName => TestColorValues.Select(color => new object[] { colorName, color }));
+
+    public static IEnumerable<object[]> ColorblindSystemColorCases =>
+        ThemableSystemColorNames.Select(colorName => new object[] { colorName });
+
+    public static IEnumerable<object[]> ColorblindAppColorCases =>
+        AppColorNames.Select(colorName => new object[] { colorName });
+
+    public static IEnumerable<object[]> CssCommentCases =>
+        TestColorValues.Select(testColorValue => new object[] { KnownColor.Control, testColorValue });
+
+    public static IEnumerable<object[]> CssImportCases =>
+        TestColorValues.Select(baseColor => new object[] { KnownColor.Control, baseColor });
+
+    public static IEnumerable<object[]> ImportedColorOverrideCases =>
+        TestColorValues.SelectMany(
+            baseColor => AlternativeTestColorValues.Select(colorOverride => new object[] { KnownColor.Control, baseColor, colorOverride }));
+
+    [Theory]
+    [MemberData(nameof(AnyThemableSystemColorCases))]
+    public void Should_load_any_themable_system_color(KnownColor colorName, Color testColorValue)
     {
         IThemeFileReader mockFileReader = CreateMockFileReader(GetThemeContent(colorName, testColorValue));
         IThemeCssUrlResolver mockCssUrlResolver = Substitute.For<IThemeCssUrlResolver>();
@@ -41,10 +64,9 @@ public class ThemeLoaderTests
         theme.GetColor(colorName).ToArgb().Should().Be(testColorValue.ToArgb());
     }
 
-    [Test]
-    public void Should_load_any_app_color(
-        [ValueSource(nameof(AppColorNames))] AppColor colorName,
-        [ValueSource(nameof(TestColorValues))] Color color)
+    [Theory]
+    [MemberData(nameof(AnyAppColorCases))]
+    public void Should_load_any_app_color(AppColor colorName, Color color)
     {
         IThemeFileReader mockFileReader = CreateMockFileReader(GetThemeContent(colorName, color));
         IThemeCssUrlResolver mockCssUrlResolver = Substitute.For<IThemeCssUrlResolver>();
@@ -55,9 +77,9 @@ public class ThemeLoaderTests
         theme.GetColor(colorName).ToArgb().Should().Be(color.ToArgb());
     }
 
-    [Test]
-    public void Should_apply_colorblind_overrides_to_system_colors(
-        [ValueSource(nameof(ThemableSystemColorNames))] KnownColor colorName)
+    [Theory]
+    [MemberData(nameof(ColorblindSystemColorCases))]
+    public void Should_apply_colorblind_overrides_to_system_colors(KnownColor colorName)
     {
         Color regularColor = Color.Red;
         Color colorblindColor = Color.Blue;
@@ -73,9 +95,9 @@ public class ThemeLoaderTests
         colorblindTheme.GetColor(colorName).ToArgb().Should().Be(colorblindColor.ToArgb());
     }
 
-    [Test]
-    public void Should_apply_colorblind_overrides_to_app_colors(
-        [ValueSource(nameof(AppColorNames))] AppColor colorName)
+    [Theory]
+    [MemberData(nameof(ColorblindAppColorCases))]
+    public void Should_apply_colorblind_overrides_to_app_colors(AppColor colorName)
     {
         Color regularColor = Color.Red;
         Color colorblindColor = Color.Blue;
@@ -90,10 +112,9 @@ public class ThemeLoaderTests
         colorblindTheme.GetColor(colorName).ToArgb().Should().Be(colorblindColor.ToArgb());
     }
 
-    [Test]
-    public void Should_tolerate_css_comment(
-        [Values(KnownColor.Control)] KnownColor colorName,
-        [ValueSource(nameof(TestColorValues))] Color testColorValue)
+    [Theory]
+    [MemberData(nameof(CssCommentCases))]
+    public void Should_tolerate_css_comment(KnownColor colorName, Color testColorValue)
     {
         string commentedContent =
             "/* entire first line with comment */" + Environment.NewLine +
@@ -108,7 +129,7 @@ public class ThemeLoaderTests
         theme.GetColor(colorName).ToArgb().Should().Be(testColorValue.ToArgb());
     }
 
-    [Test]
+    [Fact]
     public void Should_throw_When_unknown_color_name()
     {
         IThemeFileReader mockFileReader = CreateMockFileReader(GetThemeContent("InvalidColorName", Color.Red));
@@ -120,8 +141,7 @@ public class ThemeLoaderTests
             .Which.Message.Should().Contain("InvalidColorName");
     }
 
-    [Ignore("ExCSS version >= 3 do not report parsing errors.")]
-    [Test]
+    [Fact(Skip = "ExCSS version >= 3 do not report parsing errors.")]
     public void Should_throw_When_css_syntax_error()
     {
         IThemeFileReader mockFileReader = CreateMockFileReader(GetThemeContent(KnownColor.Control, Color.Red) + "}");
@@ -133,10 +153,9 @@ public class ThemeLoaderTests
             .Which.Message.Should().Contain("Error parsing CSS");
     }
 
-    [Test]
-    public void Should_honor_css_import_directive(
-        [Values(KnownColor.Control)] KnownColor colorName,
-        [ValueSource(nameof(TestColorValues))] Color baseColor)
+    [Theory]
+    [MemberData(nameof(CssImportCases))]
+    public void Should_honor_css_import_directive(KnownColor colorName, Color baseColor)
     {
         IThemePathProvider pathProvider = CreateMockPathProvider();
         ThemeCssUrlResolver resolver = new(pathProvider);
@@ -156,11 +175,9 @@ public class ThemeLoaderTests
         theme.GetColor(colorName).ToArgb().Should().Be(baseColor.ToArgb());
     }
 
-    [Test]
-    public void Should_override_imported_color_When_current_theme_redefines_it(
-        [Values(KnownColor.Control)] KnownColor colorName,
-        [ValueSource(nameof(TestColorValues))] Color baseColor,
-        [ValueSource(nameof(AlternativeTestColorValues))] Color colorOverride)
+    [Theory]
+    [MemberData(nameof(ImportedColorOverrideCases))]
+    public void Should_override_imported_color_When_current_theme_redefines_it(KnownColor colorName, Color baseColor, Color colorOverride)
     {
         IThemePathProvider pathProvider = CreateMockPathProvider();
         ThemeCssUrlResolver resolver = new(pathProvider);
@@ -182,7 +199,7 @@ public class ThemeLoaderTests
         theme.GetColor(colorName).ToArgb().Should().Be(colorOverride.ToArgb());
     }
 
-    [Test]
+    [Fact]
     public void Should_throw_When_cyclic_css_imports()
     {
         IThemePathProvider pathProvider = CreateMockPathProvider();

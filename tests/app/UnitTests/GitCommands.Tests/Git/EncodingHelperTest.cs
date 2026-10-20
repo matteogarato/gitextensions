@@ -6,13 +6,13 @@ public class EncodingHelperTest
 {
     #region Unit tests of single methods
 
-    [Test]
+    [Fact]
     public void GetStringEncodingNull()
     {
         ((Action)(() => EncodingHelper.GetString([0x30], [0x31], null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void GetStringTestSingleLineOutput()
     {
         string asciiString = "abcdefghijklmnop";
@@ -23,7 +23,7 @@ public class EncodingHelperTest
         getString.Should().Be(asciiString);
     }
 
-    [Test]
+    [Fact]
     public void GetStringTestSingleLineError()
     {
         string asciiString = "abcdefghijklmnop";
@@ -34,7 +34,7 @@ public class EncodingHelperTest
         getString.Should().Be(asciiString);
     }
 
-    [Test]
+    [Fact]
     public void GetStringTestOutputAndError()
     {
         string asciiString = "abcdefghijklmnop";
@@ -46,7 +46,7 @@ public class EncodingHelperTest
         getString.Should().Be(asciiString + Environment.NewLine + asciiString.ToUpper());
     }
 
-    [Test]
+    [Fact]
     public void GetStringTestUtf8()
     {
         byte[] testBytes = new byte[4];
@@ -61,13 +61,13 @@ public class EncodingHelperTest
         getString.Should().Be(utf8String);
     }
 
-    [Test]
+    [Fact]
     public void ConvertToTestEncodingNull()
     {
         ((Action)(() => EncodingHelper.ConvertTo(null!, "abcd"))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void ConvertToTestUtf8()
     {
         string unicodeString = "\u30a2\u30c3";
@@ -82,7 +82,7 @@ public class EncodingHelperTest
         0x83.Should().Be(convertedBytes[5]);
     }
 
-    [Test]
+    [Fact]
     public void ConvertToTestUtf16()
     {
         string unicodeString = "\u30a2\u30c3";
@@ -95,14 +95,14 @@ public class EncodingHelperTest
         0x30.Should().Be(convertedBytes[3]);
     }
 
-    [Test]
+    [Fact]
     public void DecodeStringTestEncodingNull()
     {
         Encoding? enc = null;
         ((Action)(() => EncodingHelper.DecodeString([0x30], [0x31], ref enc!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void DecodeStringTestSingleLineOutput()
     {
         string asciiString = "abcdefghijklmnop";
@@ -115,7 +115,7 @@ public class EncodingHelperTest
         decodedString.Should().Be(asciiString);
     }
 
-    [Test]
+    [Fact]
     public void DecodeStringTestSingleLineError()
     {
         string asciiString = "abcdefghijklmnop";
@@ -128,7 +128,7 @@ public class EncodingHelperTest
         decodedString.Should().Be(asciiString);
     }
 
-    [Test]
+    [Fact]
     public void DecodeStringTestOutputAndError()
     {
         string asciiString = "abcdefghijklmnop";
@@ -142,7 +142,7 @@ public class EncodingHelperTest
         decodedString.Should().Be(asciiString + Environment.NewLine + asciiString.ToUpper());
     }
 
-    [Test]
+    [Fact]
     public void DecodeStringTestUtf8()
     {
         byte[] testBytes = new byte[4];

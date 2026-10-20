@@ -6,13 +6,11 @@ using GitUI.UserControls.RevisionGrid;
 
 namespace GitUITests.UserControls;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-[NonParallelizable]
+[Culture("en-US")]
+[Collection(nameof(FilterInfoTestsCollection))]
 public class FilterInfoTests
 {
-    [SetUp]
-    public void SetUp()
+    public FilterInfoTests()
     {
         AppSettings.ShowGitNotes = false;
         AppSettings.HideMergeCommits = false;
@@ -22,7 +20,7 @@ public class FilterInfoTests
         AppSettings.MaxRevisionGraphCommits = 0;
     }
 
-    [Test]
+    [Fact]
     public async Task FilterInfo_ctor_expected()
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -46,7 +44,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public async Task FilterInfo_ctor_with_Raw_expected()
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -70,7 +68,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByDateFrom_expected()
     {
         FilterInfo filterInfo = new();
@@ -86,10 +84,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_DateFrom_with_Raw_expected(bool isRaw, bool byDateFrom)
     {
         DateTime date = new(2022, 1, 15);
@@ -111,7 +110,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByDateTo_expected()
     {
         FilterInfo filterInfo = new();
@@ -127,10 +126,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_DateTo_with_Raw_expected(bool isRaw, bool byDateTo)
     {
         DateTime date = new(2022, 1, 15);
@@ -152,7 +152,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByAuthor_expected()
     {
         FilterInfo filterInfo = new();
@@ -168,10 +168,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_Author_with_Raw_expected(bool isRaw, bool byAuthor)
     {
         const string value = "The Value";
@@ -192,7 +193,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByCommitter_expected()
     {
         FilterInfo filterInfo = new();
@@ -208,10 +209,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_Committer_with_Raw_expected(bool isRaw, bool byCommitter)
     {
         const string value = "The Value";
@@ -232,7 +234,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByMessage_expected()
     {
         FilterInfo filterInfo = new();
@@ -248,10 +250,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_Message_with_Raw_expected(bool isRaw, bool byMessage)
     {
         const string value = "The Value";
@@ -272,7 +275,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByDiffContent_expected()
     {
         FilterInfo filterInfo = new();
@@ -288,10 +291,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_DiffContent_with_Raw_expected(bool isRaw, bool byDiffContent)
     {
         const string value = "The Value";
@@ -312,7 +316,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_IgnoreCase_expected()
     {
         FilterInfo filterInfo = new();
@@ -328,7 +332,7 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_HasCommitsLimit_expected()
     {
         AppSettings.MaxRevisionGraphCommits = 1;
@@ -347,7 +351,7 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByCommitsLimit_expected()
     {
         FilterInfo filterInfo = new();
@@ -363,12 +367,12 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(0, false)]
-    [TestCase(100, false)]
-    [TestCase(-100, true)]
-    [TestCase(0, true)]
-    [TestCase(100, true)]
-    [TestCase(-100, true)]
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(100, false)]
+    [InlineData(-100, true)]
+    [InlineData(0, true)]
+    [InlineData(100, true)]
     public void FilterInfo_CommitsLimit_with_Raw_expected(int value, bool byCommitsLimit)
     {
         FilterInfo filterInfo = new()
@@ -387,7 +391,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByPathFilter_expected()
     {
         FilterInfo filterInfo = new();
@@ -403,10 +407,11 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeFalse();
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_PathFilter_with_Raw_expected(bool isRaw, bool byPathFilter)
     {
         const string value = "The Value";
@@ -427,7 +432,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ByBranchFilter_expected()
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -466,10 +471,11 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
     public void FilterInfo_BranchFilter_with_Raw_expected(bool isRaw, bool byBranchFilter)
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -506,10 +512,11 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false, false, true)]
-    [TestCase(false, true, false)]
-    [TestCase(true, false, false)]
-    [TestCase(true, true, false)]
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
     public void FilterInfo_IsShowAllBranchesChecked_expected(bool byBranchFilter, bool showCurrentBranchOnly, bool expected)
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -539,10 +546,11 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false, false, false)]
-    [TestCase(true, false, false)]
-    [TestCase(false, true, true)]
-    [TestCase(true, true, true)]
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, true)]
     public void FilterInfo_IsShowCurrentBranchOnlyChecked_expected(bool byBranchFilter, bool showCurrentBranchOnly, bool expected)
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -572,10 +580,11 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false, false, false)]
-    [TestCase(true, false, true)]
-    [TestCase(false, true, false)]
-    [TestCase(true, true, false)]
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
     public void FilterInfo_IsShowFilteredBranchesChecked_expected(bool byBranchFilter, bool showCurrentBranchOnly, bool expected)
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -605,7 +614,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ShowCurrentBranchOnly_expected()
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -644,7 +653,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ShowOnlyFirstParent_expected()
     {
         bool originalShowOnlyFirstParent = AppSettings.ShowOnlyFirstParent;
@@ -677,7 +686,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ShowReflogReferences_expected()
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -716,14 +725,15 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false, false, false)]
-    [TestCase(true, false, false)]
-    [TestCase(false, true, false)]
-    [TestCase(true, true, false)]
-    [TestCase(false, false, true)]
-    [TestCase(true, false, true)]
-    [TestCase(false, true, true)]
-    [TestCase(true, true, true)]
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, true)]
     public void FilterInfo_ShowReflogReferences_dominates_other_filters(bool byBranchFilter, bool showCurrentBranchOnly, bool showReflog)
     {
         bool originalBranchFilterEnabled = AppSettings.BranchFilterEnabled;
@@ -766,7 +776,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_ShowSimplifyByDecoration_expected()
     {
         bool originalShowSimplifyByDecoration = AppSettings.ShowSimplifyByDecoration;
@@ -799,7 +809,7 @@ public class FilterInfoTests
         }
     }
 
-    public static IEnumerable<TestCaseData> FilterInfo_HasFilterTestCases
+    public static IEnumerable<object?[]> FilterInfo_HasFilterTestCases
     {
         get
         {
@@ -827,7 +837,7 @@ public class FilterInfoTests
                                                     {
                                                         foreach (string? branchFilter in new[] { "branch1", "", null })
                                                         {
-                                                            yield return new TestCaseData(byDateFrom, byDateTo, byAuthor, byCommitter, byMessage, byDiffContent, showSimplifyByDecoration, hideMergeCommits, pathFilter, showCurrentBranchOnly, showReflogReferences, branchFilter);
+                                                            yield return new object?[] { byDateFrom, byDateTo, byAuthor, byCommitter, byMessage, byDiffContent, showSimplifyByDecoration, hideMergeCommits, pathFilter, showCurrentBranchOnly, showReflogReferences, branchFilter };
                                                         }
                                                     }
                                                 }
@@ -843,7 +853,8 @@ public class FilterInfoTests
         }
     }
 
-    [TestCaseSource(nameof(FilterInfo_HasFilterTestCases))]
+    [Theory]
+    [MemberData(nameof(FilterInfo_HasFilterTestCases))]
     public void FilterInfo_HasFilter_expected(bool byDateFrom, bool byDateTo, bool byAuthor, bool byCommitter, bool byMessage, bool byDiffContent, bool showSimplifyByDecoration, bool hideMergeCommits, string pathFilter, bool showCurrentBranchOnly, bool showReflogReferences, string branchFilter)
     {
         FilterInfo filterInfo = new()
@@ -867,7 +878,8 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().Be(byDateFrom || byDateTo || byAuthor || byCommitter || byMessage || byDiffContent || showSimplifyByDecoration || hideMergeCommits || !string.IsNullOrWhiteSpace(pathFilter) || !string.IsNullOrWhiteSpace(branchFilter));
     }
 
-    [TestCaseSource(nameof(FilterInfo_HasFilterTestCases))]
+    [Theory]
+    [MemberData(nameof(FilterInfo_HasFilterTestCases))]
     public void FilterInfo_ResetAllFilters_expected(bool byDateFrom, bool byDateTo, bool byAuthor, bool byCommitter, bool byMessage, bool byDiffContent, bool showSimplifyByDecoration, bool hideMergeCommits, string pathFilter, bool showCurrentBranchOnly, bool showReflogReferences, string branchFilter)
     {
         FilterInfo filterInfo = new()
@@ -905,7 +917,8 @@ public class FilterInfoTests
         filterInfo.ShowReflogReferences.Should().Be(showReflogReferences);
     }
 
-    [TestCase("author1", "committer2", "message3", "diffContent4", true, true, "pathFilter7", false, false, "branchFilter8",
+    [Theory]
+    [InlineData("author1", "committer2", "message3", "diffContent4", true, true, "pathFilter7", false, false, "branchFilter8",
         "Since: 10/1/2021 1:30:34 AM\r\nUntil: 11/1/2021 1:30:34 AM\r\nPath filter: pathFilter7\r\nAuthor: author1\r\nCommitter: committer2\r\nSimplify by decoration\r\nMessage: message3\r\nDiff contains: diffContent4\r\nBranches: branchFilter8\r\n",
         @"--max-count=100000 --since=""2021-10-01 01:30:34"" --until=""2021-11-01 01:30:34"" --no-merges --simplify-by-decoration --author=""author1"" --committer=""committer2"" --regexp-ignore-case -G""diffContent4"" --grep=""message3"" --parents --glob=refs/stas[h] branchFilter8")]
     public void FilterInfo_GetRevisionFilter(string author, string committer, string message, string diffContent, bool showSimplifyByDecoration, bool hideMergeCommits, string pathFilter, bool showReflog, bool showCurrentBranchOnly, string branchFilter, string expectedSummary, string expectedArgs)
@@ -941,14 +954,15 @@ public class FilterInfoTests
         filterInfo.GetRevisionFilter(new Lazy<ObjectId>(() => ObjectId.Random())).ToString().Should().Be(expectedArgs);
     }
 
-    [TestCase(false, false, "branchFilter")]
-    [TestCase(false, false, "")]
-    [TestCase(false, true, "branchFilter")]
-    [TestCase(false, true, "")]
-    [TestCase(true, false, "branchFilter")]
-    [TestCase(true, false, "")]
-    [TestCase(true, true, "branchFilter")]
-    [TestCase(true, true, "")]
+    [Theory]
+    [InlineData(false, false, "branchFilter")]
+    [InlineData(false, false, "")]
+    [InlineData(false, true, "branchFilter")]
+    [InlineData(false, true, "")]
+    [InlineData(true, false, "branchFilter")]
+    [InlineData(true, false, "")]
+    [InlineData(true, true, "branchFilter")]
+    [InlineData(true, true, "")]
     public void FilterInfo_filter_should_add_reflog_if_requested(bool showRefLog, bool showCurrentBranchOnly, string branchFilter)
     {
         FilterInfo filterInfo = new()
@@ -982,10 +996,11 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase("branchFilter", false)]
-    [TestCase(@"branchFilter*", true)]
-    [TestCase(@"branchFilter?", true)]
-    [TestCase(@"branchFilter[", true)]
+    [Theory]
+    [InlineData("branchFilter", false)]
+    [InlineData(@"branchFilter*", true)]
+    [InlineData(@"branchFilter?", true)]
+    [InlineData(@"branchFilter[", true)]
     public void FilterInfo_simple_branchfilter(string branchFilter, bool expectBranches)
     {
         FilterInfo filterInfo = new()
@@ -1009,8 +1024,9 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(0, false)]
-    [TestCase(1, true)]
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
     public void FilterInfo_filter_should_add_maxcount_if_requested(int maxCount, bool expected)
     {
         FilterInfo filterInfo = new()
@@ -1030,8 +1046,9 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void FilterInfo_OnlyFirstParent(bool expected)
     {
         FilterInfo filterInfo = new()
@@ -1051,8 +1068,9 @@ public class FilterInfoTests
         }
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void FilterInfo_HideMerges(bool expected)
     {
         FilterInfo filterInfo = new()
@@ -1072,7 +1090,7 @@ public class FilterInfoTests
         }
     }
 
-    public static IEnumerable<TestCaseData> FilterInfo_NotesStash
+    public static IEnumerable<object?[]> FilterInfo_NotesStash
     {
         get
         {
@@ -1092,7 +1110,7 @@ public class FilterInfoTests
                                     {
                                         foreach (string? branchFilter in new[] { "branch1", "", null })
                                         {
-                                            yield return new TestCaseData(showNotes, showStash, showSessionRefs, showReflog, showCurrentBranchOnly, isValidCheckout, showFilteredBranches, branchFilter);
+                                            yield return new object?[] { showNotes, showStash, showSessionRefs, showReflog, showCurrentBranchOnly, isValidCheckout, showFilteredBranches, branchFilter };
                                         }
                                     }
                                 }
@@ -1104,7 +1122,8 @@ public class FilterInfoTests
         }
     }
 
-    [TestCaseSource(nameof(FilterInfo_NotesStash))]
+    [Theory]
+    [MemberData(nameof(FilterInfo_NotesStash))]
     public void FilterInfo_GitNotes_Stashes(bool showGitNotes, bool showStash, bool showSessionRefs, bool showReflog, bool showCurrentBranchOnly, bool isValidCheckout, bool showFilteredBranches, string branchFilter)
     {
         bool originalShowGitNotes = AppSettings.ShowGitNotes;
@@ -1191,15 +1210,16 @@ public class FilterInfoTests
         return;
     }
 
-    [TestCase("message1", true)]
-    [TestCase("message1 --not", true)]
-    [TestCase("--not=message1", false)]
-    [TestCase("--not message1", false)]
-    [TestCase(" --not message1", true)]
-    [TestCase("--exclude message1", false)]
-    [TestCase("--exclude= message1", false)]
-    [TestCase("--exclude= message1 ", false)]
-    [TestCase("\t--exclude= message1", true)]
+    [Theory]
+    [InlineData("message1", true)]
+    [InlineData("message1 --not", true)]
+    [InlineData("--not=message1", false)]
+    [InlineData("--not message1", false)]
+    [InlineData(" --not message1", true)]
+    [InlineData("--exclude message1", false)]
+    [InlineData("--exclude= message1", false)]
+    [InlineData("--exclude= message1 ", false)]
+    [InlineData("\t--exclude= message1", true)]
     public void FilterInfo_Message(string message, bool expectGrep)
     {
         FilterInfo filterInfo = new()
@@ -1224,7 +1244,7 @@ public class FilterInfoTests
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_Apply_ByCommitMessage()
     {
         FilterInfo filterInfo = new();
@@ -1241,7 +1261,7 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_Apply_ByCommitter()
     {
         FilterInfo filterInfo = new();
@@ -1258,7 +1278,7 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_Apply_ByAuthor()
     {
         FilterInfo filterInfo = new();
@@ -1275,7 +1295,7 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_Apply_ByDiffContent()
     {
         FilterInfo filterInfo = new();
@@ -1292,7 +1312,7 @@ public class FilterInfoTests
         filterInfo.HasFilter.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void FilterInfo_Apply_ByMessage_Then_By_DiffContent()
     {
         // FilterInfo keep a state, so simulating actions of user where filter is changed 2 times

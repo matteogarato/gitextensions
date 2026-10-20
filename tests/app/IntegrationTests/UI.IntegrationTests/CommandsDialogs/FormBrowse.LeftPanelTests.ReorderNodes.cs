@@ -4,81 +4,35 @@ using GitCommands;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.LeftPanel;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class FormBrowse_LeftPanel_ReorderNodesTest
+public class FormBrowse_LeftPanel_ReorderNodesTest : System.IDisposable, IClassFixture<FormBrowse_LeftPanel_ReorderNodesTestFixture>
 {
     // Created once for each test
     private GitUICommands _commands = null!;
 
-    // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
-
-    private List<bool> _originalRepoObjectsTreeShow = [];
-
     private GitModuleTestHelper _repo1 = null!;
 
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public FormBrowse_LeftPanel_ReorderNodesTest(FormBrowse_LeftPanel_ReorderNodesTestFixture fixture)
     {
-        // Remember the current settings...
-        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // Stop loading custom diff tools
-        AppSettings.ShowAvailableDiffTools = false;
-
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
-        AppSettings.ShowAuthorAvatarColumn = false;
-
-        // Show all root nodes for test, restore when done
-        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowBranches);
-        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowRemotes);
-        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowWorktrees);
-        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowTags);
-        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowStashes);
-        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowSubmodules);
-        AppSettings.RepoObjectsTreeShowBranches = true;
-        AppSettings.RepoObjectsTreeShowRemotes = true;
-        AppSettings.RepoObjectsTreeShowWorktrees = true;
-        AppSettings.RepoObjectsTreeShowTags = true;
-        AppSettings.RepoObjectsTreeShowStashes = true;
-        AppSettings.RepoObjectsTreeShowSubmodules = true;
+        InitializeTest();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-
-        AppSettings.RepoObjectsTreeShowBranches = _originalRepoObjectsTreeShow[0];
-        AppSettings.RepoObjectsTreeShowRemotes = _originalRepoObjectsTreeShow[1];
-        AppSettings.RepoObjectsTreeShowWorktrees = _originalRepoObjectsTreeShow[2];
-        AppSettings.RepoObjectsTreeShowTags = _originalRepoObjectsTreeShow[3];
-        AppSettings.RepoObjectsTreeShowSubmodules = _originalRepoObjectsTreeShow[4];
-        AppSettings.RepoObjectsTreeShowStashes = _originalRepoObjectsTreeShow[5];
-    }
-
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _repo1 = new GitModuleTestHelper("repo1");
 
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _repo1.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _repo1.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_moving_first_up_and_last_down_does_nothing()
     {
         RunRepoObjectsTreeTest(
@@ -107,7 +61,7 @@ public class FormBrowse_LeftPanel_ReorderNodesTest
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_moving_node_legally_moves_it()
     {
         RunRepoObjectsTreeTest(
@@ -141,7 +95,7 @@ public class FormBrowse_LeftPanel_ReorderNodesTest
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_moving_node_across_hidden_trees_skips_them()
     {
         RunRepoObjectsTreeTest(
@@ -185,7 +139,7 @@ public class FormBrowse_LeftPanel_ReorderNodesTest
         }
 
         string items = collection.OfType<object>().Select(n => n.ToString()!).Join(", ");
-        Assert.Fail($"Actual count {actualCount} differs from expected {expectedCount}.{Environment.NewLine}Actual items: {items}");
+        actualCount.Should().Be(expectedCount, $"Actual items: {items}");
     }
 
     private static void ValidateOrder(List<TreeNode> initialNodes, TreeNodeCollection currNodes, params int[] expectedOrder)
@@ -214,5 +168,58 @@ public class FormBrowse_LeftPanel_ReorderNodesTest
         UITest.RunForm(
             showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class FormBrowse_LeftPanel_ReorderNodesTestFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _originalShowAuthorAvatarColumn;
+    private bool _showAvailableDiffTools;
+    private List<bool> _originalRepoObjectsTreeShow = [];
+
+    public FormBrowse_LeftPanel_ReorderNodesTestFixture()
+    {
+        // Remember the current settings...
+        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // Stop loading custom diff tools
+        AppSettings.ShowAvailableDiffTools = false;
+
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+        AppSettings.ShowAuthorAvatarColumn = false;
+
+        // Show all root nodes for test, restore when done
+        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowBranches);
+        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowRemotes);
+        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowWorktrees);
+        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowTags);
+        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowStashes);
+        _originalRepoObjectsTreeShow.Add(AppSettings.RepoObjectsTreeShowSubmodules);
+        AppSettings.RepoObjectsTreeShowBranches = true;
+        AppSettings.RepoObjectsTreeShowRemotes = true;
+        AppSettings.RepoObjectsTreeShowWorktrees = true;
+        AppSettings.RepoObjectsTreeShowTags = true;
+        AppSettings.RepoObjectsTreeShowStashes = true;
+        AppSettings.RepoObjectsTreeShowSubmodules = true;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
+
+        AppSettings.RepoObjectsTreeShowBranches = _originalRepoObjectsTreeShow[0];
+        AppSettings.RepoObjectsTreeShowRemotes = _originalRepoObjectsTreeShow[1];
+        AppSettings.RepoObjectsTreeShowWorktrees = _originalRepoObjectsTreeShow[2];
+        AppSettings.RepoObjectsTreeShowTags = _originalRepoObjectsTreeShow[3];
+        AppSettings.RepoObjectsTreeShowSubmodules = _originalRepoObjectsTreeShow[4];
+        AppSettings.RepoObjectsTreeShowStashes = _originalRepoObjectsTreeShow[5];
     }
 }

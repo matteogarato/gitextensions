@@ -3,7 +3,7 @@ using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Properties;
 
-internal class VerifyModuleInitializer
+public class VerifyModuleInitializer
 {
     [ModuleInitializer]
     public static void Init()

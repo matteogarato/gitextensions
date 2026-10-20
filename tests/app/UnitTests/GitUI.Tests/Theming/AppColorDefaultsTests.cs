@@ -4,26 +4,24 @@ using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
 
 namespace GitUITests.Theming;
-public class AppColorDefaultsTests
+public class AppColorDefaultsTests : IDisposable
 {
     private string _originalPath = null!;
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
+    public AppColorDefaultsTests()
     {
         AppSettings.TestAccessor testAccessor = AppSettings.GetTestAccessor();
         _originalPath = testAccessor.ApplicationExecutablePath;
-        testAccessor.ApplicationExecutablePath = Path.Combine(TestContext.CurrentContext.TestDirectory, "gitextensions.exe");
+        testAccessor.ApplicationExecutablePath = Path.Combine(AppContext.BaseDirectory, "gitextensions.exe");
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         AppSettings.TestAccessor testAccessor = AppSettings.GetTestAccessor();
         testAccessor.ApplicationExecutablePath = _originalPath;
     }
 
-    [Test]
+    [Fact]
     public void Default_values_are_defined_in_AppColorDefaults()
     {
         foreach (AppColor name in Enum.GetValues<AppColor>())
@@ -33,8 +31,11 @@ public class AppColorDefaultsTests
         }
     }
 
-    [Test]
-    public void Default_values_are_used_when_not_overridden_in_settings([Values] AppColor name)
+    public static IEnumerable<object[]> AppColorCases => Enum.GetValues<AppColor>().Select(value => new object[] { value });
+    [Theory]
+    [MemberData(nameof(AppColorCases))]
+
+    public void Default_values_are_used_when_not_overridden_in_settings(AppColor name)
     {
         // This only applies when migrating colors from AppSettings to a theme.
         // Fixes https://github.com/gitextensions/gitextensions/issues/11629
@@ -48,7 +49,7 @@ public class AppColorDefaultsTests
     }
 
 #if SUPPORT_THEMES
-    [Test]
+    [Fact]
     public void Default_values_are_specified_in_invariant_theme()
     {
         Theme invariantTheme = GetInvariantTheme();
@@ -63,7 +64,7 @@ public class AppColorDefaultsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Invariant_theme_colors_match_AppColorDefaults()
     {
         Theme invariantTheme = GetInvariantTheme();

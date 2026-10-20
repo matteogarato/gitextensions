@@ -3,32 +3,29 @@ using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.Editor;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormEditorTests
+public class FormEditorTests : System.IDisposable
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
 
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FormEditorTests()
     {
         _referenceRepository = new ReferenceRepository();
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void HasChanges_updated_correctly()
     {
         string filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
@@ -65,7 +62,7 @@ public class FormEditorTests
         }
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_set_linenumber_correctly()
     {
         string filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
@@ -106,14 +103,13 @@ public class FormEditorTests
         }
     }
 
-    [Ignore("Test cannot pass because _commands.Module.FilesEncoding has a preamble which is always used by FormEditor.SaveChanges")]
-    [Test]
+    [WinFormsFact(Skip = "Test cannot pass because _commands.Module.FilesEncoding has a preamble which is always used by FormEditor.SaveChanges")]
     public void Should_preserve_encoding_utf8()
     {
         Should_preserve_encoding(new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_preserve_encoding_utf8_bom()
     {
         Should_preserve_encoding(new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
@@ -151,5 +147,10 @@ public class FormEditorTests
         {
             File.Delete(filePath);
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

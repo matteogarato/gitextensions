@@ -1,10 +1,11 @@
 ﻿using GitCommands;
 using GitExtensions.Plugins.FindLargeFiles;
+using Xunit;
 
 namespace DeleteUnusedBranchesTests;
 public class FindLargeFilesFormTests
 {
-    [Test]
+    [Fact]
     public async Task GenerateCommand_without_deletions_should_return_expected()
     {
         string original = AppSettings.GitCommandValue;
@@ -19,7 +20,7 @@ public class FindLargeFilesFormTests
         }
     }
 
-    [Test]
+    [Fact]
     public async Task GenerateCommand_with_deletions_should_return_expected()
     {
         string original = AppSettings.GitCommandValue;

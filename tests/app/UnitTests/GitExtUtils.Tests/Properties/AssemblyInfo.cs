@@ -1,4 +1,5 @@
 ﻿using CommonTestUtils;
 
-[assembly: TestAppSettings]
-[assembly: Category("UnitTests")]
+[assembly: ConfigureJoinableTaskFactory]
+[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]
+[assembly: Trait("Category", "UnitTests")]

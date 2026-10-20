@@ -1,28 +1,26 @@
 ﻿using CommonTestUtils;
 using GitCommands;
 using GitExtensions.Extensibility.Git;
+using Xunit;
 
 namespace UITests.GitCommands;
-public sealed class GitModuleTests
+public sealed class GitModuleTests : System.IDisposable
 {
     private ReferenceRepository _refRepo = null!;
     private GitModule _gitModule = null!;
-
-    [SetUp]
-    public void SetUp()
+    public GitModuleTests()
     {
         _refRepo = new();
         _gitModule = _refRepo.Module;
         Console.WriteLine("Repo path: " + _gitModule.WorkingDir);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _refRepo.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void GetCommitCount_Should_manage_ambiguous_argument()
     {
         const string ambiguousName = "script";
@@ -42,6 +40,11 @@ public sealed class GitModuleTests
             string hash = _refRepo.CreateCommitRelative(ambiguousName, "main_file.txt", commitMessage, commitMessage);
             return new CommitData(hash, commitMessage, $"{hash} {commitMessage}", ObjectId.Parse(hash));
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }
 

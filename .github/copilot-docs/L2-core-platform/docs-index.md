@@ -35,6 +35,6 @@ Read the [L0 primer](../L0-foundations/gitextensions-primer.md) first.
 | [build-and-installer.md](build-and-installer.md) | Build (`dotnet build`), native build, installer (`Setup/`), publish. | done |
 | [ci-workflows.md](ci-workflows.md) | GitHub Actions CI: reusable core + `app-build` wrapper, and what gates a PR. | done |
 | [release-pipeline.md](release-pipeline.md) | Release: `v*` tag → `app-release`, versioning, arm64 packaging, SignPath signing. | done |
-| [testing-guide.md](testing-guide.md) | Test layout, NUnit + NSubstitute + AwesomeAssertions conventions, `TestAccessor`. | done |
+| [testing-guide.md](testing-guide.md) | Test layout, xUnit v3 + NSubstitute + AwesomeAssertions conventions, `TestAccessor`. | done |
 
 Back to [master docs-index](../docs-index.md).

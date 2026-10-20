@@ -5,7 +5,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
 {
     private readonly Color _textColor = Color.FromArgb(0, 0, 0);
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldReset_WhenEscapeCodesIsEmpty()
     {
         // currentColorId should be preserved
@@ -20,7 +20,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(BlackId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBackColorAndForeColorToNull_WhenEscapeCodeIs0()
     {
         // currentColorId should be reset
@@ -35,7 +35,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(BlackId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBoldAndForeColor_WhenEscapeCodeIs1()
     {
         // currentColorId should be unchanged, just bold
@@ -50,7 +50,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBoldAndForeColor_WhenEscapeCodeIsx1()
     {
         // currentColorId should be unchanged, just bold
@@ -65,7 +65,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBold()
     {
         // Some special cases, not fully specified
@@ -80,7 +80,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBoldBold()
     {
         // Some special cases, not fully specified
@@ -95,7 +95,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBoldDim()
     {
         // Some special cases, not fully specified
@@ -110,7 +110,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBoldDim2()
     {
         // Some special cases, not fully specified
@@ -125,7 +125,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBackBoldBold()
     {
         // Some special cases, not fully specified
@@ -139,7 +139,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(YellowId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetBackDimBold()
     {
         // Some special cases, not fully specified
@@ -153,7 +153,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(YellowId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldKeepThemeDim()
     {
         // Some special cases, not fully specified
@@ -168,7 +168,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetThemeBold()
     {
         // Adjusting difftastic colors
@@ -183,7 +183,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetThemeBold2()
     {
         // Adjusting difftastic colors
@@ -198,7 +198,7 @@ public class AnsiEscapeUtilitiesTryGetColorsTests : AnsiEscapeUtilitiesTestBase
         currentColorId.Should().Be(RedId);
     }
 
-    [Test]
+    [Fact]
     public void TryGetColorsFromEscapeSequence_ShouldSetThemeNormal()
     {
         // Adjusting difftastic colors

@@ -11,8 +11,7 @@ public class GitRefListsForRevisionTests
     private IGitModule _module = null!;
     private IGitRef[] _refs = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitRefListsForRevisionTests()
     {
         _module = Substitute.For<IGitModule>();
 
@@ -28,54 +27,54 @@ public class GitRefListsForRevisionTests
         };
     }
 
-    [Test]
+    [Fact]
     public void ctor_must_throw_if_revision_null()
     {
         ((Action)(() => new GitRefListsForRevision(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void ctor_must_throw_if_revision_ref_null()
     {
         ((Action)(() => new GitRefListsForRevision(new GitRevision(ObjectId.Random()) { Refs = null! }))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void AllBranches_must_return_all_revision_branches()
     {
         GitRefListsForRevision grl = new(_revision);
         grl.AllBranches.Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void AllTags_must_return_all_revision_tags()
     {
         GitRefListsForRevision grl = new(_revision);
         grl.AllTags.Should().ContainSingle();
     }
 
-    [Test]
+    [Fact]
     public void GetAllBranchNames_must_return_branches_names()
     {
         GitRefListsForRevision grl = new(_revision);
         grl.GetAllBranchNames().Should().BeEquivalentTo("branch1", "branch1");
     }
 
-    [Test]
+    [Fact]
     public void GetAllTagNames_must_return_branches_names()
     {
         GitRefListsForRevision grl = new(_revision);
         grl.GetAllTagNames().Should().BeEquivalentTo("tag1");
     }
 
-    [Test]
+    [Fact]
     public void GetDeletableRefs_must_return_branches_names()
     {
         GitRefListsForRevision grl = new(_revision);
         grl.GetDeletableRefs("branch1").Should().BeEquivalentTo([_refs[2], _refs[0]]);
     }
 
-    [Test]
+    [Fact]
     public void GetRenameableLocalBranches_must_return_branches_names()
     {
         GitRefListsForRevision grl = new(_revision);

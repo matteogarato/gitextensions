@@ -3,118 +3,169 @@ using GitExtensions.Extensibility;
 using GitUI.NBugReports;
 
 namespace GitUITests.NBugReports;
-public sealed class UIReporterTests
+public sealed class UIReporterTests : IDisposable
 {
     private const string RootError = "root error";
 
-    [Test, TestCaseSource(typeof(UIReporterTests), nameof(GetFileNameTestCases))]
+    [Theory]
+    [MemberData(nameof(GetFileNameTestCases), MemberType = typeof(UIReporterTests))]
     public void GetFileName_should_extract_file_name_from_exception(Exception exception, string expectedDllName)
     {
         string result = UIReporter.TestAccessor.GetFileName(exception);
         result.Should().Be(expectedDllName);
     }
 
-    private static IEnumerable<TestCaseData> GetFileNameTestCases
+    public static IEnumerable<object[]> GetFileNameTestCases
     {
         get
         {
             // DllNotFoundException
-            yield return new TestCaseData(
+            yield return new object[]
+            {
                 new DllNotFoundException("Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found."),
-                "vcruntime140_cor3.dll");
-            yield return new TestCaseData(
+                "vcruntime140_cor3.dll"
+            };
+
+            yield return new object[]
+            {
                 new DllNotFoundException("Unable to load DLL 'user32.dll': File not found."),
-                "user32.dll");
-            yield return new TestCaseData(
+                "user32.dll"
+            };
+
+            yield return new object[]
+            {
                 new DllNotFoundException("Unable to load DLL 'my.custom.dll' for some reason"),
-                "my.custom.dll");
-            yield return new TestCaseData(
+                "my.custom.dll"
+            };
+
+            yield return new object[]
+            {
                 new DllNotFoundException("No quotes in this message"),
-                "No quotes in this message");
-            yield return new TestCaseData(
+                "No quotes in this message"
+            };
+
+            yield return new object[]
+            {
                 new DllNotFoundException("'only_one_quote"),
-                "'only_one_quote");
-            yield return new TestCaseData(
+                "'only_one_quote"
+            };
+
+            yield return new object[]
+            {
                 new DllNotFoundException(""),
-                "");
-            yield return new TestCaseData(
+                ""
+            };
+
+            yield return new object[]
+            {
                 new DllNotFoundException("Unable to load DLL ''"),
-                "");
+                ""
+            };
 
             // FileNotFoundException
-            yield return new TestCaseData(
+            yield return new object[]
+            {
                 new FileNotFoundException("Could not load file or assembly Microsoft.CSharp", "Microsoft.CSharp"),
-                "Microsoft.CSharp");
-            yield return new TestCaseData(
+                "Microsoft.CSharp"
+            };
+
+            yield return new object[]
+            {
                 new FileNotFoundException("Could not load file or assembly 'System.Data.Common, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'", fileName: "System.Data.Common, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"),
-                "System.Data.Common");
-            yield return new TestCaseData(
+                "System.Data.Common"
+            };
+
+            yield return new object[]
+            {
                 new FileNotFoundException("Could not load file or assembly", fileName: null),
-                "");
-            yield return new TestCaseData(
+                ""
+            };
+
+            yield return new object[]
+            {
                 new FileNotFoundException("Could not load file or assembly MyLib", "MyLib"),
-                "MyLib");
-            yield return new TestCaseData(
+                "MyLib"
+            };
+
+            yield return new object[]
+            {
                 new FileNotFoundException("Could not load file or assembly 'SomeAssembly, version=1.0.0.0'", fileName: "SomeAssembly, version=1.0.0.0"),
-                "SomeAssembly");
-            yield return new TestCaseData(
+                "SomeAssembly"
+            };
+
+            yield return new object[]
+            {
                 new FileNotFoundException("Could not load file or assembly", fileName: ""),
-                "");
-            yield return new TestCaseData(
+                ""
+            };
+
+            yield return new object[]
+            {
                 new FileNotFoundException("Assembly not found", fileName: ", version=1.0.0.0"),
-                ", version=1.0.0.0");
+                ", version=1.0.0.0"
+            };
 
             // Other exceptions
-            yield return new TestCaseData(
+            yield return new object[]
+            {
                 new Exception("No quotes in this message"),
-                "unknown");
-            yield return new TestCaseData(
+                "unknown"
+            };
+
+            yield return new object[]
+            {
                 new Exception("'only_one_quote"),
-                "unknown");
-            yield return new TestCaseData(
+                "unknown"
+            };
+
+            yield return new object[]
+            {
                 new InvalidOperationException("some error"),
-                "unknown");
+                "unknown"
+            };
         }
     }
 
-    [TestCase("System.Data.Common", true)]
-    [TestCase("System.IO", true)]
-    [TestCase("System.", true)]
-    [TestCase("Microsoft.CSharp", true)]
-    [TestCase("Microsoft.VisualBasic", true)]
-    [TestCase("Microsoft.", true)]
-    [TestCase("system.data.common", true)] // case-insensitive
-    [TestCase("MICROSOFT.Extensions", true)] // case-insensitive
-    [TestCase("System", false)]
-    [TestCase("Microsoft", false)]
-    [TestCase("CustomAssembly", false)]
-    [TestCase("MyApp.Core", false)]
-    [TestCase("", false)]
-    [TestCase("   ", false)]
-    [TestCase(null, false)]
+    [Theory]
+    [InlineData("System.Data.Common", true)]
+    [InlineData("System.IO", true)]
+    [InlineData("System.", true)]
+    [InlineData("Microsoft.CSharp", true)]
+    [InlineData("Microsoft.VisualBasic", true)]
+    [InlineData("Microsoft.", true)]
+    [InlineData("system.data.common", true)] // case-insensitive
+    [InlineData("MICROSOFT.Extensions", true)] // case-insensitive
+    [InlineData("System", false)]
+    [InlineData("Microsoft", false)]
+    [InlineData("CustomAssembly", false)]
+    [InlineData("MyApp.Core", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData(null, false)]
     public void IsDotNetFrameworkAssembly_should_identify_framework_assemblies(string? assemblyName, bool expected)
     {
         bool result = UIReporter.TestAccessor.IsDotNetFrameworkAssembly(assemblyName!);
         result.Should().Be(expected);
     }
 
-    [TestCase("vcruntime140_cor3.dll", true)]
-    [TestCase("vcruntime140.dll", true)]
-    [TestCase("VCRUNTIME140_COR3.DLL", true)] // case-insensitive
-    [TestCase("some_vcruntime_file.dll", true)]
-    [TestCase("vcruntime", true)]
-    [TestCase("CustomDll.dll", false)]
-    [TestCase("user32.dll", false)]
-    [TestCase("", false)]
-    [TestCase("   ", false)]
-    [TestCase(null, false)]
+    [Theory]
+    [InlineData("vcruntime140_cor3.dll", true)]
+    [InlineData("vcruntime140.dll", true)]
+    [InlineData("VCRUNTIME140_COR3.DLL", true)] // case-insensitive
+    [InlineData("some_vcruntime_file.dll", true)]
+    [InlineData("vcruntime", true)]
+    [InlineData("CustomDll.dll", false)]
+    [InlineData("user32.dll", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData(null, false)]
     public void IsVCRuntimeDll_should_identify_vcruntime_dlls(string? dllName, bool expected)
     {
         bool result = UIReporter.TestAccessor.IsVCRuntimeDll(dllName!);
         result.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void CreateFailedToLoadAnAssemblyReport_should_include_report_button_for_custom_assembly()
     {
         FileNotFoundException exception = new("Could not load file or assembly CustomLib", "CustomLib");
@@ -129,7 +180,8 @@ public sealed class UIReporterTests
         page.Expander!.Text.Should().Be(exception.Message);
     }
 
-    [Test, TestCaseSource(nameof(FrameworkAssemblyAndVCRuntimeTestCases))]
+    [Theory]
+    [MemberData(nameof(FrameworkAssemblyAndVCRuntimeTestCases))]
     public void CreateFailedToLoadAnAssemblyReport_should_not_include_report_button(Exception exception, string expectedHeadingPart)
     {
         TaskDialogPage page = UIReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, isTerminating: false);
@@ -138,30 +190,36 @@ public sealed class UIReporterTests
         page.Buttons.Should().HaveCount(1);
     }
 
-    private static IEnumerable<TestCaseData> FrameworkAssemblyAndVCRuntimeTestCases
+    public static IEnumerable<object[]> FrameworkAssemblyAndVCRuntimeTestCases
     {
         get
         {
-            yield return new TestCaseData(
+            yield return new object[]
+            {
                 new FileNotFoundException(
                     "Could not load file or assembly 'System.Data.Common, Version=9.0.0.0'",
                     fileName: "System.Data.Common, Version=9.0.0.0"),
-                "System.Data.Common");
+                "System.Data.Common"
+            };
 
-            yield return new TestCaseData(
+            yield return new object[]
+            {
                 new FileNotFoundException(
                     "Could not load file or assembly 'Microsoft.CSharp, Version=9.0.0.0'",
                     fileName: "Microsoft.CSharp, Version=9.0.0.0"),
-                "Microsoft.CSharp");
+                "Microsoft.CSharp"
+            };
 
-            yield return new TestCaseData(
+            yield return new object[]
+            {
                 new DllNotFoundException(
                     "Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found."),
-                "vcruntime140_cor3.dll");
+                "vcruntime140_cor3.dll"
+            };
         }
     }
 
-    [Test]
+    [Fact]
     public void CreateDubiousOwnershipReport_should_create_page_with_expected_buttons()
     {
         const string errorMessage = $"fatal: detected dubious ownership in repository at 'd:/repo'\nTo add an exception for this directory, call:\n\n\tgit config --global --add safe.directory d:/repo\n";
@@ -180,13 +238,12 @@ public sealed class UIReporterTests
         page.Expander!.Text.Should().Be(errorMessage);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         UIReporter.IgnoreFailedToLoadAnAssembly = false;
     }
 
-    [Test]
+    [Fact]
     public void CreateErrorReport_should_show_report_bug_and_ignore_buttons_for_internal_operation()
     {
         Exception exception = new("something broke");
@@ -201,7 +258,7 @@ public sealed class UIReporterTests
         page.Buttons.Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void CreateErrorReport_should_show_report_issue_and_ignore_buttons_for_external_operation()
     {
         Exception exception = new("git failed");
@@ -214,7 +271,7 @@ public sealed class UIReporterTests
         page.Buttons.Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void CreateErrorReport_should_show_view_details_and_ignore_buttons_for_user_external_operation()
     {
         Exception exception = new("user script failed");
@@ -227,7 +284,7 @@ public sealed class UIReporterTests
         page.Buttons.Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void CreateFailedToLoadAnAssemblyReport_should_show_expander_with_exception_message()
     {
         DllNotFoundException exception = new("Unable to load DLL 'vcruntime140_cor3.dll'");
@@ -238,7 +295,7 @@ public sealed class UIReporterTests
         page.Expander!.Text.Should().Be(exception.Message);
     }
 
-    [Test]
+    [Fact]
     public void ReportFailedToLoadAnAssembly_should_return_true_when_IgnoreFailedToLoadAnAssembly_is_set()
     {
         UIReporter.IgnoreFailedToLoadAnAssembly = true;
@@ -251,7 +308,8 @@ public sealed class UIReporterTests
         result.Should().BeTrue();
     }
 
-    [Test, TestCaseSource(nameof(NonAssemblyLoadExceptionTestCases))]
+    [Theory]
+    [MemberData(nameof(NonAssemblyLoadExceptionTestCases))]
     public void ReportFailedToLoadAnAssembly_should_return_false_for_non_matching_exception(Exception exception)
     {
         UIReporter reporter = new();
@@ -261,15 +319,15 @@ public sealed class UIReporterTests
         result.Should().BeFalse();
     }
 
-    private static IEnumerable<TestCaseData> NonAssemblyLoadExceptionTestCases
+    public static IEnumerable<object[]> NonAssemblyLoadExceptionTestCases
     {
         get
         {
-            yield return new TestCaseData(new Exception("some error"));
-            yield return new TestCaseData(new InvalidOperationException("something went wrong"));
-            yield return new TestCaseData(new FileNotFoundException("File not found"));
-            yield return new TestCaseData(new DllNotFoundException("Unable to load DLL 'user32.dll'"));
-            yield return new TestCaseData(new Exception("outer", new Exception("inner")));
+            yield return new object[] { new Exception("some error") };
+            yield return new object[] { new InvalidOperationException("something went wrong") };
+            yield return new object[] { new FileNotFoundException("File not found") };
+            yield return new object[] { new DllNotFoundException("Unable to load DLL 'user32.dll'") };
+            yield return new object[] { new Exception("outer", new Exception("inner")) };
         }
     }
 }

@@ -8,24 +8,24 @@ public class SshPathLocatorTest
 {
     private IFileSystem _fileSystem = null!;
 
-    [SetUp]
-    public void Setup()
+    public SshPathLocatorTest()
     {
         _fileSystem = Substitute.For<IFileSystem>();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("nul")]
-    [TestCase(@"y:\unknown\dir")]
-    [TestCase("$?")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("nul")]
+    [InlineData(@"y:\unknown\dir")]
+    [InlineData("$?")]
     public void GetSshFromGitDir_should_return_null_if_invalid_gitgir(string? gitdir)
     {
         SshPathLocator sshPathLocator = new(_fileSystem);
         sshPathLocator.GetSshFromGitDir(gitdir!).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void GetSshFromGitDir_should_return_null_if_system_access_throwing()
     {
         const string path = @"C:\";
@@ -36,7 +36,7 @@ public class SshPathLocatorTest
         sshPathLocator.GetSshFromGitDir(path).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void GetSshFromGitDir_on_gitBinDir_having_no_ssh_exe_in_parent_directory_children_should_return_null()
     {
         string path = SetUpFileSystemWithSshExePathsAs();
@@ -45,6 +45,8 @@ public class SshPathLocatorTest
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void GetSshFromGitDir_on_gitBinDir_should_work_with_or_without_trailing_separator(bool withTrailingSeparator)
     {
         const string sshExe = @"C:\someotherdir\ssh.exe";

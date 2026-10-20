@@ -4,10 +4,13 @@ namespace GitUITests.UserControls.CommitInfo;
 
 public class BranchComparerTests
 {
-    [SetCulture("en-US")]
-    [SetUICulture("en-US")]
-    [Test]
-    public void BranchComparer([Values(null, "", "current", "(no branch)")] string? currentBranch)
+    [Culture("en-US")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("current")]
+    [InlineData("(no branch)")]
+    public void BranchComparer(string? currentBranch)
     {
         AppSettings.PrioritizedBranchNames = "master;dummy;main[^/]*|master[^/]*;release/.*";
         AppSettings.PrioritizedRemoteNames = "zzz;origin|upstream";

@@ -1,13 +1,27 @@
-﻿using GitCommands.Git;
+﻿using System.Globalization;
+using GitCommands.Git;
 
 namespace GitCommandsTests.Git;
-
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class GitBranchNameOptionsTest
+public class GitBranchNameOptionsTest : IDisposable
 {
-    [TestCase(null, "")]
-    [TestCase("", "")]
+    private readonly CultureInfo _currentCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _currentUICulture = CultureInfo.CurrentUICulture;
+
+    public GitBranchNameOptionsTest()
+    {
+        CultureInfo.CurrentCulture = new("en-US");
+        CultureInfo.CurrentUICulture = new("en-US");
+    }
+
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _currentCulture;
+        CultureInfo.CurrentUICulture = _currentUICulture;
+    }
+
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("", "")]
     public void ReplacementToken_can_be_null_or_empty(string? token, string expected)
     {
         GitBranchNameOptions options = new(token);
@@ -15,17 +29,18 @@ public class GitBranchNameOptionsTest
         options.ReplacementToken.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void ReplacementToken_cant_be_multichar()
     {
         ((Action)(() => new GitBranchNameOptions("aaa"))).Should().Throw<ArgumentOutOfRangeException>()
             .WithMessage("Replacement token must be a single character (Parameter 'replacementToken')");
     }
 
-    [TestCase(" ", ' ')]
-    [TestCase("^", '^')]
-    [TestCase("~", '~')]
-    [TestCase(":", ':')]
+    [Theory]
+    [InlineData(" ", ' ')]
+    [InlineData("^", '^')]
+    [InlineData("~", '~')]
+    [InlineData(":", ':')]
     public void ReplacementToken_cant_be_invalid(string? token, char expected)
     {
         ((Action)(() => new GitBranchNameOptions(token))).Should().Throw<ArgumentOutOfRangeException>()

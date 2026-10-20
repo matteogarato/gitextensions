@@ -2,7 +2,7 @@
 
 public abstract class AvatarCacheTestBase : AvatarTestBase
 {
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_returns_correct_image()
     {
         (await _cache.GetAvatarAsync(_email1, _name1, _size)).Should().BeSameAs(_img1);

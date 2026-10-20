@@ -4,23 +4,21 @@ using GitExtUtils.GitUI.Theming;
 
 namespace GitExtUtilsTests;
 
-public class AdaptLightnessTests
+public class AdaptLightnessTests : IDisposable
 {
-    [SetUp]
-    public void Setup()
+    public AdaptLightnessTests()
     {
         // The lightness is only adapted for a theme which is not the default one
         Theme darkTheme = new(new Dictionary<AppColor, Color>(), new Dictionary<KnownColor, Color>(), ThemeId.DefaultDark);
         ColorHelper.ThemeSettings = new ThemeSettings(darkTheme, Theme.Default, ThemeVariations.None, useSystemVisualStyle: false);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         ColorHelper.ThemeSettings = ThemeSettings.Default;
     }
 
-    [Test]
+    [Fact]
     public void AdaptLightness_should_transform_a_bitmap_backed_by_a_closed_stream()
     {
         // Icon.ToBitmap() returns such a bitmap for a PNG compressed icon frame, which is what a
@@ -44,7 +42,7 @@ public class AdaptLightnessTests
         }
     }
 
-    [Test]
+    [Fact]
     public void AdaptLightness_should_leave_the_original_untouched()
     {
         using Bitmap original = new(4, 4, PixelFormat.Format32bppArgb);

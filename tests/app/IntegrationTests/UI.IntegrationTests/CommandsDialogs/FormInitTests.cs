@@ -1,32 +1,29 @@
 ﻿using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormInitTests
+public class FormInitTests : System.IDisposable
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
 
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FormInitTests()
     {
         _referenceRepository = new ReferenceRepository();
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_show_supplied_path()
     {
         string currentDir = "bla";
@@ -39,7 +36,7 @@ public class FormInitTests
     }
 
     // Strictly speaking this is a test for GitUICommands.StartInitializeDialog
-    [Test]
+    [WinFormsFact]
     public void Should_show_current_GitModuleWorkingDir_if_supplied_path_null()
     {
         RunFormTest(
@@ -50,10 +47,11 @@ public class FormInitTests
             null!);
     }
 
-    [TestCase("")]
-    [TestCase(null)]
-    [TestCase("    ")]
-    [TestCase(@"foo\bar")]
+    [WinFormsTheory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("    ")]
+    [InlineData(@"foo\bar")]
     public void IsRootedDirectoryPath_should_detect_invalid_paths(string? input)
     {
         string currentDir = "bla";
@@ -65,10 +63,11 @@ public class FormInitTests
             currentDir);
     }
 
-    [TestCase(@"c:\foo\bar")]
-    [TestCase(@"c:\foo\bar\")]
-    [TestCase(@"c:")]
-    [TestCase(@"  c:\foo\bar  ")]
+    [WinFormsTheory]
+    [InlineData(@"c:\foo\bar")]
+    [InlineData(@"c:\foo\bar\")]
+    [InlineData(@"c:")]
+    [InlineData(@"  c:\foo\bar  ")]
     public void IsRootedDirectoryPath_returns_true_on_valid_paths(string? input)
     {
         string currentDir = "bla";
@@ -99,5 +98,10 @@ public class FormInitTests
                 _commands.StartInitializeDialog(owner: null, path).Should().BeTrue();
             },
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

@@ -1,13 +1,15 @@
 ﻿using GitExtensions.Plugins.GitlabIntegration.Settings;
+using Xunit;
 
 namespace GitlabIntegrationTests;
-internal class GitlabRemoteParserTests
+public class GitlabRemoteParserTests
 {
-    [TestCase("https://gitlab.com/owner/repo.git/")]
-    [TestCase("http://gitlab.com/owner/repo.git/")]
-    [TestCase("https://gitlab.com/owner/repo/")]
-    [TestCase("ssh://git@gitlab.com/owner/repo.git/")]
-    [TestCase("git@gitlab.com/owner/repo.git/")]
+    [Theory]
+    [InlineData("https://gitlab.com/owner/repo.git/")]
+    [InlineData("http://gitlab.com/owner/repo.git/")]
+    [InlineData("https://gitlab.com/owner/repo/")]
+    [InlineData("ssh://git@gitlab.com/owner/repo.git/")]
+    [InlineData("git@gitlab.com/owner/repo.git/")]
     public void TryExtractGitlabDataFromGitlabComRemoteUrl(string url)
     {
         new GitlabRemoteParser().TryExtractGitlabDataFromRemoteUrl(url, out string? host, out string? owner, out string? repository).Should().BeTrue();
@@ -16,11 +18,12 @@ internal class GitlabRemoteParserTests
         repository.Should().Be("repo");
     }
 
-    [TestCase("https://example.com/owner/repo.git/", "example.com")]
-    [TestCase("http://gitlab.example.com/owner/repo.git/", "gitlab.example.com")]
-    [TestCase("https://repo.example.com/owner/repo/", "repo.example.com")]
-    [TestCase("https://192.168.1.11/owner/repo/", "192.168.1.11")]
-    [TestCase("https://repo.192.168.1.11:5896/owner/repo/", "repo.192.168.1.11:5896")]
+    [Theory]
+    [InlineData("https://example.com/owner/repo.git/", "example.com")]
+    [InlineData("http://gitlab.example.com/owner/repo.git/", "gitlab.example.com")]
+    [InlineData("https://repo.example.com/owner/repo/", "repo.example.com")]
+    [InlineData("https://192.168.1.11/owner/repo/", "192.168.1.11")]
+    [InlineData("https://repo.192.168.1.11:5896/owner/repo/", "repo.192.168.1.11:5896")]
     public void TryExtractGitlabDataFromSelfHostedRemoteUrl(string url, string expectedHost)
     {
         new GitlabRemoteParser().TryExtractGitlabDataFromRemoteUrl(url, out string? host, out string? owner, out string? repository).Should().BeTrue();
@@ -29,7 +32,7 @@ internal class GitlabRemoteParserTests
         repository.Should().Be("repo");
     }
 
-    [Test]
+    [Fact]
     public void Should_fail_in_parsing_invalid_url()
     {
         GitlabRemoteParser gitlabRemoteParser = new();
@@ -41,7 +44,7 @@ internal class GitlabRemoteParserTests
         gitlabRemoteParser.IsValidRemoteUrl(url).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void Should_Correct_in_parsing_repositoryNamespace()
     {
         GitlabRemoteParser gitlabRemoteParser = new();

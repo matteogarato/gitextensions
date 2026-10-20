@@ -1,0 +1,22 @@
+<Solution>
+  <!-- Focused solution for Avalonia-only builds and tests. The main GitExtensions.slnx
+       also includes Avalonia as the default GUI. See src/app/GitExtensions.Avalonia/README.md. -->
+  <Folder Name="/eng/tools/">
+    <Project Path="../tools/WinFormsToAxaml/WinFormsToAxaml.csproj" />
+  </Folder>
+  <Folder Name="/src/app/">
+    <Project Path="../../src/app/GitCommands/GitCommands.csproj" />
+    <Project Path="../../src/app/GitExtensions.Avalonia/GitExtensions.Avalonia.csproj" />
+    <Project Path="../../src/app/GitExtensions.Extensibility/GitExtensions.Extensibility.csproj" />
+    <Project Path="../../src/app/GitExtensions.Shims.WinForms/GitExtensions.Shims.WinForms.csproj" />
+    <Project Path="../../src/app/GitExtUtils/GitExtUtils.csproj" />
+    <Project Path="../../src/app/GitUI.Avalonia/GitUI.Avalonia.csproj" />
+    <Project Path="../../src/app/ResourceManager/ResourceManager.csproj" />
+  </Folder>
+  <Folder Name="/src/plugins/">
+    <Project Path="../../src/plugins/GitUIPluginInterfaces/GitUIPluginInterfaces.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="../../tests/app/UnitTests/GitUI.Avalonia.Tests/GitUI.Avalonia.Tests.csproj" />
+  </Folder>
+</Solution>

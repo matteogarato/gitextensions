@@ -4,7 +4,7 @@ namespace GitUITests.CommandsDialogs.SettingsDialog.Pages;
 
 public static class FormFixHomeTests
 {
-    [Test]
+    [Fact]
     public static void HasGlobalConfig()
     {
         string tempDirectory = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());

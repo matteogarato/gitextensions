@@ -9,11 +9,11 @@ using GitUI;
 using GitUIPluginInterfaces;
 using NSubstitute;
 using ResourceManager;
+using Xunit;
 
 namespace GitExtensions.UITests.UserControls.CommitInfo;
 
-[Apartment(ApartmentState.STA)]
-public class CommitInfoTests
+public class CommitInfoTests : System.IDisposable
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
@@ -22,9 +22,7 @@ public class CommitInfoTests
     private MockExecutable _gitExecutable = null!;
     private GitUICommands _commands = null!;
     private MockLinkFactory _mockLinkFactory = null!;
-
-    [SetUp]
-    public void SetUp()
+    public CommitInfoTests()
     {
         _mockLinkFactory = new();
         ServiceContainer serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
@@ -43,8 +41,7 @@ public class CommitInfoTests
         executorAccessor.GitCommandRunner = new GitCommandRunner(_gitExecutable, () => GitModule.SystemEncoding);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _gitExecutable.Verify();
         _gitExecutable = null!;
@@ -52,7 +49,7 @@ public class CommitInfoTests
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void GetSortedTags_should_throw_on_git_warning()
     {
         RunCommitInfoTest(commitInfo =>
@@ -66,7 +63,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void GetSortedTags_should_split_output_if_no_warning()
     {
         RunCommitInfoTest(commitInfo =>
@@ -90,7 +87,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void GetSortedTags_should_load_ref_different_in_case()
     {
         RunCommitInfoTest(commitInfo =>
@@ -115,7 +112,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void GetSortedTags_should_load_ref_with_extra_spaces()
     {
         RunCommitInfoTest(commitInfo =>
@@ -141,7 +138,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void GetSortedTags_should_remove_duplicate_refs()
     {
         RunCommitInfoTest(commitInfo =>
@@ -166,7 +163,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void ReloadCommitInfo_should_render_links_correctly()
     {
         string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
@@ -203,8 +200,9 @@ public class CommitInfoTests
     }
 
     // Link start numbers are obtained manually.
-    [TestCase("branch05", 183, "gitext://gotobranch/branch05")]
-    [TestCase("v1.9", 745, "gitext://gototag/v1.9")]
+    [WinFormsTheory]
+    [InlineData("branch05", 183, "gitext://gotobranch/branch05")]
+    [InlineData("v1.9", 745, "gitext://gototag/v1.9")]
     public void ReloadCommitInfo_should_extract_links_correctly(string refText, int linkStart, string expectedUri)
     {
         string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
@@ -253,7 +251,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void ReloadCommitInfo_should_handle_ShowAll_branches_correctly()
     {
         string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
@@ -294,7 +292,7 @@ public class CommitInfoTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void ReloadCommitInfo_should_handle_ShowAll_tags_correctly()
     {
         string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
@@ -392,5 +390,10 @@ public class CommitInfoTests
 
             _linkFactory.ExecuteLink(linkUri, handleInternalLink, showAll);
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

@@ -3,11 +3,12 @@
 namespace GitCommandsTests.Remote;
 public class GitHubRemoteParserTests
 {
-    [TestCase("https://github.com/owner/repo.git")]
-    [TestCase("http://github.com/owner/repo.git")]
-    [TestCase("https://github.com/owner/repo")]
-    [TestCase("ssh://git@github.com/owner/repo.git")]
-    [TestCase("git@github.com/owner/repo.git")]
+    [Theory]
+    [InlineData("https://github.com/owner/repo.git")]
+    [InlineData("http://github.com/owner/repo.git")]
+    [InlineData("https://github.com/owner/repo")]
+    [InlineData("ssh://git@github.com/owner/repo.git")]
+    [InlineData("git@github.com/owner/repo.git")]
     public void TryExtractGitHubDataFromRemoteUrl(string url)
     {
         new GitHubRemoteParser().TryExtractGitHubDataFromRemoteUrl(url, out string? owner, out string? repository).Should().BeTrue();
@@ -15,7 +16,7 @@ public class GitHubRemoteParserTests
         repository.Should().Be("repo");
     }
 
-    [Test]
+    [Fact]
     public void Should_fail_in_parsing_invalid_url()
     {
         GitHubRemoteParser gitHubRemoteParser = new();

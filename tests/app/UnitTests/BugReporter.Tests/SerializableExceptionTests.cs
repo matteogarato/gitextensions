@@ -1,22 +1,38 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using BugReporter.Serialization;
 
 namespace BugReporterTests;
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public sealed partial class SerializableExceptionTests
+public sealed partial class SerializableExceptionTests : IDisposable
 {
+    private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
+
+    public SerializableExceptionTests()
+    {
+        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentCulture = testCulture;
+        CultureInfo.CurrentUICulture = testCulture;
+    }
+
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUICulture;
+    }
+
     [GeneratedRegex(@"^(?<keep>.*)(?<codeLocationToBeRemoved>\sin\s.*)$", RegexOptions.ExplicitCapture)]
     private static partial Regex PathRegex { get; }
 
-    [Test, TestCaseSource(nameof(TestCases))]
-    public async Task ToString(string testName, Action action)
+    [Theory]
+    [MemberData(nameof(TestCases))]
+    public async Task ToString_should_return_expected_details(string testName)
     {
         string message = string.Empty;
         try
         {
-            action();
+            ThrowException(testName);
         }
         catch (Exception ex)
         {
@@ -27,13 +43,14 @@ public sealed partial class SerializableExceptionTests
             .UseParameters(testName);
     }
 
-    [Test, TestCaseSource(nameof(TestCases))]
-    public async Task ToString_should_be_same_from_round_trip(string testName, Action action)
+    [Theory]
+    [MemberData(nameof(TestCases))]
+    public async Task ToString_should_be_same_from_round_trip(string testName)
     {
         string xml = string.Empty;
         try
         {
-            action();
+            ThrowException(testName);
         }
         catch (Exception ex)
         {
@@ -46,12 +63,27 @@ public sealed partial class SerializableExceptionTests
             .UseParameters(testName);
     }
 
-    public static IEnumerable<TestCaseData> TestCases
+    public static IEnumerable<object[]> TestCases
     {
         get
         {
-            yield return new TestCaseData(nameof(Code.SimpleException), (Action)(() => Code.SimpleException()));
-            yield return new TestCaseData(nameof(Code.NestedException), (Action)(() => Code.DoubleNestedException()));
+            yield return new object[] { nameof(Code.SimpleException) };
+            yield return new object[] { nameof(Code.NestedException) };
+        }
+    }
+
+    private static void ThrowException(string testName)
+    {
+        switch (testName)
+        {
+            case nameof(Code.SimpleException):
+                Code.SimpleException();
+                break;
+            case nameof(Code.NestedException):
+                Code.DoubleNestedException();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(testName));
         }
     }
 

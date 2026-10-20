@@ -3,11 +3,11 @@ using GitCommands;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormPullTests
+public class FormPullTests : System.IDisposable
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
@@ -17,9 +17,7 @@ public class FormPullTests
     private GitPullAction _originalDefaultPullAction;
     private GitPullAction _originalFormPullAction;
     private bool _originalAutoStash;
-
-    [SetUp]
-    public void SetUp()
+    public FormPullTests()
     {
         _originalDefaultPullAction = AppSettings.DefaultPullAction;
         _originalFormPullAction = AppSettings.FormPullAction;
@@ -29,8 +27,7 @@ public class FormPullTests
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         AppSettings.DefaultPullAction = _originalDefaultPullAction;
         AppSettings.FormPullAction = _originalFormPullAction;
@@ -39,7 +36,7 @@ public class FormPullTests
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_correctly_setup_form_title_for_merge_action()
     {
         RunFormTest(
@@ -57,7 +54,7 @@ public class FormPullTests
             GitPullAction.FetchAll);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_correctly_setup_form_title_for_rebase_action()
     {
         RunFormTest(
@@ -75,7 +72,7 @@ public class FormPullTests
             GitPullAction.FetchAll);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_correctly_setup_form_title_for_fetch_action()
     {
         RunFormTest(
@@ -93,12 +90,13 @@ public class FormPullTests
             GitPullAction.Merge);
     }
 
-    [TestCase(GitPullAction.None, true, false, false, false, false, false, false, false)]
-    [TestCase(GitPullAction.Merge, true, false, false, false, false, false, false, false)]
-    [TestCase(GitPullAction.Rebase, false, false, false, true, false, false, false, false)]
-    [TestCase(GitPullAction.Fetch, false, false, false, false, true, false, true, true)]
-    [TestCase(GitPullAction.FetchAll, false, false, false, false, true, false, true, true)]
-    [TestCase(GitPullAction.FetchPruneAll, false, true, false, false, true, false, true, true)]
+    [WinFormsTheory]
+    [InlineData(GitPullAction.None, true, false, false, false, false, false, false, false)]
+    [InlineData(GitPullAction.Merge, true, false, false, false, false, false, false, false)]
+    [InlineData(GitPullAction.Rebase, false, false, false, true, false, false, false, false)]
+    [InlineData(GitPullAction.Fetch, false, false, false, false, true, false, true, true)]
+    [InlineData(GitPullAction.FetchAll, false, false, false, false, true, false, true, true)]
+    [InlineData(GitPullAction.FetchPruneAll, false, true, false, false, true, false, true, true)]
     public void Should_correctly_setup_for_defined_pull_action(GitPullAction pullAction,
         bool mergeChecked, bool pruneRemoteBranches, bool pruneRemoteBranchesAndTags, bool rebaseChecked, bool fetchChecked, bool autoStashChecked, bool pruneRemoteBranchesEnabled, bool pruneRemoteBranchesAndTagsEnabled)
     {
@@ -129,12 +127,13 @@ public class FormPullTests
             null!, null!, pullAction);
     }
 
-    [TestCase(GitPullAction.None, true, false, false, false, false, false, false, false)]
-    [TestCase(GitPullAction.Merge, true, false, false, false, false, false, false, false)]
-    [TestCase(GitPullAction.Rebase, false, false, false, true, false, false, false, false)]
-    [TestCase(GitPullAction.Fetch, false, false, false, false, true, false, true, true)]
-    [TestCase(GitPullAction.FetchAll, false, false, false, false, true, false, true, true)]
-    [TestCase(GitPullAction.FetchPruneAll, false, true, false, false, true, false, true, true)]
+    [WinFormsTheory]
+    [InlineData(GitPullAction.None, true, false, false, false, false, false, false, false)]
+    [InlineData(GitPullAction.Merge, true, false, false, false, false, false, false, false)]
+    [InlineData(GitPullAction.Rebase, false, false, false, true, false, false, false, false)]
+    [InlineData(GitPullAction.Fetch, false, false, false, false, true, false, true, true)]
+    [InlineData(GitPullAction.FetchAll, false, false, false, false, true, false, true, true)]
+    [InlineData(GitPullAction.FetchPruneAll, false, true, false, false, true, false, true, true)]
     public void Should_use_user_DefaultPullAction_pull_action_None(GitPullAction pullAction,
         bool mergeChecked, bool pruneRemoteBranches, bool pruneRemoteBranchesAndTags, bool rebaseChecked, bool fetchChecked, bool autoStashChecked, bool pruneRemoteBranchesEnabled, bool pruneRemoteBranchesAndTagsEnabled)
     {
@@ -158,10 +157,11 @@ public class FormPullTests
             null!, null!, GitPullAction.None);
     }
 
-    [TestCase(true, false, false, GitPullAction.Merge)]
-    [TestCase(false, true, false, GitPullAction.Rebase)]
-    [TestCase(false, false, true, GitPullAction.Fetch)]
-    public void Should_remember_user_choice_upon_pull(bool mergeChecked, bool rebaseChecked, bool fetchChecked, GitPullAction expectedFormPullAction)
+    [WinFormsTheory]
+    [InlineData(true, false, false, GitPullAction.Merge)]
+    [InlineData(false, true, false, GitPullAction.Rebase)]
+    [InlineData(false, false, true, GitPullAction.Fetch)]
+    public void Should_remember_user_choice_upon_pull_action(bool mergeChecked, bool rebaseChecked, bool fetchChecked, GitPullAction expectedFormPullAction)
     {
         RunFormTest(
             form =>
@@ -181,9 +181,10 @@ public class FormPullTests
             GitPullAction.Merge);
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
-    public void Should_remember_user_choice_upon_pull(bool autoStashChecked)
+    [WinFormsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_remember_user_choice_upon_pull_auto_stash(bool autoStashChecked)
     {
         RunFormTest(
             form =>
@@ -220,5 +221,10 @@ public class FormPullTests
                 _commands.StartPullDialog(owner: null, remoteBranch: remoteBranch, remote: remote, pullAction: pullAction).Should().BeFalse();
             },
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

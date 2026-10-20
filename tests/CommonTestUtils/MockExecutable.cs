@@ -2,7 +2,7 @@
 using System.Text;
 using GitExtensions.Extensibility;
 using GitUI;
-using NUnit.Framework;
+using Xunit.Sdk;
 
 namespace CommonTestUtils;
 
@@ -32,7 +32,7 @@ public sealed class MockExecutable : IExecutable
                     queue.TryPeek(out (string output, int? exitCode, string? error) item) &&
                     output == item.output && error == item.error)
                 {
-                    throw new AssertionException($"Staged output should have been consumed.\nArguments: {arguments}\nOutput: {output}\nError: {error}");
+                    throw new XunitException($"Staged output should have been consumed.\nArguments: {arguments}\nOutput: {output}\nError: {error}");
                 }
             });
     }
@@ -47,7 +47,7 @@ public sealed class MockExecutable : IExecutable
             {
                 if (_commandArgumentsSet.TryGetValue(arguments, out int storedId) && storedId != id)
                 {
-                    throw new AssertionException($"Staged command should have been consumed.\nArguments: {arguments}");
+                    throw new XunitException($"Staged command should have been consumed.\nArguments: {arguments}");
                 }
             });
     }

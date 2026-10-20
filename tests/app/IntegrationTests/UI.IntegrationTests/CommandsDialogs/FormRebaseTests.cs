@@ -1,29 +1,26 @@
 ﻿using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormRebaseTests
+public class FormRebaseTests : System.IDisposable
 {
     private ReferenceRepository _referenceRepository = null!;
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FormRebaseTests()
     {
         _referenceRepository = new ReferenceRepository();
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Interactive_check_enables_autosquash()
     {
         RunFormTest(
@@ -38,7 +35,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Interactive_uncheck_disables_autosquash()
     {
         RunFormTest(
@@ -54,7 +51,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Ignore_date_check_disables_all_other_options()
     {
         RunFormTest(
@@ -72,7 +69,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Ignore_date_uncheck_enables_all_options_if_interactive_checked()
     {
         RunFormTest(
@@ -92,7 +89,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Ignore_date_uncheck_enables_all_options_but_autosquash_if_interactive_not_checked()
     {
         RunFormTest(
@@ -111,7 +108,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Committer_date_check_disables_all_other_options()
     {
         RunFormTest(
@@ -129,7 +126,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Committer_date_uncheck_enables_all_options_if_interactive_is_checked()
     {
         RunFormTest(
@@ -149,7 +146,7 @@ public class FormRebaseTests
             from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
     }
 
-    [Test]
+    [WinFormsFact]
     public void Committer_date_uncheck_enables_all_options_but_autosquash_if_interactive_not_checked()
     {
         RunFormTest(
@@ -189,5 +186,10 @@ public class FormRebaseTests
                 _commands.StartRebaseDialog(owner: null, from, to, onto, interactive, startRebaseImmediately);
             },
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

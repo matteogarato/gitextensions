@@ -2,7 +2,7 @@
 
 namespace GitCommands.Git;
 
-public readonly record struct AheadBehindData(string Branch,  string RemoteRef, string AheadCount, string BehindCount)
+public readonly record struct AheadBehindData(string Branch, string RemoteRef, string AheadCount, string BehindCount)
 {
     // gone: "plumbing" expression, see https://git-scm.com/docs/git-for-each-ref#Documentation/git-for-each-ref.txt-upstream
     public static readonly string Gone = "gone";

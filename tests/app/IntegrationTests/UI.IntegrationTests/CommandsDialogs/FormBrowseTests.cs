@@ -4,11 +4,11 @@ using GitCommands;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormBrowseTests
+public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTestsFixture>
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
@@ -16,46 +16,24 @@ public class FormBrowseTests
     // Created once for each test
     private GitUICommands _commands = null!;
 
-    // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
-
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public FormBrowseTests(FormBrowseTestsFixture fixture)
     {
-        // Remember the current settings...
-        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // Stop loading custom diff tools
-        AppSettings.ShowAvailableDiffTools = false;
-
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
-        AppSettings.ShowAuthorAvatarColumn = false;
+        InitializeTest();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-    }
-
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Filters_should_behave_as_expected()
     {
         _referenceRepository.CreateCommit("Commit1", "Commit1");
@@ -150,10 +128,11 @@ public class FormBrowseTests
             });
     }
 
-    [TestCase("", "file.txt")]
-    [TestCase("", "file with spaces.txt")]
-    [TestCase("Dir with spaces", "file.txt")]
-    [TestCase("Dir with spaces", "file with spaces.txt")]
+    [WinFormsTheory]
+    [InlineData("", "file.txt")]
+    [InlineData("", "file with spaces.txt")]
+    [InlineData("Dir with spaces", "file.txt")]
+    [InlineData("Dir with spaces", "file with spaces.txt")]
     public void File_history_should_behave_as_expected(string fileRelativePath, string fileName)
     {
         using ReferenceRepository referenceRepository = new();
@@ -188,7 +167,7 @@ public class FormBrowseTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void FileSelection_should_be_restored_after_refresh()
     {
         // create a commit with multiple files changed
@@ -246,7 +225,7 @@ public class FormBrowseTests
             commands);
     }
 
-    [Test]
+    [WinFormsFact]
     public void ShowStashes_starting_disabled_should_filter_as_expected()
     {
         using ReferenceRepository referenceRepository = new();
@@ -293,7 +272,7 @@ public class FormBrowseTests
             commands);
     }
 
-    [Test]
+    [WinFormsFact]
     public void ShowStashes_starting_enabled_should_filter_as_expected()
     {
         using ReferenceRepository referenceRepository = new();
@@ -372,5 +351,36 @@ public class FormBrowseTests
     private static void WaitForRevisionsToBeLoaded(FormBrowse form, [CallerMemberName] string caller = "")
     {
         UITest.ProcessUntil($"{caller} loading revisions", () => form.GetTestAccessor().RevisionGrid.GetTestAccessor().IsDataLoadComplete, maxMilliseconds: 10_000);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class FormBrowseTestsFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _originalShowAuthorAvatarColumn;
+    private bool _showAvailableDiffTools;
+
+    public FormBrowseTestsFixture()
+    {
+        // Remember the current settings...
+        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // Stop loading custom diff tools
+        AppSettings.ShowAvailableDiffTools = false;
+
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+        AppSettings.ShowAuthorAvatarColumn = false;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }
 }

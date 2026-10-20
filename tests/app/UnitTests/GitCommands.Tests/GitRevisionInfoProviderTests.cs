@@ -9,20 +9,19 @@ public class GitRevisionInfoProviderTests
     private IGitModule _module = null!;
     private GitRevisionInfoProvider _provider = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitRevisionInfoProviderTests()
     {
         _module = Substitute.For<IGitModule>();
         _provider = new GitRevisionInfoProvider(() => _module);
     }
 
-    [Test]
+    [Fact]
     public void LoadChildren_should_throw_if_null()
     {
         ((Action)(() => _provider.LoadChildren(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void LoadChildren_should_throw_if_ObjectId_is_zero()
     {
         IGitItem item = Substitute.For<IGitItem>();
@@ -32,7 +31,7 @@ public class GitRevisionInfoProviderTests
         ((Action)(() => _provider.LoadChildren(item))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void LoadChildren_should_return_if_gitmodule_not_supplied()
     {
         string objectId = ObjectId.Random().ToString();
@@ -44,7 +43,7 @@ public class GitRevisionInfoProviderTests
         ((Action)(() => _provider.LoadChildren(item))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void LoadChildren_should_return_shallow_tree_for_non_GitItem()
     {
         ObjectId objectId = ObjectId.Random();
@@ -53,28 +52,28 @@ public class GitRevisionInfoProviderTests
         item.Guid.Returns(objectId.ToString());
 
         IObjectGitItem[] items = [Substitute.For<IObjectGitItem>(), Substitute.For<IObjectGitItem>(), Substitute.For<IObjectGitItem>()];
-        _module.GetTree(objectId, full: false).Returns(items);
+        _module.GetTree(objectId, full: false, cancellationToken: TestContext.Current.CancellationToken).Returns(items);
 
         IEnumerable<INamedGitItem> children = _provider.LoadChildren(item);
 
         children.Should().BeEquivalentTo(items);
-        _module.Received(1).GetTree(objectId, full: false);
+        _module.Received(1).GetTree(objectId, full: false, cancellationToken: TestContext.Current.CancellationToken);
     }
 
-    [Test]
+    [Fact]
     public void LoadChildren_should_return_shallow_tree_for_GitItem_with_updated_FileName()
     {
         ObjectId commitId = ObjectId.Random();
         GitItem item = new(0, GitObjectType.Tree, commitId, "folder");
 
         IObjectGitItem[] items = [Substitute.For<IObjectGitItem>(), new GitItem(0, GitObjectType.Blob, ObjectId.Random(), "file2"), new GitItem(0, GitObjectType.Blob, ObjectId.Random(), "file3")];
-        _module.GetTree(commitId, full: false).Returns(items);
+        _module.GetTree(commitId, full: false, cancellationToken: TestContext.Current.CancellationToken).Returns(items);
 
         IEnumerable<INamedGitItem> children = _provider.LoadChildren(item);
 
         children.Should().BeEquivalentTo(items);
         ((GitItem)items[1]).FileName.Should().Be(Path.Combine(item.FileName, "file2"));
         ((GitItem)items[2]).FileName.Should().Be(Path.Combine(item.FileName, "file3"));
-        _module.Received(1).GetTree(commitId, full: false);
+        _module.Received(1).GetTree(commitId, full: false, cancellationToken: TestContext.Current.CancellationToken);
     }
 }

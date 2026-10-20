@@ -17,12 +17,11 @@ public sealed class RevisionReaderTests
     private readonly Encoding _logOutputEncoding = Encoding.UTF8;
     private readonly long _sixMonths = new DateTimeOffset(new DateTime(2021, 01, 01)).ToUnixTimeSeconds();
 
-    [SetUp]
-    public void Setup()
+    public RevisionReaderTests()
     {
     }
 
-    [Test]
+    [Fact]
     public void BuildArguments_should_be_NUL_terminated()
     {
         RevisionReader reader = RevisionReader.TestAccessor.RevisionReader(new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""), _logOutputEncoding, _sixMonths);
@@ -31,7 +30,7 @@ public sealed class RevisionReaderTests
         args.ToString().Should().Contain(" log -z ");
     }
 
-    [Test]
+    [Fact]
     public void GetLog_shall_add_Autostash()
     {
         const string autostashLabel = nameof(autostashLabel);
@@ -50,7 +49,7 @@ public sealed class RevisionReaderTests
         RevisionReader reader = RevisionReader.TestAccessor.RevisionReader(repo.Module, _logOutputEncoding, _sixMonths);
         Subject<IReadOnlyList<GitRevision>> observeRevisions = new();
         IDisposable revisionSubscription = observeRevisions.Subscribe(OnNextRevisions);
-        reader.GetLog(observeRevisions, revisionFilter: "", pathFilter: "", hasNotes: false, autostashLabel, cancellationToken: default);
+        reader.GetLog(observeRevisions, revisionFilter: "", pathFilter: "", hasNotes: false, autostashLabel, cancellationToken: TestContext.Current.CancellationToken);
 
         allRevisions.Count.Should().Be(2);
         GitRevision autostash = allRevisions[0];
@@ -88,33 +87,33 @@ public sealed class RevisionReaderTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetRevision_should_return_null_if_objectid_does_not_exist()
     {
         RevisionReader reader = RevisionReader.TestAccessor.RevisionReader(new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""), _logOutputEncoding, _sixMonths);
-        GitRevision? revision = reader.GetRevision(ObjectId.Random().ToString(), hasNotes: false, throwOnError: false, cancellationToken: default);
+        GitRevision? revision = reader.GetRevision(ObjectId.Random().ToString(), hasNotes: false, throwOnError: false, cancellationToken: TestContext.Current.CancellationToken);
 
         revision.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void GetRevision_should_return_null_if_revision_does_not_exist()
     {
         RevisionReader reader = RevisionReader.TestAccessor.RevisionReader(new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""), _logOutputEncoding, _sixMonths);
-        GitRevision? revision = reader.GetRevision("non/existing/ref", hasNotes: false, throwOnError: false, cancellationToken: default);
+        GitRevision? revision = reader.GetRevision("non/existing/ref", hasNotes: false, throwOnError: false, cancellationToken: TestContext.Current.CancellationToken);
 
         revision.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void GetRevision_should_throw_if_revision_is_artificial()
     {
         RevisionReader reader = RevisionReader.TestAccessor.RevisionReader(new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""), _logOutputEncoding, _sixMonths);
         ((Action)(() =>
-            reader.GetRevision(GitRevision.WorkTreeGuid, hasNotes: false, throwOnError: true, cancellationToken: default))).Should().Throw<InvalidOperationException>();
+            reader.GetRevision(GitRevision.WorkTreeGuid, hasNotes: false, throwOnError: true, cancellationToken: TestContext.Current.CancellationToken))).Should().Throw<InvalidOperationException>();
     }
 
-    [Test]
+    [Fact]
     public void TryParseRevisionshould_return_false_if_argument_is_invalid()
     {
         ArraySegment<byte> chunk = null!;
@@ -131,28 +130,28 @@ public sealed class RevisionReaderTests
     // Avoid launching the difftool at differences
     // APPVEYOR should be detected automatically, this forces the setting (also in local tests)
     // The popup will hang the tests without failure information
-    [Test]
-    [TestCase("bad_parentid", false)]
-    [TestCase("bad_parentid_length", false)]
-    [TestCase("bad_sha", false)]
-    [TestCase("empty", false)]
-    [TestCase("illegal_timestamp", false)]
-    [TestCase("multi_pathfilter", true)]
-    [TestCase("no_subject", true)]
-    [TestCase("normal", true)]
-    [TestCase("short_sha", false)]
-    [TestCase("simple_pathfilter", true)]
-    [TestCase("subject_no_body", true)]
-    [TestCase("empty_commit", true)]
-    [TestCase("vertical_tab", true)]
-    [TestCase("reflogselector", true, true, false)]
-    [TestCase("reflogselector_empty", true, true)]
-    [TestCase("notes_data", true, false, true, true)]
-    [TestCase("notes_empty", true, false, true, true)]
-    [TestCase("subject_starts_with_newline", true)]
+    [Theory]
+    [InlineData("bad_parentid", false)]
+    [InlineData("bad_parentid_length", false)]
+    [InlineData("bad_sha", false)]
+    [InlineData("empty", false)]
+    [InlineData("illegal_timestamp", false)]
+    [InlineData("multi_pathfilter", true)]
+    [InlineData("no_subject", true)]
+    [InlineData("normal", true)]
+    [InlineData("short_sha", false)]
+    [InlineData("simple_pathfilter", true)]
+    [InlineData("subject_no_body", true)]
+    [InlineData("empty_commit", true)]
+    [InlineData("vertical_tab", true)]
+    [InlineData("reflogselector", true, true, false)]
+    [InlineData("reflogselector_empty", true, true)]
+    [InlineData("notes_data", true, false, true, true)]
+    [InlineData("notes_empty", true, false, true, true)]
+    [InlineData("subject_starts_with_newline", true)]
     public async Task TryParseRevision_test(string testName, bool expectedReturn, bool hasReflogSelector = false, bool hasEmptyReflogSelector = true, bool hasNotes = false)
     {
-        string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData/RevisionReader", testName + ".bin");
+        string path = Path.Combine(AppContext.BaseDirectory, "TestData/RevisionReader", testName + ".bin");
         ArraySegment<byte> chunk = File.ReadAllBytes(path);
         RevisionReader reader = RevisionReader.TestAccessor.RevisionReader(new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""), _logOutputEncoding, _sixMonths);
         reader.GetTestAccessor().SetParserAttributes(hasReflogSelector, hasNotes);

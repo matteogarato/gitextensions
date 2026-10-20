@@ -3,18 +3,16 @@ using GitCommands;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormFileHistoryTests
+public class FormFileHistoryTests : System.IDisposable
 {
     private ReferenceRepository _referenceRepository = null!;
 
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FormFileHistoryTests()
     {
         _referenceRepository = new ReferenceRepository();
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
@@ -22,16 +20,16 @@ public class FormFileHistoryTests
         AppSettings.UseBrowseForFileHistory.Value = false;
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [TestCase("", "file.txt")]
-    [TestCase("", "file with spaces.txt")]
-    [TestCase("Dir with spaces", "file.txt")]
-    [TestCase("Dir with spaces", "file with spaces.txt")]
+    [WinFormsTheory]
+    [InlineData("", "file.txt")]
+    [InlineData("", "file with spaces.txt")]
+    [InlineData("Dir with spaces", "file.txt")]
+    [InlineData("Dir with spaces", "file with spaces.txt")]
     public void File_history_should_behave_as_expected(string fileRelativePath, string fileName)
     {
         string revision1 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Create '{fileName}' in directory '{fileRelativePath}'");
@@ -48,7 +46,7 @@ public class FormFileHistoryTests
             }, Path.Combine(fileRelativePath, fileName), _commands);
     }
 
-    [Test]
+    [WinFormsFact]
     public void File_history_should_display_contents_in_all_revisions()
     {
         const string text = "This text will appear in a file that shall be renamed";
@@ -97,5 +95,10 @@ public class FormFileHistoryTests
     private static void WaitForRevisionsToBeLoaded(FormFileHistory form)
     {
         UITest.ProcessUntil("Loading Revisions", () => form.GetTestAccessor().RevisionGrid.GetTestAccessor().IsDataLoadComplete);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

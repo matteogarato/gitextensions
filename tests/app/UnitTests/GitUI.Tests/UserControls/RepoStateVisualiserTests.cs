@@ -4,8 +4,7 @@ using GitUI.UserControls;
 namespace GitUITests.UserControls;
 public sealed class RepoStateVisualiserTests
 {
-    [SetUp]
-    public void SetUp()
+    public RepoStateVisualiserTests()
     {
         _repoStateVisualiser = new RepoStateVisualiser();
     }
@@ -25,7 +24,7 @@ public sealed class RepoStateVisualiserTests
         };
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconCleanWhenThereIsNoChangedFiles()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke([]);
@@ -33,7 +32,7 @@ public sealed class RepoStateVisualiserTests
         commitIcon.Should().Be(RepoStateVisualiser.Clean);
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconDirtySubmodulesWhenThereAreOnlyWorkTreeSubmodules()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke(new[]
@@ -45,7 +44,7 @@ public sealed class RepoStateVisualiserTests
         commitIcon.Should().Be(RepoStateVisualiser.DirtySubmodules);
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconDirtyWhenThereAreWorkTreeChanges()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke(new[]
@@ -57,7 +56,7 @@ public sealed class RepoStateVisualiserTests
         commitIcon.Should().Be(RepoStateVisualiser.Dirty);
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconMixedWhenThereAreIndexAndWorkTreeFiles()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke(new[]
@@ -69,7 +68,7 @@ public sealed class RepoStateVisualiserTests
         commitIcon.Should().Be(RepoStateVisualiser.Mixed);
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconStagedWhenThereAreOnlyIndexFiles()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke(new[]
@@ -81,7 +80,7 @@ public sealed class RepoStateVisualiserTests
         commitIcon.Should().Be(RepoStateVisualiser.Staged);
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconUntrackedOnlyWhenThereAreUntrackedFilesOnly()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke(new[]
@@ -93,7 +92,7 @@ public sealed class RepoStateVisualiserTests
         commitIcon.Should().Be(RepoStateVisualiser.UntrackedOnly);
     }
 
-    [Test]
+    [Fact]
     public void ReturnsIconUnknownWhenNull()
     {
         (Image image, Brush brush) commitIcon = _repoStateVisualiser.Invoke(null);

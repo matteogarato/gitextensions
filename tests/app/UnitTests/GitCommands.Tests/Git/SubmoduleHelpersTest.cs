@@ -5,7 +5,7 @@ using GitExtensions.Extensibility.Git;
 namespace GitCommandsTests.Git;
 public class SubmoduleHelpersTest
 {
-    [Test]
+    [Fact]
     public void GetSubmoduleNamesFromDiffTest()
     {
         // TODO produce a valid working directory

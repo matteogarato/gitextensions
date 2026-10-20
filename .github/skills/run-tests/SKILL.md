@@ -17,10 +17,10 @@ description: '**EXECUTION (runbook) SKILL** — Build and run the Git Extensions
 
 ## Conventions (see [testing-guide](../../copilot-docs/L2-core-platform/testing-guide.md))
 
-- **NUnit** + **NSubstitute** (mocks) + **AwesomeAssertions** (never `ClassicAssert`, never Moq).
+- **xUnit v3** + **NSubstitute** (mocks) + **AwesomeAssertions** (never `ClassicAssert`, never Moq).
 - Test names keep the method name and add a snake_case suffix (`MyMethod_should_do_x`).
 - Substitute `IExecutable`/`IProcess` so tests don't spawn real `git`.
-- `Verify.NUnit` snapshots use `.verified.*` files — review diffs when they change.
+- `Verify.XunitV3` snapshots use `.verified.*` files — review diffs when they change.
 - Reach private members via a class's `TestAccessor`.
 
 ## Diagnosing a failure
@@ -32,4 +32,4 @@ description: '**EXECUTION (runbook) SKILL** — Build and run the Git Extensions
 
 - A **flaky** test → find and fix the **root cause**; do not dismiss it as pre-existing or retry blindly.
 - Do not weaken assertions or add `[Ignore]` to make a suite green — fix the underlying issue.
-- Never use `[DataTestMethod]` (that's MSTest); this repo uses NUnit `[TestCase]`/`[TestCaseSource]`.
+- Use xUnit `[Fact]`/`[Theory]` and `[InlineData]`/`[MemberData]` for parameterized cases.

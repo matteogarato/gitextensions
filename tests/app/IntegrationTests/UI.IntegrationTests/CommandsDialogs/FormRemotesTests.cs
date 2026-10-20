@@ -7,18 +7,16 @@ using GitExtUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
 using NSubstitute;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormRemotesTests
+public class FormRemotesTests : System.IDisposable
 {
     private ReferenceRepository _referenceRepository = null!;
     private GitUICommands _commands = null!;
     private bool _originalAlwaysShowAdvOpt;
-
-    [SetUp]
-    public void SetUp()
+    public FormRemotesTests()
     {
         _originalAlwaysShowAdvOpt = AppSettings.AlwaysShowAdvOpt;
 
@@ -29,14 +27,13 @@ public class FormRemotesTests
         _commands = new GitUICommands(serviceContainer, _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         AppSettings.AlwaysShowAdvOpt = _originalAlwaysShowAdvOpt;
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_display_remotes_tab_by_default()
     {
         RunFormTest(
@@ -48,7 +45,7 @@ public class FormRemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_stay_on_remotes_tab_when_preselecting_local_without_remotes()
     {
         // Tab switch to "Default pull behaviors" only occurs when remotes are configured
@@ -61,7 +58,7 @@ public class FormRemotesTests
             preselectLocal: "master");
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_enable_save_button_when_remote_name_is_entered()
     {
         RunFormTest(
@@ -77,7 +74,7 @@ public class FormRemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_disable_delete_and_toggle_buttons_when_no_remotes_configured()
     {
         RunFormTest(
@@ -89,7 +86,7 @@ public class FormRemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_show_empty_remote_name_when_no_remotes_configured()
     {
         RunFormTest(
@@ -100,7 +97,7 @@ public class FormRemotesTests
             });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_normalise_remote_prefix_on_leave()
     {
         AppSettings.AlwaysShowAdvOpt = true;
@@ -141,5 +138,10 @@ public class FormRemotesTests
                 _commands.StartRemotesDialog(owner: null, preselectRemote: preselectRemote, preselectLocal: preselectLocal);
             },
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

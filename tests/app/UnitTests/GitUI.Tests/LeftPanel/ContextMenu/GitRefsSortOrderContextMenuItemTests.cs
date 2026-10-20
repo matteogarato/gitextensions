@@ -6,45 +6,43 @@ using NSubstitute;
 
 namespace GitUITests.UserControls;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class GitRefsSortOrderContextMenuItemTests
+[Culture("en-US")]
+public class GitRefsSortOrderContextMenuItemTests : IDisposable
 {
     private Action _onSortOrderChanged = null!;
     private GitRefsSortOrderContextMenuItem _itemUnderTest = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitRefsSortOrderContextMenuItemTests()
     {
         _onSortOrderChanged = Substitute.For<Action>();
         _itemUnderTest = new GitRefsSortOrderContextMenuItem(_onSortOrderChanged);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _itemUnderTest.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Should_show_all_sort_options()
     {
         _itemUnderTest.HasDropDownItems.Should().BeTrue();
         _itemUnderTest.DropDownItems.Count.Should().Be(EnumHelper.GetValues<GitRefsSortOrder>().Length);
     }
 
-    private static IEnumerable<TestCaseData> SortOrderOptions
+    public static IEnumerable<object[]> SortOrderOptions
     {
         get
         {
             foreach (GitRefsSortOrder order in EnumHelper.GetValues<GitRefsSortOrder>())
             {
-                yield return new TestCaseData(order);
+                yield return new object[] { order };
             }
         }
     }
 
-    [TestCaseSource(nameof(SortOrderOptions))]
+    [Theory]
+    [MemberData(nameof(SortOrderOptions))]
     public void Only_the_current_sort_option_is_selected(GitRefsSortOrder order)
     {
         GitRefsSortOrder original = AppSettings.RefsSortOrder;
@@ -63,7 +61,7 @@ public class GitRefsSortOrderContextMenuItemTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Clicking_an_item_sets_sort_in_service()
     {
         GitRefsSortOrder original = AppSettings.RefsSortOrder;

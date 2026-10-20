@@ -12,7 +12,7 @@ public class HoverHighlightCalculatorTests
 {
     private const int _rowHeight = 42;
 
-    [Test]
+    [Fact]
     public void SetHoverHighlight_should_include_tip_and_ancestors_within_visible_range()
     {
         const string tipId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -28,7 +28,7 @@ public class HoverHighlightCalculatorTests
         revisionGraph.Add(CreateRevision(rootId, []));
 
         const int rowCount = 4;
-        revisionGraph.CacheTo(rowCount - 1, rowCount - 1);
+        revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
         RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
         VisibleRowRange range = new(fromIndex: 0, count: rowCount);
@@ -44,7 +44,7 @@ public class HoverHighlightCalculatorTests
         ]);
     }
 
-    [Test]
+    [Fact]
     public void SetHoverHighlight_should_include_one_ancestor_outside_visible_range()
     {
         const string tipId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -58,7 +58,7 @@ public class HoverHighlightCalculatorTests
         revisionGraph.Add(CreateRevision(rootId, []));
 
         const int rowCount = 3;
-        revisionGraph.CacheTo(rowCount - 1, rowCount - 1);
+        revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
         RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
 
@@ -76,7 +76,7 @@ public class HoverHighlightCalculatorTests
         ]);
     }
 
-    [Test]
+    [Fact]
     public void SetHoverHighlight_should_clear_highlighted_ids_when_gitRef_is_null()
     {
         const string tipId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -88,7 +88,7 @@ public class HoverHighlightCalculatorTests
         revisionGraph.Add(CreateRevision(parentId, []));
 
         const int rowCount = 2;
-        revisionGraph.CacheTo(rowCount - 1, rowCount - 1);
+        revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
         RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
         VisibleRowRange range = new(fromIndex: 0, count: rowCount);
@@ -105,7 +105,7 @@ public class HoverHighlightCalculatorTests
         testAccessor.HoverHighlight.IsDirty.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void SetHoverHighlight_should_not_mark_cache_dirty_when_hover_selection_is_unchanged()
     {
         const string tipId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -117,7 +117,7 @@ public class HoverHighlightCalculatorTests
         revisionGraph.Add(CreateRevision(parentId, []));
 
         const int rowCount = 2;
-        revisionGraph.CacheTo(rowCount - 1, rowCount - 1);
+        revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
         RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
         VisibleRowRange range = new(fromIndex: 0, count: rowCount);

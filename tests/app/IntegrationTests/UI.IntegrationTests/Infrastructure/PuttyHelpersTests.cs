@@ -4,15 +4,15 @@ using GitExtensions.Extensibility;
 using GitUI;
 using GitUI.Infrastructure;
 using Microsoft.VisualStudio.Threading;
+using Xunit;
 
 namespace GitUITests.Infrastructure;
 
-[Apartment(ApartmentState.STA)]
 public sealed class PuttyHelpersTests
 {
     private const string Plink = "plink.exe";
 
-    [Test]
+    [WinFormsFact]
     public async Task StartPageantIfConfigured_throw_if_not_UI_thread()
     {
         await TaskScheduler.Default.SwitchTo();
@@ -20,7 +20,7 @@ public sealed class PuttyHelpersTests
         ((Action)(() => PuttyHelpers.StartPageantIfConfigured(() => null))).Should().Throw<COMException>();
     }
 
-    [Test]
+    [WinFormsFact]
     public Task StartPageantIfConfigured_throw_if_not_Plink()
     {
         return RunTestAsync(
@@ -31,7 +31,7 @@ public sealed class PuttyHelpersTests
             pageant: "foo.exe");
     }
 
-    [Test]
+    [WinFormsFact]
     public Task StartPageantIfConfigured_throw_if_Pageant_not_found()
     {
         return RunTestAsync(
@@ -43,9 +43,10 @@ public sealed class PuttyHelpersTests
             pageant: Plink);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [WinFormsTheory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public Task StartPageantIfConfigured_returns_false_if_key_empty(string? bogusKey)
     {
         // Copy notepad.exe from %SYSTEM32%\notepad.exe to be our plink.exe
@@ -74,7 +75,7 @@ public sealed class PuttyHelpersTests
         }
     }
 
-    [Test]
+    [WinFormsFact]
     public Task StartPageantIfConfigured_throws_if_key_not_empty_but_absent()
     {
         // Copy notepad.exe from %SYSTEM32%\notepad.exe to be our plink.exe

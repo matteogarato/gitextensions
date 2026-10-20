@@ -8,7 +8,7 @@ namespace GitCommandsTests;
 
 public sealed class ArgumentBuilderExtensionsTests
 {
-    [Test]
+    [Fact]
     public void Adds_conditional_parameters()
     {
         Test(
@@ -49,7 +49,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Adds_conditional_if_else_parameters()
     {
         Test(
@@ -106,7 +106,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Adds_enumerable_parameters()
     {
         Test(
@@ -136,7 +136,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Adds_conditional_enumerable_parameters()
     {
         Test(
@@ -193,7 +193,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Handles_all_enum_members()
     {
         Test<ForcePushOptions>();
@@ -221,7 +221,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Handle_artificial_objectid()
     {
         ((Action)(() => new ArgumentBuilder
@@ -238,7 +238,7 @@ public sealed class ArgumentBuilderExtensionsTests
         })).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void Add_ForcePushOptions_ensure_all_switches_are_handled()
     {
         foreach (int mode in Enum.GetValues<ForcePushOptions>())
@@ -251,7 +251,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Add_GitBisectOption_ensure_all_switches_are_handled()
     {
         foreach (int mode in Enum.GetValues<GitBisectOption>())
@@ -264,7 +264,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Add_IgnoreSubmodulesMode_ensure_all_switches_are_handled()
     {
         foreach (int mode in Enum.GetValues<IgnoreSubmodulesMode>())
@@ -277,7 +277,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Add_CleanMode_ensure_all_switches_are_handled()
     {
         foreach (int mode in Enum.GetValues<CleanMode>())
@@ -290,7 +290,7 @@ public sealed class ArgumentBuilderExtensionsTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Add_ResetMode_ensure_all_switches_are_handled()
     {
         foreach (int mode in Enum.GetValues<ResetMode>())
@@ -305,16 +305,17 @@ public sealed class ArgumentBuilderExtensionsTests
 
     // 14: 'checkout name1'
     // 20: 'checkout name1 name2'
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 15, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 16, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 20, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 21, new string[] { "checkout name1 name2", "checkout name3" }, new int[] { 2, 1 })]
+    [Theory]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 15, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 16, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 20, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 21, new string[] { "checkout name1 name2", "checkout name3" }, new int[] { 2, 1 })]
 
     // With base length
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 25, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 26, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 30, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
-    [TestCase("checkout", new string[] { "name1", "name2", "name3" }, 31, new string[] { "checkout name1 name2", "checkout name3" }, new int[] { 2, 1 }, 10)]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 25, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 26, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 30, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
+    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 31, new string[] { "checkout name1 name2", "checkout name3" }, new int[] { 2, 1 }, 10)]
     public void BuildBatchArguments_builder_work_as_expected(string command, string[] arguments, int maxLength, string[] expected, int[] expectedCounts,
         int baseLength = 0)
     {
@@ -330,18 +331,19 @@ public sealed class ArgumentBuilderExtensionsTests
 
     // 8: 'checkout'
     // 14: 'checkout name1'
-    [TestCase("checkout", new string[] { "a", "b", "c" }, 7)]
-    [TestCase("checkout", new string[] { "a", "b", "c" }, 8)]
-    [TestCase("checkout", new string[] { "a", "b", "c" }, 9)]
-    [TestCase("checkout", new string[] { "a", "b", "name1" }, 14)]
-    [TestCase("checkout", new string[] { "name1", "b", "a" }, 14)]
+    [Theory]
+    [InlineData("checkout", new string[] { "a", "b", "c" }, 7)]
+    [InlineData("checkout", new string[] { "a", "b", "c" }, 8)]
+    [InlineData("checkout", new string[] { "a", "b", "c" }, 9)]
+    [InlineData("checkout", new string[] { "a", "b", "name1" }, 14)]
+    [InlineData("checkout", new string[] { "name1", "b", "a" }, 14)]
 
     // With base length
-    [TestCase("checkout", new string[] { "a", "b", "c" }, 17, 10)]
-    [TestCase("checkout", new string[] { "a", "b", "c" }, 18, 10)]
-    [TestCase("checkout", new string[] { "a", "b", "c" }, 19, 10)]
-    [TestCase("checkout", new string[] { "a", "b", "name1" }, 24, 10)]
-    [TestCase("checkout", new string[] { "name1", "b", "a" }, 24, 10)]
+    [InlineData("checkout", new string[] { "a", "b", "c" }, 17, 10)]
+    [InlineData("checkout", new string[] { "a", "b", "c" }, 18, 10)]
+    [InlineData("checkout", new string[] { "a", "b", "c" }, 19, 10)]
+    [InlineData("checkout", new string[] { "a", "b", "name1" }, 24, 10)]
+    [InlineData("checkout", new string[] { "name1", "b", "a" }, 24, 10)]
     public void BuildBatchArguments_builder_throw_invalid_argument_exception(string command, string[] arguments, int maxLength,
         int baseLength = 0)
     {

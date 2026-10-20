@@ -5,7 +5,7 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.ExternalLinks;
-public class ExternalLinksManagerIntegrationTests
+public class ExternalLinksManagerIntegrationTests : IDisposable
 {
     private GitModuleTestHelper _testHelper = null!;
     private string _level1 = null!;
@@ -16,8 +16,7 @@ public class ExternalLinksManagerIntegrationTests
     private DistributedSettings _repoLocal = null!;
     private ExternalLinksStorage _externalLinksStorage = null!;
 
-    [SetUp]
-    public void Setup()
+    public ExternalLinksManagerIntegrationTests()
     {
         _testHelper = new GitModuleTestHelper();
 
@@ -35,8 +34,7 @@ public class ExternalLinksManagerIntegrationTests
         _externalLinksStorage = new ExternalLinksStorage();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _userRoaming.SettingsCache.Dispose();
         _repoDistributed.SettingsCache.Dispose();
@@ -45,7 +43,7 @@ public class ExternalLinksManagerIntegrationTests
         _testHelper.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Add_should_add_new_definition_to_the_lowest_level_level2()
     {
         _externalLinksStorage.Load(_userRoaming).Should().ContainSingle();
@@ -74,7 +72,7 @@ public class ExternalLinksManagerIntegrationTests
         _externalLinksStorage.Load(_userRoaming).Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void Add_should_add_new_definition_to_the_lowest_level_level3()
     {
         _externalLinksStorage.Load(_userRoaming).Should().ContainSingle();
@@ -105,7 +103,7 @@ public class ExternalLinksManagerIntegrationTests
         _externalLinksStorage.Load(_userRoaming).Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void Add_should_add_definition_present_in_lower_level_to_higher_level()
     {
         _externalLinksStorage.Load(_userRoaming).Should().ContainSingle();
@@ -138,7 +136,7 @@ public class ExternalLinksManagerIntegrationTests
         _externalLinksStorage.Load(_repoDistributed).Should().HaveCount(4);
     }
 
-    [Test]
+    [Fact]
     public void Remove_should_remove_definition_from_collection()
     {
         _externalLinksStorage.Load(_userRoaming).Should().ContainSingle();

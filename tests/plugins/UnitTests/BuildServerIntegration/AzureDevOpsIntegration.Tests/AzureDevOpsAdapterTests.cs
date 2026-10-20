@@ -1,18 +1,18 @@
 ﻿using AzureDevOpsIntegration;
+using Xunit;
 
 namespace AzureDevOpsIntegrationTests;
 public class AzureDevOpsAdapterTests
 {
     private AzureDevOpsAdapter.TestAccessor _sut;
 
-    [SetUp]
-    public void Initialize()
+    public AzureDevOpsAdapterTests()
     {
         AzureDevOpsAdapter adapter = new();
         _sut = adapter.GetTestAccessor();
     }
 
-    [Test]
+    [Fact]
     public void Should_not_filter_running_builds_When_only_one_returned()
     {
         Build myBuild = new() { SourceVersion = "ACommitHash" };
@@ -23,7 +23,7 @@ public class AzureDevOpsAdapterTests
         filteredRunningBuilds.Should().ContainSingle().And.Contain(myBuild);
     }
 
-    [Test]
+    [Fact]
     public void Should_not_filter_running_builds_When_builds_are_on_different_commits()
     {
         Build buildOnOneCommit = new() { SourceVersion = "a_commit_Hash" };
@@ -35,7 +35,7 @@ public class AzureDevOpsAdapterTests
         filteredRunningBuilds.Should().ContainInOrder(buildOnOneCommit, buildOnAnotherCommit);
     }
 
-    [Test]
+    [Fact]
     public void Should_take_only_the_first_started_running_builds_When_multiple_builds_on_same_commit()
     {
         Build firstBuildStartedOnACommit = new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 1) };
@@ -48,7 +48,7 @@ public class AzureDevOpsAdapterTests
         filteredRunningBuilds.Should().ContainSingle().And.ContainInOrder(firstBuildStartedOnACommit);
     }
 
-    [Test]
+    [Fact]
     public void Should_take_whatever_build_When_multiple_not_yet_started_builds_on_same_commit()
     {
         Build firstBuildStartedOnACommit = new() { SourceVersion = "a_commit_Hash" };
@@ -61,7 +61,7 @@ public class AzureDevOpsAdapterTests
         filteredRunningBuilds.Should().ContainSingle();
     }
 
-    [Test]
+    [Fact]
     public void Should_take_only_a_started_running_builds_When_multiple_builds_on_same_commit()
     {
         Build notStartedBuildOnACommit = new() { SourceVersion = "a_commit_Hash" };

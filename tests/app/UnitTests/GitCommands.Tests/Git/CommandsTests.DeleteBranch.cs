@@ -7,19 +7,19 @@ namespace GitCommandsTests_Git;
 
 partial class CommandsTests
 {
-    [Test]
+    [Fact]
     public void ctor_should_throw_if_branches_is_null()
     {
         ((Action)(() => Commands.DeleteBranch(branches: null!, force: false))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void ctor_should_throw_if_branches_is_empty()
     {
         ((Action)(() => Commands.DeleteBranch([], force: false))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public void ctor_should_have_expected_values()
     {
         const string remoteName = "origin";
@@ -32,7 +32,7 @@ partial class CommandsTests
         cmd.ChangesRepoState.Should().BeTrue();
     }
 
-    private static IEnumerable<TestCaseData> DeleteBranchTestData
+    public static IEnumerable<object?[]> DeleteBranchTestData
     {
         get
         {
@@ -47,8 +47,8 @@ partial class CommandsTests
 
             localRefs.Add(localBranchRef);
 
-            yield return new TestCaseData(localRefs, /* force */ false, /* expected */ $"branch --delete \"{name}\"");
-            yield return new TestCaseData(localRefs, /* force */ true, /* expected */ $"branch --delete --force \"{name}\"");
+            yield return new object?[] { localRefs, /* force */ false, /* expected */ $"branch --delete \"{name}\"" };
+            yield return new object?[] { localRefs, /* force */ true, /* expected */ $"branch --delete --force \"{name}\"" };
 
             // Test local and remote branches
             const string remoteName = "origin";
@@ -57,18 +57,19 @@ partial class CommandsTests
 
             List<IGitRef> mixedRefs = [localBranchRef, remoteBranchRef];
 
-            yield return new TestCaseData(mixedRefs, /* force */ false, /* expected */ $"branch --delete --all \"{name}\" \"origin/{name}\"");
-            yield return new TestCaseData(mixedRefs, /* force */ true, /* expected */ $"branch --delete --force --all \"{name}\" \"origin/{name}\"");
+            yield return new object?[] { mixedRefs, /* force */ false, /* expected */ $"branch --delete --all \"{name}\" \"origin/{name}\"" };
+            yield return new object?[] { mixedRefs, /* force */ true, /* expected */ $"branch --delete --force --all \"{name}\" \"origin/{name}\"" };
 
             // Test remote branches only
             List<IGitRef> remoteRefs = [remoteBranchRef];
 
-            yield return new TestCaseData(remoteRefs, /* force */ false, /* expected */ $"branch --delete --remotes \"origin/{name}\"");
-            yield return new TestCaseData(remoteRefs, /* force */ true, /* expected */ $"branch --delete --force --remotes \"origin/{name}\"");
+            yield return new object?[] { remoteRefs, /* force */ false, /* expected */ $"branch --delete --remotes \"origin/{name}\"" };
+            yield return new object?[] { remoteRefs, /* force */ true, /* expected */ $"branch --delete --force --remotes \"origin/{name}\"" };
         }
     }
 
-    [TestCaseSource(nameof(DeleteBranchTestData))]
+    [Theory]
+    [MemberData(nameof(DeleteBranchTestData))]
     public void Arguments_are_Expected(IReadOnlyCollection<IGitRef> branches, bool force, string expected)
     {
         IGitCommand cmd = Commands.DeleteBranch(branches, force);

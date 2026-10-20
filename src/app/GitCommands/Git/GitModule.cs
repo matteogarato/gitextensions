@@ -2384,11 +2384,12 @@ public sealed partial class GitModule : IGitModule
             stripAnsiEscapeCodes: !useGitColoring,
             throwOnErrorExit: false,
             cancellationToken: cancellationToken);
-        if (!result.ExitedSuccessfully)
+        if (!result.ExitedSuccessfully && (isTracked || result.ExitCode != 1))
         {
             return (Patch: null, ErrorMessage: $"{result.StandardError}{Environment.NewLine}Git command (exit code: {result.ExitCodeDisplay}): {args}{Environment.NewLine}");
         }
 
+        // git diff --no-index returns 1 when it successfully finds differences.
         string patch = result.StandardOutput;
         IReadOnlyList<Patch> patches = PatchProcessor.CreatePatchesFromString(patch, new Lazy<Encoding>(() => encoding)).ToList();
 

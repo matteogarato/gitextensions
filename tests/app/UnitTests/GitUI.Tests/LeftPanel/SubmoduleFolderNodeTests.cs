@@ -4,7 +4,7 @@ namespace GitUITests.LeftPanel;
 
 public sealed class SubmoduleFolderNodeTests
 {
-    [Test]
+    [Fact]
     public void CompactSingleChildFolders_should_merge_chain_of_single_child_folders()
     {
         SubmoduleFolderNode root = CreateFolder("extension");
@@ -22,7 +22,7 @@ public sealed class SubmoduleFolderNodeTests
         root.Nodes.Count.Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void CompactSingleChildFolders_should_stop_at_non_folder_child()
     {
         SubmoduleFolderNode root = CreateFolder("a");
@@ -38,7 +38,7 @@ public sealed class SubmoduleFolderNodeTests
         root.Nodes.Count.Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void CompactSingleChildFolders_should_not_compact_when_multiple_children()
     {
         SubmoduleFolderNode root = CreateFolder("Externals");
@@ -54,7 +54,7 @@ public sealed class SubmoduleFolderNodeTests
         root.Nodes.Count.Should().Be(2);
     }
 
-    [Test]
+    [Fact]
     public void CompactSingleChildFolders_should_not_compact_when_no_children()
     {
         SubmoduleFolderNode root = CreateFolder("empty");
@@ -65,7 +65,7 @@ public sealed class SubmoduleFolderNodeTests
         root.Nodes.Count.Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void CompactSingleChildFolders_should_preserve_grandchildren_of_multi_child_node()
     {
         SubmoduleFolderNode root = CreateFolder("a");

@@ -1,11 +1,12 @@
 ﻿using System.ComponentModel;
 using GitCommands;
 using GitUI.ScriptsEngine;
+using Xunit;
 
 namespace GitExtensions.UITests.ScriptEngine;
 public class ScriptManagerTests
 {
-    [Test]
+    [Fact]
     public async Task Can_save_settings()
     {
         string? originalScripts = AppSettings.OwnScripts;

@@ -9,8 +9,7 @@ public class ColorsPageSettingsPageControllerTests
 {
     private ColorSettingsPageTestContext _context = null!;
 
-    [SetUp]
-    public void Setup()
+    public ColorsPageSettingsPageControllerTests()
     {
         MockColorsSettingsPage page = new();
         IThemeRepository themeRepository = Substitute.For<IThemeRepository>();
@@ -23,7 +22,7 @@ public class ColorsPageSettingsPageControllerTests
         _context = new ColorSettingsPageTestContext(page, controller, themeRepository);
     }
 
-    [Test]
+    [Fact]
     public void When_current_theme_is_default_choosing_visual_style_should_be_disabled()
     {
         AppSettings.ThemeId = ThemeId.DefaultLight;
@@ -33,7 +32,7 @@ public class ColorsPageSettingsPageControllerTests
         _context.Page.IsChoosingVisualStyleEnabled.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void When_current_theme_is_non_default_choosing_visual_style_should_be_enabled()
     {
         AppSettings.ThemeId = new ThemeId("non_default", isBuiltin: true);
@@ -43,7 +42,7 @@ public class ColorsPageSettingsPageControllerTests
         _context.Page.IsChoosingVisualStyleEnabled.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void When_user_switches_to_default_theme_UseSystemVisualStyle_should_be_checked()
     {
         AppSettings.ThemeId = new ThemeId("non_default", isBuiltin: true);
@@ -57,7 +56,7 @@ public class ColorsPageSettingsPageControllerTests
         _context.Page.UseSystemVisualStyle.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void When_user_switches_to_non_default_theme_UseSystemVisualStyle_should_be_unchecked()
     {
         AppSettings.ThemeId = ThemeId.DefaultLight;
@@ -71,7 +70,7 @@ public class ColorsPageSettingsPageControllerTests
         _context.Page.UseSystemVisualStyle.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void When_user_switches_to_default_theme_UseColorblindVariation_should_be_unchecked()
     {
         AppSettings.ThemeId = new ThemeId("non_default", isBuiltin: true);
@@ -85,7 +84,8 @@ public class ColorsPageSettingsPageControllerTests
         _context.Page.SelectedThemeVariations.Should().BeEmpty();
     }
 
-    [TestCaseSource(nameof(CasesThemeSettings))]
+    [Theory]
+    [MemberData(nameof(CasesThemeSettings))]
     public void SettingsAreModified_should_reflect_ThemeId_change(
         ThemeId themeId, string[] themeVariations, bool? useSystemVisualStyle)
     {
@@ -99,7 +99,8 @@ public class ColorsPageSettingsPageControllerTests
         _context.Controller.SettingsAreModified.Should().BeTrue();
     }
 
-    [TestCaseSource(nameof(CasesThemeSettings))]
+    [Theory]
+    [MemberData(nameof(CasesThemeSettings))]
     public void SettingsAreModified_should_reflect_UseSystemVisualStyle_change(
         ThemeId themeId, string[] themeVariations, bool? useSystemVisualStyle)
     {
@@ -122,7 +123,8 @@ public class ColorsPageSettingsPageControllerTests
         }
     }
 
-    [TestCaseSource(nameof(CasesThemeSettings))]
+    [Theory]
+    [MemberData(nameof(CasesThemeSettings))]
     public void SettingsAreModified_should_reflect_ThemeVariations_change(
         ThemeId themeId, string[] themeVariations, bool? useSystemVisualStyle)
     {
@@ -140,10 +142,12 @@ public class ColorsPageSettingsPageControllerTests
         _context.Controller.SettingsAreModified.Should().BeTrue();
     }
 
-    [TestCaseSource(nameof(CasesThemeSettings))]
+    [Theory]
+    [MemberData(nameof(CasesThemeSettings))]
     public void Theme_UseSystemVisualStyle_defaults_from_theme(
         ThemeId themeId, string[] themeVariations, bool? useSystemVisualStyle)
     {
+        _ = themeVariations;
         _context.Page.SelectedThemeId = themeId;
         _context.Controller.HandleSelectedThemeChanged();
         if (themeId == ThemeId.WindowsAppColorModeId)
@@ -156,7 +160,7 @@ public class ColorsPageSettingsPageControllerTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Theme_WindowsAppColorModeId_should_set_SystemColorMode()
     {
         AppSettings.ThemeId = ThemeId.WindowsAppColorModeId;
@@ -173,7 +177,7 @@ public class ColorsPageSettingsPageControllerTests
         ThemeModule.Settings.Theme.Id.Should().Be(id);
     }
 
-    private static IEnumerable<object[]> CasesThemeSettings()
+    public static IEnumerable<object[]> CasesThemeSettings()
     {
         yield return new object[]
         {

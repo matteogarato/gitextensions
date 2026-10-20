@@ -3,33 +3,30 @@ using GitUI.Editor;
 
 namespace GitUITests.Editor;
 
-[Apartment(ApartmentState.STA)]
-public class FileViewerTests
+public class FileViewerTests : IDisposable
 {
     private FileViewer _fileViewer = null!;
 
-    [SetUp]
-    public void SetUp()
+    public FileViewerTests()
     {
         _fileViewer = new FileViewer();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _fileViewer.Dispose();
     }
 
-    [Test]
-    [TestCase(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Eol, true, false, false)]
-    [TestCase(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Change, true, true, false)]
-    [TestCase(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.AllSpace, true, true, true)]
-    [TestCase(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.Change, true, true, false)]
-    [TestCase(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.AllSpace, true, true, true)]
-    [TestCase(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.Eol, true, false, false)]
-    [TestCase(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.AllSpace, true, true, true)]
-    [TestCase(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Eol, true, false, false)]
-    [TestCase(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Change, true, true, false)]
+    [StaTheory]
+    [InlineData(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Eol, true, false, false)]
+    [InlineData(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Change, true, true, false)]
+    [InlineData(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.AllSpace, true, true, true)]
+    [InlineData(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.Change, true, true, false)]
+    [InlineData(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.AllSpace, true, true, true)]
+    [InlineData(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.Eol, true, false, false)]
+    [InlineData(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.AllSpace, true, true, true)]
+    [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Eol, true, false, false)]
+    [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Change, true, true, false)]
     public void Should_correctly_setup_IgnoreWhitespaceMethod_with_one_click(IgnoreWhitespaceKind oldIgnoreWhitespace, IgnoreWhitespaceKind newIgnoreWhitespace, bool ignoreEol, bool ignoreChange, bool ignoreAllSpace)
     {
         newIgnoreWhitespace.Should().NotBe(oldIgnoreWhitespace);
@@ -63,16 +60,16 @@ public class FileViewerTests
         accessor.IgnoreAllWhitespacesMenuItem.Checked.Should().Be(ignoreAllSpace);
     }
 
-    [Test]
-    [TestCase(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Eol)]
-    [TestCase(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Change)]
-    [TestCase(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.AllSpace)]
-    [TestCase(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.Change)]
-    [TestCase(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.AllSpace)]
-    [TestCase(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.Eol)]
-    [TestCase(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.AllSpace)]
-    [TestCase(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Eol)]
-    [TestCase(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Change)]
+    [StaTheory]
+    [InlineData(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Eol)]
+    [InlineData(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.Change)]
+    [InlineData(IgnoreWhitespaceKind.None, IgnoreWhitespaceKind.AllSpace)]
+    [InlineData(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.Change)]
+    [InlineData(IgnoreWhitespaceKind.Eol, IgnoreWhitespaceKind.AllSpace)]
+    [InlineData(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.Eol)]
+    [InlineData(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.AllSpace)]
+    [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Eol)]
+    [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Change)]
     public void Should_correctly_reset_IgnoreWhitespaceMethod_to_None_with_two_clicks(IgnoreWhitespaceKind oldIgnoreWhitespace, IgnoreWhitespaceKind newIgnoreWhitespace)
     {
         newIgnoreWhitespace.Should().NotBe(oldIgnoreWhitespace);

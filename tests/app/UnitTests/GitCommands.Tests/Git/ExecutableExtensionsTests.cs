@@ -8,14 +8,13 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.Git;
-public sealed class ExecutableExtensionsTests
+public sealed class ExecutableExtensionsTests : IDisposable
 {
     private MockExecutable _executable = null!;
     private Executable _gitExecutable = null!;
     private string _appPath = null!;
 
-    [SetUp]
-    public void SetUp()
+    public ExecutableExtensionsTests()
     {
         _executable = new MockExecutable();
 
@@ -29,18 +28,17 @@ public sealed class ExecutableExtensionsTests
 
         // Execute process in GitExtension working directory, so that git will return success exit-code
         // git always return non-zero exit code when run git reset outside of git repository
-        // NUnit working directory always default to MS test host
+        // The test host runs from its output directory rather than a Git Extensions working directory.
         string? workingDir = Path.GetDirectoryName(Assembly.GetAssembly(typeof(ExecutableExtensionsTests))!.Location);
         _gitExecutable = new Executable(_appPath, workingDir!);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _executable.Verify();
     }
 
-    [Test]
+    [Fact]
     public void GetOutput_with_cache_hit()
     {
         const string arguments = "abc";
@@ -61,7 +59,7 @@ public sealed class ExecutableExtensionsTests
         cache.GetCachedCommands().Count.Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void GetOutput_with_cache_miss()
     {
         const string arguments = "abc";
@@ -85,8 +83,9 @@ public sealed class ExecutableExtensionsTests
     }
 
     // Process argument upper bound is actually (short.MaxValue - 1)
-    [TestCase(32766, 32766, 32767, 2, new int[] { 1, 1 })]
-    [TestCase(32764, 1, 32767, 1, new int[] { 2 })]
+    [Theory]
+    [InlineData(32766, 32766, 32767, 2, new int[] { 1, 1 })]
+    [InlineData(32764, 1, 32767, 1, new int[] { 2 })]
     public void RunBatchCommand_can_handle_max_length_arguments(int arg1Len, int arg2Len,
         int maxLength, int argCount, int[] expectedProcessedCounts)
     {
@@ -114,8 +113,9 @@ public sealed class ExecutableExtensionsTests
         });
     }
 
-    [TestCase(32766 - 8, 32766 - 8, int.MaxValue)]
-    [TestCase(32766 - 9, 1, int.MaxValue)]
+    [Theory]
+    [InlineData(32766 - 8, 32766 - 8, int.MaxValue)]
+    [InlineData(32766 - 9, 1, int.MaxValue)]
     public void RunBatchCommand_throw_when_cmd_exceed_max_length(int arg1Len, int arg2Len,
         int maxLength)
     {

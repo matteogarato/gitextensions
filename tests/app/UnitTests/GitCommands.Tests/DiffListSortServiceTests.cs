@@ -1,29 +1,27 @@
 ﻿using GitCommands;
 
 namespace GitCommandsTests;
-public class DiffListSortServiceTests
+public class DiffListSortServiceTests : IDisposable
 {
     /// <summary>
     /// DO NOT change this during the test. It is used to put your normal setting back the way it was.
     /// </summary>
     private DiffListSortType _storedSetting;
 
-    [SetUp]
-    public void Setup()
+    public DiffListSortServiceTests()
     {
         _storedSetting = AppSettings.DiffListSorting;
     }
 
-    [TearDown]
-    public void Teardown()
+    public void Dispose()
     {
         AppSettings.DiffListSorting = _storedSetting;
     }
 
-    [Test]
-    [TestCase(DiffListSortType.FilePath)]
-    [TestCase(DiffListSortType.FileExtension)]
-    [TestCase(DiffListSortType.FileStatus)]
+    [Theory]
+    [InlineData(DiffListSortType.FilePath)]
+    [InlineData(DiffListSortType.FileExtension)]
+    [InlineData(DiffListSortType.FileStatus)]
     public void Constructor_loads_persisted_setting(DiffListSortType persistedSetting)
     {
         AppSettings.DiffListSorting = persistedSetting;
@@ -32,10 +30,10 @@ public class DiffListSortServiceTests
         service.DiffListSorting.Should().Be(persistedSetting);
     }
 
-    [Test]
-    [TestCase(DiffListSortType.FilePath)]
-    [TestCase(DiffListSortType.FileExtension)]
-    [TestCase(DiffListSortType.FileStatus)]
+    [Theory]
+    [InlineData(DiffListSortType.FilePath)]
+    [InlineData(DiffListSortType.FileExtension)]
+    [InlineData(DiffListSortType.FileStatus)]
     public void Changing_the_sort_modifies_persistence(DiffListSortType sortType)
     {
         DiffListSortService service = new()
@@ -46,7 +44,7 @@ public class DiffListSortServiceTests
         AppSettings.DiffListSorting.Should().Be(sortType);
     }
 
-    [Test]
+    [Fact]
     public void Change_notifications_occur_when_sort_is_changed()
     {
         DiffListSortService service = new()
@@ -70,7 +68,7 @@ public class DiffListSortServiceTests
         raisedCount.Should().Be(2, "Service sort changed. It should not have raised a second notification.");
     }
 
-    [Test]
+    [Fact]
     public void Can_get_singleton()
     {
         DiffListSortService.Instance.Should().NotBeNull();

@@ -5,19 +5,18 @@ public class RepositoryXmlSerialiserTests
 {
     private RepositoryXmlSerialiser _repositoryXmlSerialiser = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryXmlSerialiserTests()
     {
         _repositoryXmlSerialiser = new RepositoryXmlSerialiser();
     }
 
-    [Test]
+    [Fact]
     public void Deserialize_should_throw_if_null()
     {
         ((Action)(() => _repositoryXmlSerialiser.Deserialize(null!))).Should().Throw<ArgumentException>();
     }
 
-    [Test]
+    [Fact]
     public async Task Deserialize_remote_repositories_with_ns()
     {
         const string settingHistoryValue = @"<?xml version=""1.0"" encoding=""utf-16""?>
@@ -53,7 +52,7 @@ public class RepositoryXmlSerialiserTests
         await Verifier.Verify(repositories);
     }
 
-    [Test]
+    [Fact]
     public async Task Deserialize_remote_repositories_without_ns()
     {
         const string settingHistoryValue = @"<?xml version=""1.0"" encoding=""utf-16""?>
@@ -89,13 +88,13 @@ public class RepositoryXmlSerialiserTests
         await Verifier.Verify(repositories);
     }
 
-    [Test]
+    [Fact]
     public void Serialize_should_throw_if_null()
     {
         ((Action)(() => _repositoryXmlSerialiser.Serialize(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task Serialize_recent_repositories()
     {
         List<Repository> history =

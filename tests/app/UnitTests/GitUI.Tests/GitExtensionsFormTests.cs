@@ -4,18 +4,16 @@ using NSubstitute;
 
 namespace GitUITests;
 
-[Apartment(ApartmentState.STA)]
 public class GitExtensionsFormTests
 {
     private IWindowPositionManager _windowPositionManager = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitExtensionsFormTests()
     {
         _windowPositionManager = Substitute.For<IWindowPositionManager>();
     }
 
-    [Test]
+    [StaFact]
     public void RestorePosition_should_not_restore_position_if_not_required()
     {
         using MockForm form = new(false)
@@ -33,7 +31,7 @@ public class GitExtensionsFormTests
         form.Size.Should().Be(new Size(500, 500));
     }
 
-    [Test]
+    [StaFact]
     public void RestorePosition_should_not_restore_position_if_minimised()
     {
         using MockForm form = new(false)
@@ -53,7 +51,7 @@ public class GitExtensionsFormTests
         form.WindowState.Should().Be(FormWindowState.Minimized);
     }
 
-    [Test]
+    [StaFact]
     public void RestorePosition_should_not_restore_position_if_not_persisted()
     {
         using MockForm form = new(true)
@@ -74,11 +72,12 @@ public class GitExtensionsFormTests
         form.Size.Should().Be(new Size(500, 500));
     }
 
-    [TestCase(FormBorderStyle.Fixed3D)]
-    [TestCase(FormBorderStyle.FixedDialog)]
-    [TestCase(FormBorderStyle.FixedSingle)]
-    [TestCase(FormBorderStyle.FixedToolWindow)]
-    [TestCase(FormBorderStyle.None)]
+    [StaTheory]
+    [InlineData(FormBorderStyle.Fixed3D)]
+    [InlineData(FormBorderStyle.FixedDialog)]
+    [InlineData(FormBorderStyle.FixedSingle)]
+    [InlineData(FormBorderStyle.FixedToolWindow)]
+    [InlineData(FormBorderStyle.None)]
     public void RestorePosition_should_not_scale_fixed_window_if_different_dpi(FormBorderStyle borderStyle)
     {
         using MockForm form = new(true)
@@ -106,17 +105,19 @@ public class GitExtensionsFormTests
         form.Size.Should().Be(new Size(300, 300));
     }
 
-    [TestCase(96, 500, 500)]
-    [TestCase(120, 400, 400)]
-    [TestCase(144, 333, 333)]
-    [TestCase(192, 250, 250)]
+    [Theory]
+    [InlineData(96, 500, 500)]
+    [InlineData(120, 400, 400)]
+    [InlineData(144, 333, 333)]
+    [InlineData(192, 250, 250)]
 #pragma warning disable IDE0060 // Remove unused parameter
     public void RestorePosition_should_scale_sizable_window_if_different_dpi(int savedDpi, int expectedWidthAt96dpi, int expectedHeightAt96dpi)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
+        _ = expectedWidthAt96dpi;
         if (DpiUtil.IsNonStandard)
         {
-            Assert.Inconclusive("The test must be run at 96dpi");
+            throw Xunit.Sdk.SkipException.ForSkip("The test must be run at 96dpi");
         }
 
         using MockForm form = new(true)
@@ -143,14 +144,15 @@ public class GitExtensionsFormTests
         form.Size.Should().Be(new Size(expectedHeightAt96dpi, expectedHeightAt96dpi));
     }
 
-    [TestCase(-1000, 100, /* -1000 + (800 - 300)/2 */ -750, /* 100 + (600-200)/2 */300)]
-    [TestCase(0, 0, /* 0 + (800 - 300)/2 */ 250, /* 0 + (600-200)/2 */200)]
-    [TestCase(1000, -500, /* falls off the screen -> first non-empty screen */ -1920, /* falls off the screen */ 0)]
+    [StaTheory]
+    [InlineData(-1000, 100, /* -1000 + (800 - 300)/2 */ -750, /* 100 + (600-200)/2 */300)]
+    [InlineData(0, 0, /* 0 + (800 - 300)/2 */ 250, /* 0 + (600-200)/2 */200)]
+    [InlineData(1000, -500, /* falls off the screen -> first non-empty screen */ -1920, /* falls off the screen */ 0)]
     public void RestorePosition_should_position_window_with_Owner_set_and_CenterParent(int ownerFormTop, int ownerFormLeft, int expectFormTop, int expectedFormLeft)
     {
         if (DpiUtil.IsNonStandard)
         {
-            Assert.Inconclusive("The test must be run at 96dpi");
+            throw Xunit.Sdk.SkipException.ForSkip("The test must be run at 96dpi");
         }
 
         using Form owner = new()

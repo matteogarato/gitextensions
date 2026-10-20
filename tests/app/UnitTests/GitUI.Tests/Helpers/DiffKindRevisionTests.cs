@@ -5,7 +5,7 @@ using GitUIPluginInterfaces;
 namespace GitUITests.Helpers;
 public class DiffKindRevisionTests
 {
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_error()
     {
         IReadOnlyList<GitRevision>? revisions = null;
@@ -22,7 +22,7 @@ public class DiffKindRevisionTests
         RevisionDiffInfoProvider.TryGet(revisions, RevisionDiffKind.DiffBLocal, out _, out _, out _).Should().BeFalse("2nd null rev DiffBLocal");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AB_1p()
     {
         ObjectId parent = ObjectId.Random();
@@ -34,7 +34,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(head.ToString(), "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AB_1h()
     {
         ObjectId head = ObjectId.Random();
@@ -45,7 +45,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(head.ToString(), "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AB_2()
     {
         ObjectId head = ObjectId.Random();
@@ -57,7 +57,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(head.ToString(), "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AB_null()
     {
         ObjectId head = ObjectId.Random();
@@ -68,7 +68,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(head.ToString(), "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AL_1()
     {
         ObjectId head = ObjectId.Random();
@@ -79,7 +79,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(null, "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AL_2()
     {
         ObjectId head = ObjectId.Random();
@@ -91,7 +91,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(null, "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_AL_3()
     {
         ObjectId head = ObjectId.Random();
@@ -102,7 +102,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(null, "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_BL_1()
     {
         ObjectId head = ObjectId.Random();
@@ -113,7 +113,7 @@ public class DiffKindRevisionTests
         secondRevision.Should().Be(null, "second");
     }
 
-    [Test]
+    [Fact]
     public void DiffKindRevisionTests_BL_2()
     {
         ObjectId head = ObjectId.Random();

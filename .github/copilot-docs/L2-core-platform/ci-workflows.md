@@ -40,7 +40,7 @@ release ships".
 ## How (what fails a PR)
 
 - **Compilation / analyzer / StyleCop** violations → the `Build .NET` step fails.
-- **Failing tests** (NUnit unit or UI integration) → the `Run tests` step fails.
+- **Failing tests** (xUnit unit or UI integration) → the `Run tests` step fails.
 - **Stale `English.xlf`** — the `Verify localisation` step regenerates translations and fails if the
   working tree changed. Run `update-loc.cmd` locally. See [translation-system](translation-system.md).
 - **`fixup!` / `squash!` commits** present → `git.yml` blocks merge (autosquash them first).

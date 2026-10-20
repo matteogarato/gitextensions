@@ -6,7 +6,7 @@ using GitExtensions.Extensibility.Settings;
 using NSubstitute;
 
 namespace GitCommandsTests.ExternalLinks;
-public class ConfiguredLinkDefinitionsProviderTests
+public class ConfiguredLinkDefinitionsProviderTests : IDisposable
 {
     private GitModuleTestHelper _testHelper = null!;
     private string _repoLocalConfigFilePath = null!;
@@ -18,8 +18,7 @@ public class ConfiguredLinkDefinitionsProviderTests
     private IExternalLinksStorage _externalLinksStorage = null!;
     private ConfiguredLinkDefinitionsProvider _provider = null!;
 
-    [SetUp]
-    public void Setup()
+    public ConfiguredLinkDefinitionsProviderTests()
     {
         _testHelper = new GitModuleTestHelper();
 
@@ -39,8 +38,7 @@ public class ConfiguredLinkDefinitionsProviderTests
         _provider = new ConfiguredLinkDefinitionsProvider(_externalLinksStorage);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _userRoaming.SettingsCache.Dispose();
         _repoDistributed.SettingsCache.Dispose();
@@ -49,13 +47,13 @@ public class ConfiguredLinkDefinitionsProviderTests
         _testHelper.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Get_should_throw_if_data_null()
     {
         ((Action)(() => _provider.Get(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void Can_load_1_layers_of_settings()
     {
         _externalLinksStorage.Load(Arg.Any<DistributedSettings>()).Returns(new List<ExternalLinkDefinition>
@@ -68,7 +66,7 @@ public class ConfiguredLinkDefinitionsProviderTests
         effectiveSettings.Should().ContainSingle();
     }
 
-    [Test]
+    [Fact]
     public void Can_load_2_layers_of_settings()
     {
         _externalLinksStorage.Load(Arg.Any<DistributedSettings>()).Returns(
@@ -90,7 +88,7 @@ public class ConfiguredLinkDefinitionsProviderTests
         effectiveSettings.Should().HaveCount(4);
     }
 
-    [Test]
+    [Fact]
     public void Can_load_3_layers_of_settings()
     {
         _externalLinksStorage.Load(Arg.Any<DistributedSettings>()).Returns(

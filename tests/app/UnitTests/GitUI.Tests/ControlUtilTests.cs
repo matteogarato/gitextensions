@@ -20,7 +20,7 @@ public sealed class ControlUtilTests
         return root;
     }
 
-    [Test]
+    [Fact]
     public void FindDescendants()
     {
         using Control root = CreateTestHierarchy();
@@ -30,7 +30,7 @@ public sealed class ControlUtilTests
         root.FindDescendants().Distinct().Count().Should().Be(5);
     }
 
-    [Test]
+    [Fact]
     public void FindDescendantsOfType()
     {
         using Control root = CreateTestHierarchy();
@@ -40,7 +40,7 @@ public sealed class ControlUtilTests
         root.FindDescendantsOfType<Label>().Count().Should().Be(0);
     }
 
-    [Test]
+    [Fact]
     public void FindDescendantsOfTypeWithPredicate()
     {
         using Control root = CreateTestHierarchy();

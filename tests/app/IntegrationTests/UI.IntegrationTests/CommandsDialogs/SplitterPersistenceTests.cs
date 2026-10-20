@@ -7,11 +7,11 @@ using GitUI;
 using GitUI.CommandsDialogs;
 using NSubstitute;
 using static GitUI.CommandsDialogs.FormBrowse;
+using Xunit;
 
 namespace UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class SplitterPersistenceTests
+public class SplitterPersistenceTests : System.IDisposable
 {
     private IWindowPositionManager _windowPositionManager = null!;
     private MemorySettings _settings = null!;
@@ -21,9 +21,7 @@ public class SplitterPersistenceTests
 
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public SplitterPersistenceTests()
     {
         _settings = new();
 
@@ -40,8 +38,7 @@ public class SplitterPersistenceTests
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         // Since we set AppSettings, we need to delete the backing file so that any subsequent tests won't load
         // outdated settings.
@@ -50,7 +47,7 @@ public class SplitterPersistenceTests
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public async Task SplitterPositionsShouldBeDefault()
     {
         AppSettings.CommitInfoPosition.Should().Be(CommitInfoPosition.BelowList);
@@ -64,9 +61,10 @@ public class SplitterPersistenceTests
             });
     }
 
-    [TestCase(CommitInfoPosition.BelowList)]
-    [TestCase(CommitInfoPosition.LeftwardFromList)]
-    [TestCase(CommitInfoPosition.RightwardFromList)]
+    [WinFormsTheory]
+    [InlineData(CommitInfoPosition.BelowList)]
+    [InlineData(CommitInfoPosition.LeftwardFromList)]
+    [InlineData(CommitInfoPosition.RightwardFromList)]
     public async Task SplitterPositionsShouldBeSaved(CommitInfoPosition commitInfoPosition)
     {
         AppSettings.CommitInfoPosition = commitInfoPosition;
@@ -252,5 +250,10 @@ public class SplitterPersistenceTests
             get => _settings.GetInt(SizeSettingsKey) ?? throw new InvalidOperationException();
             set => _settings.SetInt(SizeSettingsKey, value);
         }
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

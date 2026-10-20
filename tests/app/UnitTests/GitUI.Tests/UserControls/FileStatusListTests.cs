@@ -7,14 +7,12 @@ using NSubstitute;
 
 namespace GitUITests.UserControls;
 
-[TestFixture]
-public class FileStatusListTests
+public class FileStatusListTests : IDisposable
 {
     private string _workingDir;
     private IFullPathResolver _fullPathResolver;
 
-    [SetUp]
-    public void Setup()
+    public FileStatusListTests()
     {
         _workingDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_workingDir);
@@ -23,8 +21,7 @@ public class FileStatusListTests
         _fullPathResolver.Resolve(Arg.Any<string>()).Returns(callInfo => Path.Combine(_workingDir, callInfo.Arg<string>()));
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         if (Directory.Exists(_workingDir))
         {
@@ -32,7 +29,7 @@ public class FileStatusListTests
         }
     }
 
-    [Test]
+    [Fact]
     public void HasFilesWhichMayBeDeleted_should_return_false_for_a_file_deleted_in_the_revision()
     {
         GitItemStatus status = new("deleted.txt") { IsDeleted = true, IsTracked = true };
@@ -40,7 +37,7 @@ public class FileStatusListTests
         FileStatusList.HasFilesWhichMayBeDeleted([Item(status)], _fullPathResolver).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void HasFilesWhichMayBeDeleted_should_return_true_for_a_path_which_exists_in_the_working_directory()
     {
         File.WriteAllText(Path.Combine(_workingDir, "deleted.txt"), "an untracked file at the same path");
@@ -49,7 +46,7 @@ public class FileStatusListTests
         FileStatusList.HasFilesWhichMayBeDeleted([Item(status)], _fullPathResolver).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void HasFilesWhichMayBeDeleted_should_return_true_for_a_directory_which_exists_in_the_working_directory()
     {
         Directory.CreateDirectory(Path.Combine(_workingDir, "submodule"));
@@ -58,7 +55,7 @@ public class FileStatusListTests
         FileStatusList.HasFilesWhichMayBeDeleted([Item(status)], _fullPathResolver).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void HasFilesWhichMayBeDeleted_should_return_false_for_changed_files()
     {
         File.WriteAllText(Path.Combine(_workingDir, "changed.txt"), "the file which is about to be reset");
@@ -67,7 +64,7 @@ public class FileStatusListTests
         FileStatusList.HasFilesWhichMayBeDeleted([Item(status)], _fullPathResolver).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void HasFilesWhichMayBeDeleted_should_return_true_when_only_the_old_name_of_a_rename_exists()
     {
         File.WriteAllText(Path.Combine(_workingDir, "old.txt"), "the name the file had before the rename");
@@ -76,7 +73,7 @@ public class FileStatusListTests
         FileStatusList.HasFilesWhichMayBeDeleted([Item(status)], _fullPathResolver).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void HasFilesWhichMayBeDeleted_should_return_true_if_any_item_may_be_deleted()
     {
         File.WriteAllText(Path.Combine(_workingDir, "added.txt"), "a file which was added");

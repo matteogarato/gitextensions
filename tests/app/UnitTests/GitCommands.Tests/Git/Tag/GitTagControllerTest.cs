@@ -7,14 +7,13 @@ using NSubstitute;
 namespace GitCommandsTests.Git.Tag;
 public class GitTagControllerTest
 {
-    private readonly string _workingDir = TestContext.CurrentContext.TestDirectory;
+    private readonly string _workingDir = AppContext.BaseDirectory;
     private string _tagMessageFile = null!;
     private IGitTagController _controller = null!;
     private IFileSystem _fileSystem = null!;
     private IGitUICommands _uiCommands = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitTagControllerTest()
     {
         _tagMessageFile = Path.Combine(_workingDir, "TAGMESSAGE");
 
@@ -28,14 +27,14 @@ public class GitTagControllerTest
         _controller = new GitTagController(_uiCommands, _fileSystem);
     }
 
-    [Test]
+    [Fact]
     public void CreateTagWithMessageThrowsIfTheWindowIsNull()
     {
         GitCreateTagArgs args = CreateAnnotatedTagArgs();
         ((Action)(() => _controller.CreateTag(args, parentWindow: null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void CreateTagWithMessageWritesTagMessageFile()
     {
         GitCreateTagArgs args = CreateAnnotatedTagArgs();
@@ -45,9 +44,9 @@ public class GitTagControllerTest
         _fileSystem.File.Received(1).WriteAllText(_tagMessageFile, "hello world");
     }
 
-    [Test]
-    [TestCase(true)]
-    [TestCase(false)]
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void CreateTagWithMessageDeletesTheTemporaryFileForUiResult(bool uiResult)
     {
         GitCreateTagArgs args = CreateAnnotatedTagArgs();
@@ -62,7 +61,7 @@ public class GitTagControllerTest
         _fileSystem.File.Received(1).Delete(_tagMessageFile);
     }
 
-    [Test]
+    [Fact]
     public void PassesCreatedArgsAndWindowToCommands()
     {
         GitCreateTagArgs args = CreateAnnotatedTagArgs();

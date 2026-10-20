@@ -87,8 +87,7 @@ public class LaneInfoProviderTests
     private IGitRevisionSummaryBuilder _gitRevisionSummaryBuilder = null!;
     private LaneInfoProvider _infoProvider = null!;
 
-    [SetUp]
-    public void Setup()
+    public LaneInfoProviderTests()
     {
         _artificialCommitNode = new RevisionGraphRevision(ObjectId.WorkTreeId, guessScore: 0)
         {
@@ -178,13 +177,13 @@ public class LaneInfoProviderTests
         _infoProvider.GetLaneInfo(0, 0).Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_return_empty_if_node_null()
     {
         _infoProvider.GetLaneInfo(0, 0).Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_return_no_info_if_node_revision_null()
     {
         RevisionGraphRevision nodeWithoutRevision = new(ObjectId.WorkTreeId, 0);
@@ -193,7 +192,7 @@ public class LaneInfoProviderTests
         _infoProvider.GetLaneInfo(0, 0).Should().Be(LaneInfoProvider.TestAccessor.NoInfoText.Text);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_for_non_artificial_commit_should_contain_guid_and_mark_if_at_node()
     {
         _laneNodeLocator.FindPrevNode(Arg.Any<int>(), Arg.Any<int>()).Returns(x => (_realCommitNode, isAtNode: true, (RevisionGraphRevision?)null));
@@ -201,7 +200,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode, prefix: "* ");
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_for_non_artificial_commit_should_contain_guid_and_no_mark_if_not_at_node()
     {
         _laneNodeLocator.FindPrevNode(Arg.Any<int>(), Arg.Any<int>()).Returns(x => (_realCommitNode, isAtNode: false, (RevisionGraphRevision?)null));
@@ -209,7 +208,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_for_artificial_commit_should_not_add_guid_and_mark_if_at_node()
     {
         _laneNodeLocator.FindPrevNode(Arg.Any<int>(), Arg.Any<int>()).Returns(x => (_artificialCommitNode, isAtNode: true, (RevisionGraphRevision?)null));
@@ -217,7 +216,7 @@ public class LaneInfoProviderTests
         _infoProvider.GetLaneInfo(0, 0).Should().Be(_artificialCommitNode.GitRevision!.Body);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_for_artificial_commit_should_not_add_guid_and_mark_if_not_at_node()
     {
         _laneNodeLocator.FindPrevNode(Arg.Any<int>(), Arg.Any<int>()).Returns(x => (_artificialCommitNode, isAtNode: false, (RevisionGraphRevision?)null));
@@ -225,7 +224,7 @@ public class LaneInfoProviderTests
         _infoProvider.GetLaneInfo(0, 0).Should().Be(_artificialCommitNode.GitRevision!.Body);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_the_subject_if_singleline_body_null()
     {
         _realCommitNode.GitRevision!.Body = null;
@@ -235,7 +234,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_the_subject_and_hint_if_multiline_body_null()
     {
         _realCommitNode.GitRevision!.Body = null;
@@ -245,7 +244,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode, suffix: _realCommitNode.GitRevision!.Subject + TranslatedStrings.BodyNotLoaded);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_branch_and_source_from_merge_node()
     {
         _laneNodeLocator.FindPrevNode(Arg.Any<int>(), Arg.Any<int>()).Returns(x => (_mergeCommitNode, isAtNode: false, (RevisionGraphRevision?)null));
@@ -261,7 +260,7 @@ public class LaneInfoProviderTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_only_the_branch_from_next_merge_node()
     {
         _mergeCommitNode.GetTestAccessor().AddParent(_realCommitNode);
@@ -278,7 +277,7 @@ public class LaneInfoProviderTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_only_the_branch_from_detected_merge_node_in_a_tree()
     {
         // synthetic test tree which does not need the right junction of merges
@@ -303,7 +302,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode, into);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_only_the_branch_from_inner_node_in_a_tree()
     {
         // synthetic test tree which does not need the right junction of merges
@@ -332,7 +331,7 @@ public class LaneInfoProviderTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_prefer_the_branch_from_merge_to_a_GitRef__at_junction_node()
     {
         // synthetic test tree which does not need the right junction of merges
@@ -345,7 +344,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_prefer_the_branch_from_merge_to_a_GitRef();
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_prefer_the_branch_from_merge_to_a_GitRef__at_inner_node()
     {
         // synthetic test tree which does not need the right junction of merges
@@ -376,7 +375,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode, into);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_the_merged_branch()
     {
         // test tree
@@ -396,7 +395,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode, branch: mergedWith);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_not_display_a_branch_if_none_to_detect()
     {
         // synthetic test tree
@@ -417,7 +416,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_not_display_a_branch_if_none_at_first_children()
     {
         // synthetic test tree which does not need the right junction of merges
@@ -444,7 +443,7 @@ public class LaneInfoProviderTests
         GetLaneInfo_should_display(_realCommitNode);
     }
 
-    [Test]
+    [Fact]
     public void GetLaneInfo_should_display_child_info()
     {
         // test tree

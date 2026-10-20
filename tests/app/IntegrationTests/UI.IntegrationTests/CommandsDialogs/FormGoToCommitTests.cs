@@ -1,11 +1,11 @@
 ﻿using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs.BrowseDialog;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormGoToCommitTests
+public class FormGoToCommitTests : System.IDisposable
 {
     /// <summary>
     ///  The tab stops of the dialog, in tab order.
@@ -24,21 +24,18 @@ public class FormGoToCommitTests
 
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    [SetUp]
-    public void SetUp()
+    public FormGoToCommitTests()
     {
         _referenceRepository = new ReferenceRepository();
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Focus_should_visit_every_tab_stop_when_tabbing_forwards()
     {
         RunFormTest(form =>
@@ -46,7 +43,7 @@ public class FormGoToCommitTests
                 .Should().Equal(_tabStops.Skip(1).Append(_tabStops[0])));
     }
 
-    [Test]
+    [WinFormsFact]
     public void Focus_should_visit_every_tab_stop_when_tabbing_backwards()
     {
         RunFormTest(form =>
@@ -86,5 +83,10 @@ public class FormGoToCommitTests
                 form.Close();
                 return Task.CompletedTask;
             });
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
     }
 }

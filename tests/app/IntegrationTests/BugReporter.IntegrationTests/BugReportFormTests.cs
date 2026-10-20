@@ -1,29 +1,18 @@
 ﻿using BugReporter;
 using BugReporter.Serialization;
+using CommonTestUtils;
+using Xunit;
 
 namespace GitExtensions.UITests.NBugReports;
 
-[Apartment(ApartmentState.STA)]
-public class BugReportFormTests
+public sealed class BugReportFormTests : IDisposable
 {
-    private BugReportForm _form = null!;
+    private readonly BugReportForm _form = new();
 
-    [SetUp]
-    public void Setup()
-    {
-        _form = new BugReportForm();
-    }
-
-    [TearDown]
-    public void TearDown()
-    {
-        _form.Dispose();
-    }
-
-    [Test]
+    [WinFormsFact]
     public void Should_show_load_exception_info_correctly()
     {
-        string path = Path.Combine(TestContext.CurrentContext.TestDirectory, @"MockData/SimpleException.txt");
+        string path = Path.Combine(AppContext.BaseDirectory, @"MockData/SimpleException.txt");
         string content = File.ReadAllText(path);
 
         SerializableException exception = SerializableException.FromXmlString(content);
@@ -70,6 +59,11 @@ public class BugReportFormTests
             exception,
             exceptionInfo: "",
             environmentInfo: "");
+    }
+
+    public void Dispose()
+    {
+        _form.Dispose();
     }
 
     private void RunFormTest(Action<BugReportForm> testDriver, SerializableException exception, string exceptionInfo, string environmentInfo)

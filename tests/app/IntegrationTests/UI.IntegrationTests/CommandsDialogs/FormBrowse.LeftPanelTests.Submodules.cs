@@ -7,19 +7,14 @@ using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class FormBrowse_LeftPanel_SubmodulesTests
+public class FormBrowse_LeftPanel_SubmodulesTests : System.IDisposable, IClassFixture<FormBrowse_LeftPanel_SubmodulesTestsFixture>
 {
     // Created once for each test
     private GitUICommands _commands = null!;
-
-    // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
 
     private GitModuleTestHelper _repo1 = null!;
     private GitModuleTestHelper _repo2 = null!;
@@ -34,29 +29,12 @@ public class FormBrowse_LeftPanel_SubmodulesTests
 
     private ISubmoduleStatusProvider _provider = null!;
 
-    [OneTimeSetUp]
-    public void SetUpFixture()
+    public FormBrowse_LeftPanel_SubmodulesTests(FormBrowse_LeftPanel_SubmodulesTestsFixture fixture)
     {
-        // Remember the current settings...
-        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // Stop loading custom diff tools
-        AppSettings.ShowAvailableDiffTools = false;
-
-        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
-        AppSettings.ShowAuthorAvatarColumn = false;
+        InitializeTest();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-    }
-
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _repo1 = new GitModuleTestHelper("repo1");
         _repo2 = new GitModuleTestHelper("repo2");
@@ -79,8 +57,7 @@ public class FormBrowse_LeftPanel_SubmodulesTests
         _commands = new GitUICommands(serviceContainer, _repo1Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _provider.Dispose();
         _repo1.Dispose();
@@ -88,7 +65,7 @@ public class FormBrowse_LeftPanel_SubmodulesTests
         _repo3.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void RepoObjectTree_should_show_all_submodules()
     {
         RunFormTest(
@@ -131,5 +108,36 @@ public class FormBrowse_LeftPanel_SubmodulesTests
         UITest.RunForm(
             showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class FormBrowse_LeftPanel_SubmodulesTestsFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _originalShowAuthorAvatarColumn;
+    private bool _showAvailableDiffTools;
+
+    public FormBrowse_LeftPanel_SubmodulesTestsFixture()
+    {
+        // Remember the current settings...
+        _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // Stop loading custom diff tools
+        AppSettings.ShowAvailableDiffTools = false;
+
+        // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+        AppSettings.ShowAuthorAvatarColumn = false;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }
 }

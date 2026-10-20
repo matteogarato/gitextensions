@@ -6,15 +6,15 @@ public class FormRemotesControllerTests
 {
     private FormRemotesController _controller = null!;
 
-    [SetUp]
-    public void Setup()
+    public FormRemotesControllerTests()
     {
         _controller = new FormRemotesController();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void RemoteDelete_should_not_throw_or_mutate_list_of_remotes_if_oldRemoteUrl_null_or_empty(string? oldRemoteUrl)
     {
         List<Repository> remotes =
@@ -28,7 +28,7 @@ public class FormRemotesControllerTests
         remotes.Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void RemoteDelete_should_not_throw_or_mutate_list_of_remotes_if_oldRemoteUrl_not_in_list()
     {
         List<Repository> remotes =
@@ -42,7 +42,7 @@ public class FormRemotesControllerTests
         remotes.Should().HaveCount(2);
     }
 
-    [Test]
+    [Fact]
     public void RemoteDelete_should_remove_remotes_matching_oldRemoteUrl()
     {
         List<Repository> remotes =
@@ -57,9 +57,10 @@ public class FormRemotesControllerTests
         remotes[0].Path.Should().Be("a");
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("\t")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\t")]
     public void RemoteUpdate_should_not_throw_or_mutate_list_of_remotes_if_newRemoteUrl_null_or_empty(string? newRemoteUrl)
     {
         List<Repository> remotes =
@@ -75,7 +76,7 @@ public class FormRemotesControllerTests
         remotes[1].Path.Should().Be("b");
     }
 
-    [Test]
+    [Fact]
     public void RemoteDelete_should_replace_matching_oldRemoteUrl()
     {
         List<Repository> remotes =
@@ -90,7 +91,7 @@ public class FormRemotesControllerTests
         remotes.Select(r => r.Path).Should().BeEquivalentTo(["a1", "b"]);
     }
 
-    [Test]
+    [Fact]
     public void RemoteDelete_should_place_newRemoteUrl_as_first()
     {
         List<Repository> remotes =

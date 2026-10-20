@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Text;
+﻿using System.Text;
 using GitCommands;
 using GitCommands.Patches;
 using GitExtensions.Extensibility.Git;
@@ -25,13 +24,13 @@ public sealed class PatchProcessorTest
 
         static string LoadPatch(string fileName)
         {
-            string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Patches/testdata", fileName);
+            string path = Path.Combine(AppContext.BaseDirectory, "Patches/testdata", fileName);
             byte[] bytes = File.ReadAllBytes(path);
             return GitModule.LosslessEncoding.GetString(bytes);
         }
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadPatch()
     {
         TestPatch expectedPatch = CreateSmallPatchExample();
@@ -47,7 +46,7 @@ public sealed class PatchProcessorTest
         createdPatch.Text.Should().Be(expectedPatch.Patch.Text);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadReversePatch()
     {
         TestPatch expectedPatch = CreateSmallPatchExample(reverse: true);
@@ -63,7 +62,7 @@ public sealed class PatchProcessorTest
         createdPatch.Text.Should().Be(expectedPatch.Patch.Text);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsTheRightNumberOfDiffsInAPatchFile()
     {
         IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
@@ -71,7 +70,7 @@ public sealed class PatchProcessorTest
         patches.Count().Should().Be(17);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsTheRightFileNamesInAPatchFile()
     {
         List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8))];
@@ -80,7 +79,7 @@ public sealed class PatchProcessorTest
         patches.Select(p => p.FileNameB).Distinct().Count().Should().Be(17);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsBinaryPatch()
     {
         IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigBinPatch, new Lazy<Encoding>(() => Encoding.UTF8));
@@ -88,7 +87,7 @@ public sealed class PatchProcessorTest
         patches.Count(p => p.FileType == PatchFileType.Binary).Should().Be(248);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsOneNewFile()
     {
         IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
@@ -96,7 +95,7 @@ public sealed class PatchProcessorTest
         patches.Count(p => p.ChangeType == PatchChangeType.NewFile).Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsOneDeleteFile()
     {
         IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
@@ -104,7 +103,7 @@ public sealed class PatchProcessorTest
         patches.Count(p => p.ChangeType == PatchChangeType.DeleteFile).Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsChangeFiles()
     {
         IEnumerable<Patch> bigPatches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
@@ -114,7 +113,7 @@ public sealed class PatchProcessorTest
         smallPatches.Count(p => p.ChangeType == PatchChangeType.ChangeFile).Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void TestCorrectlyLoadsRebaseDiff()
     {
         List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_rebaseDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
@@ -122,7 +121,7 @@ public sealed class PatchProcessorTest
         patches.Count.Should().Be(13);
     }
 
-    [Test]
+    [Fact]
     public void TestCombinedDiff()
     {
         const string diff = @"diff --cc GitCommands/Patches/PatchProcessor.cs
@@ -140,7 +139,7 @@ index cdf8bebba,55ff37bb9..000000000
         patches.Count.Should().Be(2);
     }
 
-    [Test]
+    [Fact]
     public void ColorDiff()
     {
         List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_colorDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
@@ -157,9 +156,10 @@ index cdf8bebba,55ff37bb9..000000000
     }
 
     // Prefix must *not* contains a space or a '/' (except the mandatory one at the end)
-    [TestCase("before:/", "after:/")]
-    [TestCase("a:./", "b:./")]
-    [TestCase("./", "./")]
+    [Theory]
+    [InlineData("before:/", "after:/")]
+    [InlineData("a:./", "b:./")]
+    [InlineData("./", "./")]
     public void ColorPrefixDiff(string prefixSrc, string prefixDst)
     {
         string diffWithCutomPrefixes = _colorPrefixDiff.Replace("[PLACEHOLDER_PREFIX_SRC]", prefixSrc).Replace("[PLACEHOLDER_PREFIX_DST]", prefixDst);
@@ -176,7 +176,7 @@ index cdf8bebba,55ff37bb9..000000000
         createdPatch.FileType.Should().Be(PatchFileType.Text);
     }
 
-    [Test]
+    [Fact]
     public void ColorBinDiff()
     {
         List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_colorBinDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
@@ -242,7 +242,7 @@ index cdf8bebba,55ff37bb9..000000000
         }
     }
 
-    [Test]
+    [Fact]
     public async Task CreatePatchFromString_with_spaces()
     {
         string patchText = """
@@ -256,7 +256,8 @@ index cdf8bebba,55ff37bb9..000000000
         await Verifier.Verify(PatchProcessor.CreatePatchesFromString(patchText, new Lazy<Encoding>(Encoding.UTF8)));
     }
 
-    [TestCaseSource(typeof(CreatePatchFromStringTestData), nameof(CreatePatchFromStringTestData.TestCases))]
+    [Theory]
+    [MemberData(nameof(CreatePatchFromStringTestData.TestCases), MemberType = typeof(CreatePatchFromStringTestData))]
     public async Task CreatePatchFromString_Text_ChangeFile(Encoding filesContentEncoding)
     {
         const char escape = '\u001b';
@@ -280,13 +281,13 @@ index cdf8bebba,55ff37bb9..000000000
 
     public class CreatePatchFromStringTestData
     {
-        public static IEnumerable TestCases
+        public static IEnumerable<object?[]> TestCases
         {
             get
             {
-                yield return new TestCaseData(Encoding.UTF8);
-                yield return new TestCaseData(Encoding.ASCII);
-                yield return new TestCaseData(Encoding.Latin1);
+                yield return new object?[] { Encoding.UTF8 };
+                yield return new object?[] { Encoding.ASCII };
+                yield return new object?[] { Encoding.Latin1 };
             }
         }
     }

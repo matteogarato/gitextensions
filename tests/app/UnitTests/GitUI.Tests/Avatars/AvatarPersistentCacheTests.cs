@@ -15,11 +15,8 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
     private FileInfoBase _fileInfo = null!;
     private IFileInfoFactory _fileInfoFactory = null!;
 
-    [SetUp]
-    public override void SetUp()
+    public AvatarPersistentCacheTests()
     {
-        base.SetUp();
-
         _fileSystem = Substitute.For<IFileSystem>();
         _directory = Substitute.For<DirectoryBase>();
         _fileSystem.Directory.Returns(_directory);
@@ -37,7 +34,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         _email1AvatarPath = Path.Combine(_avatarImageCachePath, $"{_email1}.{_size}px.png");
     }
 
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_should_create_if_folder_absent()
     {
         MockFileSystem fileSystem = new();
@@ -49,7 +46,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         fileSystem.Directory.Exists(_avatarImageCachePath).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_should_create_image_from_stream()
     {
         MockFileSystem fileSystem = new();
@@ -62,7 +59,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         fileSystem.File.Exists(_email1AvatarPath).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public async Task GetAvatarAsync_uses_inner_if_file_expired()
     {
         _fileInfo.Exists.Returns(true);
@@ -88,7 +85,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         _fileSystem.File.Received(1).OpenRead(_email1AvatarPath);
     }
 
-    [Test]
+    [Fact]
     public async Task ClearCacheAsync_should_return_if_folder_absent()
     {
         _directory.Exists(Arg.Any<string>()).Returns(false);
@@ -98,7 +95,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         _directory.DidNotReceive().GetFiles(Arg.Any<string>());
     }
 
-    [Test]
+    [Fact]
     public async Task ClearCacheAsync_should_remove_all()
     {
         MockFileSystem fileSystem = new();
@@ -113,7 +110,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         fileSystem.AllFiles.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void ClearCacheAsync_should_ignore_errors()
     {
         _directory.Exists(Arg.Any<string>()).Returns(true);

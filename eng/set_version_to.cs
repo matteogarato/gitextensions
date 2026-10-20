@@ -59,6 +59,7 @@ List<string> assemblyInfoFiles =
 [
     Path.Combine(repoRoot, "CommonAssemblyInfo.cs"),
     Path.Combine(repoRoot, "CommonAssemblyInfoExternals.cs"),
+    Path.Combine(repoRoot, "src", "app", "GitUI.Avalonia", "Properties", "CommonAssemblyInfoAvalonia.cs"),
 ];
 
 string externalsDir = Path.Combine(repoRoot, "externals");

@@ -5,7 +5,7 @@ namespace GitUITests.UserControls;
 
 public sealed class ICSharpTextEditorTest
 {
-    [Test]
+    [Fact]
     public void ResourceStreamNamesMatchSyntaxNodes()
     {
         Assembly assembly = typeof(ICSharpCode.TextEditor.Document.ResourceSyntaxModeProvider).Assembly;

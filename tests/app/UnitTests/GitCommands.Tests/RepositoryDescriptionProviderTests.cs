@@ -3,23 +3,21 @@ using GitCommands.UserRepositoryHistory;
 using NSubstitute;
 
 namespace GitCommandsTests.UserRepositoryHistory;
-public class RepositoryDescriptionProviderTests
+public class RepositoryDescriptionProviderTests : IDisposable
 {
     private string _tempDir = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryDescriptionProviderTests()
     {
         _tempDir = Directory.CreateTempSubdirectory().FullName;
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         Directory.Delete(_tempDir, recursive: true);
     }
 
-    [Test]
+    [Fact]
     public void RepositoryDescriptionProvider_should_handle_subrepos()
     {
         IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
@@ -45,8 +43,11 @@ public class RepositoryDescriptionProviderTests
             .Should().Be("leafsubmodule < test_repo");
     }
 
-    [Test]
-    public void RepositoryDescriptionProvider_should_skip_uninformative_submodule_name([Values("app", "repo", "repository")] string uninformative)
+    [Theory]
+    [InlineData("app")]
+    [InlineData("repo")]
+    [InlineData("repository")]
+    public void RepositoryDescriptionProvider_should_skip_uninformative_submodule_name(string uninformative)
     {
         IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);
@@ -60,8 +61,11 @@ public class RepositoryDescriptionProviderTests
             .Should().Be($"{parent} < {rootrepo}");
     }
 
-    [Test]
-    public void RepositoryDescriptionProvider_should_not_skip_uninformative_submodule_name_to_parent_repo([Values("app", "repo", "repository")] string uninformative)
+    [Theory]
+    [InlineData("app")]
+    [InlineData("repo")]
+    [InlineData("repository")]
+    public void RepositoryDescriptionProvider_should_not_skip_uninformative_submodule_name_to_parent_repo(string uninformative)
     {
         IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);
@@ -74,8 +78,11 @@ public class RepositoryDescriptionProviderTests
             .Should().Be($"{uninformative} < {parentrepo}");
     }
 
-    [Test]
-    public void RepositoryDescriptionProvider_should_not_skip_uninformative_root_repo_name([Values("app", "repo", "repository")] string uninformative)
+    [Theory]
+    [InlineData("app")]
+    [InlineData("repo")]
+    [InlineData("repository")]
+    public void RepositoryDescriptionProvider_should_not_skip_uninformative_root_repo_name(string uninformative)
     {
         IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);

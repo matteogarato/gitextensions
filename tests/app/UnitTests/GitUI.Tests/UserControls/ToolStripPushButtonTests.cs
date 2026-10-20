@@ -7,15 +7,14 @@ using JetBrains.Annotations;
 using NSubstitute;
 
 namespace GitUITests.UserControls;
-public class ToolStripPushButtonTests
+public class ToolStripPushButtonTests : IDisposable
 {
     private static readonly int PushImageHashCode = Images.Push.RawFormat.GetHashCode();
     private bool _originalShowAheadBehindData;
     private IAheadBehindDataProvider _aheadBehindDataProvider = null!;
     private ToolStripPushButton _sut = null!;
 
-    [SetUp]
-    public void Setup()
+    public ToolStripPushButtonTests()
     {
         _originalShowAheadBehindData = AppSettings.ShowAheadBehindData;
         AppSettings.ShowAheadBehindData = true;
@@ -26,14 +25,13 @@ public class ToolStripPushButtonTests
         _sut.ResetToDefaultState();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _sut.Dispose();
         AppSettings.ShowAheadBehindData = _originalShowAheadBehindData;
     }
 
-    [Test]
+    [Fact]
     public void DisplayAheadBehindInformation_should_not_display_anything_if_does_not_support_ahead_behind()
     {
         _sut.ResetToDefaultState();
@@ -45,8 +43,9 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
     }
 
-    [TestCaseSource(nameof(GetInvalidAheadBehindData))]
-    public void DisplayAheadBehindInformation_should_display_default_text_image_if_ahead_behind_data_null(IReadOnlyDictionary<string, AheadBehindData> data)
+    [Theory]
+    [MemberData(nameof(GetInvalidAheadBehindData))]
+    public void DisplayAheadBehindInformation_should_display_default_text_image_if_ahead_behind_data_null(IReadOnlyDictionary<string, AheadBehindData>? data)
     {
         string branchName = "who_cares";
         _aheadBehindDataProvider.GetData(branchName).Returns(x => data);
@@ -56,24 +55,20 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
     }
 
-    private static IEnumerable<TestCaseData> GetInvalidAheadBehindData
+    public static IEnumerable<object?[]> GetInvalidAheadBehindData
     {
         [UsedImplicitly]
         get
         {
-            int index = 0;
-            yield return new TestCaseData(null)
-                .SetName($"{++index}. AheadBehindData is null");
+            yield return new object?[] { null };
 
-            yield return new TestCaseData(new Dictionary<string, AheadBehindData>())
-                .SetName($"{++index}. AheadBehindData is empty");
+            yield return new object?[] { new Dictionary<string, AheadBehindData>() };
 
-            yield return new TestCaseData(new Dictionary<string, AheadBehindData> { { "some_branch", new AheadBehindData() } })
-                .SetName($"{++index}. AheadBehindData doesn't contain desired branch");
+            yield return new object?[] { new Dictionary<string, AheadBehindData> { { "some_branch", new AheadBehindData() } } };
         }
     }
 
-    [Test]
+    [Fact]
     public void DisplayAheadBehindInformation_should_display_normal_state_when_no_data_returned()
     {
         string branchName = "(no branch) or any-branch";
@@ -86,7 +81,7 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
     }
 
-    [Test]
+    [Fact]
     public void DisplayAheadBehindInformation_should_display_normal_state_when_in_ahead_state()
     {
         string branchName = "my-branch";
@@ -104,7 +99,7 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
     }
 
-    [Test]
+    [Fact]
     public void DisplayAheadBehindInformation_should_display_warning_state_when_in_behind_state()
     {
         string branchName = "my-branch";
@@ -122,7 +117,7 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(Images.Unstage.RawFormat.GetHashCode());
     }
 
-    [Test]
+    [Fact]
     public void DisplayAheadBehindInformation_should_display_warning_state_when_in_ahead_and_behind_state()
     {
         string branchName = "my-branch";
@@ -140,7 +135,7 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(Images.Unstage.RawFormat.GetHashCode());
     }
 
-    [Test]
+    [Fact]
     public void DisplayAheadBehindInformation_should_display_nothing_when_disabled()
     {
         AppSettings.ShowAheadBehindData = false;
@@ -155,7 +150,7 @@ public class ToolStripPushButtonTests
         _sut!.Image!.RawFormat.GetHashCode().Should().Be(Images.Unstage.RawFormat.GetHashCode());
     }
 
-    [Test]
+    [Fact]
     public void PushButton_should_keep_size_before_update_and_decrease_if_fewer_changes()
     {
         string branchName = "my-branch";

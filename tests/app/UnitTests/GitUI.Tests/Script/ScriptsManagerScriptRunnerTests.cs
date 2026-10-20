@@ -7,16 +7,14 @@ using static GitUI.ScriptsEngine.ScriptsManager;
 
 namespace GitUITests.Script;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
+[Culture("en-US")]
 public class ScriptsManagerScriptRunnerTests
 {
     private IGitUICommands _commands = null!;
     private IGitModule _module = null!;
     private IScriptOptionsProvider _scriptOptionsProvider = null!;
 
-    [SetUp]
-    public void Setup()
+    public ScriptsManagerScriptRunnerTests()
     {
         _module = Substitute.For<IGitModule>();
         _scriptOptionsProvider = Substitute.For<IScriptOptionsProvider>();
@@ -26,7 +24,7 @@ public class ScriptsManagerScriptRunnerTests
     }
 
     // Regression test for https://github.com/gitextensions/gitextensions/issues/11892
-    [Test]
+    [Fact]
     public void Parse_should_not_fail_if_arguments_null()
     {
         (string? arguments, bool abort, bool cancel) result = ScriptRunner.ParseUserInputs("script_name", arguments: null, _commands,
@@ -37,7 +35,7 @@ public class ScriptsManagerScriptRunnerTests
         result.arguments.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_distincts_userInput()
     {
         _commands.GetService<ISimplePromptCreator>().Returns(new SimplePromptCreatorForTest(("input label1", "value", "foo1"), ("input label2", "value2", "bar1"), (null!, string.Empty, "foo2")));
@@ -49,7 +47,7 @@ public class ScriptsManagerScriptRunnerTests
         result.arguments.Should().Be(@"foo1_""bar1""_foo2_""foo2""");
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_customized_userInput_without_default_value_specified()
     {
         _commands.GetService<ISimplePromptCreator>().Returns(new SimplePromptCreatorForTest(("input label1", string.Empty, "foo1")));
@@ -61,7 +59,7 @@ public class ScriptsManagerScriptRunnerTests
         result.arguments.Should().Be(@"foo1");
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_customized_userInputs_and_replace_all_with_same_label()
     {
         _commands.GetService<ISimplePromptCreator>().Returns(new SimplePromptCreatorForTest(("input label1", "value", "foo1")));
@@ -73,7 +71,7 @@ public class ScriptsManagerScriptRunnerTests
         result.arguments.Should().Be(@"foo1_foo1_""foo1""");
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_userInput_with_default_value_as_expression_containing_arguments_inside()
     {
         _module.GetRevision(default, Arg.Any<bool>(), Arg.Any<bool>()).Returns(new GitRevision(ObjectId.Parse("79b9792ca4db3d01d7c0f2cd95419dd53665ec41")));
@@ -131,7 +129,7 @@ public class ScriptsManagerScriptRunnerTests
         public DialogResult ShowDialog(IWin32Window owner) => DialogResult.OK;
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_parse_userFiles()
     {
         _commands.GetService<IFilePromptCreator>().Returns(new FilePromptCreatorForTest(@"C:\a_file_path\file.txt"));

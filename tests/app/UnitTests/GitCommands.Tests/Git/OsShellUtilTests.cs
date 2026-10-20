@@ -4,13 +4,12 @@ using GitExtensions.Extensibility;
 using NSubstitute;
 
 namespace GitCommandsTests.Git;
-public class OsShellUtilTests
+public class OsShellUtilTests : IDisposable
 {
     private IExecutable _executable = null!;
     private IProcess _process = null!;
 
-    [SetUp]
-    public void SetUp()
+    public OsShellUtilTests()
     {
         _process = Substitute.For<IProcess>();
         _executable = Substitute.For<IExecutable>();
@@ -28,14 +27,13 @@ public class OsShellUtilTests
         OsShellUtil.TestAccessor.MockExecutable = _executable;
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _process?.Dispose();
         OsShellUtil.TestAccessor.MockExecutable = null;
     }
 
-    [Test]
+    [Fact]
     public void Open_should_start_with_shell_execute()
     {
         OsShellUtil.Open("test.txt");
@@ -51,7 +49,7 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void Open_should_fall_back_to_OpenAs_when_Start_throws()
     {
         int callCount = 0;
@@ -88,7 +86,7 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void OpenAs_should_start_rundll32_with_correct_arguments()
     {
         OsShellUtil.OpenAs("test.txt");
@@ -104,7 +102,7 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void SelectPathInFileExplorer_should_pass_quoted_path_with_select()
     {
         OsShellUtil.SelectPathInFileExplorer(@"C:\some\file.txt");
@@ -120,7 +118,7 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void OpenWithFileExplorer_should_quote_arguments_by_default()
     {
         OsShellUtil.OpenWithFileExplorer(@"C:\some\folder");
@@ -136,7 +134,7 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void OpenWithFileExplorer_should_not_quote_when_quote_is_false()
     {
         OsShellUtil.OpenWithFileExplorer(@"/select, ""C:\some\file.txt""", quote: false);
@@ -152,7 +150,7 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [Test]
+    [Fact]
     public void OpenUrlInDefaultBrowser_should_start_with_shell_execute()
     {
         OsShellUtil.OpenUrlInDefaultBrowser("https://example.com");
@@ -168,9 +166,10 @@ public class OsShellUtilTests
             Arg.Any<CancellationToken>());
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("   ")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public void OpenUrlInDefaultBrowser_should_not_start_when_url_is_null_or_whitespace(string? url)
     {
         OsShellUtil.OpenUrlInDefaultBrowser(url);

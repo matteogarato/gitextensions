@@ -3,25 +3,25 @@
 namespace GitExtUtilsTests;
 public class ComboBoxExtensionsTests
 {
-    [Test]
+    [StaFact]
     public void AdjustWidthToFitContent_should_throw_if_combo_null()
     {
         ((Action)(() => ((ComboBox)null!).AdjustWidthToFitContent())).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ComboBox_should_throw_if_combo_null()
     {
         ((Action)(() => ((ComboBox)null!).ResizeDropDownWidth(1, 2))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_should_throw_if_combo_null()
     {
         ((Action)(() => ((ToolStripComboBox)null!).ResizeDropDownWidth(1, 2))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [StaFact]
     public void AdjustWidthToFitContent_ComboBox_Should_Account_For_Scrollbar()
     {
         // Arrange
@@ -55,7 +55,7 @@ public class ComboBoxExtensionsTests
         adjustedWidth52.Should().Be(adjustedWidth2);
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_Sets_Width_To_A_Minimum_When_Its_Higher_Than_Content_Width()
     {
         // Arrange
@@ -71,7 +71,7 @@ public class ComboBoxExtensionsTests
         comboBox.DropDownWidth.Should().Be(4000);
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_Caps_At_Maximum_When_Item_Too_Long()
     {
         // Arrange
@@ -87,7 +87,7 @@ public class ComboBoxExtensionsTests
         comboBox.DropDownWidth.Should().Be(400);
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_Respects_DisplayMember()
     {
         // Arrange
@@ -106,7 +106,7 @@ public class ComboBoxExtensionsTests
         comboBox.DropDownWidth.Should().Be(400);
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_Respects_DisplayMember_When_Value_Is_Null()
     {
         // Arrange
@@ -125,7 +125,7 @@ public class ComboBoxExtensionsTests
         comboBox.DropDownWidth.Should().BeLessThan(400);
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_Uses_ToString_Value()
     {
         // Arrange
@@ -141,7 +141,7 @@ public class ComboBoxExtensionsTests
         comboBox.DropDownWidth.Should().Be(400);
     }
 
-    [Test]
+    [StaFact]
     public void ResizeDropDownWidth_ToolStripComboBox_Uses_ToString_Value_When_DisplayMember_Is_Not_On_Item()
     {
         // Arrange

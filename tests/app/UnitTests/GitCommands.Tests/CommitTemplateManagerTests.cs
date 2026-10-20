@@ -16,8 +16,7 @@ public class CommitTemplateManagerTests
     private IFullPathResolver _fullPathResolver = null!;
     private CommitTemplateManager _manager = null!;
 
-    [SetUp]
-    public void Setup()
+    public CommitTemplateManagerTests()
     {
         _module = Substitute.For<IGitModule>();
 
@@ -29,8 +28,9 @@ public class CommitTemplateManagerTests
         _manager = new CommitTemplateManager(() => _module, _fullPathResolver, _fileSystem);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
     public void LoadGitCommitTemplate_commit_template_not_defined(string? template)
     {
         _module.GetEffectiveSetting("commit.template").Returns(template);
@@ -38,9 +38,10 @@ public class CommitTemplateManagerTests
         _manager.LoadGitCommitTemplate().Should().BeNull();
     }
 
-    [TestCase("~/template.txt")]
-    [TestCase("./template.txt")]
-    [TestCase("template.txt")]
+    [Theory]
+    [InlineData("~/template.txt")]
+    [InlineData("./template.txt")]
+    [InlineData("template.txt")]
     public void LoadGitCommitTemplate_should_throw_if_template_not_found(string? template)
     {
         _module.WorkingDir.Returns(_workingDir);
@@ -49,7 +50,7 @@ public class CommitTemplateManagerTests
         ((Action)(() => _manager.LoadGitCommitTemplate())).Should().Throw<FileNotFoundException>();
     }
 
-    [Test]
+    [Fact]
     public void LoadGitCommitTemplate_should_load_file_content()
     {
         const string relativePath = "./template.txt";
@@ -66,7 +67,7 @@ public class CommitTemplateManagerTests
         content.Should().NotBeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void Register_should_not_add_duplicates()
     {
         const string templateName = "template1";
@@ -76,7 +77,7 @@ public class CommitTemplateManagerTests
         _manager.RegisteredTemplates.Should().HaveCount(count + 1);
     }
 
-    [Test]
+    [Fact]
     public void RegisteredTemplates_should_be_threadsafe()
     {
         _manager.Register("template1", () => "text1", null);
@@ -90,7 +91,7 @@ public class CommitTemplateManagerTests
         }
     }
 
-    [Test]
+    [Fact]
     public void RegisteredTemplates_should_be_immutable()
     {
         _manager.Register("template1", () => "text1", null);
@@ -100,7 +101,7 @@ public class CommitTemplateManagerTests
         _manager.RegisteredTemplates.Should().HaveCount(expectedCount);
     }
 
-    [Test]
+    [Fact]
     public void RegisteredTemplates_should_be_store_IsRegex()
     {
         int count = _manager.RegisteredTemplates.Count();
@@ -108,7 +109,7 @@ public class CommitTemplateManagerTests
         _manager.RegisteredTemplates.ElementAt(count).IsRegex.Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void RegisteredTemplates_default_IsRegex_should_be_False()
     {
         int count = _manager.RegisteredTemplates.Count();
@@ -118,7 +119,7 @@ public class CommitTemplateManagerTests
 
     public class IntegrationTests
     {
-        [Test]
+        [Fact]
         public void LoadGitCommitTemplate_real_filesystem()
         {
             using GitModuleTestHelper helper = new();

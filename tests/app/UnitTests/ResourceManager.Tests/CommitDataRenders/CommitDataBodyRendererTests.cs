@@ -13,8 +13,7 @@ public class CommitDataBodyRendererTests
     private CommitDataBodyRenderer _renderer = null!;
     private CommitDataBodyRenderer _rendererReal = null!;
 
-    [SetUp]
-    public void Setup()
+    public CommitDataBodyRendererTests()
     {
         _module = Substitute.For<IGitModule>();
         _getModule = () => _module;
@@ -24,13 +23,13 @@ public class CommitDataBodyRendererTests
         _rendererReal = new CommitDataBodyRenderer(_getModule, new LinkFactory());
     }
 
-    [Test]
+    [Fact]
     public void Render_should_throw_if_data_null()
     {
         ((Action)(() => _renderer.Render(null!, true))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void Render_should_render_body_with_links()
     {
         _module.TryResolvePartialCommitId(Arg.Any<string>(), out _).Returns(ci =>
@@ -68,7 +67,7 @@ The ability to do so from the RevisionGrid context menu has been added in commit
 @line 42.");
     }
 
-    [Test]
+    [Fact]
     public void Render_should_render_body_without_links()
     {
         CommitData data = new(ObjectId.Random(),

@@ -7,13 +7,12 @@ public class RevisionDiffContextMenuControllerTests
 {
     private FileStatusListContextMenuController _revisionDiffContextMenuController = null!;
 
-    [SetUp]
-    public void Setup()
+    public RevisionDiffContextMenuControllerTests()
     {
         _revisionDiffContextMenuController = new FileStatusListContextMenuController();
     }
 
-    [Test]
+    [Fact]
     public void BrowseDiff_SuppressDiffToLocalWhenNoSelectedRevision()
     {
         ContextMenuDiffToolInfo selectionInfo = new();
@@ -22,7 +21,7 @@ public class RevisionDiffContextMenuControllerTests
         _revisionDiffContextMenuController.ShouldShowMenuSelectedToLocal(selectionInfo).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void BrowseDiff_SuppressDiffToLocalWhenNoLocalExists()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -32,7 +31,7 @@ public class RevisionDiffContextMenuControllerTests
         _revisionDiffContextMenuController.ShouldShowMenuSelectedToLocal(selectionInfo).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void BrowseDiff_ShowContextDiffToolForWorkTree()
     {
         GitRevision rev = new(ObjectId.WorkTreeId);
@@ -42,7 +41,7 @@ public class RevisionDiffContextMenuControllerTests
         _revisionDiffContextMenuController.ShouldShowMenuSelectedToLocal(selectionInfo).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void BrowseDiff_ShowContextDiffToolForWorkTreeParent()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -52,10 +51,11 @@ public class RevisionDiffContextMenuControllerTests
         _revisionDiffContextMenuController.ShouldShowMenuSelectedToLocal(selectionInfo).Should().BeTrue();
     }
 
-    [TestCase(true, true)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(false, false)]
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
     public void BrowseDiff_ShowContextDiffToolForDeletedAndNew(bool d, bool n)
     {
         GitRevision rev = new(ObjectId.Random());

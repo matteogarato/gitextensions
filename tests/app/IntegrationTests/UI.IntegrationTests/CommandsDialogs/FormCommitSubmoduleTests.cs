@@ -6,12 +6,11 @@ using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls;
 using GitUIPluginInterfaces;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-[NonParallelizable]
-public class FormCommitSubmoduleTests
+public class FormCommitSubmoduleTests : System.IDisposable, IClassFixture<FormCommitSubmoduleTestsFixture>
 {
     private const string _submodulePath = "sub";
 
@@ -20,26 +19,12 @@ public class FormCommitSubmoduleTests
     private GitModuleTestHelper _submoduleRepo = null!;
     private GitUICommands _commands = null!;
 
-    // Track the original setting value
-    private bool _showAvailableDiffTools;
-
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
+    public FormCommitSubmoduleTests(FormCommitSubmoduleTestsFixture fixture)
     {
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // Stop loading custom diff tools
-        AppSettings.ShowAvailableDiffTools = false;
+        InitializeTest();
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-    }
-
-    [SetUp]
-    public void SetUp()
+    private void InitializeTest()
     {
         _parentRepo = new GitModuleTestHelper("parent");
         _submoduleRepo = new GitModuleTestHelper("submodule");
@@ -55,14 +40,13 @@ public class FormCommitSubmoduleTests
         _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _parentRepo.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _parentRepo.Dispose();
         _submoduleRepo.Dispose();
     }
 
-    [Test]
+    [WinFormsFact]
     public void Unstaging_a_new_submodule_should_leave_the_status_a_rescan_reports()
     {
         RunFormTest(form =>
@@ -103,5 +87,29 @@ public class FormCommitSubmoduleTests
                 AsyncTestHelper.JoinPendingOperations();
             },
             testDriverAsync);
+    }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
+}
+
+public sealed class FormCommitSubmoduleTestsFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _showAvailableDiffTools;
+
+    public FormCommitSubmoduleTestsFixture()
+    {
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // Stop loading custom diff tools
+        AppSettings.ShowAvailableDiffTools = false;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }
 }

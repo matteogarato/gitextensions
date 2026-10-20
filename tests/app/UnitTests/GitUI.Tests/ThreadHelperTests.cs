@@ -5,7 +5,6 @@ using JetBrains.Annotations;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitUITests;
-[Apartment(ApartmentState.STA)]
 public sealed class ThreadHelperTests
 {
     private static async Task YieldOntoControlMainThreadAsync(Control control)
@@ -19,7 +18,7 @@ public sealed class ThreadHelperTests
         throw ex;
     }
 
-    [Test]
+    [StaFact]
     public async Task FileAndForgetReportsThreadException()
     {
         using ThreadExceptionHelper helper = new();
@@ -31,7 +30,7 @@ public sealed class ThreadHelperTests
         helper.Exception.Should().BeSameAs(ex);
     }
 
-    [Test]
+    [StaFact]
     public async Task FileAndForgetIgnoresCancellationExceptions()
     {
         using ThreadExceptionHelper helper = new();
@@ -44,7 +43,7 @@ public sealed class ThreadHelperTests
         helper.Exception.Should().BeNull(helper.Message);
     }
 
-    [Test]
+    [StaFact]
     public async Task ThrowIfNotOnUIThread()
     {
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
@@ -59,7 +58,7 @@ public sealed class ThreadHelperTests
         ((Action)(() => ThreadHelper.ThrowIfNotOnUIThread())).Should().Throw<COMException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task ThrowIfOnUIThread()
     {
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
@@ -72,14 +71,14 @@ public sealed class ThreadHelperTests
         ThreadHelper.ThrowIfOnUIThread();
     }
 
-    [Test]
+    [StaFact]
     public void CompletedResultThrowsIfNotCompleted()
     {
         TaskCompletionSource<int> tcs = new();
         ((Action)(() => tcs.Task.CompletedResult())).Should().Throw<InvalidOperationException>();
     }
 
-    [Test]
+    [StaFact]
     public void CompletedResultReturnsResultIfCompleted()
     {
         TaskCompletionSource<int> tcs = new();
@@ -87,7 +86,7 @@ public sealed class ThreadHelperTests
         tcs.Task.CompletedResult().Should().Be(1);
     }
 
-    [Test]
+    [StaFact]
     public void CompletedResultThrowsIfCancelled()
     {
         TaskCompletionSource<int> tcs = new();
@@ -97,7 +96,7 @@ public sealed class ThreadHelperTests
         actual.InnerException.Should().BeOfType<TaskCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public void CompletedResultThrowsIfFaulted()
     {
         TaskCompletionSource<int> tcs = new();
@@ -109,14 +108,14 @@ public sealed class ThreadHelperTests
         actual.InnerExceptions.Count.Should().Be(1);
     }
 
-    [Test]
+    [StaFact]
     public void CompletedOrDefaultReturnsDefaultIfNotCompleted()
     {
         TaskCompletionSource<int> tcs = new();
         tcs.Task.CompletedOrDefault().Should().Be(0);
     }
 
-    [Test]
+    [StaFact]
     public void CompletedOrDefaultReturnsResultIfCompleted()
     {
         TaskCompletionSource<int> tcs = new();
@@ -124,7 +123,7 @@ public sealed class ThreadHelperTests
         tcs.Task.CompletedOrDefault().Should().Be(1);
     }
 
-    [Test]
+    [StaFact]
     public void CompletedOrDefaultThrowsIfCancelled()
     {
         TaskCompletionSource<int> tcs = new();
@@ -134,7 +133,7 @@ public sealed class ThreadHelperTests
         actual.InnerException.Should().BeOfType<TaskCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public void CompletedOrDefaultThrowsIfFaulted()
     {
         TaskCompletionSource<int> tcs = new();
@@ -146,8 +145,7 @@ public sealed class ThreadHelperTests
         actual.InnerExceptions.Count.Should().Be(1);
     }
 
-    [Test]
-    [Apartment(ApartmentState.MTA)]
+    [Fact]
     public void JoinableTaskFactoryConfiguredForMTA()
     {
         Thread.CurrentThread.GetApartmentState().Should().Be(ApartmentState.MTA);
@@ -157,8 +155,7 @@ public sealed class ThreadHelperTests
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeFalse();
     }
 
-    [Test]
-    [Apartment(ApartmentState.MTA)]
+    [Fact]
     public async Task AllowAwaitForAsynchronousMTATest()
         => await Task.Yield();
 

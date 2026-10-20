@@ -1,9 +1,7 @@
 ﻿using CommonTestUtils;
+using Xunit;
 
-[assembly: Epilogue]
 [assembly: ConfigureJoinableTaskFactory]
-[assembly: TestAppSettings]
+[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]
 
-// Don't allow tests to run in parallel
-[assembly: NonParallelizable]
-[assembly: Category("IntegrationTests")]
+[assembly: Trait("Category", "IntegrationTests")]

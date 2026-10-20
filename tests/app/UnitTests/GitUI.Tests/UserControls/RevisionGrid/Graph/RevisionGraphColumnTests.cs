@@ -11,7 +11,7 @@ public class RevisionGraphColumnTests
 {
     private const int _rowHeight = 42;
 
-    [Test]
+    [Fact]
     public void RenderGraphToCache_should_start_cache_with_single_line()
     {
         const int rowCount = 2;
@@ -25,7 +25,7 @@ public class RevisionGraphColumnTests
         testAccessor.GraphCache.Capacity.Should().Be(3 * rowCount);
     }
 
-    [Test]
+    [Fact]
     public void RenderGraphToCache_should_draw_from_cache()
     {
         Setup(rowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
@@ -42,7 +42,7 @@ public class RevisionGraphColumnTests
         testAccessor.GraphCache.Count.Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void RenderGraphToCache_should_fill_forward_then_restart()
     {
         Setup(rowCount: 10, visibleRowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
@@ -66,7 +66,7 @@ public class RevisionGraphColumnTests
         testAccessor.GraphCache.Count.Should().Be(1);
     }
 
-    [Test]
+    [Fact]
     public void RenderGraphToCache_should_scroll_forward()
     {
         Setup(rowCount: 10, visibleRowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
@@ -120,7 +120,7 @@ public class RevisionGraphColumnTests
         testAccessor.GraphCache.Count.Should().Be(6);
     }
 
-    [Test]
+    [Fact]
     public void RenderGraphToCache_should_scroll_backward_then_restart()
     {
         const int rowCount = 10;
@@ -156,7 +156,7 @@ public class RevisionGraphColumnTests
             revisionGraph.Add(new GitRevision(ObjectId.Random()));
         }
 
-        revisionGraph.CacheTo(currentRowIndex: visibleRowCount, lastToCacheRowIndex: visibleRowCount);
+        revisionGraph.CacheTo(currentRowIndex: visibleRowCount, lastToCacheRowIndex: visibleRowCount, TestContext.Current.CancellationToken);
 
         IGitRevisionSummaryBuilder gitRevisionSummaryBuilder = Substitute.For<IGitRevisionSummaryBuilder>();
 

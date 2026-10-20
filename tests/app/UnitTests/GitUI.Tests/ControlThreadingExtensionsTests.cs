@@ -5,10 +5,9 @@ using Microsoft.VisualStudio.Threading;
 // This diagnostic is unnecessarily noisy when testing async patterns
 
 namespace GitUITests;
-[Apartment(ApartmentState.STA)]
 public class ControlThreadingExtensionsTests
 {
-    [Test]
+    [StaFact]
     public async Task ControlSwitchToMainThreadOnMainThread()
     {
         using Form form = new();
@@ -18,7 +17,7 @@ public class ControlThreadingExtensionsTests
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlSwitchToMainThreadOnMainThread_with_cancellation_token()
     {
         using Form form = new();
@@ -29,7 +28,7 @@ public class ControlThreadingExtensionsTests
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
     }
 
-    [Test]
+    [StaFact]
     public void ControlSwitchToMainThreadOnMainThreadCompletesSynchronously()
     {
         using Form form = new();
@@ -50,7 +49,7 @@ public class ControlThreadingExtensionsTests
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlSwitchToMainThreadOnBackgroundThread()
     {
         using Form form = new();
@@ -61,7 +60,7 @@ public class ControlThreadingExtensionsTests
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlSwitchToMainThreadOnBackgroundThread_with_cancellation_token()
     {
         using Form form = new();
@@ -73,7 +72,7 @@ public class ControlThreadingExtensionsTests
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlDisposedBeforeSwitchOnMainThread()
     {
         Form form = new();
@@ -84,7 +83,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task TokenCancelledBeforeSwitchOnMainThread()
     {
         using Form form = new();
@@ -96,7 +95,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlDisposedAndTokenCancelledBeforeSwitchOnMainThread()
     {
         Form form = new();
@@ -112,7 +111,7 @@ public class ControlThreadingExtensionsTests
         exception.CancellationToken.Should().Be(cancellationTokenSource.Token);
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlDisposedAfterSwitchOnMainThread()
     {
         Form form = new();
@@ -126,7 +125,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task TokenCancelledAfterSwitchOnMainThread()
     {
         using Form form = new();
@@ -141,7 +140,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlDisposedBeforeSwitchOnBackgroundThread()
     {
         Form form = new();
@@ -154,7 +153,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task TokenCancelledBeforeSwitchOnBackgroundThread()
     {
         using Form form = new();
@@ -169,7 +168,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task ControlDisposedAfterSwitchOnBackgroundThread()
     {
         Form form = new();
@@ -189,7 +188,7 @@ public class ControlThreadingExtensionsTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Test]
+    [StaFact]
     public async Task TokenCancelledAfterSwitchOnBackgroundThread()
     {
         using Form form = new();

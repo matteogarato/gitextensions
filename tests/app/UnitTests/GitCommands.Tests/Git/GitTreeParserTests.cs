@@ -6,19 +6,18 @@ public class GitTreeParserTests
 {
     private IGitTreeParser _parser = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitTreeParserTests()
     {
         _parser = new GitTreeParser();
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_return_empty_if_null()
     {
         _parser.Parse(null).Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void Parse_should_return_the_list()
     {
         List<GitItem> items = [.. _parser.Parse(GetLsTreeOutput())];
@@ -46,22 +45,23 @@ public class GitTreeParserTests
         items[11].ObjectType.Should().Be(GitObjectType.Commit);
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("Hello World")]
-    [TestCase("ZZZZZZ blob 0000000000000000000000000000000000000000\tREADME.md")]
-    [TestCase("100644 blob 000000000000000000000000000000000000000\tREADME.md")]
-    [TestCase("100644 blob 00000000000000000000000000000000000000000\tREADME.md")]
-    [TestCase("100644 ZZZZ 00000000000000000000000000000000000000000\tREADME.md")]
-    [TestCase("1006444 blob 0000000000000000000000000000000000000000\tREADME.md")]
-    [TestCase("10064 blob 0000000000000000000000000000000000000000\tREADME.md")]
-    [TestCase("100644 blob 960498876e233a6119e20fc73171bca2e26f57c0 space")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Hello World")]
+    [InlineData("ZZZZZZ blob 0000000000000000000000000000000000000000\tREADME.md")]
+    [InlineData("100644 blob 000000000000000000000000000000000000000\tREADME.md")]
+    [InlineData("100644 blob 00000000000000000000000000000000000000000\tREADME.md")]
+    [InlineData("100644 ZZZZ 00000000000000000000000000000000000000000\tREADME.md")]
+    [InlineData("1006444 blob 0000000000000000000000000000000000000000\tREADME.md")]
+    [InlineData("10064 blob 0000000000000000000000000000000000000000\tREADME.md")]
+    [InlineData("100644 blob 960498876e233a6119e20fc73171bca2e26f57c0 space")]
     public void ParseSingle_should_return_null_if_input_invalid(string? s)
     {
         _parser.ParseSingle(s).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void ParseSingle_should_return_GitItem()
     {
         const string s = "100644 blob 25d7b5d771e84982a3dfd8bd537531d8fb45d491\t.editorconfig";
@@ -91,7 +91,7 @@ public class GitTreeParserTests
             "040000 tree 0c7cce8981b980d03431f65b9b54c680a467fa2e\tBuild");
     }
 
-    [Test]
+    [Fact]
     public void ParseLsFiles_should_return_the_list()
     {
         List<GitItem> items = [.. _parser.ParseLsFiles(GetLsFilesOutput())];

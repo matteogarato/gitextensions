@@ -11,14 +11,13 @@ public class GpgInfoProviderTests
     private IGitGpgController _gitGpgController = null!;
     private GpgInfoProvider _provider = null!;
 
-    [SetUp]
-    public void Setup()
+    public GpgInfoProviderTests()
     {
         _gitGpgController = Substitute.For<IGitGpgController>();
         _provider = new GpgInfoProvider(_gitGpgController);
     }
 
-    [Test]
+    [Fact]
     public async Task LoadGpgInfoAsync_should_throw_if_already_cancelled_before_querying_git()
     {
         GitRevision revision = new(ObjectId.Random());
@@ -42,7 +41,7 @@ public class GpgInfoProviderTests
         await _gitGpgController.DidNotReceive().GetRevisionTagSignatureStatusAsync(Arg.Any<GitRevision>());
     }
 
-    [Test]
+    [Fact]
     public async Task LoadGpgInfoAsync_should_throw_when_cancelled_by_a_newer_selection_while_git_calls_are_in_flight()
     {
         // Simulates the FormBrowse race this guards against: a slower, now-stale request

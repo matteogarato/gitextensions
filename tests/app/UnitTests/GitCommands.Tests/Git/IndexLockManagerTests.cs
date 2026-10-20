@@ -20,8 +20,7 @@ public class IndexLockManagerTests
     private IGitModule _module = null!;
     private IIndexLockManager _manager = null!;
 
-    [SetUp]
-    public void Setup()
+    public IndexLockManagerTests()
     {
         _gitFile = Path.Combine(_workingDir, ".git");
         _gitWorkingDir = _gitFile.EnsureTrailingPathSeparator();
@@ -42,8 +41,9 @@ public class IndexLockManagerTests
         _manager = new IndexLockManager(_module, _gitDirectoryResolver, _fileSystem);
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void IsIndexLocked(bool fileExists)
     {
         _file.Exists(Arg.Any<string>()).Returns(fileExists);
@@ -51,7 +51,7 @@ public class IndexLockManagerTests
         _manager.IsIndexLocked().Should().Be(fileExists);
     }
 
-    [Test]
+    [Fact]
     public void UnlockIndex_should_only_delete_working_folder_lock_if_requested()
     {
         _manager.UnlockIndex(false);
@@ -59,7 +59,7 @@ public class IndexLockManagerTests
         _module.DidNotReceive().GetSubmodulesLocalPaths();
     }
 
-    [Test]
+    [Fact]
     public void UnlockIndex_should_not_delete_lock_if_absent()
     {
         _file.Exists(_indexLockFile).Returns(false);
@@ -70,7 +70,7 @@ public class IndexLockManagerTests
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
 
-    [Test]
+    [Fact]
     public void UnlockIndex_should_only_delete_lock_if_exists()
     {
         _file.Exists(_indexLockFile).Returns(true);
@@ -82,7 +82,7 @@ public class IndexLockManagerTests
         _file.Received(1).Delete(_indexLockFile);
     }
 
-    [Test]
+    [Fact]
     public void UnlockIndex_should_throw_if_delete_fails()
     {
         _file.Exists(_indexLockFile).Returns(true);
@@ -97,8 +97,7 @@ public class IndexLockManagerTests
         _file.Received(1).Delete(_indexLockFile);
     }
 
-    [Platform(Include = "Win")]
-    [Test]
+    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
     public void UnlockIndex_should_delete_submodule_locks_if_requested()
     {
         _file.Exists(_indexLockFile).Returns(true);
@@ -124,7 +123,7 @@ public class IndexLockManagerTests
         _file.DidNotReceive().Delete(submoduleNBugIndexLock);
     }
 
-    [Test]
+    [Fact]
     public void Resolve_submodule_real_filesystem()
     {
         using GitModuleTestHelper helper = new();

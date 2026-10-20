@@ -5,8 +5,7 @@ using NSubstitute;
 using ResourceManager;
 
 namespace GitUITests.LeftPanel;
-[Apartment(ApartmentState.STA)]
-public class GitRefMenuItemsTest
+public class GitRefMenuItemsTest : IDisposable
 {
     private const int expectedMenuItems = 7;
     private const int expectedTotal = expectedMenuItems + 1; // + end separator
@@ -14,8 +13,7 @@ public class GitRefMenuItemsTest
     private IMenuItemFactory _factory = null!;
     private TestBranchNode _testNode = new();
 
-    [SetUp]
-    public void Setup()
+    public GitRefMenuItemsTest()
     {
         _factory = Substitute.For<IMenuItemFactory>();
         _factory.CreateMenuItem<ToolStripMenuItem, TestBranchNode>(
@@ -28,8 +26,7 @@ public class GitRefMenuItemsTest
         Enumerable.Range(0, expectedMenuItems).ForEach(_ => _factoryQueue.Enqueue(new ToolStripMenuItem()));
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         while (_factoryQueue.Count > 0)
         {
@@ -37,7 +34,7 @@ public class GitRefMenuItemsTest
         }
     }
 
-    [Test]
+    [StaFact]
     public void WithInactiveLocalBranch_HasAllMenuItems()
     {
         // Arrange
@@ -46,7 +43,7 @@ public class GitRefMenuItemsTest
         WithRefMenu_HasAllItems(group);
     }
 
-    [Test]
+    [StaFact]
     public void WithRemoteBranch_HasAllMenuItems()
     {
         // Arrange
@@ -55,7 +52,7 @@ public class GitRefMenuItemsTest
         WithRefMenu_HasAllItems(group);
     }
 
-    [Test]
+    [StaFact]
     public void WithTagNode_HasAllMenuItems()
     {
         // Arrange
@@ -84,7 +81,7 @@ public class GitRefMenuItemsTest
         AssertItem(menuItems[testIndex++], nameof(TestBranchNode.Delete));
     }
 
-    [Test]
+    [StaFact]
     public void WithCurrentLocalBranch_HavingDisabledItems()
     {
         // Arrange

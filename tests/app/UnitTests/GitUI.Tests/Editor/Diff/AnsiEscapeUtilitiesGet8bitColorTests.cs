@@ -3,7 +3,7 @@
 namespace GitUITests.Editor.Diff;
 public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
 {
-    [Test]
+    [Fact]
     public void Get8bitColor_ShouldReturnBuiltinThemeColors()
     {
         for (int colorId = 0; colorId < 8; ++colorId)
@@ -29,7 +29,7 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
         }
     }
 
-    [Test]
+    [Fact]
     public void Get8bitColor_ShouldReturnCorrect6bitColor()
     {
         for (int i = 16; i < 232; ++i)
@@ -64,7 +64,7 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
         }
     }
 
-    [Test]
+    [Fact]
     public void Get8bitColor_ShouldReturnCorrect4bitGrey()
     {
         for (int i = 232; i <= 255; ++i)
@@ -92,7 +92,7 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
         }
     }
 
-    [Test]
+    [Fact]
     public void Get8bitColor_ShouldThrowException_WhenColorCodeIsOutOfRange()
     {
         int colorCode = 256;

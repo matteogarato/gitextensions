@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitUI.WorkingTreePanel">
+  <DockPanel>
+    <TabControl x:Name="statusTabs">
+      <TabItem x:Name="unstagedTab">
+        <DockPanel Margin="4">
+          <Button x:Name="btnStageSelected" DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="0,0,0,4" />
+          <ListBox x:Name="lstUnstaged" SelectionMode="Multiple" />
+        </DockPanel>
+      </TabItem>
+      <TabItem x:Name="stagedTab">
+        <DockPanel Margin="4">
+          <Button x:Name="btnUnstageSelected" DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="0,0,0,4" />
+          <ListBox x:Name="lstStaged" SelectionMode="Multiple" />
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

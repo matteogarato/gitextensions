@@ -3,37 +3,40 @@
 namespace GitCommandsTests.Settings;
 public class FileSettingsCacheTests
 {
-    [SetUp]
-    public void Setup()
+    public FileSettingsCacheTests()
     {
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("boo")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("boo")]
     public void ctor_FileWatcher_Path_should_not_set_if_invalid_dir(string? settingsFilePath)
     {
         new MockFileSettingsCache(settingsFilePath!, false).GetTestAccessor().FileSystemWatcher.Path.Should().BeNullOrEmpty();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("boo")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("boo")]
     public void ctor_FileWatcher_Filter_should_be_default_if_invalid_dir(string? settingsFilePath)
     {
         new MockFileSettingsCache(settingsFilePath!, false).GetTestAccessor().FileSystemWatcher.Filter.Should().Be("*");
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("boo")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("boo")]
     public void ctor_FileWatcher_EnableRaisingEvents_should_be_false_if_invalid_dir(string? settingsFilePath)
     {
         new MockFileSettingsCache(settingsFilePath!, false).GetTestAccessor().FileSystemWatcher.EnableRaisingEvents.Should().BeFalse();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
     public void SaveImpl_should_throw_if_invalid_path(string? settingsFilePath)
     {
         FileSettingsCache.TestAccessor cache = new MockFileSettingsCache(settingsFilePath!, false).GetTestAccessor();
@@ -41,7 +44,7 @@ public class FileSettingsCacheTests
         ((Action)(() => cache.SaveImpl())).Should().Throw<SaveSettingsException>();
     }
 
-    [Test]
+    [Fact]
     public void SaveImpl_should_create_folder_if_absent()
     {
         string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -74,8 +77,9 @@ public class FileSettingsCacheTests
         }
     }
 
-    [TestCase(true, ".unreadable")]
-    [TestCase(false, ".backup")]
+    [Theory]
+    [InlineData(true, ".unreadable")]
+    [InlineData(false, ".backup")]
     public void SaveImpl_should_preserve_a_settings_file_which_could_not_be_read(bool readFails, string expectedExtension)
     {
         string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

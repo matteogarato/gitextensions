@@ -1,12 +1,13 @@
 ﻿using ResourceManager;
 
 namespace ResourceManagerTests;
-internal class LinkFactoryTests
+public class LinkFactoryTests
 {
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase(" ")]
-    [TestCase("no link")]
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("no link")]
     public void ParseInvalidLink(string? link)
     {
         LinkFactory linkFactory = new();
@@ -14,7 +15,7 @@ internal class LinkFactoryTests
         actualUri.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void ParseGoToBranchLink()
     {
         LinkFactory linkFactory = new();
@@ -24,7 +25,7 @@ internal class LinkFactoryTests
         actualUri!.AbsoluteUri.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void ParseGoToBranchLinkWithHash()
     {
         LinkFactory linkFactory = new();
@@ -34,6 +35,7 @@ internal class LinkFactoryTests
         actualUri!.AbsoluteUri.Should().Be(expected);
     }
 
+    [Fact]
     public void ParseGoToBranchLinkWithDetachedHead()
     {
         const string linkCaption = "(HEAD detached at 178264)";
@@ -53,19 +55,19 @@ internal class LinkFactoryTests
         actualUri!.AbsoluteUri.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void ParseMailTo()
     {
         TestCreateLink("Janusz Białobrzewski <jbialobr@o2.pl>", "mailto:jbialobr@o2.pl");
     }
 
-    [Test]
+    [Fact]
     public void ParseHttpLinkWithHash()
     {
         TestCreateLink("#3471", "https://github.com/gitextensions/gitextensions/pull/3471#end");
     }
 
-    [Test]
+    [Fact]
     public void ParseRawHttpLinkWithHash()
     {
         LinkFactory linkFactory = new();
@@ -75,13 +77,13 @@ internal class LinkFactoryTests
         actualUri!.AbsoluteUri.Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void ParseCustomSchemeLinkWithHash()
     {
         TestCreateLink("PR#3471 and Issue#64", "ftp://github.com/gitextensions/gitextensions/pull/3471#end");
     }
 
-    [Test]
+    [Fact]
     public void ParseInternalScheme_Null()
     {
         LinkFactory linkFactory = new();
@@ -89,10 +91,11 @@ internal class LinkFactoryTests
         actualCommandEventArgs.Should().BeNull();
     }
 
-    [TestCase("slkldfjdfkj:fkjsd")]
-    [TestCase("slkldfjdfkj://fkjsd")]
-    [TestCase("slkldfjdfkj://")]
-    [TestCase("http://x")]
+    [Theory]
+    [InlineData("slkldfjdfkj:fkjsd")]
+    [InlineData("slkldfjdfkj://fkjsd")]
+    [InlineData("slkldfjdfkj://")]
+    [InlineData("http://x")]
     public void ParseInternalScheme_None(string? link)
     {
         LinkFactory linkFactory = new();
@@ -101,14 +104,15 @@ internal class LinkFactoryTests
         actualCommandEventArgs.Should().BeNull();
     }
 
-    [TestCase("gitext://command/data", "command", "data")]
-    [TestCase("gitext://command/data/more", "command", "data/more")]
-    [TestCase("gitext://", "", "")]
-    [TestCase("gitext://command", "command", "")]
-    [TestCase("gitext://command/", "command", "")]
-    [TestCase("gitext://command/d", "command", "d")]
-    [TestCase("gitext://command/d/", "command", "d/")]
-    [TestCase("gitext:not/an/internal/link", "", "not/an/internal/link")]
+    [Theory]
+    [InlineData("gitext://command/data", "command", "data")]
+    [InlineData("gitext://command/data/more", "command", "data/more")]
+    [InlineData("gitext://", "", "")]
+    [InlineData("gitext://command", "command", "")]
+    [InlineData("gitext://command/", "command", "")]
+    [InlineData("gitext://command/d", "command", "d")]
+    [InlineData("gitext://command/d/", "command", "d/")]
+    [InlineData("gitext:not/an/internal/link", "", "not/an/internal/link")]
     public void ParseInternalScheme(string? link, string? expectedCommand, string? expectedData)
     {
         LinkFactory linkFactory = new();
@@ -118,12 +122,13 @@ internal class LinkFactoryTests
         actualCommandEventArgs.Data.Should().Be(expectedData);
     }
 
-    [TestCase("gitext://command/data", "command", "data", null, "", false, true)]
-    [TestCase("gitext://command/data", "command", "data", null, "", false, false)]
-    [TestCase("gitext://showall/what", null, null, "what", "", true, false)]
-    [TestCase("gitext://showall/what", null, null, "what", "", false, false)]
-    [TestCase("gitext://command/data", null, null, null, "unexpected internal link: gitext://command/data", true, false)]
-    [TestCase("gitext://showall/what", null, null, null, "unexpected internal link: gitext://showall/what", false, true)]
+    [Theory]
+    [InlineData("gitext://command/data", "command", "data", null, "", false, true)]
+    [InlineData("gitext://command/data", "command", "data", null, "", false, false)]
+    [InlineData("gitext://showall/what", null, null, "what", "", true, false)]
+    [InlineData("gitext://showall/what", null, null, "what", "", false, false)]
+    [InlineData("gitext://command/data", null, null, null, "unexpected internal link: gitext://command/data", true, false)]
+    [InlineData("gitext://showall/what", null, null, null, "unexpected internal link: gitext://showall/what", false, true)]
     public void ExecuteLink(string? link,
         string? expectedCommand,
         string? expectedData,

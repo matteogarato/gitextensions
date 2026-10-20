@@ -9,8 +9,7 @@ public class CommitDataManagerTest
     private IGitModule _module = null!;
     private Func<IGitModule> _getModule = null!;
 
-    [SetUp]
-    public void Setup()
+    public CommitDataManagerTest()
     {
         _module = Substitute.For<IGitModule>();
         _module.ReEncodeStringFromLossless(Arg.Any<string>()).Returns(x => x[0]);

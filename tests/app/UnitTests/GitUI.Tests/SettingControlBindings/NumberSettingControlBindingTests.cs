@@ -5,13 +5,12 @@ using NSubstitute;
 
 namespace GitUITests.SettingControlBindings;
 
-[TestFixture]
 public sealed class NumberSettingControlBindingTests
 {
     private const string SettingName = "TestSetting";
     private const int DefaultValue = 42;
 
-    [Test]
+    [Fact]
     public void CreateControlBinding_TextBox_SaveSetting_should_set_null_when_TextBox_is_empty()
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -26,7 +25,7 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.Received(1).SetValue(SettingName, null);
     }
 
-    [Test]
+    [Fact]
     public void CreateControlBinding_TextBox_LoadSetting_should_show_default_value_when_nothing_stored_at_effective_level()
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -42,9 +41,12 @@ public sealed class NumberSettingControlBindingTests
         textBox.Text.Should().Be(DefaultValue.ToString());
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(
-        [Values(SettingLevel.Global, SettingLevel.Local, SettingLevel.Distributed)] SettingLevel settingLevel)
+    [Theory]
+    [InlineData(SettingLevel.Global)]
+    [InlineData(SettingLevel.Local)]
+    [InlineData(SettingLevel.Distributed)]
+
+    public void CreateControlBinding_TextBox_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(SettingLevel settingLevel)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new();
@@ -59,7 +61,7 @@ public sealed class NumberSettingControlBindingTests
         textBox.Text.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void CreateControlBinding_TextBox_SaveSetting_should_not_write_when_TextBox_shows_default_value_at_effective_level()
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -76,9 +78,13 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string?>());
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_LoadSetting_should_show_stored_value_at_effective_level(
-        [Values(0, 1, 99, int.MaxValue)] int storedValue)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(99)]
+    [InlineData(int.MaxValue)]
+
+    public void CreateControlBinding_TextBox_LoadSetting_should_show_stored_value_at_effective_level(int storedValue)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new();
@@ -93,9 +99,13 @@ public sealed class NumberSettingControlBindingTests
         textBox.Text.Should().Be(storedValue.ToString());
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_SaveSetting_should_write_valid_number(
-        [Values(0, 1, 99, int.MaxValue)] int value)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(99)]
+    [InlineData(int.MaxValue)]
+
+    public void CreateControlBinding_TextBox_SaveSetting_should_write_valid_number(int value)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new();
@@ -109,9 +119,12 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.Received(1).SetValue(SettingName, value.ToString());
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_should_set_red_background_when_text_changes_to_invalid(
-        [Values("abc", "1.5", "1e3")] string invalidText)
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("1.5")]
+    [InlineData("1e3")]
+
+    public void CreateControlBinding_TextBox_should_set_red_background_when_text_changes_to_invalid(string invalidText)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new();
@@ -124,9 +137,12 @@ public sealed class NumberSettingControlBindingTests
         textBox.ForeColor.Should().Be(ColorHelper.GetTextColor(OtherColors.BrightRed));
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_SaveSetting_should_store_null_on_invalid_input(
-        [Values("abc", "1.5", "1e3")] string invalidText)
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("1.5")]
+    [InlineData("1e3")]
+
+    public void CreateControlBinding_TextBox_SaveSetting_should_store_null_on_invalid_input(string invalidText)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new();
@@ -140,9 +156,13 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.Received(1).SetValue(SettingName, null);
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_should_restore_background_when_text_changes_to_valid(
-        [Values(0, 1, 99, int.MaxValue)] int value)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(99)]
+    [InlineData(int.MaxValue)]
+
+    public void CreateControlBinding_TextBox_should_restore_background_when_text_changes_to_valid(int value)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new() { BackColor = Color.Red, ForeColor = Color.WhiteSmoke };
@@ -155,9 +175,13 @@ public sealed class NumberSettingControlBindingTests
         textBox.ForeColor.Should().Be(SystemColors.WindowText);
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_LoadSetting_should_restore_background(
-        [Values(SettingLevel.Global, SettingLevel.Local, SettingLevel.Distributed, SettingLevel.Effective)] SettingLevel settingLevel)
+    [Theory]
+    [InlineData(SettingLevel.Global)]
+    [InlineData(SettingLevel.Local)]
+    [InlineData(SettingLevel.Distributed)]
+    [InlineData(SettingLevel.Effective)]
+
+    public void CreateControlBinding_TextBox_LoadSetting_should_restore_background(SettingLevel settingLevel)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new() { BackColor = Color.Red, ForeColor = Color.WhiteSmoke };
@@ -173,9 +197,12 @@ public sealed class NumberSettingControlBindingTests
         textBox.ForeColor.Should().Be(SystemColors.WindowText);
     }
 
-    [Test]
-    public void CreateControlBinding_TextBox_SaveSetting_should_write_default_value_at_non_effective_level(
-        [Values(SettingLevel.Global, SettingLevel.Local, SettingLevel.Distributed)] SettingLevel settingLevel)
+    [Theory]
+    [InlineData(SettingLevel.Global)]
+    [InlineData(SettingLevel.Local)]
+    [InlineData(SettingLevel.Distributed)]
+
+    public void CreateControlBinding_TextBox_SaveSetting_should_write_default_value_at_non_effective_level(SettingLevel settingLevel)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using TextBox textBox = new();
@@ -190,7 +217,7 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.Received(1).SetValue(SettingName, DefaultValue.ToString());
     }
 
-    [Test]
+    [Fact]
     public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_default_value_when_nothing_stored_at_effective_level()
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -206,9 +233,12 @@ public sealed class NumberSettingControlBindingTests
         numericUpDown.Value.Should().Be(DefaultValue);
     }
 
-    [Test]
-    public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(
-        [Values(SettingLevel.Global, SettingLevel.Local, SettingLevel.Distributed)] SettingLevel settingLevel)
+    [Theory]
+    [InlineData(SettingLevel.Global)]
+    [InlineData(SettingLevel.Local)]
+    [InlineData(SettingLevel.Distributed)]
+
+    public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(SettingLevel settingLevel)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
@@ -223,9 +253,13 @@ public sealed class NumberSettingControlBindingTests
         numericUpDown.Text.Should().BeEmpty();
     }
 
-    [Test]
-    public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_stored_value(
-        [Values(SettingLevel.Global, SettingLevel.Local, SettingLevel.Distributed, SettingLevel.Effective)] SettingLevel settingLevel)
+    [Theory]
+    [InlineData(SettingLevel.Global)]
+    [InlineData(SettingLevel.Local)]
+    [InlineData(SettingLevel.Distributed)]
+    [InlineData(SettingLevel.Effective)]
+
+    public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_stored_value(SettingLevel settingLevel)
     {
         const int StoredValue = 99;
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -241,7 +275,7 @@ public sealed class NumberSettingControlBindingTests
         numericUpDown.Value.Should().Be(StoredValue);
     }
 
-    [Test]
+    [Fact]
     public void CreateControlBinding_NumericUpDown_SaveSetting_should_set_null_when_control_is_empty()
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -256,7 +290,7 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.Received(1).SetValue(SettingName, null);
     }
 
-    [Test]
+    [Fact]
     public void CreateControlBinding_NumericUpDown_SaveSetting_should_not_write_when_control_shows_default_value_at_effective_level()
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
@@ -273,9 +307,13 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string?>());
     }
 
-    [Test]
-    public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_value_at_effective_level(
-        [Values(0, 1, 99, int.MaxValue)] int value)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(99)]
+    [InlineData(int.MaxValue)]
+
+    public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_value_at_effective_level(int value)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
@@ -293,9 +331,12 @@ public sealed class NumberSettingControlBindingTests
         settingsSource.Received(1).SetValue(SettingName, value.ToString());
     }
 
-    [Test]
-    public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_default_value_at_non_effective_level(
-        [Values(SettingLevel.Global, SettingLevel.Local, SettingLevel.Distributed)] SettingLevel settingLevel)
+    [Theory]
+    [InlineData(SettingLevel.Global)]
+    [InlineData(SettingLevel.Local)]
+    [InlineData(SettingLevel.Distributed)]
+
+    public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_default_value_at_non_effective_level(SettingLevel settingLevel)
     {
         NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };

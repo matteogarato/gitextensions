@@ -1,0 +1,21 @@
+<Project>
+  <Target Name="ValidateAvaloniaDoesNotReferenceWinForms" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <_AvaloniaWinFormsAssembly Include="@(ReferencePath)"
+                                 Condition="'%(ReferencePath.Filename)' == 'System.Windows.Forms'" />
+      <_AvaloniaWindowsDesktopReference Include="@(FrameworkReference)"
+                                        Condition="'%(FrameworkReference.Identity)' == 'Microsoft.WindowsDesktop.App.WindowsForms'" />
+      <_AvaloniaLegacyUiProject Include="@(ProjectReference)"
+                                Condition="'%(ProjectReference.Filename)' == 'GitUI' or '%(ProjectReference.Filename)' == 'GitExtensions'" />
+    </ItemGroup>
+
+    <Error Condition="'$(UseWindowsForms)' == 'true'"
+           Text="Avalonia projects and their shared targets must not enable UseWindowsForms." />
+    <Error Condition="'@(_AvaloniaWinFormsAssembly)' != ''"
+           Text="Avalonia projects and their shared targets must not reference System.Windows.Forms." />
+    <Error Condition="'@(_AvaloniaWindowsDesktopReference)' != ''"
+           Text="Avalonia projects and their shared targets must not reference the Windows Forms desktop framework." />
+    <Error Condition="'@(_AvaloniaLegacyUiProject)' != ''"
+           Text="Avalonia projects and their shared targets must not reference the legacy GitUI or GitExtensions projects." />
+  </Target>
+</Project>

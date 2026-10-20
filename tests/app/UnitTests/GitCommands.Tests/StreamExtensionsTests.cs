@@ -5,36 +5,37 @@ public sealed class StreamExtensionsTests
 {
     private const byte nil = 0;
 
-    [TestCase(
+    [Theory]
+    [InlineData(
         new byte[] { })]
-    [TestCase(
+    [InlineData(
         new byte[] { 1 },
         new byte[] { 1 })]
-    [TestCase(
+    [InlineData(
         new byte[] { nil },
         new byte[0])]
-    [TestCase(
+    [InlineData(
         new byte[] { nil, nil },
         new byte[0], new byte[0])]
-    [TestCase(
+    [InlineData(
         new byte[] { 1, 2, 3, 4, 5, 6 },
         new byte[] { 1, 2, 3, 4, 5, 6 })]
-    [TestCase(
+    [InlineData(
         new byte[] { 2, 3, 4, 5, 6, nil },
         new byte[] { 2, 3, 4, 5, 6 })]
-    [TestCase(
+    [InlineData(
         new byte[] { nil, 1, 2, 3, 4, 5, 6 },
         new byte[0], new byte[] { 1, 2, 3, 4, 5, 6 })]
-    [TestCase(
+    [InlineData(
         new byte[] { 1, 2, 3, nil, 4, 5, 6 },
         new byte[] { 1, 2, 3 }, new byte[] { 4, 5, 6 })]
-    [TestCase(
+    [InlineData(
         new byte[] { 1, 2, 3, nil, nil, 4, 5, 6 },
         new byte[] { 1, 2, 3 }, new byte[0], new byte[] { 4, 5, 6 })]
-    [TestCase(
+    [InlineData(
         new byte[] { 1, 2, 3, nil, 4, 5, 6, nil, 7, 8, 9 },
         new byte[] { 1, 2, 3 }, new byte[] { 4, 5, 6 }, new byte[] { 7, 8, 9 })]
-    [TestCase(
+    [InlineData(
         new byte[] { nil, 1, nil, 2, 3, nil, 4, 5, 6, nil, 7, 8, 9, 10 },
         new byte[0], new byte[] { 1 }, new byte[] { 2, 3 }, new byte[] { 4, 5, 6 }, new byte[] { 7, 8, 9, 10 })]
     public void ReadNullTerminatedLines(byte[] input, params byte[][] expectedChunks)

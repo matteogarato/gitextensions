@@ -1,25 +1,40 @@
-﻿using GitUI;
+﻿using System.Globalization;
+using GitUI;
 
 namespace GitExtUtilsTests;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class TableLayoutPanelExtensionsTests
+public class TableLayoutPanelExtensionsTests : IDisposable
 {
-    [Test]
+    private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
+
+    public TableLayoutPanelExtensionsTests()
+    {
+        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentCulture = testCulture;
+        CultureInfo.CurrentUICulture = testCulture;
+    }
+
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUICulture;
+    }
+
+    [StaFact]
     public void AdjustWidthToSize_should_throw_if_table_null()
     {
         ((Action)(() => ((TableLayoutPanel)null!).AdjustWidthToSize(0, []))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [StaFact]
     public void AdjustWidthToSize_should_throw_if_table_has_no_columns()
     {
         ((Action)(() => new TableLayoutPanel().AdjustWidthToSize(0, []))).Should().Throw<ArgumentException>()
             .WithMessage("The table must have at least one column");
     }
 
-    [Test]
+    [StaFact]
     public void AdjustWidthToSize_should_throw_if_index_outside_table_columns_count()
     {
         using TableLayoutPanel table = new()
@@ -32,7 +47,7 @@ public class TableLayoutPanelExtensionsTests
             .WithMessage("Column index must be within [0, 2] range (Parameter 'columnIndex')\nActual value was 3.");
     }
 
-    [Test]
+    [StaFact]
     public void AdjustWidthToSize_should_throw_if_no_widths_given()
     {
         using TableLayoutPanel table = new()
@@ -42,7 +57,7 @@ public class TableLayoutPanelExtensionsTests
         ((Action)(() => table.AdjustWidthToSize(0, null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [StaFact]
     public void AdjustWidthToSize_should_throw_if_no_widths_given1()
     {
         using TableLayoutPanel table = new()
@@ -53,7 +68,7 @@ public class TableLayoutPanelExtensionsTests
             .WithMessage("At least one control is required (Parameter 'controls')");
     }
 
-    [Test]
+    [Fact]
     public void AdjustWidthToSize_should_set_width_to_largest_value()
     {
         using TableLayoutPanel table = new()

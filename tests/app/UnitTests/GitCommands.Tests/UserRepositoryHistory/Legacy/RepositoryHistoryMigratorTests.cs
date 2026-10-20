@@ -10,21 +10,20 @@ public class RepositoryHistoryMigratorTests
     private IRepositoryStorage _repositoryStorage = null!;
     private RepositoryHistoryMigrator _historyMigrator = null!;
 
-    [SetUp]
-    public void Setup()
+    public RepositoryHistoryMigratorTests()
     {
         _repositoryStorage = Substitute.For<IRepositoryStorage>();
         _historyMigrator = new RepositoryHistoryMigrator(_repositoryStorage);
     }
 
-    [Test]
+    [Fact]
     public void MigrateAsync_should_throw_if_currentHistory_null()
     {
         Func<Task> f = async () => { await _historyMigrator.MigrateAsync(null!); };
         f.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task MigrateSettings_should_migrate_old_categorised_settings()
     {
         string xml = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.CategorisedRepositories02.xml");

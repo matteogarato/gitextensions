@@ -5,25 +5,21 @@ using GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitCommandsTests;
-
-[Apartment(ApartmentState.STA)]
-public sealed class AsyncLoaderTests
+public sealed class AsyncLoaderTests : IDisposable
 {
     private AsyncLoader _loader = null!;
 
-    [SetUp]
-    public void SetUp()
+    public AsyncLoaderTests()
     {
         _loader = new AsyncLoader();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _loader.Dispose();
     }
 
-    [Test]
+    [StaFact]
     public async Task Load_should_execute_async_operation_and_callback()
     {
         SemaphoreSlim loadSignal = new(0);
@@ -55,7 +51,7 @@ public sealed class AsyncLoaderTests
         task.Status.Should().Be(TaskStatus.RanToCompletion);
     }
 
-    [Test]
+    [StaFact]
     public async Task Load_performed_on_thread_pool_and_result_handled_via_callers_context()
     {
         Thread callerThread = Thread.CurrentThread;
@@ -74,7 +70,7 @@ public sealed class AsyncLoaderTests
         continuationThread.Should().NotBeSameAs(loadThread);
     }
 
-    [Test]
+    [StaFact]
     public async Task Cancel_during_load_means_callback_not_fired()
     {
         SemaphoreSlim loadSignal = new(0);
@@ -107,7 +103,7 @@ public sealed class AsyncLoaderTests
         task.Status.Should().Be(TaskStatus.RanToCompletion);
     }
 
-    [Test]
+    [StaFact]
     public async Task Cancel_during_delay_means_load_not_fired()
     {
         // Deliberately use a long delay as cancellation should cut it short
@@ -134,7 +130,7 @@ public sealed class AsyncLoaderTests
         task.Status.Should().Be(TaskStatus.RanToCompletion);
     }
 
-    [Test]
+    [StaFact]
     public async Task Dispose_during_load_means_callback_not_fired()
     {
         SemaphoreSlim loadSignal = new(0);
@@ -167,7 +163,7 @@ public sealed class AsyncLoaderTests
         task.Status.Should().Be(TaskStatus.RanToCompletion);
     }
 
-    [Test]
+    [StaFact]
     public async Task Delay_causes_load_callback_to_be_deferred()
     {
         _loader.Delay = TimeSpan.FromMilliseconds(200);
@@ -181,7 +177,7 @@ public sealed class AsyncLoaderTests
         sw.Elapsed.Should().BeGreaterThanOrEqualTo(_loader.Delay - TimeSpan.FromMilliseconds(20));
     }
 
-    [Test]
+    [StaFact]
     public async Task Error_raised_via_event_and_marked_as_handled_does_not_fault_task()
     {
         List<Exception> observed = [];
@@ -196,13 +192,13 @@ public sealed class AsyncLoaderTests
 
         await _loader.LoadAsync(
             () => throw ex,
-            Assert.Fail);
+            () => Assert.Fail("The load callback should not run after an error."));
 
         observed.Count.Should().Be(1);
         observed[0].Should().BeSameAs(ex);
     }
 
-    [Test]
+    [StaFact]
     public void Error_raised_via_event_when_no_error_handler_installed_faults_task()
     {
         Exception ex = new();
@@ -210,14 +206,14 @@ public sealed class AsyncLoaderTests
         JoinableTask loadTask = ThreadHelper.JoinableTaskFactory.RunAsync(() =>
             _loader.LoadAsync(
                 loadContent: () => throw ex,
-                onLoaded: Assert.Fail));
+                onLoaded: () => Assert.Fail("The load callback should not run after an error.")));
 
         Action act = () => loadTask.Join();
         Exception oe = act.Should().Throw<Exception>().Which;
         ex.Should().BeSameAs(oe);
     }
 
-    [Test]
+    [StaFact]
     public void Error_raised_via_event_and_not_marked_as_handled_faults_task()
     {
         List<Exception> observed = [];
@@ -232,7 +228,7 @@ public sealed class AsyncLoaderTests
 
         JoinableTask loadTask = ThreadHelper.JoinableTaskFactory.RunAsync(() => _loader.LoadAsync(
             () => throw ex,
-            Assert.Fail));
+            () => Assert.Fail("The load callback should not run after an error.")));
 
         Action act = () => loadTask.Join();
         Exception oe = act.Should().Throw<Exception>().Which;
@@ -242,7 +238,7 @@ public sealed class AsyncLoaderTests
         observed[0].Should().BeSameAs(oe);
     }
 
-    [Test]
+    [StaFact]
     public async Task Using_load_or_cancel_after_dispose_throws()
     {
         AsyncLoader loader = new();

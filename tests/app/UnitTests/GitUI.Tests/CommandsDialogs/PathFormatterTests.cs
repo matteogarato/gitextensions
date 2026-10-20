@@ -3,15 +3,14 @@ using GitUI;
 
 namespace GitUITests.CommandsDialogs;
 
-public class PathFormatterTests
+public class PathFormatterTests : IDisposable
 {
     private Bitmap _bitmap = null!;
     private Graphics _graphics = null!;
     private Font _font = null!;
     private TruncatePathMethod _originalTruncatePathMethod;
 
-    [SetUp]
-    public void SetUp()
+    public PathFormatterTests()
     {
         _bitmap = new Bitmap(1, 1);
         _graphics = Graphics.FromImage(_bitmap);
@@ -19,24 +18,24 @@ public class PathFormatterTests
         _originalTruncatePathMethod = AppSettings.TruncatePathMethod;
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         AppSettings.TruncatePathMethod = _originalTruncatePathMethod;
         _graphics.Dispose();
         _bitmap.Dispose();
     }
 
-    [TestCase("name.ext", null, TruncatePathMethod.None, int.MaxValue, null, "name.ext", null)]
-    [TestCase("path/name.ext", null, TruncatePathMethod.None, int.MaxValue, "path/", "name.ext", null)]
-    [TestCase("name.ext", "old.ext", TruncatePathMethod.None, int.MaxValue, null, "name.ext", " (old.ext)")]
-    [TestCase("path/name.ext", "old/old.ext", TruncatePathMethod.None, int.MaxValue, "path/", "name.ext", " (old/old.ext)")]
-    [TestCase("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, int.MaxValue, "path/", "name.ext", " (old/old.ext)")]
-    [TestCase("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, 1, null, "...", null)]
-    [TestCase("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, 18, null, "...", null)]
-    [TestCase("name.ext", null, TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", null)]
-    [TestCase("path/name.ext", null, TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", null)]
-    [TestCase("path/name.ext", "old/old.ext", TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", " (old.ext)")]
+    [Theory]
+    [InlineData("name.ext", null, TruncatePathMethod.None, int.MaxValue, null, "name.ext", null)]
+    [InlineData("path/name.ext", null, TruncatePathMethod.None, int.MaxValue, "path/", "name.ext", null)]
+    [InlineData("name.ext", "old.ext", TruncatePathMethod.None, int.MaxValue, null, "name.ext", " (old.ext)")]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.None, int.MaxValue, "path/", "name.ext", " (old/old.ext)")]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, int.MaxValue, "path/", "name.ext", " (old/old.ext)")]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, 1, null, "...", null)]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, 18, null, "...", null)]
+    [InlineData("name.ext", null, TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", null)]
+    [InlineData("path/name.ext", null, TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", null)]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", " (old.ext)")]
     public void FormatTextForDrawing_returns_expected_for_method(
         string name,
         string? oldName,
@@ -52,7 +51,7 @@ public class PathFormatterTests
         formatter.FormatTextForDrawing(maxWidth, name, oldName).Should().Be((expectedPrefix, expectedText, expectedSuffix));
     }
 
-    [Test]
+    [Fact]
     public void FormatTextForDrawing_TrimStart_with_empty_name_returns_null_prefix_empty_text_and_oldName_suffix()
     {
         // When name is empty and oldName differs, even a low maxWidth accommodates
@@ -65,7 +64,7 @@ public class PathFormatterTests
         formatter.FormatTextForDrawing(maxWidth, string.Empty, oldName).Should().Be((null, string.Empty, $" ({oldName})"));
     }
 
-    [Test]
+    [Fact]
     public void FormatTextForDrawing_TrimStart_non_empty_name_never_yields_empty_text()
     {
         // Even with maxWidth so small that nothing fits, a non-empty name must still
@@ -80,7 +79,7 @@ public class PathFormatterTests
         suffix.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void FormatTextForDrawing_TrimStart_truncates_suffix_before_text()
     {
         // FormatString must consume all oldName chars before touching name chars.
@@ -106,7 +105,7 @@ public class PathFormatterTests
         suffixAfter.Should().Be(" (...)", "with TrimStart the maximally-truncated oldName is still shown as '...'");
     }
 
-    [Test]
+    [Fact]
     public void FormatTextForDrawing_TrimStart_truncates_name_independently_of_oldName()
     {
         // Verify name and oldName are truncated by their respective counters (not swapped).
@@ -124,52 +123,55 @@ public class PathFormatterTests
         suffix.Should().Be($" ({oldName})");
     }
 
-    [TestCase("new.ext", null, "new.ext", null)]
-    [TestCase("new.ext", "", "new.ext", null)]
-    [TestCase("path/new.ext", null, "new.ext", null)]
-    [TestCase("/path/new.ext", null, "new.ext", null)]
-    [TestCase("C:/path/new.ext", null, "new.ext", null)]
-    [TestCase("path\\new.ext", null, "new.ext", null)]
-    [TestCase("C:\\path\\new.ext", null, "new.ext", null)]
-    [TestCase("path/new.ext", "old.ext", "new.ext", " (old.ext)")]
-    [TestCase("path/new.ext", "oldPath/old.ext", "new.ext", " (old.ext)")]
-    [TestCase("path/new.ext", "/oldPath/old.ext", "new.ext", " (old.ext)")]
-    [TestCase("path/new.ext", "C:/oldPath/old.ext", "new.ext", " (old.ext)")]
-    [TestCase("path/new.ext", "C:\\oldPath\\old.ext", "new.ext", " (old.ext)")]
-    [TestCase("path/new.ext", "oldPath\\old.ext", "new.ext", " (old.ext)")]
+    [Theory]
+    [InlineData("new.ext", null, "new.ext", null)]
+    [InlineData("new.ext", "", "new.ext", null)]
+    [InlineData("path/new.ext", null, "new.ext", null)]
+    [InlineData("/path/new.ext", null, "new.ext", null)]
+    [InlineData("C:/path/new.ext", null, "new.ext", null)]
+    [InlineData("path\\new.ext", null, "new.ext", null)]
+    [InlineData("C:\\path\\new.ext", null, "new.ext", null)]
+    [InlineData("path/new.ext", "old.ext", "new.ext", " (old.ext)")]
+    [InlineData("path/new.ext", "oldPath/old.ext", "new.ext", " (old.ext)")]
+    [InlineData("path/new.ext", "/oldPath/old.ext", "new.ext", " (old.ext)")]
+    [InlineData("path/new.ext", "C:/oldPath/old.ext", "new.ext", " (old.ext)")]
+    [InlineData("path/new.ext", "C:\\oldPath\\old.ext", "new.ext", " (old.ext)")]
+    [InlineData("path/new.ext", "oldPath\\old.ext", "new.ext", " (old.ext)")]
     public void Test_FormatTextForFileNameOnly(string? name, string? oldName, string expectedText, string? expectedSuffix)
     {
         PathFormatter.FormatTextForFileNameOnly(name!, oldName).Should().Be((expectedText, expectedSuffix));
     }
 
-    [TestCase(null, null)]
-    [TestCase("", null)]
-    [TestCase("filename.ext", " (filename.ext)")]
-    [TestCase("/filename.ext", " (/filename.ext)")]
-    [TestCase("path/filename.ext", " (path/filename.ext)")]
-    [TestCase("nested/path/filename.ext", " (nested/path/filename.ext)")]
-    [TestCase("/nested/path/filename.ext", " (/nested/path/filename.ext)")]
-    [TestCase("path\\filename.ext", " (path\\filename.ext)")]
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", null)]
+    [InlineData("filename.ext", " (filename.ext)")]
+    [InlineData("/filename.ext", " (/filename.ext)")]
+    [InlineData("path/filename.ext", " (path/filename.ext)")]
+    [InlineData("nested/path/filename.ext", " (nested/path/filename.ext)")]
+    [InlineData("/nested/path/filename.ext", " (/nested/path/filename.ext)")]
+    [InlineData("path\\filename.ext", " (path\\filename.ext)")]
     public void Test_FormatOldName(string? oldName, string? expectedSuffix)
     {
         PathFormatter.TestAccessor.FormatOldName(oldName!).Should().Be(expectedSuffix);
     }
 
-    [TestCase(null, null, null)]
-    [TestCase("", null, "")]
-    [TestCase(" ", null, " ")]
-    [TestCase("filename.ext", null, "filename.ext")]
-    [TestCase("/filename.ext", "/", "filename.ext")]
-    [TestCase("path/filename.ext", "path/", "filename.ext")]
-    [TestCase("nested/path/filename.ext", "nested/path/", "filename.ext")]
-    [TestCase("/nested/path/filename.ext", "/nested/path/", "filename.ext")]
-    [TestCase("path\\filename.ext", null, "path\\filename.ext")]
-    [TestCase("path\\submodule.dir\\", null, "path\\submodule.dir\\")]
-    [TestCase("/", null, "/")]
-    [TestCase("submodule.dir/", null, "submodule.dir/")]
-    [TestCase("/submodule.dir/", "/", "submodule.dir/")]
-    [TestCase("path/submodule.dir/", "path/", "submodule.dir/")]
-    [TestCase("/path/submodule.dir/", "/path/", "submodule.dir/")]
+    [Theory]
+    [InlineData(null, null, null)]
+    [InlineData("", null, "")]
+    [InlineData(" ", null, " ")]
+    [InlineData("filename.ext", null, "filename.ext")]
+    [InlineData("/filename.ext", "/", "filename.ext")]
+    [InlineData("path/filename.ext", "path/", "filename.ext")]
+    [InlineData("nested/path/filename.ext", "nested/path/", "filename.ext")]
+    [InlineData("/nested/path/filename.ext", "/nested/path/", "filename.ext")]
+    [InlineData("path\\filename.ext", null, "path\\filename.ext")]
+    [InlineData("path\\submodule.dir\\", null, "path\\submodule.dir\\")]
+    [InlineData("/", null, "/")]
+    [InlineData("submodule.dir/", null, "submodule.dir/")]
+    [InlineData("/submodule.dir/", "/", "submodule.dir/")]
+    [InlineData("path/submodule.dir/", "path/", "submodule.dir/")]
+    [InlineData("/path/submodule.dir/", "/path/", "submodule.dir/")]
     public void Test_SplitPathName(string? name, string? expectedPath, string? expectedFileName)
     {
         PathFormatter.TestAccessor.SplitPathName(name!).Should().Be((expectedPath, expectedFileName));

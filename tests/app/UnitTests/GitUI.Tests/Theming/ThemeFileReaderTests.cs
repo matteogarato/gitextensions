@@ -3,7 +3,7 @@
 namespace GitUITests.Theming;
 public class ThemeFileReaderTests
 {
-    [Test]
+    [Fact]
     public void Should_return_file_text()
     {
         const string mockThemeContent = "test content";
@@ -22,10 +22,10 @@ public class ThemeFileReaderTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Should_throw_ThemeException_if_file_does_not_exist()
     {
-        string nonExistingFile = Path.Combine(TestContext.CurrentContext.TestDirectory, "non_existing_theme.css");
+        string nonExistingFile = Path.Combine(AppContext.BaseDirectory, "non_existing_theme.css");
 
         ThemeFileReader reader = new();
         reader.Invoking(_ => _.ReadThemeFile(nonExistingFile))

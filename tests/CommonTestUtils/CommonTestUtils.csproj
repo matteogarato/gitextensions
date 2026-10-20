@@ -17,7 +17,8 @@
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
     <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="NUnit" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="xunit.v3.assert" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,11 +26,6 @@
     <ProjectReference Include="..\..\src\app\GitExtUtils\GitExtUtils.csproj" />
     <ProjectReference Include="..\..\src\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj" />
     <PackageReference Include="JetBrains.Annotations" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- This project takes depedency on nUnit that adds the TestContainer capability importing NUnit.props, but this is not a test project -->
-    <ProjectCapability Remove="TestContainer" />
   </ItemGroup>
 
 </Project>

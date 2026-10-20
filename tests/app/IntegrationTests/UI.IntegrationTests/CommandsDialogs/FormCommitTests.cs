@@ -1,4 +1,3 @@
-﻿using System.Collections;
 using System.ComponentModel.Design;
 using CommonTestUtils;
 using GitCommands;
@@ -12,24 +11,24 @@ using GitUI.ScriptsEngine;
 using GitUI.UserControls;
 using ICSharpCode.TextEditor;
 using NSubstitute;
+using Xunit;
 
 namespace GitExtensions.UITests.CommandsDialogs;
 
-[Apartment(ApartmentState.STA)]
-public class FormCommitTests
+public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTestsFixture>
 {
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
 
-    // Track the original setting value
-    private bool _provideAutocompletion;
-    private bool _showAvailableDiffTools;
-
     // Created once for each test
     private GitUICommands _commands = null!;
 
-    [SetUp]
-    public void SetUp()
+    public FormCommitTests(FormCommitTestsFixture fixture)
+    {
+        InitializeTest();
+    }
+
+    private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
@@ -43,32 +42,12 @@ public class FormCommitTests
         _commands = new GitUICommands(serviceContainer, _referenceRepository.Module);
     }
 
-    [TearDown]
-    public void TearDown()
+    private void DisposeTest()
     {
         _referenceRepository.Dispose();
     }
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        // Remember the current setting...
-        _provideAutocompletion = AppSettings.ProvideAutocompletion;
-        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
-
-        // ...and stop loading auto completion and custom diff tools
-        AppSettings.ProvideAutocompletion = false;
-        AppSettings.ShowAvailableDiffTools = false;
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        AppSettings.ProvideAutocompletion = _provideAutocompletion;
-        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
-    }
-
-    [Test]
+    [WinFormsFact]
     public void Should_show_committer_info_on_open()
     {
         RunFormTest(async form =>
@@ -82,7 +61,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_not_update_committer_info_on_form_activated()
     {
         RunFormTest(async form =>
@@ -112,7 +91,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_display_branch_and_no_remote_info_in_statusbar()
     {
         string branchName = _referenceRepository.Module.GetCurrentBranchName();
@@ -130,7 +109,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_display_detached_head_info_in_statusbar()
     {
         _referenceRepository.CheckoutRevision();
@@ -153,7 +132,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_display_branch_and_remote_info_in_statusbar()
     {
         string branchName = _referenceRepository.Module.GetCurrentBranchName();
@@ -171,7 +150,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void PreserveCommitMessageOnReopen()
     {
         string generatedCommitMessage = Guid.NewGuid().ToString();
@@ -188,8 +167,9 @@ public class FormCommitTests
         });
     }
 
-    [TestCase(CommitKind.Fixup)]
-    [TestCase(CommitKind.Squash)]
+    [WinFormsTheory]
+    [InlineData(CommitKind.Fixup)]
+    [InlineData(CommitKind.Squash)]
     public void DoNotPreserveCommitMessageOnReopenFromSpecialCommit(CommitKind commitKind)
     {
         string generatedCommitMessage = Guid.NewGuid().ToString();
@@ -209,7 +189,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void PreserveCommitMessageOnReopenFromAmendCommit()
     {
         string? oldCommitMessage = _referenceRepository.Module.GetRevision().Body;
@@ -229,7 +209,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void SelectMessageFromHistory()
     {
         const string lastCommitMessage = "last commit message";
@@ -249,7 +229,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Should_handle_well_commit_message_in_commit_message_menu()
     {
         const string lastCommitMessage = "last commit message";
@@ -269,9 +249,8 @@ public class FormCommitTests
         });
     }
 
-    [SetCulture("en-US")]
-    [SetUICulture("en-US")]
-    [Test]
+    [UseCulture("en-US")]
+    [WinFormsFact]
     public void Should_stage_only_filtered_on_StageAll()
     {
         _referenceRepository.CreateRepoFile("file1A.txt", "Test");
@@ -306,9 +285,8 @@ public class FormCommitTests
         });
     }
 
-    [SetCulture("en-US")]
-    [SetUICulture("en-US")]
-    [Test]
+    [UseCulture("en-US")]
+    [WinFormsFact]
     public void Should_unstage_only_filtered_on_UnstageAll()
     {
         _referenceRepository.CreateRepoFile("file1A-Привет.txt", "Test");   // escaped and not escaped in the same string
@@ -352,7 +330,7 @@ public class FormCommitTests
         });
     }
 
-    [Test, TestCaseSource(typeof(CommitMessageTestData), nameof(CommitMessageTestData.TestCases))]
+    [WinFormsTheory, MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
     public void AddSelectionToCommitMessage_shall_be_ignored_unless_diff_is_focused(
         string message,
         int selectionStart,
@@ -366,10 +344,10 @@ public class FormCommitTests
     {
         TestAddSelectionToCommitMessage(focusSelectedDiff: false, CommitMessageTestData.SelectedText,
             message, selectionStart, selectionLength,
-            expectedResult: false, expectedMessage: message, expectedSelectionStart: selectionStart);
+            expectedResult: false, expectedMessage: expectedMessage, expectedSelectionStart: expectedSelectionStart);
     }
 
-    [Test, TestCaseSource(typeof(CommitMessageTestData), nameof(CommitMessageTestData.TestCases))]
+    [WinFormsTheory, MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
     public void AddSelectionToCommitMessage_shall_be_ignored_if_no_difftext_is_selected(
         string message,
         int selectionStart,
@@ -383,10 +361,10 @@ public class FormCommitTests
     {
         TestAddSelectionToCommitMessage(focusSelectedDiff: true, selectedText: "",
             message, selectionStart, selectionLength,
-            expectedResult: false, expectedMessage: message, expectedSelectionStart: selectionStart);
+            expectedResult: false, expectedMessage: expectedMessage, expectedSelectionStart: expectedSelectionStart);
     }
 
-    [Test, TestCaseSource(typeof(CommitMessageTestData), nameof(CommitMessageTestData.TestCases))]
+    [WinFormsTheory, MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
     public void AddSelectionToCommitMessage_shall_modify_the_commit_message(
         string message,
         int selectionStart,
@@ -399,7 +377,7 @@ public class FormCommitTests
             expectedResult: true, expectedMessage, expectedSelectionStart);
     }
 
-    [Test]
+    [WinFormsFact]
     public void EditFileToolStripMenuItem_Click_no_selection_should_not_throw()
     {
         RunFormTest(async form =>
@@ -415,7 +393,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void ResetAuthor_depends_on_amend()
     {
         RunFormTest(form =>
@@ -453,7 +431,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void ResetSoft()
     {
         AppSettings.CommitAndPushForcedWhenAmend = true;
@@ -524,7 +502,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void Dialog_remembers_window_geometry()
     {
         RunGeometryMemoryTest(
@@ -532,7 +510,7 @@ public class FormCommitTests
             (bounds1, bounds2) => bounds2.Should().Be(bounds1));
     }
 
-    [Test]
+    [WinFormsFact]
     public void MessageEdit_remembers_geometry()
     {
         RunGeometryMemoryTest(
@@ -540,7 +518,7 @@ public class FormCommitTests
             (bounds1, bounds2) => bounds2.Should().Be(bounds1));
     }
 
-    [Test]
+    [WinFormsFact]
     public void UnstagedList_remembers_geometry()
     {
         RunGeometryMemoryTest(
@@ -559,8 +537,12 @@ public class FormCommitTests
             });
     }
 
-    [Test]
-    public void Lists_must_not_select_an_item_when_a_click_gives_the_focus_back([Values] bool byMouse, [Values] bool staged)
+    [WinFormsTheory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void Lists_must_not_select_an_item_when_a_click_gives_the_focus_back(bool byMouse, bool staged)
     {
         bool expectedHasSelection = !byMouse;
 
@@ -604,7 +586,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void SelectedDiff_remembers_geometry()
     {
         RunGeometryMemoryTest(
@@ -612,8 +594,9 @@ public class FormCommitTests
             (bounds1, bounds2) => bounds2.Should().Be(bounds1));
     }
 
-    [TestCase("", 0, "feat: ", 6)]
-    [TestCase("text", 3, "feat: text", 9)]
+    [WinFormsTheory]
+    [InlineData("", 0, "feat: ", 6)]
+    [InlineData("text", 3, "feat: text", 9)]
     public void ConventionalCommit_keyword_is_prefixed_when_none(string initialText, int initialPosition,
         string expectedText, int expectedPosition)
     {
@@ -628,8 +611,9 @@ public class FormCommitTests
         });
     }
 
-    [TestCase("", 0, "feat(): ", 5)]
-    [TestCase("text", 3, "feat(): text", 5)]
+    [WinFormsTheory]
+    [InlineData("", 0, "feat(): ", 5)]
+    [InlineData("text", 3, "feat(): text", 5)]
     public void ConventionalCommit_keyword_is_prefixed_when_none_with_scope(string initialText, int initialPosition,
         string expectedText, int expectedPosition)
     {
@@ -644,8 +628,9 @@ public class FormCommitTests
         });
     }
 
-    [TestCase("fix: ", 0, "feat: ", 6)]
-    [TestCase("fix: text", 3, "feat: text", 6)]
+    [WinFormsTheory]
+    [InlineData("fix: ", 0, "feat: ", 6)]
+    [InlineData("fix: text", 3, "feat: text", 6)]
     public void ConventionalCommit_keyword_is_prefixed_when_already_typed(string initialText, int initialPosition,
         string expectedText, int expectedPosition)
     {
@@ -660,10 +645,11 @@ public class FormCommitTests
         });
     }
 
-    [TestCase("fix: ", 0, "feat(): ", 5)]
-    [TestCase("fix: text", 3, "feat(): text", 5)]
-    [TestCase("fix(scope): ", 0, "feat(scope): ", 13)]
-    [TestCase("fix(scope): text", 14, "feat(scope): text", 15)]
+    [WinFormsTheory]
+    [InlineData("fix: ", 0, "feat(): ", 5)]
+    [InlineData("fix: text", 3, "feat(): text", 5)]
+    [InlineData("fix(scope): ", 0, "feat(scope): ", 13)]
+    [InlineData("fix(scope): text", 14, "feat(scope): text", 15)]
     public void ConventionalCommit_keyword_is_prefixed_when_already_typed_with_scope(string initialText, int initialPosition,
         string expectedText, int expectedPosition)
     {
@@ -678,7 +664,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void MainSplitter_Remembers_Distance()
     {
         bool splitterMoved = false;
@@ -729,7 +715,7 @@ public class FormCommitTests
         });
     }
 
-    [Test]
+    [WinFormsFact]
     public void ShouldNotUndoRenameFileWhenResettingStagedLines()
     {
         RunFormTest(form =>
@@ -823,6 +809,11 @@ public class FormCommitTests
             },
             testDriverAsync);
     }
+
+    public void Dispose()
+    {
+        DisposeTest();
+    }
 }
 
 public class CommitMessageTestData
@@ -830,18 +821,42 @@ public class CommitMessageTestData
     internal const string SelectedText = "selection";
     private const string SelectedTextWithNewLine = SelectedText + "\n";
 
-    public static IEnumerable TestCases
+    public static IEnumerable<object[]> TestCases
     {
         get
         {
-            yield return new TestCaseData("", 0, 0, SelectedTextWithNewLine, 0 + SelectedTextWithNewLine.Length);
-            yield return new TestCaseData("msg", 0, 0, SelectedTextWithNewLine + "msg", 0 + SelectedTextWithNewLine.Length);
-            yield return new TestCaseData("msg", 1, 0, "m" + SelectedTextWithNewLine + "sg", 1 + SelectedTextWithNewLine.Length);
-            yield return new TestCaseData("msg", 2, 0, "ms" + SelectedTextWithNewLine + "g", 2 + SelectedTextWithNewLine.Length);
-            yield return new TestCaseData("msg", 3, 0, "msg" + SelectedTextWithNewLine, 3 + SelectedTextWithNewLine.Length);
-            yield return new TestCaseData("msg", 0, 1, "" + SelectedText + "sg", 0 + SelectedText.Length);
-            yield return new TestCaseData("msg", 1, 1, "m" + SelectedText + "g", 1 + SelectedText.Length);
-            yield return new TestCaseData("msg", 2, 1, "ms" + SelectedText, 2 + SelectedText.Length);
+            yield return ["", 0, 0, SelectedTextWithNewLine, SelectedTextWithNewLine.Length];
+            yield return ["msg", 0, 0, SelectedTextWithNewLine + "msg", SelectedTextWithNewLine.Length];
+            yield return ["msg", 1, 0, "m" + SelectedTextWithNewLine + "sg", 1 + SelectedTextWithNewLine.Length];
+            yield return ["msg", 2, 0, "ms" + SelectedTextWithNewLine + "g", 2 + SelectedTextWithNewLine.Length];
+            yield return ["msg", 3, 0, "msg" + SelectedTextWithNewLine, 3 + SelectedTextWithNewLine.Length];
+            yield return ["msg", 0, 1, "" + SelectedText + "sg", SelectedText.Length];
+            yield return ["msg", 1, 1, "m" + SelectedText + "g", 1 + SelectedText.Length];
+            yield return ["msg", 2, 1, "ms" + SelectedText, 2 + SelectedText.Length];
         }
+    }
+}
+
+public sealed class FormCommitTestsFixture : System.IDisposable
+{
+    // Track the original setting value
+    private bool _provideAutocompletion;
+    private bool _showAvailableDiffTools;
+
+    public FormCommitTestsFixture()
+    {
+        // Remember the current setting...
+        _provideAutocompletion = AppSettings.ProvideAutocompletion;
+        _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+        // ...and stop loading auto completion and custom diff tools
+        AppSettings.ProvideAutocompletion = false;
+        AppSettings.ShowAvailableDiffTools = false;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.ProvideAutocompletion = _provideAutocompletion;
+        AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }
 }

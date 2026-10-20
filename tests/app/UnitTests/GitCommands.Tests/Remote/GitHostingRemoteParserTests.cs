@@ -3,19 +3,19 @@
 namespace GitCommandsTests.Remote;
 public class GitHostingRemoteParserTests
 {
-    [TestCase("https://github.com/owner/repo.git", "github.com")]
-    [TestCase("http://github.com/owner/repo.git", "github.com")]
-    [TestCase("https://github.com/owner/repo", "github.com")]
-    [TestCase("ssh://git@github.com/owner/repo.git", "github.com")]
-    [TestCase("git@github.com/owner/repo.git", "github.com")]
-    [TestCase("git@framagit.org:owner/repo.git", "framagit.org")]
-    [TestCase("https://framagit.org/owner/repo.git", "framagit.org")]
-    [TestCase("https://github.com/owner/repo.git", "github.com")]
-    [TestCase("git@github.com:owner/repo.git", "github.com")]
-    [TestCase("https://git.sr.ht/owner/repo", "git.sr.ht")]
-    [TestCase("git@git.sr.ht:owner/repo", "git.sr.ht")]
-    [TestCase("https://gitlab.freedesktop.org/owner/repo.git", "gitlab.freedesktop.org")]
-    [TestCase("git@gitlab.freedesktop.org:owner/repo.git", "gitlab.freedesktop.org")]
+    [Theory]
+    [InlineData("https://github.com/owner/repo.git", "github.com")]
+    [InlineData("http://github.com/owner/repo.git", "github.com")]
+    [InlineData("https://github.com/owner/repo", "github.com")]
+    [InlineData("ssh://git@github.com/owner/repo.git", "github.com")]
+    [InlineData("git@github.com/owner/repo.git", "github.com")]
+    [InlineData("git@framagit.org:owner/repo.git", "framagit.org")]
+    [InlineData("https://framagit.org/owner/repo.git", "framagit.org")]
+    [InlineData("git@github.com:owner/repo.git", "github.com")]
+    [InlineData("https://git.sr.ht/owner/repo", "git.sr.ht")]
+    [InlineData("git@git.sr.ht:owner/repo", "git.sr.ht")]
+    [InlineData("https://gitlab.freedesktop.org/owner/repo.git", "gitlab.freedesktop.org")]
+    [InlineData("git@gitlab.freedesktop.org:owner/repo.git", "gitlab.freedesktop.org")]
     public void TryExtractGitHubDataFromRemoteUrl(string url, string expectedGitHosting)
     {
         new GitHostingRemoteParser().TryExtractGitHostingDataFromRemoteUrl(url, out string? gitHosting, out string? owner, out string? repository).Should().BeTrue();
@@ -24,7 +24,7 @@ public class GitHostingRemoteParserTests
         repository.Should().Be("repo");
     }
 
-    [Test]
+    [Fact]
     public void Should_fail_in_parsing_invalid_url()
     {
         GitHostingRemoteParser gitHubRemoteParser = new();

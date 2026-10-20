@@ -11,15 +11,13 @@ using ResourceManager;
 
 namespace GitUITests.Editor;
 
-[Apartment(ApartmentState.STA)]
-public class FileViewerTextTests
+public class FileViewerTextTests : IDisposable
 {
     private IServiceProvider _serviceProvider = null!;
     private IGitUICommandsSource _uiCommandsSource = null!;
     private FileViewer _fileViewer = null!;
 
-    [SetUp]
-    public void SetUp()
+    public FileViewerTextTests()
     {
         ServiceContainer serviceContainer = new();
         IScriptsManager scriptsManager = Substitute.For<IScriptsManager>();
@@ -32,8 +30,7 @@ public class FileViewerTextTests
         _fileViewer = new FileViewer();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _fileViewer.Dispose();
     }
@@ -42,7 +39,7 @@ public class FileViewerTextTests
     /// When: some text is selected in a <see cref="FileViewer"/>.
     /// Assert: All occurrences of the selected text are highlighted.
     /// </summary>
-    [Test]
+    [StaFact]
     public void FileViewer_highlight_selected_text_when_enabled()
     {
         const string textToSelect = "Selected";
@@ -83,7 +80,7 @@ public class FileViewerTextTests
         caretOffset.Should().Be(4, "Caret should have been moved back to the first occurence of '" + textToSelect + "'");
     }
 
-    [Test]
+    [StaFact]
     public void FileViewer_ShowSyntaxHighlightingInDiff_enabled_use_highlighting()
     {
         // a sample c sharp file diff
@@ -116,7 +113,7 @@ index 62a5c2f08..2bc482714 100644
             .HighlightingStrategy.Should().Be(csharpHighlighting);
     }
 
-    [Test]
+    [StaFact]
     public void FileViewer_ShowSyntaxHighlightingInDiff_disabled_do_not_use_highlighting()
     {
         // a sample c sharp file diff
@@ -144,7 +141,7 @@ index 62a5c2f08..2bc482714 100644
         _fileViewer.GetTestAccessor().FileViewerInternal.GetTestAccessor().TextEditor.Document.HighlightingStrategy.Should().Be(HighlightingManager.Manager.DefaultHighlighting);
     }
 
-    [Test]
+    [StaFact]
     public void FileViewer_given_non_text_use_default_highlighting()
     {
         // a sample c sharp file diff

@@ -5,7 +5,7 @@ using GitExtensions.Extensibility.Git;
 namespace GitCommandsTests.Git_Commands;
 public sealed class GitCheckoutBranchCmdTest
 {
-    [Test]
+    [Fact]
     public void TestConstructor()
     {
         IGitCommand cmd = Commands.CheckoutBranch("branchName", remote: true);
@@ -13,7 +13,7 @@ public sealed class GitCheckoutBranchCmdTest
         cmd.Should().NotBeNull();
     }
 
-    [Test]
+    [Fact]
     public void TestConstructorRemoteIsFalse()
     {
         IGitCommand cmd = Commands.CheckoutBranch("branchName", remote: false);
@@ -21,7 +21,7 @@ public sealed class GitCheckoutBranchCmdTest
         cmd.Should().NotBeNull();
     }
 
-    [Test]
+    [Fact]
     public void TestAccessesRemoteIsFalse()
     {
         IGitCommand cmd = Commands.CheckoutBranch("branchName", remote: true);
@@ -29,7 +29,7 @@ public sealed class GitCheckoutBranchCmdTest
         cmd.AccessesRemote.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void TestCollectArgumentsMergeReset()
     {
         // Merge

@@ -2,18 +2,8 @@
 using GitCommands.Settings;
 
 namespace GitCommandsTests.Settings;
-internal sealed class RuntimeSettingTests
+public sealed class RuntimeSettingTests
 {
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-    }
-
     private enum Enum
     {
         Foo,
@@ -23,7 +13,7 @@ internal sealed class RuntimeSettingTests
         RuntimeValue,
     }
 
-    [Test]
+    [Fact]
     public void EnumRuntimeSetting()
     {
         SettingsPath rootSettingsPath = new AppSettingsPath(pathName: "");

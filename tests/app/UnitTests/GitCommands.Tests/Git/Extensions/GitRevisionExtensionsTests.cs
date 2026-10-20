@@ -4,13 +4,14 @@ using GitUIPluginInterfaces;
 namespace GitCommandsTests.Git.Extensions;
 public class GitRevisionExtensionsTests
 {
-    [TestCase(null, false)]
-    [TestCase("", false)]
-    [TestCase(" ", false)]
-    [TestCase("0000", false)]
-    [TestCase(GitRevision.WorkTreeGuid, true)]
-    [TestCase(GitRevision.IndexGuid, true)]
-    [TestCase(GitRevision.CombinedDiffGuid, true)]
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData(" ", false)]
+    [InlineData("0000", false)]
+    [InlineData(GitRevision.WorkTreeGuid, true)]
+    [InlineData(GitRevision.IndexGuid, true)]
+    [InlineData(GitRevision.CombinedDiffGuid, true)]
     public void IsArtificial_tests(string? sha1, bool expected)
     {
         sha1.IsArtificial().Should().Be(expected);

@@ -4,7 +4,7 @@ using NSubstitute;
 namespace GitUITests.Avatars;
 public class CacheControlAvatarProviderTests
 {
-    [Test]
+    [Fact]
     public async Task ClearCache_is_passed_to_all_children()
     {
         IAvatarCacheCleaner cacheCleaner1 = Substitute.For<IAvatarCacheCleaner>();
@@ -25,7 +25,7 @@ public class CacheControlAvatarProviderTests
         cacheClearedEventHandler.Received(1)(cacheCleaner, EventArgs.Empty);
     }
 
-    [Test]
+    [Fact]
     public void Construction_with_null_parameters_is_permitted()
     {
         ((Action)(() => new MultiCacheCleaner(null!))).Should().Throw<ArgumentNullException>();

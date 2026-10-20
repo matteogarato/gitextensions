@@ -75,6 +75,10 @@ jobs:
         dotnet --version
         git --version
 
+    - name: Restore local .NET tools
+      if: ${{ !inputs.release }}
+      run: dotnet tool restore
+
     - name: Install WiX
       if: inputs.release
       run: dotnet tool install --global wix
@@ -202,7 +206,20 @@ jobs:
       # The slowest healthy test is ~25s on x64 / ~50s on the slower arm64 runner, so 3m leaves ample headroom.
       # --blame-hang-dump-type mini captures a minidump (all managed thread stacks) of the hung test host so the
       # actual deadlock is diagnosable from the artifact, instead of only knowing which test was running.
-      run: dotnet test -c Release -m:1 --no-restore --no-build --nologo --verbosity q --test-adapter-path:. --logger:trx --blame-hang-timeout 3m --blame-hang-dump-type mini /bl:artifacts\log\tests.binlog
+      run: dotnet test -c Release -m:1 --no-restore --no-build --nologo --verbosity q --test-adapter-path:. --logger:trx --collect:"XPlat Code Coverage" --settings:tests/coverlet.runsettings --blame-hang-timeout 3m --blame-hang-dump-type mini /bl:artifacts\log\tests.binlog
+
+    - name: Generate aggregate coverage reports
+      if: always() && !inputs.release
+      shell: pwsh
+      run: |
+        $reports = Get-ChildItem artifacts\Release\TestsResults -Filter coverage.opencover.xml -File -Recurse |
+          Where-Object { $_.FullName -notmatch '[\\/]In[\\/]' } |
+          ForEach-Object { $_.FullName }
+        if (-not $reports) { throw 'No Coverlet OpenCover reports were produced.' }
+
+        $reportList = $reports -join ';'
+        dotnet tool run reportgenerator -- "-reports:$reportList" "-targetdir:artifacts\Release\Coverage" "-reporttypes:Html;Cobertura;TextSummary"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     - name: Upload test results
       id: upload-test-results
@@ -214,6 +231,17 @@ jobs:
         path: 'artifacts\Release\TestsResults\**\*.trx'
         retention-days: 7
         if-no-files-found: ignore
+
+    - name: Upload coverage reports
+      if: always() && !inputs.release
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: coverage-${{ runner.arch }}
+        path: |
+          artifacts\Release\Coverage\**
+          artifacts\Release\TestsResults\*\coverage.*
+        retention-days: 7
+        if-no-files-found: error
 
     - name: Upload build logs on failure
       # Also run on cancellation (e.g. the job hits its timeout while a test is stuck) so a stuck pipeline still

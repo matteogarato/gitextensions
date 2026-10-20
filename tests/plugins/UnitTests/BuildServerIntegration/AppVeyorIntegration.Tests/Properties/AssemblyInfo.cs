@@ -1,4 +1,5 @@
 ﻿using CommonTestUtils;
+using Xunit;
 
-[assembly: Category("UnitTests")]
-[assembly: TestAppSettings]
+[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]
+[assembly: Trait("Category", "UnitTests")]

@@ -3,13 +3,13 @@
 namespace GitExtUtilsTests;
 public sealed class DisplayWithSuffixUpdaterTests
 {
-    [Test]
+    [Fact]
     public void FromInitialValue()
     {
         "a\u00A0(b)".Should().Be(DisplayWithSuffixUpdater.UpdateSuffixWithinParenthesis("a", "b"));
     }
 
-    [Test]
+    [Fact]
     public void FromValueContainingAlreadyTheSuffix()
     {
         "a\u00A0(c)".Should().Be(DisplayWithSuffixUpdater.UpdateSuffixWithinParenthesis("a (b)", "c"));

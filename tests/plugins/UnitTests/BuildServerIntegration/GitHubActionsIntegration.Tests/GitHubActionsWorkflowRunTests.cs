@@ -1,13 +1,14 @@
 ﻿using GitExtensions.Extensibility.BuildServerIntegration;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Plugins.GitHubActionsIntegration.ApiClient.Models;
+using Xunit;
 
 namespace GitHubActionsIntegrationTests;
-internal class GitHubActionsWorkflowRunTests
+public class GitHubActionsWorkflowRunTests
 {
     private const string TestSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_success_correctly()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "success");
@@ -22,7 +23,7 @@ internal class GitHubActionsWorkflowRunTests
         result.ShowInBuildReportTab.Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_failure_correctly()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "failure");
@@ -32,7 +33,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Failure);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_cancelled_to_stopped()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "cancelled");
@@ -42,7 +43,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Stopped);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_in_progress_correctly()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "in_progress", conclusion: null);
@@ -52,7 +53,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.InProgress);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_queued_to_in_progress()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "queued", conclusion: null);
@@ -62,7 +63,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.InProgress);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_timed_out_to_failure()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "timed_out");
@@ -72,7 +73,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Failure);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_action_required_to_unstable()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "action_required");
@@ -82,7 +83,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Unstable);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_skipped_to_success()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "skipped");
@@ -92,7 +93,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Success);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_neutral_to_success()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "neutral");
@@ -102,7 +103,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Success);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_map_stale_to_unstable()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "stale");
@@ -112,9 +113,10 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.Unstable);
     }
 
-    [TestCase("waiting")]
-    [TestCase("pending")]
-    [TestCase("requested")]
+    [Theory]
+    [InlineData("waiting")]
+    [InlineData("pending")]
+    [InlineData("requested")]
     public void ToBuildInfo_should_map_pending_statuses_to_in_progress(string status)
     {
         GitHubActionsWorkflowRun run = CreateRun(status: status, conclusion: null);
@@ -124,7 +126,7 @@ internal class GitHubActionsWorkflowRunTests
         result.Status.Should().Be(BuildStatus.InProgress);
     }
 
-    [Test]
+    [Fact]
     public void ToBuildInfo_should_format_description()
     {
         GitHubActionsWorkflowRun run = CreateRun(status: "completed", conclusion: "success");

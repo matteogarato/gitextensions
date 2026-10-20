@@ -2,7 +2,6 @@ using GitCommands.Git;
 
 namespace GitCommandsTests.Git;
 
-[TestFixture]
 public class GitExecutorTests
 {
     // Regression test for: WSL-routed git commands returned no revisions/diff output at all.
@@ -16,8 +15,9 @@ public class GitExecutorTests
     // with a non-zero exit and zero output, which GitExtensions then rendered as "no commits".
     // Passing `--exec` makes wsl.exe invoke git directly, without a shell in between, matching
     // how the equivalent native Windows git invocation already behaves.
-    [TestCase(@"\\wsl$\Ubuntu\home\user\repo\", "Ubuntu")]
-    [TestCase(@"\\wsl.localhost\Ubuntu-20.04\home\user\repo\", "Ubuntu-20.04")]
+    [Theory]
+    [InlineData(@"\\wsl$\Ubuntu\home\user\repo\", "Ubuntu")]
+    [InlineData(@"\\wsl.localhost\Ubuntu-20.04\home\user\repo\", "Ubuntu-20.04")]
     public void GitExecutable_for_wsl_working_dir_uses_exec_to_bypass_the_distro_shell(string workingDir, string expectedDistro)
     {
         GitExecutor executor = new(new GitDirectoryResolver(), workingDir);
@@ -27,7 +27,7 @@ public class GitExecutorTests
             .And.MatchRegex(@"--cd\s+\S+\s+--exec\s+git\s*$");
     }
 
-    [Test]
+    [Fact]
     public void GitExecutable_for_non_wsl_working_dir_has_no_wsl_prefix()
     {
         GitExecutor executor = new(new GitDirectoryResolver(), @"c:\repo\");

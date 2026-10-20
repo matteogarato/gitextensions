@@ -2,7 +2,7 @@
 using NSubstitute;
 
 namespace GitUITests.Avatars;
-public class ChainedAvatarProviderTests
+public class ChainedAvatarProviderTests : IDisposable
 {
     private const int _size = 16;
 
@@ -33,8 +33,7 @@ public class ChainedAvatarProviderTests
         _img6 = new Bitmap(_size, _size);
     }
 
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public void Dispose()
     {
         _img1.Dispose();
         _img2.Dispose();
@@ -44,7 +43,7 @@ public class ChainedAvatarProviderTests
         _img6.Dispose();
     }
 
-    [Test]
+    [Fact]
     public async Task Construction_without_parameter_is_allowed_and_returns_null()
     {
         ChainedAvatarProvider provider = new();
@@ -53,7 +52,7 @@ public class ChainedAvatarProviderTests
         image.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void Construction_with_null_parameters_is_permitted()
     {
         ((Action)(() => new ChainedAvatarProvider(null!))).Should().Throw<ArgumentNullException>();
@@ -61,7 +60,7 @@ public class ChainedAvatarProviderTests
         ((Action)(() => new ChainedAvatarProvider(null!, null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task Return_first_non_null_result()
     {
         IAvatarProvider provider1 = Substitute.For<IAvatarProvider>();

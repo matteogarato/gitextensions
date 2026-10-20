@@ -19,20 +19,20 @@ public class RememberFileContextMenuControllerTests
         return id;
     }
 
-    [SetUp]
-    public void Setup()
+    public RememberFileContextMenuControllerTests()
     {
         _rememberFileContextMenuController = new RememberFileContextMenuController();
     }
 
-    [TestCase(false, false, false, true)]
-    [TestCase(false, false, true, false)]
-    [TestCase(false, true, false, true)]
-    [TestCase(false, true, true, false)]
-    [TestCase(true, false, false, false)]
-    [TestCase(true, false, true, false)]
-    [TestCase(true, true, false, false)]
-    [TestCase(true, true, true, false)]
+    [Theory]
+    [InlineData(false, false, false, true)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, false, true, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, true, true, false)]
     public void RememberFile_ShouldEnableFirstRemember_WorkTree(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
     {
         GitRevision rev = new(ObjectId.Random());
@@ -47,14 +47,15 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.ShouldEnableFirstItemDiff(item, isSecondRev).Should().Be(result);
     }
 
-    [TestCase(false, false, false, true)]
-    [TestCase(false, false, true, true)]
-    [TestCase(false, true, false, true)]
-    [TestCase(false, true, true, false)]
-    [TestCase(true, false, false, false)]
-    [TestCase(true, false, true, false)]
-    [TestCase(true, true, false, false)]
-    [TestCase(true, true, true, false)]
+    [Theory]
+    [InlineData(false, false, false, true)]
+    [InlineData(false, false, true, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, false, true, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, true, true, false)]
     public void RememberFile_ShouldEnableFirstRemember_Commit(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
     {
         GitRevision rev = new(ObjectId.Random());
@@ -69,14 +70,15 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.ShouldEnableFirstItemDiff(item, isSecondRev).Should().Be(result);
     }
 
-    [TestCase(false, false, false, true)]
-    [TestCase(false, false, true, true)]
-    [TestCase(false, true, false, true)]
-    [TestCase(false, true, true, false)]
-    [TestCase(true, false, false, false)]
-    [TestCase(true, false, true, false)]
-    [TestCase(true, true, false, false)]
-    [TestCase(true, true, true, false)]
+    [Theory]
+    [InlineData(false, false, false, true)]
+    [InlineData(false, false, true, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, false, true, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, true, true, false)]
     public void RememberFile_ShouldEnableSecondRemember_WorkTree(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
     {
         GitRevision rev = new(ObjectId.Random());
@@ -91,14 +93,15 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.ShouldEnableSecondItemDiff(item, isSecondRev).Should().Be(result);
     }
 
-    [TestCase(false, false, false, true)]
-    [TestCase(false, false, true, true)]
-    [TestCase(false, true, false, true)]
-    [TestCase(false, true, true, false)]
-    [TestCase(true, false, false, false)]
-    [TestCase(true, false, true, false)]
-    [TestCase(true, true, false, false)]
-    [TestCase(true, true, true, false)]
+    [Theory]
+    [InlineData(false, false, false, true)]
+    [InlineData(false, false, true, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, false, true, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, true, true, false)]
     public void RememberFile_ShouldEnableSecondRemember_Commit(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
     {
         GitRevision rev = new(ObjectId.Random());
@@ -113,7 +116,7 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.ShouldEnableSecondItemDiff(item, isSecondRev).Should().Be(result);
     }
 
-    [Test]
+    [Fact]
     public void RememberFile_GetGitCommit_null()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -128,7 +131,7 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(null, item, false).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void RememberFile_GetGitCommit_FirstWorkTree()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -141,7 +144,7 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(null, item, false).Should().Be(name);
     }
 
-    [Test]
+    [Fact]
     public void RememberFile_GetGitCommit_SecondWorkTree()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -154,7 +157,7 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(null, item, true).Should().Be(name);
     }
 
-    [Test]
+    [Fact]
     public void RememberFile_GetGitCommit_Index_Tree()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -167,7 +170,7 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(GetFileBlobHash, item, true).Should().Be(ObjectId.IndexId.ToString());
     }
 
-    [Test]
+    [Fact]
     public void RememberFile_GetGitCommit_Index_GetBlob()
     {
         GitRevision rev = new(ObjectId.Random());
@@ -180,8 +183,9 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(GetFileBlobHash, item, true).Should().Be(ObjectId.IndexId.ToString());
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void RememberFile_GetGitCommit_Commit(bool isSecondRev)
     {
         ObjectId id = ObjectId.Random();
@@ -199,8 +203,9 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(null, item, isSecondRev).Should().Be(expected);
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void RememberFile_GetGitCommit_CommitNoOld(bool isSecondRev)
     {
         ObjectId id = ObjectId.Random();

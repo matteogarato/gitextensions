@@ -7,7 +7,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
 {
     private const string _escape_sequence = "\u001b[";
 
-    [Test]
+    [Fact]
     public void ParseEscape_ShouldAppendTextWithoutEscapeSequence_WhenNoEscapeSequenceIsPresent()
     {
         string text = "No escape sequence  ";
@@ -20,7 +20,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
         textMarkers.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void ParseEscape_ShouldAppendTextWithCorrectEscapeSequence_WhenEscapeSequenceIsPresent()
     {
         string in_text = $"""
@@ -30,7 +30,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
             Now {_escape_sequence}101mbold reverse red{_escape_sequence}0m
             and some {_escape_sequence}2:31mdim red{_escape_sequence}0m
             {_escape_sequence}31m{_escape_sequence}mdefault not red{_escape_sequence}0m{_escape_sequence}31m, red no end
-              
+
             """.ReplaceLineEndings("\n");
         string expected = """
             Text with red escape sequence
@@ -39,7 +39,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
             Now bold reverse red
             and some dim red
             default not red, red no end
-              
+
             """.ReplaceLineEndings("\n");
         StringBuilder sb = new();
         List<TextMarker> textMarkers = [];
@@ -75,7 +75,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
         textMarkers[4].ForeColor.Should().Be(GetAnsiColor());
     }
 
-    [Test]
+    [Fact]
     public void ParseEscape_ShouldHandleNonConformingEscapes()
     {
         string in_text = $"""
@@ -129,7 +129,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
         textMarkers[3].ForeColor.Should().Be(Color.FromArgb(0x00, 0x00, 0x00));
     }
 
-    [Test]
+    [Fact]
     public void ParseEscape_ShouldHandleAdjacentAndIllegalEscapes()
     {
         // Insert \r after setting the text newline to \n
@@ -153,7 +153,7 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
              merge adjacent segments continue here
              ignore empty
              ignore carriage return color {carriageReplacer}
-             but not space 
+             but not space
              merge ending with carriage return newline{carriageReplacer}
              some text
             """.ReplaceLineEndings("\n").Replace(carriageReplacer, carriageReturn);

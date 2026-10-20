@@ -9,26 +9,27 @@ using GitUIPluginInterfaces;
 using Microsoft;
 
 namespace GitCommandsTests.Settings;
-internal sealed class AppSettingsTests
+public sealed class AppSettingsTests
 {
     private const string SettingsFileContent = @"<?xml version=""1.0"" encoding=""utf-8""?><dictionary />";
 
-    [TestCase(null, "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("\t", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("33.33", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("33.33.33", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("33.33.33.33", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("a", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("v4.5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
-    [TestCase("4.5", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
-    [TestCase("4.5.", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
-    [TestCase("4.5.0", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
-    [TestCase("4.5.2", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
-    [TestCase("4.5.2.1", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
-    [TestCase("4.5.2x", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
-    [TestCase("40.501.123", "https://git-extensions-documentation.readthedocs.org/en/release-40.501/")]
+    [Theory]
+    [InlineData(null, "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("\t", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("33.33", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("33.33.33", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("33.33.33.33", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("a", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("v4.5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+    [InlineData("4.5", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+    [InlineData("4.5.", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+    [InlineData("4.5.0", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+    [InlineData("4.5.2", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+    [InlineData("4.5.2.1", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+    [InlineData("4.5.2x", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+    [InlineData("40.501.123", "https://git-extensions-documentation.readthedocs.org/en/release-40.501/")]
     public void SetDocumentationBaseUrl_should_currectly_append_version(string? version, string expected)
     {
         AppSettings.GetTestAccessor().ResetDocumentationBaseUrl();
@@ -37,12 +38,11 @@ internal sealed class AppSettingsTests
         AppSettings.DocumentationBaseUrl.Should().Be(expected);
     }
 
-    [Test]
-    [TestCaseSource(nameof(TestCases))]
-#pragma warning disable IDE0060 // Remove unused parameter
+    [Theory]
+    [MemberData(nameof(TestCases))]
     public void Should_return_default_value(PropertyInfo property, object value, object defaultValue, bool isISetting)
-#pragma warning restore IDE0060 // Remove unused parameter
     {
+        _ = value;
         // Arrange
         object? root = null;
 
@@ -74,8 +74,8 @@ internal sealed class AppSettingsTests
         storedValue.Should().Be(defaultValue);
     }
 
-    [Test]
-    [TestCaseSource(nameof(TestCases))]
+    [Theory]
+    [MemberData(nameof(TestCases))]
     public void Should_save_value(PropertyInfo property, object value, object defaultValue, bool isISetting)
     {
         // Arrange
@@ -133,7 +133,7 @@ internal sealed class AppSettingsTests
     /// <summary>
     ///  Verifies that ISetting property names (storage keys) remain stable across changes.
     /// </summary>
-    [Test]
+    [Fact]
     public Task ISetting_properties_should_have_stable_storage_keys()
     {
         StringBuilder sb = new();
@@ -165,7 +165,7 @@ internal sealed class AppSettingsTests
 
     #region Test Cases
 
-    private static IEnumerable<object[]> TestCases()
+    public static IEnumerable<object[]> TestCases()
     {
         foreach ((PropertyInfo property, object? defaultValue, bool isNullable, bool isISetting) in PropertyInfos())
         {

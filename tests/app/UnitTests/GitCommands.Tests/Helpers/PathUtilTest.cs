@@ -3,38 +3,39 @@
 namespace GitCommandsTests.Helpers;
 public class PathUtilTest
 {
-    [TestCase('a', true)]
-    [TestCase('z', true)]
-    [TestCase('A', true)]
-    [TestCase('Z', true)]
-    [TestCase('0', true)]
-    [TestCase('9', true)]
-    [TestCase('-', true)]
-    [TestCase('_', true)]
-    [TestCase('.', true)]
-    [TestCase('/', true)]
-    [TestCase('!', true)]
-    [TestCase('}', true)]
-    [TestCase('@', true)]
-    [TestCase(' ', false)]
-    [TestCase('~', false)]
-    [TestCase('^', false)]
-    [TestCase(':', false)]
-    [TestCase('"', false)]
-    [TestCase('<', false)]
-    [TestCase('>', false)]
-    [TestCase('|', false)]
-    [TestCase('\0', false)]
-    [TestCase('\t', false)]
-    [TestCase('\n', false)]
-    [TestCase('\r', false)]
-    [TestCase('\x7F', false)]
+    [Theory]
+    [InlineData('a', true)]
+    [InlineData('z', true)]
+    [InlineData('A', true)]
+    [InlineData('Z', true)]
+    [InlineData('0', true)]
+    [InlineData('9', true)]
+    [InlineData('-', true)]
+    [InlineData('_', true)]
+    [InlineData('.', true)]
+    [InlineData('/', true)]
+    [InlineData('!', true)]
+    [InlineData('}', true)]
+    [InlineData('@', true)]
+    [InlineData(' ', false)]
+    [InlineData('~', false)]
+    [InlineData('^', false)]
+    [InlineData(':', false)]
+    [InlineData('"', false)]
+    [InlineData('<', false)]
+    [InlineData('>', false)]
+    [InlineData('|', false)]
+    [InlineData('\0', false)]
+    [InlineData('\t', false)]
+    [InlineData('\n', false)]
+    [InlineData('\r', false)]
+    [InlineData('\x7F', false)]
     public void IsValidPathChar_should_return_expected(char c, bool expected)
     {
         PathUtil.IsValidPathChar(c).Should().Be(expected);
     }
 
-    [Test]
+    [Fact]
     public void IsValidPathChar_should_return_false_for_all_invalid_path_chars()
     {
         foreach (char c in Path.GetInvalidPathChars())
@@ -43,7 +44,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void IsValidPathChar_should_accept_all_ascii_letters_and_digits()
     {
         for (char c = 'a'; c <= 'z'; c++)
@@ -62,7 +63,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void ToPosixPathTest()
     {
         if (Path.DirectorySeparatorChar == '\\')
@@ -78,7 +79,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void ToNativePathTest()
     {
         if (Path.DirectorySeparatorChar == '\\')
@@ -95,7 +96,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void ToWslPathTest()
     {
         PathUtil.ToWslPath(null).Should().BeNull();
@@ -104,7 +105,7 @@ public class PathUtilTest
         "/var/tmp/".Should().Be(@"/var/tmp/".ToWslPath());
     }
 
-    [Test]
+    [Fact]
     public void ToCygwinPathTest()
     {
         PathUtil.ToCygwinPath(null).Should().BeNull();
@@ -113,7 +114,7 @@ public class PathUtilTest
         "/var/tmp/".Should().Be(@"/var/tmp/".ToCygwinPath());
     }
 
-    [Test]
+    [Fact]
     public void ToMountPathTest()
     {
         const string prefix = "PrEfiX";
@@ -131,7 +132,7 @@ public class PathUtilTest
         "/var/tmp/".Should().Be(@"/var/tmp/".ToMountPath(prefix));
     }
 
-    [Test]
+    [Fact]
     public void EnsureTrailingPathSeparatorTest()
     {
         ((string?)null).EnsureTrailingPathSeparator().Should().BeNull();
@@ -157,7 +158,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void RemoveTrailingPathSeparatorTest()
     {
         ((string?)null).RemoveTrailingPathSeparator().Should().BeNull();
@@ -176,7 +177,7 @@ public class PathUtilTest
         "foo/bar".Should().Be("foo/bar/".RemoveTrailingPathSeparator());
     }
 
-    [Test]
+    [Fact]
     public void IsLocalFileTest()
     {
         true.Should().Be(PathUtil.IsLocalFile("\\\\my-pc\\Work\\GitExtensions"));
@@ -188,7 +189,7 @@ public class PathUtilTest
         false.Should().Be(PathUtil.IsLocalFile("ssh://domain\\user@serverip/cache/git/something/something.git"));
     }
 
-    [Test]
+    [Fact]
     public void GetFileNameTest()
     {
         if (Path.DirectorySeparatorChar == '\\')
@@ -205,7 +206,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void GetRepositoryNameTest()
     {
         "gitextensions".Should().Be(PathUtil.GetRepositoryName("https://github.com/gitextensions/gitextensions.git"));
@@ -237,185 +238,198 @@ public class PathUtilTest
         }
     }
 
-    [Platform(Include = "Win")]
-    [TestCase(null, "")]
-    [TestCase("", "")]
-    [TestCase(" ", "")]
-    [TestCase("c:", "")]
-    [TestCase("C:\\", "C:\\")]
-    [TestCase("a:\\folder\\filename.txt", "a:\\folder\\filename.txt")]
-    [TestCase("a:\\folder\\..\\filename.txt", "a:\\filename.txt")]
-    [TestCase("file:///C:/Test%20Project.exe", "C:\\Test Project.exe")]
-    [TestCase("C:\\Progra~1\\", "C:\\Program Files\\")]
-    [TestCase("C:\\Progra~1", "C:\\Program Files")]
-    [TestCase("\\\\folder\\filename.txt", "\\\\folder\\filename.txt")]
-    [TestCase("a:\\\\folder/filename.txt", "a:\\folder\\filename.txt")]
-    [TestCase(@"c:\folder#\filename.txt", @"c:\folder#\filename.txt")]
-    [TestCase(@"C:\WORK\..\WORK\.\GitExtensions\", @"C:\WORK\GitExtensions\")]
-    [TestCase(@"\\my-pc\Work\.\GitExtensions\", @"\\my-pc\Work\GitExtensions\")]
-    [TestCase(@"\\wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    [TestCase(@"\\Wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    [TestCase(@"\\w$\work\", "")]
+    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [InlineData(null, "")]
+    [InlineData("", "")]
+    [InlineData(" ", "")]
+    [InlineData("c:", "")]
+    [InlineData("C:\\", "C:\\")]
+    [InlineData("a:\\folder\\filename.txt", "a:\\folder\\filename.txt")]
+    [InlineData("a:\\folder\\..\\filename.txt", "a:\\filename.txt")]
+    [InlineData("file:///C:/Test%20Project.exe", "C:\\Test Project.exe")]
+    [InlineData("C:\\Progra~1\\", "C:\\Program Files\\")]
+    [InlineData("C:\\Progra~1", "C:\\Program Files")]
+    [InlineData("\\\\folder\\filename.txt", "\\\\folder\\filename.txt")]
+    [InlineData("a:\\\\folder/filename.txt", "a:\\folder\\filename.txt")]
+    [InlineData(@"c:\folder#\filename.txt", @"c:\folder#\filename.txt")]
+    [InlineData(@"C:\WORK\..\WORK\.\GitExtensions\", @"C:\WORK\GitExtensions\")]
+    [InlineData(@"\\my-pc\Work\.\GitExtensions\", @"\\my-pc\Work\GitExtensions\")]
+    [InlineData(@"\\wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [InlineData(@"\\Wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [InlineData(@"\\w$\work\", "")]
     public void NormalizePath(string? path, string expected)
     {
         PathUtil.NormalizePath(path!).Should().Be(expected);
     }
 
-    [Platform(Include = "Win")]
-    [TestCase("", "")]
-    [TestCase(" ", " ")]
-    [TestCase("c:", "c:")]
-    [TestCase("C:\\", "C:\\")]
-    [TestCase(@"\\wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    [TestCase(@"\\Wsl.LoCALhosT\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    [TestCase(@"\\wsl.localhost\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [InlineData("", "")]
+    [InlineData(" ", " ")]
+    [InlineData("c:", "c:")]
+    [InlineData("C:\\", "C:\\")]
+    [InlineData(@"\\wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [InlineData(@"\\Wsl.LoCALhosT\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [InlineData(@"\\wsl.localhost\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
     public void NormalizeWslPath(string? path, string expected)
     {
         PathUtil.NormalizeWslPath(path!).Should().Be(expected);
     }
 
-    [TestCase(@"C:\WORK\GitExtensions\", @"C:\WORK\GitExtensions\")]
-    [TestCase(@"\\my-pc\Work\GitExtensions\", @"\\my-pc\Work\GitExtensions\")]
-    [TestCase(@"\\wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    [TestCase(@"\\wsl$\Ubuntu\home\jack\.\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    [TestCase(@"\\WSL$\Ubuntu\home\jack\.\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    public void Resolve(string? path, string expected)
+    [Theory]
+    [InlineData(@"C:\WORK\GitExtensions\", @"C:\WORK\GitExtensions\")]
+    [InlineData(@"\\my-pc\Work\GitExtensions\", @"\\my-pc\Work\GitExtensions\")]
+    [InlineData(@"\\wsl$\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [InlineData(@"\\wsl$\Ubuntu\home\jack\.\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    [InlineData(@"\\WSL$\Ubuntu\home\jack\.\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    public void Resolve_should_return_expected_path(string? path, string expected)
     {
         PathUtil.Resolve(path!).Should().Be(expected);
     }
 
-    [TestCase(@"C:\WORK\", @"GitExtensions\", @"C:\WORK\GitExtensions\")]
-    [TestCase(@"C:\WORK\", @" file .txt ", @"C:\WORK\ file .txt ")]
-    [TestCase(@"\\wsl$\", @"Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    public void Resolve(string? path, string relativePath, string expected)
+    [Theory]
+    [InlineData(@"C:\WORK\", @"GitExtensions\", @"C:\WORK\GitExtensions\")]
+    [InlineData(@"C:\WORK\", @" file .txt ", @"C:\WORK\ file .txt ")]
+    [InlineData(@"\\wsl$\", @"Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
+    public void Resolve_with_relative_path_should_return_expected_path(string? path, string relativePath, string expected)
     {
         PathUtil.Resolve(path!, relativePath).Should().Be(expected);
     }
 
-    [TestCase(@"\\w$\work\", typeof(UriFormatException))]
-    [TestCase(@":$\work\", typeof(UriFormatException))]
-    [TestCase(@"C:", typeof(UriFormatException))]
-    [TestCase(@"\\wsl$", typeof(UriFormatException))]
-    [TestCase(null, typeof(ArgumentException))]
-    [TestCase("", typeof(ArgumentException))]
-    [TestCase(" ", typeof(ArgumentException))]
-    public void Resolve(string? input, Type expectedException)
+    [Theory]
+    [InlineData(@"\\w$\work\", typeof(UriFormatException))]
+    [InlineData(@":$\work\", typeof(UriFormatException))]
+    [InlineData(@"C:", typeof(UriFormatException))]
+    [InlineData(@"\\wsl$", typeof(UriFormatException))]
+    [InlineData(null, typeof(ArgumentException))]
+    [InlineData("", typeof(ArgumentException))]
+    [InlineData(" ", typeof(ArgumentException))]
+    public void Resolve_should_throw_expected_exception(string? input, Type expectedException)
     {
         Assert.Throws(expectedException, () => PathUtil.Resolve(input!));
     }
 
-    [TestCase(@"\\wsl$\Ubuntu\work\..\GitExtensions\", @"\\wsl$\Ubuntu\GitExtensions\")]
-    [TestCase(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", @"\\wsl$\Ubuntu\GitExtensions\")]
-    [TestCase(@"\\WSL$\Ubuntu\work\..\GitExtensions\", @"\\wsl$\Ubuntu\GitExtensions\")]
-    public void ResolveWsl(string? path, string expected)
+    [Theory]
+    [InlineData(@"\\wsl$\Ubuntu\work\..\GitExtensions\", @"\\wsl$\Ubuntu\GitExtensions\")]
+    [InlineData(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", @"\\wsl$\Ubuntu\GitExtensions\")]
+    [InlineData(@"\\WSL$\Ubuntu\work\..\GitExtensions\", @"\\wsl$\Ubuntu\GitExtensions\")]
+    public void ResolveWsl_should_return_expected_path(string? path, string expected)
     {
         PathUtil.ResolveWsl(path!).Should().Be(expected);
     }
 
-    [TestCase(@"\\w$\work\", typeof(ArgumentException))]
-    [TestCase(@":$\work\", typeof(ArgumentException))]
-    [TestCase(@"C:\work\", typeof(ArgumentException))]
-    [TestCase(null, typeof(ArgumentException))]
-    [TestCase("", typeof(ArgumentException))]
-    [TestCase(" ", typeof(ArgumentException))]
-    public void ResolveWsl(string? input, Type expectedException)
+    [Theory]
+    [InlineData(@"\\w$\work\", typeof(ArgumentException))]
+    [InlineData(@":$\work\", typeof(ArgumentException))]
+    [InlineData(@"C:\work\", typeof(ArgumentException))]
+    [InlineData(null, typeof(ArgumentException))]
+    [InlineData("", typeof(ArgumentException))]
+    [InlineData(" ", typeof(ArgumentException))]
+    public void ResolveWsl_should_throw_expected_exception(string? input, Type expectedException)
     {
         Assert.Throws(expectedException, () => PathUtil.ResolveWsl(input!));
     }
 
-    [TestCase(@"C:\work\..\GitExtensions\", false)]
-    [TestCase(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", false)]
-    [TestCase(@"\\wsl.localhost\Ubuntu\work\..\GitExtensions\", true)]
-    [TestCase(@"\\wsl.localhost/Ubuntu\work\..\GitExtensions\", false)]
+    [Theory]
+    [InlineData(@"C:\work\..\GitExtensions\", false)]
+    [InlineData(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", false)]
+    [InlineData(@"\\wsl.localhost\Ubuntu\work\..\GitExtensions\", true)]
+    [InlineData(@"\\wsl.localhost/Ubuntu\work\..\GitExtensions\", false)]
     public void IsWslLocalhostPath(string? path, bool expected)
     {
         PathUtil.TestAccessor.IsWslLocalhostPrefixPath(path!).Should().Be(expected);
     }
 
-    [TestCase(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", true, true)]
-    [TestCase(@"\\wsl$\Ubuntu\work\..\GitExtensions\", true, true)]
-    [TestCase(@"C:\work\..\GitExtensions\", false, false)]
-    [TestCase(@"\\Wsl$/Ubuntu\work\..\GitExtensions\", false, false)]
-    [TestCase(@"\\Wsl.localhost\GitExtensions\", true, false)]
+    [Theory]
+    [InlineData(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", true, true)]
+    [InlineData(@"\\wsl$\Ubuntu\work\..\GitExtensions\", true, true)]
+    [InlineData(@"C:\work\..\GitExtensions\", false, false)]
+    [InlineData(@"\\Wsl$/Ubuntu\work\..\GitExtensions\", false, false)]
+    [InlineData(@"\\Wsl.localhost\GitExtensions\", true, false)]
     public void IsWslPath(string? path, bool expected, bool expectedPrefix)
     {
         PathUtil.IsWslPath(path).Should().Be(expected);
         PathUtil.TestAccessor.IsWslPrefixPath(path!).Should().Be(expectedPrefix);
     }
 
-    [TestCase(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu")]
-    [TestCase(@"\\wsl$\Ubuntu/work/../GitExtensions", "Ubuntu")]
-    [TestCase(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu-20.04")]
-    [TestCase(@"C:\work\..\GitExtensions\", "")]
+    [Theory]
+    [InlineData(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu")]
+    [InlineData(@"\\wsl$\Ubuntu/work/../GitExtensions", "Ubuntu")]
+    [InlineData(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu-20.04")]
+    [InlineData(@"C:\work\..\GitExtensions\", "")]
     public void GetWslDistro(string? path, string expected)
     {
         PathUtil.GetWslDistro(path).Should().Be(expected);
     }
 
-    [TestCase(@"\\wsl$/Ubuntu/work/../GitExtensions", "")]
+    [Theory]
+    [InlineData(@"\\wsl$/Ubuntu/work/../GitExtensions", "")]
     public void GetWslDistro_unexpected_usage(string? path, string expected)
     {
         PathUtil.GetWslDistro(path).Should().Be(expected);
     }
 
-    [TestCase(@"\\wsl$\Ubuntu\work\..\GitExtensions\", "", @"//wsl$/Ubuntu/work/../GitExtensions/")]
-    [TestCase(@"C:\work\..\GitExtensions\", "", @"C:/work/../GitExtensions/")]
-    [TestCase(@"work\..\GitExtensions\", "", @"work/../GitExtensions/")]
+    [Theory]
+    [InlineData(@"\\wsl$\Ubuntu\work\..\GitExtensions\", "", @"//wsl$/Ubuntu/work/../GitExtensions/")]
+    [InlineData(@"C:\work\..\GitExtensions\", "", @"C:/work/../GitExtensions/")]
+    [InlineData(@"work\..\GitExtensions\", "", @"work/../GitExtensions/")]
     public void GetPathForGitExecution_GetWindowsPath_default(string? path, string wslDistro, string expected)
     {
         PathUtil.GetPathForGitExecution(path, wslDistro).Should().Be(expected);
         PathUtil.GetWindowsPath(expected, wslDistro).Should().Be(path);
     }
 
-    [TestCase(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu", @"/work/../GitExtensions/")]
-    [TestCase(@"\\wsl$\Ubuntu\work/../GitExtensions", "Ubuntu", @"/work/../GitExtensions")]
-    [TestCase(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu-20.04", @"/work/../GitExtensions/")]
-    [TestCase(@"C:\work\..\GitExtensions\", "Ubuntu", @"/mnt/c/work/../GitExtensions/")]
-    [TestCase(@"work\..\GitExtensions\", "Ubuntu", @"work/../GitExtensions/")]
+    [Theory]
+    [InlineData(@"\\Wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu", @"/work/../GitExtensions/")]
+    [InlineData(@"\\wsl$\Ubuntu\work/../GitExtensions", "Ubuntu", @"/work/../GitExtensions")]
+    [InlineData(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu-20.04", @"/work/../GitExtensions/")]
+    [InlineData(@"C:\work\..\GitExtensions\", "Ubuntu", @"/mnt/c/work/../GitExtensions/")]
+    [InlineData(@"work\..\GitExtensions\", "Ubuntu", @"work/../GitExtensions/")]
     public void GetPathForGitExecution_wsl(string? path, string wslDistro, string expected)
     {
         PathUtil.GetPathForGitExecution(path, wslDistro).Should().Be(expected);
     }
 
-    [TestCase(@"\\wsl$/Ubuntu/work/../GitExtensions", "Ubuntu", @"//wsl$/Ubuntu/work/../GitExtensions")]
-    [TestCase(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu", @"//wsl$/Ubuntu-20.04/work/../GitExtensions/")]
+    [Theory]
+    [InlineData(@"\\wsl$/Ubuntu/work/../GitExtensions", "Ubuntu", @"//wsl$/Ubuntu/work/../GitExtensions")]
+    [InlineData(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu", @"//wsl$/Ubuntu-20.04/work/../GitExtensions/")]
     public void GetPathForGitExecution_unexpected_usage(string? path, string wslDistro, string expected)
     {
         PathUtil.GetPathForGitExecution(path, wslDistro).Should().Be(expected);
     }
 
     // Mostly opposite to GetRepoPath_wsl
-    [TestCase(@"\\wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu", @"/work/../GitExtensions/")]
-    [TestCase(@"\\wsl$\Ubuntu\work\..\GitExtensions", "Ubuntu", @"/work/../GitExtensions")]
-    [TestCase(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu-20.04", @"/work/../GitExtensions/")]
-    [TestCase(@"C:\work\..\GitExtensions\", "Ubuntu", @"/mnt/c/work/../GitExtensions/")]
-    [TestCase(@"\\wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu", @"work/../GitExtensions/")]
+    [Theory]
+    [InlineData(@"\\wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu", @"/work/../GitExtensions/")]
+    [InlineData(@"\\wsl$\Ubuntu\work\..\GitExtensions", "Ubuntu", @"/work/../GitExtensions")]
+    [InlineData(@"\\wsl$\Ubuntu-20.04\work\..\GitExtensions\", "Ubuntu-20.04", @"/work/../GitExtensions/")]
+    [InlineData(@"C:\work\..\GitExtensions\", "Ubuntu", @"/mnt/c/work/../GitExtensions/")]
+    [InlineData(@"\\wsl$\Ubuntu\work\..\GitExtensions\", "Ubuntu", @"work/../GitExtensions/")]
     public void GetWindowsPath_wsl(string expected, string wslDistro, string? path)
     {
         PathUtil.GetWindowsPath(path, wslDistro).Should().Be(expected);
     }
 
-    [Platform(Include = "Win")]
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase(" ")]
-    [TestCase("a:\\folder\\filename.txt")]
-    [TestCase("a:\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
-    [TestCase("file:////folder/filename.txt")]
-    [TestCaseSource(nameof(GetInvalidPaths))]
+    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("a:\\folder\\filename.txt")]
+    [InlineData("a:\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
+    [InlineData("file:////folder/filename.txt")]
+    [MemberData(nameof(GetInvalidPaths))]
     public void TryFindFullPath_not_throw_if_file_not_exist(string? fileName)
     {
         PathUtil.TryFindFullPath(fileName!, out _).Should().BeFalse();
     }
 
-    private static IEnumerable<string> GetInvalidPaths()
+    public static IEnumerable<object?[]> GetInvalidPaths()
     {
         if (Path.DirectorySeparatorChar == '\\')
         {
-            yield return @"c::\word";
-            yield return "\"c:\\word\t\\\"";
-            yield return @".c:\Programs\";
-            yield return "c:\\Programs\\Get\"\\";
+            yield return new object?[] { @"c::\word" };
+            yield return new object?[] { "\"c:\\word\t\\\"" };
+            yield return new object?[] { @".c:\Programs\" };
+            yield return new object?[] { "c:\\Programs\\Get\"\\" };
         }
         else
         {
@@ -423,7 +437,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void GetDisplayPath()
     {
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -432,36 +446,37 @@ public class PathUtilTest
         PathUtil.GetDisplayPath("c:\\SomePath").Should().Be("c:\\SomePath");
     }
 
-    [TestCase("/foo/bar", new[] { "\\foo\\", "\\" })]
-    [TestCase("/foo/bar/", new[] { "\\foo\\", "\\" })]
-    [TestCase("/foo", new[] { "\\" })]
-    [TestCase("/foo/", new[] { "\\" })]
-    [TestCase("/", new string[0])]
-    [TestCase("C:\\foo\\bar", new[] { "C:\\foo\\", "C:\\" })]
-    [TestCase("C:\\", new string[0])]
+    [Theory]
+    [InlineData("/foo/bar", new[] { "\\foo\\", "\\" })]
+    [InlineData("/foo/bar/", new[] { "\\foo\\", "\\" })]
+    [InlineData("/foo", new[] { "\\" })]
+    [InlineData("/foo/", new[] { "\\" })]
+    [InlineData("/", new string[0])]
+    [InlineData("C:\\foo\\bar", new[] { "C:\\foo\\", "C:\\" })]
+    [InlineData("C:\\", new string[0])]
     public void FindAncestors(string? path, string[] expected)
     {
         PathUtil.FindAncestors(path!).ToArray().Should().Equal(expected);
     }
 
-    private static IEnumerable<TestCaseData> InvalidFolders
+    public static IEnumerable<object?[]> InvalidFolders
     {
         get
         {
-            yield return new TestCaseData(null);
-            yield return new TestCaseData("");
-            yield return new TestCaseData(@"A:\does\not\exist");
+            yield return new object?[] { null };
+            yield return new object?[] { "" };
+            yield return new object?[] { @"A:\does\not\exist" };
         }
     }
 
-    [Test, TestCaseSource(nameof(InvalidFolders))]
+    [Theory, MemberData(nameof(InvalidFolders))]
     public void DeleteWithExtremePrejudice_should_return_true_for_empty_input_or_absent_folders(string? path)
     {
         path.TryDeleteDirectory(out string? errorMessage).Should().BeTrue();
         errorMessage.Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void DeleteWithExtremePrejudice_should_return_true_if_delete_successful()
     {
         string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -473,7 +488,7 @@ public class PathUtilTest
         Directory.Exists(tempPath).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void TryFindShellPath_should_not_throw_for_nonexistent_shell()
     {
         // This exercises the null-safety guards in TryFindShellPath:
@@ -485,9 +500,10 @@ public class PathUtilTest
         shellPath.Should().BeNull();
     }
 
-    [TestCase("", "git-bash.exe")]
-    [TestCase("bin", "sh.exe")]
-    [TestCase("usr/bin", "bash.exe")]
+    [Theory]
+    [InlineData("", "git-bash.exe")]
+    [InlineData("bin", "sh.exe")]
+    [InlineData("usr/bin", "bash.exe")]
     public void TryFindShellInGitDir_should_find_a_shell_shipped_with_git(string subDirectory, string shell)
     {
         string gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -511,7 +527,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void TryFindShellInGitDir_should_prefer_usr_bin_over_bin_for_the_same_shell_name()
     {
         // "bin\bash.exe" is a thin compatibility wrapper around the real MSYS2 bash shipped in
@@ -541,7 +557,7 @@ public class PathUtilTest
         }
     }
 
-    [Test]
+    [Fact]
     public void TryFindShellInGitDir_should_not_find_a_shell_which_is_not_there()
     {
         string gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -550,45 +566,48 @@ public class PathUtilTest
         shellPath.Should().BeNull();
     }
 
-    [TestCase(@"C:\Users\Acker Liu\Git\bash.exe", @"""C:\Users\Acker Liu\Git\bash.exe""")]
-    [TestCase(@"C:\Program Files\Git\bash.exe", @"""C:\Program Files\Git\bash.exe""")]
-    [TestCase(@"C:\NoSpaces\bash.exe", @"""C:\NoSpaces\bash.exe""")]
-    [TestCase(null, "")]
+    [Theory]
+    [InlineData(@"C:\Users\Acker Liu\Git\bash.exe", @"""C:\Users\Acker Liu\Git\bash.exe""")]
+    [InlineData(@"C:\Program Files\Git\bash.exe", @"""C:\Program Files\Git\bash.exe""")]
+    [InlineData(@"C:\NoSpaces\bash.exe", @"""C:\NoSpaces\bash.exe""")]
+    [InlineData(null, "")]
     public void Quote_should_handle_paths_with_spaces(string? path, string expected)
     {
         path.Quote().Should().Be(expected);
     }
 
-    [TestCase(@"C:\Users\Acker Liu\Git\bash.exe", @"""C:\Users\Acker Liu\Git\bash.exe""")]
-    [TestCase(null, null)]
-    [TestCase("", "")]
+    [Theory]
+    [InlineData(@"C:\Users\Acker Liu\Git\bash.exe", @"""C:\Users\Acker Liu\Git\bash.exe""")]
+    [InlineData(null, null)]
+    [InlineData("", "")]
     public void QuoteNE_should_handle_paths_with_spaces(string? path, string? expected)
     {
         path.QuoteNE().Should().Be(expected);
     }
 
-    [TestCase(null, false)]
-    [TestCase("", false)]
-    [TestCase(" ", false)]
-    [TestCase("blah", false)]
-    [TestCase("https://github.com/gitextensions/gitextensions", true)]
-    [TestCase("https://github.com/gitextensions/gitextensions.git", true)]
-    [TestCase("github.com/gitextensions/gitextensions.git", true)]
-    [TestCase("HTTPS://MYPRIVATEGITHUB.COM:8080/LOUDREPO.GIT", true)]
-    [TestCase("git://myurl/myrepo.git", true)]
-    [TestCase("git@github.com:gitextensions/gitextensions.git", true)]
-    [TestCase("git@github.com:gitextensions/gitextensions.git/", true)]
-    [TestCase("https://github.com/gitextensions/gitextensions/issues/12210#issuecomment-2672903979", false)]
-    [TestCase("https://github.com/gitextensions/gitextensions?query=param", false)]
-    [TestCase("github.com/gitextensions", false)]
-    [TestCase("github.com/gitextensions/gitextensions/pull/9018", false)]
-    [TestCase("http://", false)]
-    [TestCase("HTTPS://www", true)]
-    [TestCase("git://", true)]
-    [TestCase("file:", false)]
-    [TestCase("SSH:", true)]
-    [TestCase("SSH", false)]
-    [TestCase("https://myhost:12368/", true)]
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData(" ", false)]
+    [InlineData("blah", false)]
+    [InlineData("https://github.com/gitextensions/gitextensions", true)]
+    [InlineData("https://github.com/gitextensions/gitextensions.git", true)]
+    [InlineData("github.com/gitextensions/gitextensions.git", true)]
+    [InlineData("HTTPS://MYPRIVATEGITHUB.COM:8080/LOUDREPO.GIT", true)]
+    [InlineData("git://myurl/myrepo.git", true)]
+    [InlineData("git@github.com:gitextensions/gitextensions.git", true)]
+    [InlineData("git@github.com:gitextensions/gitextensions.git/", true)]
+    [InlineData("https://github.com/gitextensions/gitextensions/issues/12210#issuecomment-2672903979", false)]
+    [InlineData("https://github.com/gitextensions/gitextensions?query=param", false)]
+    [InlineData("github.com/gitextensions", false)]
+    [InlineData("github.com/gitextensions/gitextensions/pull/9018", false)]
+    [InlineData("http://", false)]
+    [InlineData("HTTPS://www", true)]
+    [InlineData("git://", true)]
+    [InlineData("file:", false)]
+    [InlineData("SSH:", true)]
+    [InlineData("SSH", false)]
+    [InlineData("https://myhost:12368/", true)]
     public void CanBeGitURL(string? url, bool expected)
     {
         PathUtil.CanBeGitURL(url).Should().Be(expected);

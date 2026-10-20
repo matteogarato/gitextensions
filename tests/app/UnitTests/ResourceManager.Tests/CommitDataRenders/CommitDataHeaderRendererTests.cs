@@ -1,4 +1,5 @@
-﻿using GitExtensions.Extensibility.Git;
+﻿using System.Globalization;
+using GitExtensions.Extensibility.Git;
 using GitUIPluginInterfaces;
 using NSubstitute;
 using ResourceManager;
@@ -6,10 +7,10 @@ using ResourceManager.CommitDataRenders;
 
 namespace ResourceManagerTests.CommitDataRenders;
 
-[SetCulture("en-US")]
-[SetUICulture("en-US")]
-public class CommitDataHeaderRendererTests
+public class CommitDataHeaderRendererTests : IDisposable
 {
+    private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
     private IHeaderLabelFormatter _labelFormatter = null!;
     private IHeaderRenderStyleProvider _headerRendererStyleProvider = null!;
     private ILinkFactory _linkFactory = null!;
@@ -30,9 +31,12 @@ public class CommitDataHeaderRendererTests
         ObjectId.Parse("bc911920838c15bcf86808904ecb897595b9ef5f")
     };
 
-    [SetUp]
-    public void Setup()
+    public CommitDataHeaderRendererTests()
     {
+        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentCulture = testCulture;
+        CultureInfo.CurrentUICulture = testCulture;
+
         _labelFormatter = Substitute.For<IHeaderLabelFormatter>();
         _labelFormatter.FormatLabel(TranslatedStrings.Author, Arg.Any<int>()).Returns(x => "Author:        ");
         _labelFormatter.FormatLabel(TranslatedStrings.Committer, Arg.Any<int>()).Returns(x => "Committer:     ");
@@ -52,7 +56,13 @@ public class CommitDataHeaderRendererTests
         _renderer = new CommitDataHeaderRenderer(_labelFormatter, _dateFormatter, _headerRendererStyleProvider, _linkFactory);
     }
 
-    [Test]
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUICulture;
+    }
+
+    [StaFact]
     public void GetFont_should_get_font_from_style_provider()
     {
         using Control c = new();
@@ -62,7 +72,7 @@ public class CommitDataHeaderRendererTests
         _headerRendererStyleProvider.Received().GetFont(g);
     }
 
-    [Test]
+    [StaFact]
     public void GetTabStops_should_get_stops_from_style_provider()
     {
         _renderer.GetTabStops();
@@ -70,13 +80,13 @@ public class CommitDataHeaderRendererTests
         _headerRendererStyleProvider.Received().GetTabStops();
     }
 
-    [Test]
+    [Fact]
     public void Render_should_throw_if_data_null()
     {
         ((Action)(() => _renderer.Render(null!, true))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void Render_should_not_render_committer_info_if_same_as_author_info()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -103,7 +113,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void Render_should_render_committer_if_different_from_author()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -131,7 +141,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void Render_should_render_commit_date_if_different_from_author_date()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -159,7 +169,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.Committer, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void Render_should_render_commit_children()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -192,7 +202,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void Render_should_render_commit_parents()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -220,8 +230,9 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [TestCase(GitRevision.IndexGuid)]
-    [TestCase(GitRevision.WorkTreeGuid)]
+    [Theory]
+    [InlineData(GitRevision.IndexGuid)]
+    [InlineData(GitRevision.WorkTreeGuid)]
     public void Render_should_render_minimal_info_for_artificial_commits(string artificialGuid)
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -248,13 +259,13 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void RenderPlain_should_throw_if_data_null()
     {
         ((Action)(() => _renderer.RenderPlain(null!))).Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public void RenderPlain_should_not_render_committer_info_if_same_as_author_info()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -281,7 +292,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void RenderPlain_should_render_committer_if_different_from_author()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -309,7 +320,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.CommitDate, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void RenderPlain_should_render_commit_date_if_different_from_author_date()
     {
         string author = "John Doe (Acme Inc) <John.Doe@test.com>";
@@ -337,7 +348,7 @@ public class CommitDataHeaderRendererTests
         _labelFormatter.DidNotReceive().FormatLabel(TranslatedStrings.Committer, Arg.Any<int>());
     }
 
-    [Test]
+    [Fact]
     public void GetPlainText_should_repace_multiple_spaces_and_tabs()
     {
         string header = "label 1:  value 1\nlabel 2:\tvalue 2\nlabel 3:\t value 3\nlabel 4: value 4";
@@ -345,29 +356,33 @@ public class CommitDataHeaderRendererTests
         _renderer.GetPlainText(header).Should().Be(expected);
     }
 
-    [Test]
-    public void GetPlainText_should_remove_relative_time([Values("1 minute", "3 years")] string relativeTime)
+    [Theory]
+    [InlineData("1 minute")]
+    [InlineData("3 years")]
+    public void GetPlainText_should_remove_relative_time(string relativeTime)
     {
         string header = $"\ndate: {relativeTime} ago (time)\nlabel 2: value 2";
         string expected = "\ndate: time\nlabel 2: value 2";
         _renderer.GetPlainText(header).Should().Be(expected);
     }
 
-    [Test]
-    public void GetPlainText_should_not_remove_ago_from_author([Values("mago@x.y", "x@blagoq.org", "ago <x@y.z>")] string author)
+    [Theory]
+    [InlineData("mago@x.y")]
+    [InlineData("x@blagoq.org")]
+    [InlineData("ago <x@y.z>")]
+    public void GetPlainText_should_not_remove_ago_from_author(string author)
     {
         string header = $"\nAuthor: {author}\nlabel 2: value 2";
         _renderer.GetPlainText(header).Should().Be(header);
     }
 
-    [Test]
-    public void GetPlainText_should_remove_child_and_parent_commits([Values(
-        "Child: 123bcdef",
-        "Children: 123bcdef, 234abcd",
-        "Parent: 123bcdef",
-        "Parents: 123bcdef, 234abcd",
-        "Children: 123bcdef, 234abcd\nParent: 345bcdef")]
-        string relatives)
+    [Theory]
+    [InlineData("Child: 123bcdef")]
+    [InlineData("Children: 123bcdef, 234abcd")]
+    [InlineData("Parent: 123bcdef")]
+    [InlineData("Parents: 123bcdef, 234abcd")]
+    [InlineData("Children: 123bcdef, 234abcd\nParent: 345bcdef")]
+    public void GetPlainText_should_remove_child_and_parent_commits(string relatives)
     {
         string header = $"label 1: value 1\n{relatives}\nlabel 3: value 3";
         string expected = $"label 1: value 1\nlabel 3: value 3";

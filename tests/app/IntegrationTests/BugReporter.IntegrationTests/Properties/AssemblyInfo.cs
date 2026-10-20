@@ -1,5 +1,6 @@
 ﻿using CommonTestUtils;
+using Xunit;
 
-[assembly: Category("IntegrationTests")]
+[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]
+[assembly: Trait("Category", "IntegrationTests")]
 [assembly: ConfigureJoinableTaskFactory]
-[assembly: TestAppSettings]

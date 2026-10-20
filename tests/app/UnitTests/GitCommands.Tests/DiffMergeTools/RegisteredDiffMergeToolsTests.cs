@@ -3,7 +3,7 @@
 namespace GitCommandsTests.DiffMergeTools;
 public class RegisteredDiffMergeToolsTests
 {
-    [Test]
+    [Fact]
     public void All_DiffTools()
     {
         IEnumerable<string> tools = RegisteredDiffMergeTools.All(DiffMergeToolType.Diff);
@@ -11,7 +11,7 @@ public class RegisteredDiffMergeToolsTests
         tools.Should().BeEquivalentTo("araxis", "bc", "bc3", "diffmerge", "kdiff3", "meld", "p4merge", "semanticmerge", "smerge", "tortoisediff", "TortoiseGitIDiff", "vscode", "vsdiffmerge", "winmerge");
     }
 
-    [Test]
+    [Fact]
     public void All_MergeTools()
     {
         IEnumerable<string> tools = RegisteredDiffMergeTools.All(DiffMergeToolType.Merge);

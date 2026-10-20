@@ -8,8 +8,7 @@ public class LaneNodeLocatorTests
     private IRevisionGraphRowProvider _revisionGraphRowProvider = null!;
     private LaneNodeLocator _laneNodeLocator = null!;
 
-    [SetUp]
-    public void Setup()
+    public LaneNodeLocatorTests()
     {
         _revisionGraphRowProvider = Substitute.For<IRevisionGraphRowProvider>();
         _laneNodeLocator = new LaneNodeLocator(_revisionGraphRowProvider);
@@ -45,19 +44,19 @@ public class LaneNodeLocatorTests
         return node;
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_null_if_lane_negative()
     {
         _laneNodeLocator.FindPrevNode(0, -1).Should().Be((null, false, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_null_if_rowIndex_negative()
     {
         _laneNodeLocator.FindPrevNode(-1, 0).Should().Be((null, false, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_null_if_model_does_not_have_row()
     {
         const int row = 100;
@@ -65,7 +64,7 @@ public class LaneNodeLocatorTests
         _laneNodeLocator.FindPrevNode(row, 0).Should().Be((null, false, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_null_if_rowIndex_exceeds_model_row_count()
     {
         // It is not up to FindPrevNode() to check this, because:
@@ -73,7 +72,7 @@ public class LaneNodeLocatorTests
         FindPrevNode_should_return_null_if_model_does_not_have_row();
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_the_node_if_it_is_at_the_node_lane_although_lane_count_is_0()
     {
         const int row = 100;
@@ -84,7 +83,7 @@ public class LaneNodeLocatorTests
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((node, true, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_null_if_lane_exceeds_lane_count_and_lane_is_not_the_node_lane()
     {
         const int row = 100;
@@ -95,7 +94,7 @@ public class LaneNodeLocatorTests
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((null, false, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_null_if_there_is_no_lane_info()
     {
         const int row = 100;
@@ -107,7 +106,7 @@ public class LaneNodeLocatorTests
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((null, false, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_the_parent_node_of_the_single_segment()
     {
         const int row = 100;
@@ -118,7 +117,7 @@ public class LaneNodeLocatorTests
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((laneNode, false, null));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_the_parent_and_child_nodes_of_the_single_segment()
     {
         const int row = 100;
@@ -130,7 +129,7 @@ public class LaneNodeLocatorTests
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((laneNode, false, childNode));
     }
 
-    [Test]
+    [Fact]
     public void FindPrevNode_should_return_the_parent_node_of_the_first_segment_and_throw_in_debug_build()
     {
         const int row = 100;
@@ -148,7 +147,7 @@ public class LaneNodeLocatorTests
         {
             // Exception before innermost "return" in DEBUG build
             _laneNodeLocator.FindPrevNode(row, lane).Should().Be((parentNode, false, null));
-            throw new AssertionException("The debug build should throw an exception!");
+            throw new Xunit.Sdk.XunitException("The debug build should throw an exception!");
         }
         catch (Exception x)
         {

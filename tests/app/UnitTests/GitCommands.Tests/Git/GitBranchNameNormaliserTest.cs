@@ -6,16 +6,16 @@ public sealed class GitBranchNameNormaliserTest
     private GitBranchNameNormaliser _gitBranchNameNormaliser = null!;
     private GitBranchNameOptions _gitBranchNameOptions = null!;
 
-    [SetUp]
-    public void Setup()
+    public GitBranchNameNormaliserTest()
     {
         _gitBranchNameNormaliser = new GitBranchNameNormaliser();
         _gitBranchNameOptions = new GitBranchNameOptions("_");
     }
 
-    [TestCase("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "_", "_BUG-1234]_some_long_description_located__/test/_/dir_/_lock]{3,}_and_foo_bar_can_")]
-    [TestCase("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "-", "-BUG-1234]-some-long-description-located--/test/-/dir-/-lock]{3,}-and-foo-bar-can-")]
-    [TestCase("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "", "BUG-1234]somelongdescriptionlocated/test/dir/lock]{3,}andfoobarcan")]
+    [Theory]
+    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "_", "_BUG-1234]_some_long_description_located__/test/_/dir_/_lock]{3,}_and_foo_bar_can_")]
+    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "-", "-BUG-1234]-some-long-description-located--/test/-/dir-/-lock]{3,}-and-foo-bar-can-")]
+    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "", "BUG-1234]somelongdescriptionlocated/test/dir/lock]{3,}andfoobarcan")]
     public void Normalise(string input, string replacementToken, string expected)
     {
         _gitBranchNameOptions = new GitBranchNameOptions(replacementToken);
@@ -24,38 +24,40 @@ public sealed class GitBranchNameNormaliserTest
 
     // They can include slash / for hierarchical (directory) grouping,
     // but no slash-separated component can begin with a dot . or end with the sequence .lock.
-    [TestCase(".test", "_test")]
-    [TestCase("hierarchy/.test", "hierarchy/_test")]
-    [TestCase("hierarchy/.test/foo", "hierarchy/_test/foo")]
-    [TestCase(".lock", "_lock")]
-    [TestCase("pad.lock", "pad_lock")]
-    [TestCase("pad.lock.lock", "pad.lock_lock")]
-    [TestCase("hierarchy/sher.lock", "hierarchy/sher_lock")]
-    [TestCase("hierarchy/sher.lok", "hierarchy/sher.lok")]
-    [TestCase("hierarchy/sher.lock/foo", "hierarchy/sher_lock/foo")]
-    [TestCase("hierarchy/sher.lok/foo", "hierarchy/sher.lok/foo")]
+    [Theory]
+    [InlineData(".test", "_test")]
+    [InlineData("hierarchy/.test", "hierarchy/_test")]
+    [InlineData("hierarchy/.test/foo", "hierarchy/_test/foo")]
+    [InlineData(".lock", "_lock")]
+    [InlineData("pad.lock", "pad_lock")]
+    [InlineData("pad.lock.lock", "pad.lock_lock")]
+    [InlineData("hierarchy/sher.lock", "hierarchy/sher_lock")]
+    [InlineData("hierarchy/sher.lok", "hierarchy/sher.lok")]
+    [InlineData("hierarchy/sher.lock/foo", "hierarchy/sher_lock/foo")]
+    [InlineData("hierarchy/sher.lok/foo", "hierarchy/sher.lok/foo")]
     public void Normalise_rule01(string input, string expected)
     {
         GitBranchNameNormaliser.Rule01(input, _gitBranchNameOptions).Should().Be(expected);
     }
 
     // They cannot have two consecutive dots .. anywhere.
-    [TestCase("..test", "_test")]
-    [TestCase("...test", "_test")]
-    [TestCase("hierarchy/..test", "hierarchy/_test")]
-    [TestCase("hierarchy/...test", "hierarchy/_test")]
-    [TestCase("hierarchy/..test/foo", "hierarchy/_test/foo")]
-    [TestCase("hierarchy/...test/foo", "hierarchy/_test/foo")]
-    [TestCase("..lock", "_lock")]
-    [TestCase("pad..lock", "pad_lock")]
-    [TestCase("pad...lock", "pad_lock")]
-    [TestCase("hierarchy/sher..lock", "hierarchy/sher_lock")]
-    [TestCase("padlock...", "padlock_")]
-    [TestCase("hierarchy/sher...lock", "hierarchy/sher_lock")]
-    [TestCase("hierarchy/sher..lock/foo", "hierarchy/sher_lock/foo")]
-    [TestCase("hierarchy/sher...lock/foo", "hierarchy/sher_lock/foo")]
-    [TestCase("hierarchy/sher..lok/foo", "hierarchy/sher_lok/foo")]
-    [TestCase("hier.....archy/sher...lok/fo..o", "hier_archy/sher_lok/fo_o")]
+    [Theory]
+    [InlineData("..test", "_test")]
+    [InlineData("...test", "_test")]
+    [InlineData("hierarchy/..test", "hierarchy/_test")]
+    [InlineData("hierarchy/...test", "hierarchy/_test")]
+    [InlineData("hierarchy/..test/foo", "hierarchy/_test/foo")]
+    [InlineData("hierarchy/...test/foo", "hierarchy/_test/foo")]
+    [InlineData("..lock", "_lock")]
+    [InlineData("pad..lock", "pad_lock")]
+    [InlineData("pad...lock", "pad_lock")]
+    [InlineData("hierarchy/sher..lock", "hierarchy/sher_lock")]
+    [InlineData("padlock...", "padlock_")]
+    [InlineData("hierarchy/sher...lock", "hierarchy/sher_lock")]
+    [InlineData("hierarchy/sher..lock/foo", "hierarchy/sher_lock/foo")]
+    [InlineData("hierarchy/sher...lock/foo", "hierarchy/sher_lock/foo")]
+    [InlineData("hierarchy/sher..lok/foo", "hierarchy/sher_lok/foo")]
+    [InlineData("hier.....archy/sher...lok/fo..o", "hier_archy/sher_lok/fo_o")]
     public void Normalise_rule03(string input, string expected)
     {
         GitBranchNameNormaliser.Rule03(input, _gitBranchNameOptions).Should().Be(expected);
@@ -63,48 +65,51 @@ public sealed class GitBranchNameNormaliserTest
 
     // Branch name cannot have ASCII control characters (i.e. bytes whose values are lower than \040, or \127 'DEL'),
     // space, tilde '~', caret '^', or colon ':' anywhere.
-    [TestCase("test:test", "test_test")]
-    [TestCase("test test", "test_test")]
-    [TestCase("test^test", "test_test")]
-    [TestCase("test~test", "test_test")]
-    [TestCase("hier archy:sher~lok/fo^o", "hier_archy_sher_lok/fo_o")]
-    [TestCase("błąd", "błąd")]
-    [TestCase("привет, ё-маё!", "привет,_ё-маё!")]
-    [TestCase("Pokémon 195", "Pokémon_195")]
-    [TestCase("Anhörung`!@#$%", "Anhörung`!@#$%")]
-    [TestCase("test\"test", "test_test")]
-    [TestCase("test<test>test", "test_test_test")]
-    [TestCase("test|test", "test_test")]
+    [Theory]
+    [InlineData("test:test", "test_test")]
+    [InlineData("test test", "test_test")]
+    [InlineData("test^test", "test_test")]
+    [InlineData("test~test", "test_test")]
+    [InlineData("hier archy:sher~lok/fo^o", "hier_archy_sher_lok/fo_o")]
+    [InlineData("błąd", "błąd")]
+    [InlineData("привет, ё-маё!", "привет,_ё-маё!")]
+    [InlineData("Pokémon 195", "Pokémon_195")]
+    [InlineData("Anhörung`!@#$%", "Anhörung`!@#$%")]
+    [InlineData("test\"test", "test_test")]
+    [InlineData("test<test>test", "test_test_test")]
+    [InlineData("test|test", "test_test")]
     public void Normalise_rule04(string input, string expected)
     {
         GitBranchNameNormaliser.Rule04(input, _gitBranchNameOptions).Should().Be(expected);
     }
 
     // Branch name cannot have question-mark '?', asterisk '*', or open bracket '[' anywhere.
-    [TestCase("test?", "test_")]
-    [TestCase("?test", "_test")]
-    [TestCase("test???test", "test___test")]
-    [TestCase("test*", "test_")]
-    [TestCase("*test", "_test")]
-    [TestCase("test***test", "test___test")]
-    [TestCase("test[foo]", "test_foo]")]
-    [TestCase("[test]", "_test]")]
-    [TestCase("testing?[*]*test", "testing___]_test")]
+    [Theory]
+    [InlineData("test?", "test_")]
+    [InlineData("?test", "_test")]
+    [InlineData("test???test", "test___test")]
+    [InlineData("test*", "test_")]
+    [InlineData("*test", "_test")]
+    [InlineData("test***test", "test___test")]
+    [InlineData("test[foo]", "test_foo]")]
+    [InlineData("[test]", "_test]")]
+    [InlineData("testing?[*]*test", "testing___]_test")]
     public void Normalise_rule05(string input, string expected)
     {
         GitBranchNameNormaliser.Rule05(input, _gitBranchNameOptions).Should().Be(expected);
     }
 
     // Branch name begin or end with a slash '/' or contain multiple consecutive slashes.
-    [TestCase("test/", false, "test")]
-    [TestCase("test/", true, "test/")]
-    [TestCase("/test", false, "test")]
-    [TestCase("/test/", false, "test")]
-    [TestCase("/test/", true, "test/")]
-    [TestCase("/test/test/", false, "test/test")]
-    [TestCase("/test/test/", true, "test/test/")]
-    [TestCase("///test///test///", false, "test/test")]
-    [TestCase("///test///test///", true, "test/test/")]
+    [Theory]
+    [InlineData("test/", false, "test")]
+    [InlineData("test/", true, "test/")]
+    [InlineData("/test", false, "test")]
+    [InlineData("/test/", false, "test")]
+    [InlineData("/test/", true, "test/")]
+    [InlineData("/test/test/", false, "test/test")]
+    [InlineData("/test/test/", true, "test/test/")]
+    [InlineData("///test///test///", false, "test/test")]
+    [InlineData("///test///test///", true, "test/test/")]
     public void Normalise_rule06(string input, bool allowTrailingSlash, string expected)
     {
         GitBranchNameOptions options = new(replacementToken: "_", allowTrailingSlash);
@@ -112,33 +117,37 @@ public sealed class GitBranchNameNormaliserTest
     }
 
     // Branch name end with a dot '.'.
-    [TestCase("test.", "test_")]
-    [TestCase("test..", "test_")]
-    [TestCase("test...", "test_")]
+    [Theory]
+    [InlineData("test.", "test_")]
+    [InlineData("test..", "test_")]
+    [InlineData("test...", "test_")]
     public void Normalise_rule07(string input, string expected)
     {
         GitBranchNameNormaliser.Rule07(input, _gitBranchNameOptions).Should().Be(expected);
     }
 
     // Branch name cannot contain a sequence '@{'.
-    [TestCase("@{", "_")]
-    [TestCase("@{test}", "_test}")]
-    [TestCase("test@foo", "test@foo")]
-    [TestCase("test@{bla}", "test_bla}")]
+    [Theory]
+    [InlineData("@{", "_")]
+    [InlineData("@{test}", "_test}")]
+    [InlineData("test@foo", "test@foo")]
+    [InlineData("test@{bla}", "test_bla}")]
     public void Normalise_rule08(string input, string expected)
     {
         GitBranchNameNormaliser.Rule08(input, _gitBranchNameOptions).Should().Be(expected);
     }
 
     // Branch name cannot be the single character '@'.
-    [TestCase(@"@", "_")]
+    [Theory]
+    [InlineData(@"@", "_")]
     public void Normalise_rule09(string input, string expected)
     {
         GitBranchNameNormaliser.Rule09(input, _gitBranchNameOptions).Should().Be(expected);
     }
 
     // Branch name cannot contain a '\'.
-    [TestCase(@"test\foo\\bar\", "test_foo_bar_")]
+    [Theory]
+    [InlineData(@"test\foo\\bar\", "test_foo_bar_")]
     public void Normalise_rule10(string input, string expected)
     {
         GitBranchNameNormaliser.Rule10(input, _gitBranchNameOptions).Should().Be(expected);

@@ -3,7 +3,7 @@
 namespace GitExtUtilsTests;
 public sealed class MruCacheTests
 {
-    [Test]
+    [Fact]
     public void Add_expires_last_used_entry_when_at_capacity()
     {
         MruCache<int, string> cache = new(capacity: 3);
@@ -24,7 +24,7 @@ public sealed class MruCacheTests
         cache.TryGetValue(4, out _).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void TryGetValue_renews_lifespan_of_entry()
     {
         MruCache<int, string> cache = new(capacity: 3);
@@ -45,7 +45,7 @@ public sealed class MruCacheTests
         cache.TryGetValue(4, out _).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void Clear_removes_all_entries()
     {
         MruCache<int, string> cache = new(capacity: 3);
@@ -61,7 +61,7 @@ public sealed class MruCacheTests
         cache.TryGetValue(3, out _).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void TryRemove_removes_existing_entries()
     {
         MruCache<int, string> cache = new(capacity: 3);
@@ -78,7 +78,7 @@ public sealed class MruCacheTests
         cache.TryGetValue(3, out _).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void TryRemove_returns_false_for_unknown_entry()
     {
         MruCache<int, string> cache = new(capacity: 3);

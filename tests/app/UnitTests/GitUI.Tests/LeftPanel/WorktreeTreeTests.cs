@@ -6,7 +6,7 @@ public sealed class WorktreeTreeTests
 {
     private static readonly char Sep = Path.DirectorySeparatorChar;
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_return_empty_for_no_paths()
     {
         string result = WorktreeTree.GetCommonPrefix([]);
@@ -14,7 +14,7 @@ public sealed class WorktreeTreeTests
         result.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_return_empty_for_single_path()
     {
         // A single path has nothing to compare against — no common prefix to strip.
@@ -25,7 +25,7 @@ public sealed class WorktreeTreeTests
         result.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_return_common_prefix_for_sibling_paths()
     {
         string[] paths =
@@ -39,7 +39,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be($"my-repo.worktrees{Sep}");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_return_empty_when_paths_share_no_directory_prefix()
     {
         string[] paths =
@@ -53,7 +53,7 @@ public sealed class WorktreeTreeTests
         result.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_return_partial_prefix_for_mixed_depth()
     {
         string[] paths =
@@ -68,7 +68,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be($"root{Sep}");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_handle_nested_common_prefix()
     {
         string[] paths =
@@ -82,7 +82,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be($"root{Sep}sub{Sep}");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_be_case_insensitive()
     {
         string[] paths =
@@ -96,7 +96,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be($"Worktrees{Sep}");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_strip_underscore_delimited_prefix()
     {
         string[] paths =
@@ -111,7 +111,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be("gitextensions3_");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_strip_hyphen_delimited_prefix()
     {
         string[] paths =
@@ -125,7 +125,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be("my-repo-feature-");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_strip_dot_delimited_prefix()
     {
         string[] paths =
@@ -139,7 +139,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be("repo.worktrees.");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_strip_space_delimited_prefix()
     {
         string[] paths =
@@ -153,7 +153,7 @@ public sealed class WorktreeTreeTests
         result.Should().Be("my repo feature-");
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_not_split_mid_word()
     {
         string[] paths = ["apricot", "apple"];
@@ -163,7 +163,7 @@ public sealed class WorktreeTreeTests
         result.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_return_empty_for_single_path_without_boundary()
     {
         string[] paths = ["worktree"];
@@ -173,7 +173,7 @@ public sealed class WorktreeTreeTests
         result.Should().BeEmpty();
     }
 
-    [Test]
+    [Fact]
     public void GetCommonPrefix_should_snap_to_directory_separator_over_word_boundary()
     {
         // When paths contain directory separators, the prefix snaps to the last

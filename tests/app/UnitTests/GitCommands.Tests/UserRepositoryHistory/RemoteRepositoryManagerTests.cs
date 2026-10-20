@@ -3,15 +3,14 @@ using GitCommands.UserRepositoryHistory;
 using NSubstitute;
 
 namespace GitCommandsTests.UserRepositoryHistory;
-public class RemoteRepositoryManagerTests
+public class RemoteRepositoryManagerTests : IDisposable
 {
     private const string Key = "history remote";
     private IRepositoryStorage _repositoryStorage = null!;
     private RemoteRepositoryManager _manager = null!;
     private int _userSetting;
 
-    [SetUp]
-    public void Setup()
+    public RemoteRepositoryManagerTests()
     {
         // backup the user setting, will restore it at the end of the test run
         _userSetting = AppSettings.RecentRepositoriesHistorySize;
@@ -21,13 +20,12 @@ public class RemoteRepositoryManagerTests
         _manager = new RemoteRepositoryManager(_repositoryStorage);
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         AppSettings.RecentRepositoriesHistorySize = _userSetting;
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_add_new_path_as_top_entry()
     {
         const string repoToAdd = "https://path.to/add";
@@ -46,7 +44,7 @@ public class RemoteRepositoryManagerTests
         newHistory[0].Path.Should().Be(repoToAdd);
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_move_existing_path_as_top_entry()
     {
         const string repoToAdd = "https://path.to/add";
@@ -66,7 +64,7 @@ public class RemoteRepositoryManagerTests
         newHistory[0].Path.Should().Be(repoToAdd);
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_move_only_first_existing_path_as_top_entry()
     {
         const string repoToAdd = "https://path.to/add";
@@ -88,7 +86,7 @@ public class RemoteRepositoryManagerTests
         newHistory[4].Path.Should().Be(repoToAdd);
     }
 
-    [Test]
+    [Fact]
     public async Task AddAsMostRecentAsync_should_not_move_if_path_already_as_top_entry()
     {
         const string repoToAdd = "https://path.to/add";
@@ -109,7 +107,7 @@ public class RemoteRepositoryManagerTests
         _repositoryStorage.DidNotReceive().Save(Key, Arg.Any<IList<Repository>>());
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveRecentAsync_should_remove_if_exists()
     {
         const string repoToDelete = "path to delete";
@@ -132,7 +130,7 @@ public class RemoteRepositoryManagerTests
         _repositoryStorage.Received(1).Save(Key, Arg.Is<IEnumerable<Repository>>(h => h.All(r => r.Path != repoToDelete)));
     }
 
-    [Test]
+    [Fact]
     public async Task RemoveRecentAsync_should_not_crash_if_not_exists()
     {
         const string repoToDelete = "path to delete";
@@ -155,14 +153,14 @@ public class RemoteRepositoryManagerTests
         _repositoryStorage.DidNotReceive().Save(Key, Arg.Any<IEnumerable<Repository>>());
     }
 
-    [Test]
+    [Fact]
     public void SaveRecentHistoryAsync_should_throw_if_repositories_null()
     {
         Func<Task> action = async () => await _manager.SaveRecentHistoryAsync(null!);
         action.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Test]
+    [Fact]
     public async Task SaveRecentHistoryAsync_should_trim_history_size()
     {
         const int size = 3;

@@ -4,7 +4,7 @@ using GitUI.Editor.RichTextBoxExtension;
 using ResourceManager;
 
 namespace GitUITests.Editor;
-public class RichTextBoxXhtmlSupportExtensionTests
+public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
 {
     private const string _defaultLinkText = "link";
     private const string _defaultLinkUri = "https://uri.org";
@@ -15,15 +15,13 @@ public class RichTextBoxXhtmlSupportExtensionTests
     private RichTextBox _rtb = null!;
     private ILinkFactory _linkFactory = null!;
 
-    [SetUp]
-    public void Setup()
+    public RichTextBoxXhtmlSupportExtensionTests()
     {
         _rtb = new RichTextBox();
         _linkFactory = new LinkFactory();
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         _rtb.Dispose();
     }
@@ -62,7 +60,7 @@ public class RichTextBoxXhtmlSupportExtensionTests
         SetupLink(_defaultPrefix, _defaultLinkText, _defaultLinkUri, _defaultSuffix);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_null_if_index_is_invalid()
     {
         SetupLink(prefix: "", linkText: null!, uri: null!, suffix: "");
@@ -74,7 +72,7 @@ public class RichTextBoxXhtmlSupportExtensionTests
         _rtb.GetLink(_rtb.Text.Length).Should().BeNull();
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_null_if_left_of_link()
     {
         SetupDefaultLink();
@@ -84,7 +82,7 @@ public class RichTextBoxXhtmlSupportExtensionTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_null_if_right_of_link()
     {
         SetupDefaultLink();
@@ -94,14 +92,14 @@ public class RichTextBoxXhtmlSupportExtensionTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_text_contains_hash()
     {
         SetupLink(prefix: string.Empty, linkText: "#hash", uri: _defaultLinkUri, suffix: string.Empty);
         _rtb.GetLink(0).Should().Be(_defaultLinkUri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_uri_contains_hash()
     {
         string uri = _defaultLinkUri + "#hash";
@@ -109,7 +107,7 @@ public class RichTextBoxXhtmlSupportExtensionTests
         _rtb.GetLink(0).Should().Be(uri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_text_and_uri_contain_hash()
     {
         string uri = _defaultLinkUri + "#hash";
@@ -117,7 +115,7 @@ public class RichTextBoxXhtmlSupportExtensionTests
         _rtb.GetLink(0).Should().Be(uri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_at_link()
     {
         SetupDefaultLink();
@@ -127,49 +125,49 @@ public class RichTextBoxXhtmlSupportExtensionTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_begins_with_link()
     {
         SetupLink(prefix: null!, _defaultLinkText, _defaultLinkUri, _defaultSuffix);
         _rtb.GetLink(0).Should().Be(_defaultLinkUri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_link_at_line_begin()
     {
         SetupLink(_defaultPrefix + "\n", _defaultLinkText, _defaultLinkUri, _defaultSuffix);
         _rtb.GetLink(_defaultPrefix.Length + 1).Should().Be(_defaultLinkUri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_ends_with_link()
     {
         SetupLink(_defaultPrefix, _defaultLinkText, _defaultLinkUri, suffix: null!);
         _rtb.GetLink(_defaultPrefix.Length).Should().Be(_defaultLinkUri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_link_at_line_end()
     {
         SetupLink(_defaultPrefix, _defaultLinkText, _defaultLinkUri, "\n" + _defaultSuffix);
         _rtb.GetLink(_defaultPrefix.Length).Should().Be(_defaultLinkUri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_comma_after_link()
     {
         SetupLink(_defaultPrefix, _defaultLinkText, _defaultLinkUri, "," + _defaultSuffix);
         _rtb.GetLink(_defaultPrefix.Length).Should().Be(_defaultLinkUri);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_without_link_text()
     {
         SetupLink(_defaultPrefix, null!, _defaultLinkUri, _defaultSuffix);
         _rtb.GetLink(_defaultPrefix.Length).Should().Be(null);
     }
 
-    [Test]
+    [Fact]
     public void GetLink_should_return_uri_if_ends_with_link_without_link_text()
     {
         SetupLink(_defaultPrefix, null!, _defaultLinkUri, suffix: null!);
