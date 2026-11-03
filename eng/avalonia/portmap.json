@@ -9,13 +9,25 @@
     "twin": "src/app/GitUI.Avalonia/CommandsDialogs/FormBrowse.axaml.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "Reduced shell: five browse panes plus Repository/Refresh and Commands/Fetch all; remaining menus and toolbars are added with their dialogs."
+    "notes": "Reduced shell: five browse panes, repository/refresh/fetch actions, configurable shortcuts for five actions, a Scripts menu for enabled user-menu scripts, and commit before/after lifecycle scripts; script editor, pull/push lifecycle hooks, revision context actions, and full toolbars remain absent."
   },
   "src/app/GitUI/UserControls/RevisionGrid/RevisionGridControl.cs": {
     "twin": "src/app/GitUI.Avalonia/UserControls/RevisionGrid/RevisionGridControl.axaml.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "Read-only: graph, ref labels, selection. No column providers, context menu, or hotkeys yet."
+    "notes": "Revision history with graph, ref labels, selection, and basic message/author/committer filters. No column providers, context menu, or hotkeys yet."
+  },
+  "src/app/GitUI/UserControls/RevisionGrid/FilterInfo.cs": {
+    "twin": "src/app/GitUI/UserControls/RevisionGrid/FilterInfo.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared revision-filter argument builder compiled unchanged into the Avalonia assembly."
+  },
+  "src/app/GitUI/UserControls/RevisionGrid/RevisionFilter.cs": {
+    "twin": "src/app/GitUI/UserControls/RevisionGrid/RevisionFilter.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared revision-filter model compiled unchanged into the Avalonia assembly."
   },
   "src/app/GitUI/UserControls/RevisionGrid/Graph/RevisionGraphLaneColor.cs": {
     "twin": "src/app/GitUI.Avalonia/UserControls/RevisionGrid/Graph/RevisionGraphLaneColor.cs",
@@ -42,7 +54,13 @@
     "twin": "src/app/GitUI.Avalonia/UserControls/FileStatusList.axaml.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "Read-only list with change-kind markers; no grouping, filtering, or interactivity yet."
+    "notes": "Read-only list with change-kind markers and History/Blame actions; grouping, filtering, staging, and full context menus are not ported."
+  },
+  "src/app/GitUI/CommandsDialogs/FormFileHistory.cs": {
+    "twin": "src/app/GitUI.Avalonia/CommandsDialogs/FileHistoryWindow.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Reduced history/blame window; follows renames and resolves the historical path for selected-revision blame. No revision diff or legacy blame options."
   },
   "src/app/GitUI/Editor/FileViewer.cs": {
     "twin": "src/app/GitUI.Avalonia/Editor/FileViewer.axaml.cs",
@@ -60,7 +78,7 @@
     "twin": "src/app/GitUI.Avalonia/LeftPanel/RepoObjectsTree.axaml.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "Flat Branches/Remotes/Tags lists; no nested folders, stashes, or submodules yet."
+    "notes": "Flat Branches/Remotes/Tags lists; no nested folders, stashes, or submodule tree. Basic submodule update/sync is available from the Repository menu."
   },
   "src/app/GitUI/GitExtensionsForm.cs": {
     "twin": "src/app/GitUI.Avalonia/GitExtensionsForm.cs",
@@ -94,7 +112,7 @@
     "twin": "src/app/GitUI.Avalonia/GitModuleForm.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "UICommands/Module only; hotkey and scripts plumbing come with the hotkey subphase."
+    "notes": "UICommands/Module plus shared script contracts; configurable browse hotkeys and Avalonia script services are wired through the Avalonia service registry."
   },
   "src/app/GitUI/GitExtensionsDialog.cs": {
     "twin": "src/app/GitUI.Avalonia/GitExtensionsDialog.cs",
@@ -112,7 +130,121 @@
     "twin": "src/app/GitUI.Avalonia/ServiceContainerRegistry.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "Registers the plain text console emulation only so far."
+    "notes": "Registers plain text console emulation, the Avalonia browse hotkey loader, and the shared user-script manager/runner with Avalonia prompt adapters."
+  },
+  "src/app/GitUI/Hotkey/HotkeySettings.cs": {
+    "twin": "src/app/GitUI/Hotkey/HotkeySettings.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared XML settings model compiled unchanged for Avalonia hotkey persistence."
+  },
+  "src/app/GitUI/ScriptsEngine/ScriptEvent.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/ScriptEvent.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared script event identifiers compiled unchanged."
+  },
+  "src/app/GitUI/ScriptsEngine/IScriptOptionsForm.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/IScriptOptionsForm.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared script option form contract; implemented by Avalonia prompt adapters."
+  },
+  "src/app/GitUI/ScriptsEngine/IScriptOptionsProvider.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/IScriptOptionsProvider.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared script option provider contract."
+  },
+  "src/app/GitUI/ScriptsEngine/IScriptsManager.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/IScriptsManager.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared script manager contract."
+  },
+  "src/app/GitUI/ScriptsEngine/IScriptsRunner.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/IScriptsRunner.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared script runner contract."
+  },
+  "src/app/GitUI/ScriptsEngine/IUserInputPrompt.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/IUserInputPrompt.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared prompt contract implemented by the Avalonia simple prompt."
+  },
+  "src/app/GitUI/ScriptsEngine/ScriptOptionsParser.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/ScriptOptionsParser.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared token/options parser compiled unchanged; Avalonia supplies modal ref and string selectors."
+  },
+  "src/app/GitUI/ScriptsEngine/ScriptOptionsProviderBase.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/ScriptOptionsProviderBase.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared script option provider base compiled unchanged."
+  },
+  "src/app/GitUI/ScriptsEngine/ScriptsManager.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/ScriptsManager.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared user-script configuration loading and menu filtering compiled unchanged."
+  },
+  "src/app/GitUI/ScriptsEngine/ScriptsManager.ScriptRunner.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/ScriptsManager.ScriptRunner.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared runner supports process, PowerShell, plugin, and ref-navigation commands; URL opening uses xdg-open on non-Windows systems."
+  },
+  "src/app/GitUI/ScriptsEngine/SimplePromptCreator.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/SimplePromptCreator.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared prompt factory contract."
+  },
+  "src/app/GitUI/ScriptsEngine/FilePromptCreator.cs": {
+    "twin": "src/app/GitUI/ScriptsEngine/FilePromptCreator.cs",
+    "status": "parity",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared file prompt factory contract."
+  },
+  "src/app/GitUI/ScriptsEngine/ScriptInfo.cs": {
+    "twin": "src/app/GitUI.Avalonia/ScriptsEngine/ScriptInfo.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Avalonia-local XML model retains existing property names and icon metadata but does not render System.Drawing icons."
+  },
+  "src/app/GitUI/ScriptsEngine/SimplePrompt.cs": {
+    "twin": "src/app/GitUI.Avalonia/ScriptsEngine/SimplePrompt.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Avalonia modal input/confirmation adapter for shared script tokens."
+  },
+  "src/app/GitUI/ScriptsEngine/FormFilePrompt.cs": {
+    "twin": "src/app/GitUI.Avalonia/ScriptsEngine/FormFilePrompt.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Avalonia file-selection adapter for script tokens."
+  },
+  "src/app/GitUI/ScriptsEngine/PowerShellHelper.cs": {
+    "twin": "src/app/GitUI.Avalonia/ScriptsEngine/PowerShellHelper.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Selects powershell.exe on Windows and pwsh on non-Windows systems."
+  },
+  "src/app/GitUI/UserControls/RevisionGrid/FormQuickGitRefSelector.cs": {
+    "twin": "src/app/GitUI.Avalonia/UserControls/RevisionGrid/FormQuickItemSelector.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared selector contract is adapted to a centered Avalonia modal used by script ref tokens."
+  },
+  "src/app/GitUI/UserControls/RevisionGrid/FormQuickStringSelector.cs": {
+    "twin": "src/app/GitUI.Avalonia/UserControls/RevisionGrid/FormQuickItemSelector.cs",
+    "status": "functional",
+    "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
+    "notes": "Shared selector contract is adapted to a centered Avalonia modal used by script string tokens."
   },
   "src/app/GitUI/HelperDialogs/FormStatus.cs": {
     "twin": "src/app/GitUI.Avalonia/HelperDialogs/FormStatus.axaml.cs",
@@ -142,6 +274,6 @@
     "twin": "src/app/GitExtensions.Avalonia/Program.cs",
     "status": "functional",
     "basedOn": "abd24eff5bd364da0fa16f82edc9937da0ae8387",
-    "notes": "Entry point twin (with App.axaml.cs); browse command and repo detection only."
+    "notes": "Entry point twin (with App.axaml.cs); initializes managed extensibility for Avalonia plugin scripts and launches the browse UI."
   }
 }

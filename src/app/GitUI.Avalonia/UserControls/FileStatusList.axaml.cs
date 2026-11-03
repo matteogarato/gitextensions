@@ -7,25 +7,43 @@ using ResourceManager;
 
 namespace GitUI;
 
-// TODO(avalonia-port): milestone M1.3 — a read-only file list for the selected revision.
-// The grouping, filtering, staging interactions, and context menus of the WinForms
-// FileStatusList (2,198 LOC) arrive in later milestones.
+// TODO(avalonia-port): grouping, filtering, staging interactions, and the full context menus
+// of the WinForms FileStatusList (2,198 LOC) arrive in later milestones.
 public partial class FileStatusList : GitExtensionsControl
 {
     public FileStatusList()
     {
         InitializeComponent();
 
+        btnFileHistory.Content = GitUI.TranslatedStrings.FileHistory;
+        btnBlameFile.Content = GitUI.TranslatedStrings.BlameFile;
+        btnFileHistory.Click += (_, _) => FileHistoryRequested?.Invoke(this, EventArgs.Empty);
+        btnBlameFile.Click += (_, _) => BlameRequested?.Invoke(this, EventArgs.Empty);
         lstFiles.ItemTemplate = new FuncDataTemplate<GitItemStatus?>(CreateFileRow, supportsRecycling: false);
-        lstFiles.SelectionChanged += (_, _) => SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
+        lstFiles.SelectionChanged += (_, _) =>
+        {
+            UpdateActionState();
+            SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
+        };
 
         InitializeComplete();
+        UpdateActionState();
     }
 
     /// <summary>
     ///  Occurs when the selected file changes (named like the WinForms event).
     /// </summary>
     public event EventHandler? SelectedIndexChanged;
+
+    /// <summary>
+    ///  Occurs when the file history action is requested for the selected file.
+    /// </summary>
+    public event EventHandler? FileHistoryRequested;
+
+    /// <summary>
+    ///  Occurs when the blame action is requested for the selected file.
+    /// </summary>
+    public event EventHandler? BlameRequested;
 
     /// <summary>
     ///  Gets the selected file status item, or <see langword="null"/>.
@@ -45,12 +63,22 @@ public partial class FileStatusList : GitExtensionsControl
         {
             lstFiles.SelectedIndex = 0;
         }
+
+        UpdateActionState();
     }
 
     public void Clear()
     {
         lstFiles.ItemsSource = null;
         lblCount.Text = string.Empty;
+        UpdateActionState();
+    }
+
+    private void UpdateActionState()
+    {
+        bool hasSelectedFile = SelectedItem is not null;
+        btnFileHistory.IsEnabled = hasSelectedFile;
+        btnBlameFile.IsEnabled = hasSelectedFile;
     }
 
     private static Control CreateFileRow(GitItemStatus? item, INameScope nameScope)

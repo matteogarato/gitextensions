@@ -130,13 +130,14 @@ Launch the published app directly:
 The Linux workflow publishes this output, checks its executable and native dependencies, runs it
 under Xvfb with a temporary Git repository whose path and filename contain spaces/Unicode, checks
 that the expected per-user settings file is created, and uploads the output as a short-lived CI
-artifact. A framework-dependent publish is not an installer: no desktop entry, package manager
-integration, Flatpak/AppImage, or system-wide install/uninstall procedure is provided.
+artifact. A framework-dependent publish is not an installer. The optional helper
+`eng/avalonia/setup-desktop-entry.sh` installs a per-user launcher and directory "Open With"
+action; it does not set the default directory handler. No package manager integration,
+Flatpak/AppImage, or system-wide install/uninstall procedure is provided.
 
 For the tested internal-preview artifact, its current release decision, installation requirements,
-configuration caveats, and verification results, see the [Avalonia installation guide](../../../docs/avalonia/installation.md)
-and [release-candidate assessment](../../../docs/avalonia/release-candidate.md). These documents
-do not imply approval for beta or public distribution.
+configuration caveats, and verification results, see the [migration status](../../../docs/avalonia/MIGRATION.md).
+It does not imply approval for beta or public distribution.
 
 ## Running
 

@@ -255,7 +255,7 @@ partial class ScriptsManager
 
             if (originalCommand.Equals("{openurl}", StringComparison.CurrentCultureIgnoreCase))
             {
-                return "explorer";
+                return OperatingSystem.IsWindows() ? "explorer" : "xdg-open";
             }
 
             // Prefix should be {plugin:pluginname},{plugin=pluginname}

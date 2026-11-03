@@ -31,16 +31,27 @@ public partial class RepoObjectsTree : GitExtensionsControl
     public IGitRef? SelectedRef => (treeMain.SelectedItem as TreeViewItem)?.Tag as IGitRef;
 
     /// <summary>
-    ///  Fills the tree from the repository refs.
+    ///  Gets the selected stash, or <see langword="null"/>.
     /// </summary>
-    public void SetRefs(IReadOnlyList<IGitRef> refs)
+    public GitStash? SelectedStash => (treeMain.SelectedItem as TreeViewItem)?.Tag as GitStash;
+
+    /// <summary>
+    ///  Fills the tree from the repository refs and stashes.
+    /// </summary>
+    public void SetRefs(IReadOnlyList<IGitRef> refs, IReadOnlyList<GitStash>? stashes = null)
     {
+        stashes ??= [];
+        TreeViewItem stashesNode = new()
+        {
+            Header = $"{GitUI.TranslatedStrings.Stashes} ({stashes.Count})",
+            ItemsSource = stashes.Select(stash => new TreeViewItem { Header = stash.Summary, Tag = stash }).ToArray(),
+        };
         TreeViewItem branchesNode = CreateGroupNode(GitUI.TranslatedStrings.Branches, refs.Where(gitRef => gitRef.IsHead && !gitRef.IsTag));
         TreeViewItem remotesNode = CreateGroupNode(GitUI.TranslatedStrings.Remotes, refs.Where(gitRef => gitRef.IsRemote));
         TreeViewItem tagsNode = CreateGroupNode(GitUI.TranslatedStrings.Tags, refs.Where(gitRef => gitRef.IsTag));
         branchesNode.IsExpanded = true;
 
-        treeMain.ItemsSource = new[] { branchesNode, remotesNode, tagsNode };
+        treeMain.ItemsSource = new[] { branchesNode, remotesNode, tagsNode, stashesNode };
 
         return;
 

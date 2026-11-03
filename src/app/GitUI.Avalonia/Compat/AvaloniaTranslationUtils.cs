@@ -1,4 +1,6 @@
-﻿using Avalonia.Controls;
+﻿using System.Collections;
+
+using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using GitExtensions.Extensibility.Translations;
 
@@ -32,6 +34,48 @@ internal static class AvaloniaTranslationUtils
             if (!string.IsNullOrEmpty(translatedText))
             {
                 SetText(item, ToAvaloniaMnemonics(translatedText));
+            }
+        }
+    }
+
+    public static void NormalizeMnemonicsFromFields(object host)
+    {
+        foreach ((string _, object item) in TranslationUtils.GetObjFields(host, "$this"))
+        {
+            if (GetText(item) is string text)
+            {
+                SetText(item, ToAvaloniaMnemonics(text));
+            }
+        }
+    }
+
+    public static void NormalizeMenuMnemonics(ItemsControl menu)
+    {
+        IEnumerable items = menu.ItemsSource as IEnumerable ?? menu.Items;
+        foreach (object? item in items)
+        {
+            if (item is MenuItem menuItem)
+            {
+                NormalizeMenuItem(menuItem);
+            }
+        }
+
+        return;
+
+        static void NormalizeMenuItem(MenuItem menuItem)
+        {
+            if (menuItem.Header is string header)
+            {
+                menuItem.Header = ToAvaloniaMnemonics(header);
+            }
+
+            IEnumerable items = menuItem.ItemsSource as IEnumerable ?? menuItem.Items;
+            foreach (object? item in items)
+            {
+                if (item is MenuItem childMenuItem)
+                {
+                    NormalizeMenuItem(childMenuItem);
+                }
             }
         }
     }
@@ -71,7 +115,7 @@ internal static class AvaloniaTranslationUtils
         }
     }
 
-    private static string ToAvaloniaMnemonics(string text)
+    public static string ToAvaloniaMnemonics(string text)
     {
         const string escapedAmpersand = "\u0001";
         return text

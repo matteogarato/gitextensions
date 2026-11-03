@@ -81,6 +81,34 @@ public static partial class Commands
         }
     }
 
+    /// <summary>
+    ///  Builds a command to delete a local tag.
+    /// </summary>
+    /// <param name="tagName">The tag name to delete.</param>
+    /// <returns>A state-changing local Git command.</returns>
+    public static IGitCommand DeleteTag(string tagName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+
+        return new GitCommand(accessesRemote: false, changesRepoState: true,
+            new GitArgumentBuilder("tag")
+            {
+                "-d",
+                "--",
+                tagName.QuoteNE()
+            });
+    }
+
+    /// <summary>
+    ///  Builds a command to run Git garbage collection for the current repository.
+    /// </summary>
+    /// <returns>A state-changing local Git command.</returns>
+    public static IGitCommand GarbageCollect()
+    {
+        return new GitCommand(accessesRemote: false, changesRepoState: true,
+            new GitArgumentBuilder("gc"));
+    }
+
     public static IGitCommand DeleteBranch(IReadOnlyCollection<IGitRef> branches, bool force)
     {
         ArgumentNullException.ThrowIfNull(branches);

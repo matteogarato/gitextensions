@@ -12,8 +12,6 @@ namespace GitCommands;
 /// </summary>
 public static partial class ExecutableExtensions
 {
-    private static readonly Lazy<Encoding> _defaultOutputEncoding = new(() => GitModule.SystemEncoding, false);
-
     [GeneratedRegex(@"\u001B[\u0040-\u005F].*?[\u0040-\u007E]", RegexOptions.ExplicitCapture)]
     private static partial Regex AnsiCodeRegex { get; }
 
@@ -94,7 +92,7 @@ public static partial class ExecutableExtensions
         CommandCache? cache = null,
         bool stripAnsiEscapeCodes = true)
     {
-        outputEncoding ??= _defaultOutputEncoding.Value;
+        outputEncoding ??= GitModule.SystemEncoding;
 
         if (cache?.TryGet(arguments, out string? output, out string? _) is true)
         {
@@ -288,7 +286,7 @@ public static partial class ExecutableExtensions
         bool throwOnErrorExit = true,
         CancellationToken cancellationToken = default)
     {
-        outputEncoding ??= _defaultOutputEncoding.Value;
+        outputEncoding ??= GitModule.SystemEncoding;
 
         string cacheKey = $"{arguments} #{executable.WorkingDir}::{(stripAnsiEscapeCodes ? "stripped" : "plain")}::{outputEncoding.WebName}::{extraCacheKey}";
         if (cache?.TryGet(cacheKey, out string? cachedOutput, out string? cachedError) is true)

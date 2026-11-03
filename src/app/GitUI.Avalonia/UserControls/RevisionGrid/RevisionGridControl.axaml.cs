@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using GitCommands;
@@ -8,6 +9,7 @@ using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
+using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Graph;
 using GitUI.UserControls.RevisionGrid.Graph.Rendering;
 using GitUIPluginInterfaces;
@@ -36,14 +38,47 @@ public partial class RevisionGridControl : GitExtensionsControl
     private readonly CancellationTokenSequence _refreshSequence = new();
     private readonly List<GitRevision> _revisions = [];
     private readonly RevisionGraph _revisionGraph = new();
+    private readonly FilterInfo _filterInfo = new();
     private RevisionGraphConfig _config = new();
     private ObjectId? _headId;
     private bool _headHighlighted;
     private ILookup<ObjectId, IGitRef>? _refsByObjectId;
+    private IGitModule? _module;
 
     public RevisionGridControl()
     {
         InitializeComponent();
+
+        txtRevisionFilter.PlaceholderText = GitUI.TranslatedStrings.RevisionFilterWatermark;
+        ComboBoxItem messageOption = new()
+        {
+            Content = GitUI.TranslatedStrings.RevisionFilterMessage,
+            Tag = RevisionSearchField.Message
+        };
+        cbxRevisionFilterField.Items.Add(messageOption);
+        cbxRevisionFilterField.Items.Add(new ComboBoxItem
+        {
+            Content = GitUI.TranslatedStrings.RevisionFilterAuthor,
+            Tag = RevisionSearchField.Author
+        });
+        cbxRevisionFilterField.Items.Add(new ComboBoxItem
+        {
+            Content = GitUI.TranslatedStrings.RevisionFilterCommitter,
+            Tag = RevisionSearchField.Committer
+        });
+        cbxRevisionFilterField.SelectedItem = messageOption;
+        btnApplyRevisionFilter.Content = GitUI.TranslatedStrings.ApplyFilter;
+        btnClearRevisionFilter.Content = GitUI.TranslatedStrings.ClearFilter;
+        btnApplyRevisionFilter.Click += (_, _) => ApplyRevisionFilter();
+        btnClearRevisionFilter.Click += (_, _) => ClearRevisionFilter();
+        txtRevisionFilter.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                ApplyRevisionFilter();
+            }
+        };
 
         lstRevisions.ItemTemplate = new FuncDataTemplate<GitRevision>((_, _) => new RevisionRowControl(this), supportsRecycling: true);
         lstRevisions.SelectionChanged += (_, _) => SelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -55,6 +90,18 @@ public partial class RevisionGridControl : GitExtensionsControl
     ///  Gets the revision currently selected in the list, or <see langword="null"/>.
     /// </summary>
     public GitRevision? SelectedRevision => lstRevisions.SelectedItem as GitRevision;
+
+    /// <summary>
+    ///  Gets the selected revisions in their displayed order.
+    /// </summary>
+    public IReadOnlyList<GitRevision> SelectedRevisions
+    {
+        get
+        {
+            HashSet<GitRevision> selected = (lstRevisions.SelectedItems?.OfType<GitRevision>() ?? []).ToHashSet();
+            return _revisions.Where(selected.Contains).ToArray();
+        }
+    }
 
     /// <summary>
     ///  Occurs when the selected revision changes.
@@ -69,9 +116,23 @@ public partial class RevisionGridControl : GitExtensionsControl
         GitRevision? revision = _revisions.Find(r => r.ObjectId == objectId);
         if (revision is not null)
         {
+            lstRevisions.SelectedItems?.Clear();
             lstRevisions.SelectedItem = revision;
             lstRevisions.ScrollIntoView(revision);
         }
+    }
+
+    public bool GoToRef(string refName)
+    {
+        GitRevision? revision = _revisions.FirstOrDefault(candidate => candidate.Refs.Any(
+            gitRef => string.Equals(gitRef.Name, refName, StringComparison.Ordinal)));
+        if (revision is null)
+        {
+            return false;
+        }
+
+        SelectRevision(revision.ObjectId);
+        return true;
     }
 
     /// <summary>
@@ -80,6 +141,7 @@ public partial class RevisionGridControl : GitExtensionsControl
     /// </summary>
     public void ReloadRevisions(IGitModule module)
     {
+        _module = module;
         CancellationToken cancellationToken = _refreshSequence.Next();
 
         _revisions.Clear();
@@ -89,6 +151,8 @@ public partial class RevisionGridControl : GitExtensionsControl
         _headHighlighted = false;
         lstRevisions.ItemsSource = null;
         lblLoadingStatus.Text = "Loading…";
+        Lazy<ObjectId> currentCheckout = new(module.GetCurrentCheckout);
+        string revisionFilter = _filterInfo.GetRevisionFilter(currentCheckout);
 
         RevisionObserver observer = new(this, cancellationToken);
         ThreadHelper.FileAndForget(() =>
@@ -100,8 +164,47 @@ public partial class RevisionGridControl : GitExtensionsControl
                 .ToLookup(gitRef => gitRef.ObjectId);
 
             RevisionReader reader = new(module);
-            reader.GetLog(observer, revisionFilter: "--all", pathFilter: "", hasNotes: false, autostashLabel: "autostash", cancellationToken);
+            reader.GetLog(observer, revisionFilter, pathFilter: "", hasNotes: false, autostashLabel: "autostash", cancellationToken);
         });
+    }
+
+    private void ApplyRevisionFilter()
+    {
+        IGitModule? module = _module;
+        if (module is null)
+        {
+            return;
+        }
+
+        if (cbxRevisionFilterField.SelectedItem is not ComboBoxItem { Tag: RevisionSearchField field })
+        {
+            throw new InvalidOperationException("A revision filter field must be selected.");
+        }
+
+        string text = txtRevisionFilter.Text ?? string.Empty;
+        _filterInfo.Apply(new RevisionFilter(
+            text,
+            byCommit: field == RevisionSearchField.Message,
+            byCommitter: field == RevisionSearchField.Committer,
+            byAuthor: field == RevisionSearchField.Author,
+            byDiffContent: false));
+        ReloadRevisions(module);
+    }
+
+    private void ClearRevisionFilter()
+    {
+        txtRevisionFilter.Text = string.Empty;
+        cbxRevisionFilterField.SelectedItem = cbxRevisionFilterField.Items
+            .OfType<ComboBoxItem>()
+            .Single(item => item.Tag is RevisionSearchField.Message);
+        ApplyRevisionFilter();
+    }
+
+    private enum RevisionSearchField
+    {
+        Message,
+        Author,
+        Committer
     }
 
     /// <summary>

@@ -1,10 +1,12 @@
 ﻿using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
 using GitExtensions.Shims.WinForms;
 using GitExtUtils;
+using GitUI.CommandsDialogs;
 using GitUI.HelperDialogs;
 using GitUIPluginInterfaces;
 
@@ -96,6 +98,27 @@ public sealed class GitUICommands : IGitUICommands
         return FormProcess.ShowDialog(owner, this, arguments, Module.WorkingDir, input: null, useDialogSettings: true);
     }
 
+    public bool StashApply(IWin32Window? owner, string stashName)
+        => RunStashCommand(owner, new GitArgumentBuilder("stash") { "apply", stashName.Quote() });
+
+    public bool StashDrop(IWin32Window? owner, string stashName)
+        => RunStashCommand(owner, new GitArgumentBuilder("stash") { "drop", stashName.Quote() });
+
+    public bool StashPop(IWin32Window? owner, string stashName = "")
+        => RunStashCommand(owner, new GitArgumentBuilder("stash") { "pop", stashName.QuoteNE() });
+
+    public bool StashSave(IWin32Window? owner, bool includeUntrackedFiles, bool keepIndex = false, string message = "", IReadOnlyList<string>? selectedFiles = null)
+        => RunStashCommand(owner, Commands.StashSave(includeUntrackedFiles, keepIndex, message, selectedFiles));
+
+    private bool RunStashCommand(IWin32Window? owner, ArgumentString arguments)
+    {
+        FormProcess.ShowDialog(owner, this, arguments, Module.WorkingDir, input: null, useDialogSettings: true);
+
+        // git-stash may have changed commits also if aborted, the grid must be refreshed
+        RepoChangedNotifier.Notify();
+        return true;
+    }
+
     private void InvokeEvent(IWin32Window? ownerForm, EventHandler<GitUIEventArgs>? gitUIEventHandler)
     {
         try
@@ -127,7 +150,28 @@ public sealed class GitUICommands : IGitUICommands
     public bool StartAddToGitIgnoreDialog(IWin32Window? owner, bool localExclude, params string[] filePattern) => throw NotPorted(nameof(StartAddToGitIgnoreDialog));
     public bool StartAmendCommitDialog(IWin32Window? owner, GitRevision revision) => throw NotPorted(nameof(StartAmendCommitDialog));
     public bool StartApplyPatchDialog(IWin32Window? owner, string? patchFile = null) => throw NotPorted(nameof(StartApplyPatchDialog));
-    public bool StartArchiveDialog(IWin32Window? owner = null, GitRevision? revision = null, GitRevision? revision2 = null, string? path = null) => throw NotPorted(nameof(StartArchiveDialog));
+    public bool StartArchiveDialog(IWin32Window? owner = null, GitRevision? revision = null, GitRevision? revision2 = null, string? path = null)
+    {
+        if (revision is null)
+        {
+            return false;
+        }
+
+        ArchiveWindow dialog = new(this, revision, revision2, path);
+        if (owner is Avalonia.Controls.Window ownerWindow)
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(async () => await dialog.ShowDialog<bool>(ownerWindow));
+        }
+
+        if (owner is null)
+        {
+            dialog.Show();
+            return true;
+        }
+
+        throw new ArgumentException("The archive dialog owner must be an Avalonia window.", nameof(owner));
+    }
+
     public void StartBatchFileProcessDialog(string batchFile) => throw NotPorted(nameof(StartBatchFileProcessDialog));
     public bool StartBrowseDialog(IWin32Window? owner, BrowseArguments? args = null) => throw NotPorted(nameof(StartBrowseDialog));
     public bool StartCheckoutBranch(IWin32Window? owner, IReadOnlyList<ObjectId>? containObjectIds) => throw NotPorted(nameof(StartCheckoutBranch));
@@ -136,9 +180,48 @@ public sealed class GitUICommands : IGitUICommands
     public bool StartCheckoutRevisionDialog(IWin32Window? owner, string? revision = null) => throw NotPorted(nameof(StartCheckoutRevisionDialog));
     public bool StartCherryPickDialog(IWin32Window? owner = null, GitRevision? revision = null) => throw NotPorted(nameof(StartCherryPickDialog));
     public bool StartCherryPickDialog(IWin32Window? owner, IEnumerable<GitRevision> revisions) => throw NotPorted(nameof(StartCherryPickDialog));
-    public bool StartCleanupRepositoryDialog(IWin32Window? owner = null, string? path = null) => throw NotPorted(nameof(StartCleanupRepositoryDialog));
-    public bool StartCloneDialog(IWin32Window? owner, string url, EventHandler<GitModuleEventArgs> gitModuleChanged) => throw NotPorted(nameof(StartCloneDialog));
-    public bool StartCloneDialog(IWin32Window? owner, string? url = null, bool openedFromProtocolHandler = false, EventHandler<GitModuleEventArgs>? gitModuleChanged = null) => throw NotPorted(nameof(StartCloneDialog));
+    public bool StartCleanupRepositoryDialog(IWin32Window? owner = null, string? path = null)
+    {
+        CleanupRepositoryWindow dialog = new(this, path);
+        if (owner is Avalonia.Controls.Window ownerWindow)
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(async () => await dialog.ShowDialog<bool>(ownerWindow));
+        }
+
+        if (owner is null)
+        {
+            dialog.Show();
+            return true;
+        }
+
+        throw new ArgumentException("The cleanup dialog owner must be an Avalonia window.", nameof(owner));
+    }
+
+    public bool StartCloneDialog(IWin32Window? owner, string url, EventHandler<GitModuleEventArgs> gitModuleChanged)
+        => StartCloneDialog(owner, url, openedFromProtocolHandler: false, gitModuleChanged);
+
+    public bool StartCloneDialog(IWin32Window? owner, string? url = null, bool openedFromProtocolHandler = false, EventHandler<GitModuleEventArgs>? gitModuleChanged = null)
+    {
+        CloneRepositoryWindow dialog = new(
+            this,
+            url,
+            path => gitModuleChanged?.Invoke(
+                this,
+                new GitModuleEventArgs(new GitModule(this.GetRequiredService<IGitExecutorProvider>(), path))));
+        if (owner is Avalonia.Controls.Window ownerWindow)
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(async () => await dialog.ShowDialog<bool>(ownerWindow));
+        }
+
+        if (owner is null)
+        {
+            dialog.Show();
+            return true;
+        }
+
+        throw new ArgumentException("The clone dialog owner must be an Avalonia window.", nameof(owner));
+    }
+
     public void StartCloneForkFromHoster(IWin32Window? owner, IRepositoryHostPlugin gitHoster, EventHandler<GitModuleEventArgs>? gitModuleChanged) => throw NotPorted(nameof(StartCloneForkFromHoster));
     public bool StartCommitDialog(IWin32Window? owner, string? commitMessage = null, bool showOnlyWhenChanges = false) => throw NotPorted(nameof(StartCommitDialog));
     public bool StartCompareRevisionsDialog(IWin32Window? owner = null) => throw NotPorted(nameof(StartCompareRevisionsDialog));
@@ -179,7 +262,29 @@ public sealed class GitUICommands : IGitUICommands
     public bool StartRepoSettingsDialog(IWin32Window? owner) => throw NotPorted(nameof(StartRepoSettingsDialog));
     public bool StartResetChangesDialog(IWin32Window? owner, IReadOnlyCollection<GitItemStatus> workTreeFiles, bool onlyWorkTree) => throw NotPorted(nameof(StartResetChangesDialog));
     public bool StartResetCurrentBranchDialog(IWin32Window? owner, string branch) => throw NotPorted(nameof(StartResetCurrentBranchDialog));
-    public bool StartResolveConflictsDialog(IWin32Window? owner = null, bool offerCommit = true) => throw NotPorted(nameof(StartResolveConflictsDialog));
+    public bool StartResolveConflictsDialog(IWin32Window? owner = null, bool offerCommit = true)
+    {
+        ConflictResolutionWindow dialog = new(Module, offerCommit);
+        if (owner is Avalonia.Controls.Window ownerWindow)
+        {
+            ThreadHelper.JoinableTaskFactory.Run(async () => await dialog.ShowDialog(ownerWindow));
+            if (dialog.ContinueRequested && ConflictWorkflow.BuildContinue(Module) is ArgumentString continueCommand)
+            {
+                StartGitCommandProcessDialog(owner, continueCommand);
+            }
+        }
+        else if (owner is null)
+        {
+            dialog.Show();
+        }
+        else
+        {
+            throw new ArgumentException("The conflict dialog owner must be an Avalonia window.", nameof(owner));
+        }
+
+        return true;
+    }
+
     public bool StartRevertCommitDialog(IWin32Window? owner, GitRevision revision) => throw NotPorted(nameof(StartRevertCommitDialog));
     public bool StartSettingsDialog(IGitPlugin gitPlugin) => throw NotPorted(nameof(StartSettingsDialog));
     public bool StartSettingsDialog(IWin32Window? owner, SettingsPageReference? initialPage = null) => throw NotPorted(nameof(StartSettingsDialog));
@@ -192,13 +297,25 @@ public sealed class GitUICommands : IGitUICommands
     public bool StartTheContinueRebaseDialog(IWin32Window? owner) => throw NotPorted(nameof(StartTheContinueRebaseDialog));
     public bool StartUpdateSubmoduleDialog(IWin32Window? owner, string submoduleLocalPath, string submoduleParentPath) => throw NotPorted(nameof(StartUpdateSubmoduleDialog));
     public bool StartUpdateSubmodulesDialog(IWin32Window? owner, string submoduleLocalPath = "") => throw NotPorted(nameof(StartUpdateSubmodulesDialog));
-    public bool StartVerifyDatabaseDialog(IWin32Window? owner = null) => throw NotPorted(nameof(StartVerifyDatabaseDialog));
+    public bool StartVerifyDatabaseDialog(IWin32Window? owner = null)
+    {
+        VerifyRepositoryWindow dialog = new(this);
+        if (owner is Avalonia.Controls.Window ownerWindow)
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(async () => await dialog.ShowDialog<bool>(ownerWindow));
+        }
+
+        if (owner is null)
+        {
+            dialog.Show();
+            return true;
+        }
+
+        throw new ArgumentException("The verify dialog owner must be an Avalonia window.", nameof(owner));
+    }
+
     public bool StartViewPatchDialog(IWin32Window? owner, string? patchFile = null) => throw NotPorted(nameof(StartViewPatchDialog));
     public bool StartViewPatchDialog(string patchFile) => throw NotPorted(nameof(StartViewPatchDialog));
-    public bool StashApply(IWin32Window? owner, string stashName) => throw NotPorted(nameof(StashApply));
-    public bool StashDrop(IWin32Window? owner, string stashName) => throw NotPorted(nameof(StashDrop));
-    public bool StashPop(IWin32Window? owner, string stashName = "") => throw NotPorted(nameof(StashPop));
-    public bool StashSave(IWin32Window? owner, bool includeUntrackedFiles, bool keepIndex = false, string message = "", IReadOnlyList<string>? selectedFiles = null) => throw NotPorted(nameof(StashSave));
     public bool StashStaged(IWin32Window? owner) => throw NotPorted(nameof(StashStaged));
     public void UpdateSubmodules(IWin32Window? owner) => throw NotPorted(nameof(UpdateSubmodules));
     public bool WorktreeCreate(IWin32Window? owner, string mainWorktreePath) => throw NotPorted(nameof(WorktreeCreate));

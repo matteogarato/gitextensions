@@ -1,4 +1,6 @@
 ﻿using GitExtensions.Extensibility.Git;
+using GitUI.ScriptsEngine;
+using ResourceManager;
 
 namespace GitUI;
 
@@ -6,7 +8,7 @@ namespace GitUI;
 // The hotkey and scripts plumbing of the WinForms base arrives with the Phase 2 hotkey work.
 
 /// <summary>Base window that provides access to the module and <see cref="IGitUICommands"/>.</summary>
-public class GitModuleForm : GitExtensionsForm
+public class GitModuleForm : GitExtensionsForm, IGitModuleForm, IScriptOptionsForm
 {
     private IGitUICommands? _uiCommands;
 
@@ -33,4 +35,6 @@ public class GitModuleForm : GitExtensionsForm
 
     /// <summary>Gets the module of the currently set <see cref="UICommands"/>.</summary>
     public IGitModule Module => UICommands.Module;
+
+    public IScriptOptionsProvider GetScriptOptionsProvider() => ScriptOptionsProviderBase.Default;
 }

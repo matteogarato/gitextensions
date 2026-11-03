@@ -21,6 +21,16 @@ public static class ThemePreference
             throw new InvalidOperationException("The Avalonia application is not initialized.");
         }
 
+        if (themeId == ThemeId.WindowsAppColorModeId)
+        {
+            // Default makes Avalonia follow the operating system, so the shim mirrors the actual platform variant.
+            application.RequestedThemeVariant = ThemeVariant.Default;
+            GitExtensions.Shims.WinForms.Application.SystemColorMode = application.ActualThemeVariant == ThemeVariant.Dark
+                ? GitExtensions.Shims.WinForms.SystemColorMode.Dark
+                : GitExtensions.Shims.WinForms.SystemColorMode.Classic;
+            return;
+        }
+
         bool isDark = themeId == ThemeId.DefaultDark;
         application.RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
         GitExtensions.Shims.WinForms.Application.SystemColorMode = isDark

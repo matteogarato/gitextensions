@@ -33,8 +33,26 @@
     <Compile Include="..\GitUI\FormStatusOutputLog.cs" Link="FormStatusOutputLog.cs" />
     <Compile Include="..\GitUI\Models\IOutputHistoryRecorder.cs" Link="Models\IOutputHistoryRecorder.cs" />
     <Compile Include="..\GitUI\Models\RunProcessInfo.cs" Link="Models\RunProcessInfo.cs" />
+    <Compile Include="..\GitUI\Hotkey\HotkeySettings.cs" Link="Hotkey\HotkeySettings.cs" />
+    <Compile Include="..\GitUI\Plugin\GitPluginSettingsContainer.cs" Link="Plugin\GitPluginSettingsContainer.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\FilePromptCreator.cs" Link="ScriptsEngine\FilePromptCreator.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\IScriptOptionsForm.cs" Link="ScriptsEngine\IScriptOptionsForm.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\IScriptOptionsProvider.cs" Link="ScriptsEngine\IScriptOptionsProvider.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\IScriptsManager.cs" Link="ScriptsEngine\IScriptsManager.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\IScriptsRunner.cs" Link="ScriptsEngine\IScriptsRunner.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\IUserInputPrompt.cs" Link="ScriptsEngine\IUserInputPrompt.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\ScriptEvent.cs" Link="ScriptsEngine\ScriptEvent.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\ScriptOptionsParser.cs" Link="ScriptsEngine\ScriptOptionsParser.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\ScriptOptionsProviderBase.cs" Link="ScriptsEngine\ScriptOptionsProviderBase.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\ScriptsManager.cs" Link="ScriptsEngine\ScriptsManager.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\ScriptsManager.ScriptRunner.cs" Link="ScriptsEngine\ScriptsManager.ScriptRunner.cs" />
+    <Compile Include="..\GitUI\ScriptsEngine\SimplePromptCreator.cs" Link="ScriptsEngine\SimplePromptCreator.cs" />
+    <Compile Include="..\GitUI\UserControls\RevisionGrid\FormQuickGitRefSelector.cs" Link="UserControls\RevisionGrid\FormQuickGitRefSelector.cs" />
+    <Compile Include="..\GitUI\UserControls\RevisionGrid\FormQuickStringSelector.cs" Link="UserControls\RevisionGrid\FormQuickStringSelector.cs" />
     <Compile Include="..\GitUI\TranslatedStrings.cs" Link="TranslatedStrings.cs" />
     <Compile Include="..\GitUI\UserControls\TextEventArgs.cs" Link="UserControls\TextEventArgs.cs" />
+    <Compile Include="..\GitUI\UserControls\RevisionGrid\FilterInfo.cs" Link="UserControls\RevisionGrid\FilterInfo.cs" />
+    <Compile Include="..\GitUI\UserControls\RevisionGrid\RevisionFilter.cs" Link="UserControls\RevisionGrid\RevisionFilter.cs" />
     <Compile Include="..\GitUI\UserControls\RevisionGrid\Graph\BranchFinder.cs" Link="UserControls\RevisionGrid\Graph\BranchFinder.cs" />
     <Compile Include="..\GitUI\UserControls\RevisionGrid\Graph\Lane.cs" Link="UserControls\RevisionGrid\Graph\Lane.cs" />
     <Compile Include="..\GitUI\UserControls\RevisionGrid\Graph\LaneInfo.cs" Link="UserControls\RevisionGrid\Graph\LaneInfo.cs" />

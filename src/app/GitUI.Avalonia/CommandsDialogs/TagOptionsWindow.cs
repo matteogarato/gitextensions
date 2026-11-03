@@ -1,0 +1,43 @@
+using Avalonia.Controls;
+using Avalonia.Layout;
+using GitCommands.Git.Tag;
+using GitExtensions.Extensibility.Git;
+
+namespace GitUI.CommandsDialogs;
+
+/// <summary>
+///  Collects the name and annotation for a lightweight or annotated tag.
+/// </summary>
+public sealed class TagOptionsWindow : OptionsWindow
+{
+    private readonly TextBox _name = new() { MinWidth = 320 };
+    private readonly CheckBox _annotated = new() { Content = GitUI.TranslatedStrings.AnnotatedTagOption };
+    private readonly TextBox _message = new() { MinHeight = 90, AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, IsEnabled = false };
+
+    /// <summary>
+    ///  Initializes a new instance of the <see cref="TagOptionsWindow"/> class.
+    /// </summary>
+    /// <param name="objectId">The commit to tag.</param>
+    public TagOptionsWindow(ObjectId objectId)
+        : base(GitUI.TranslatedStrings.TagOptionsTitle, 460, 380)
+    {
+        _annotated.IsCheckedChanged += (_, _) => _message.IsEnabled = _annotated.IsChecked == true;
+
+        Button create = new() { Content = GitUI.TranslatedStrings.CreateTagMenu, IsDefault = true };
+        create.Click += (_, _) => Close(new TagConfiguration(
+            _name.Text?.Trim() ?? string.Empty,
+            objectId,
+            _annotated.IsChecked == true ? TagOperation.Annotate : TagOperation.Lightweight,
+            _message.Text ?? string.Empty));
+
+        SetOptionsContent(
+            create,
+            [
+                new TextBlock { Text = GitUI.TranslatedStrings.TagNamePrompt },
+                _name,
+                _annotated,
+                new TextBlock { Text = GitUI.TranslatedStrings.TagMessagePrompt },
+                _message,
+            ]);
+    }
+}

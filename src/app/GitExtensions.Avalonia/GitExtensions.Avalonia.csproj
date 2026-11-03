@@ -32,4 +32,10 @@
     <Compile Include="$(RepoRoot)\src\app\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\native\GitExtensionsShellEx\Resources\git-extensions-logo.ico"
+             Link="git-extensions-logo.ico"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

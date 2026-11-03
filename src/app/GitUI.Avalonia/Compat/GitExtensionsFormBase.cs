@@ -133,6 +133,11 @@ public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Win
     /// <remarks>Subclasses must ensure this method is called in their constructor, ideally as the final statement.</remarks>
     protected void InitializeComplete()
     {
+        if (Translator.GetTranslation(AppSettings.CurrentTranslation).Count == 0)
+        {
+            AvaloniaTranslationUtils.NormalizeMnemonicsFromFields(this);
+        }
+
         Translator.Translate(this, AppSettings.CurrentTranslation);
     }
 

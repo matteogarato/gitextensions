@@ -4,12 +4,14 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.Compat;
+using GitUIPluginInterfaces;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitExtensions;
@@ -35,10 +37,18 @@ public partial class App : Application
                 => MessageBoxes.ShowError(owner: null, e.Exception.ToString());
 
             AppSettings.LoadSettings();
+            ManagedExtensibility.Initialise(userPluginsPath: AppSettings.UserPluginsPath);
             ThemePreference.Apply(AppSettings.ThemeId);
 
             string[] args = Environment.GetCommandLineArgs();
             GitModule module = new(Program.ServiceContainer.GetRequiredService<IGitExecutorProvider>(), GetWorkingDir(args));
+            if (module.IsValidGitWorkingDir())
+            {
+                AppSettings.RecentWorkingDir = module.WorkingDir;
+                ThreadHelper.JoinableTaskFactory.Run(
+                    () => RepositoryHistoryManager.Locals.AddAsMostRecentAsync(module.WorkingDir));
+            }
+
             desktop.MainWindow = new FormBrowse(Program.ServiceContainer, module);
         }
 

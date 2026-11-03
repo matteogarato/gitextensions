@@ -10143,8 +10143,52 @@ When OpenSSH is used, command line dialogs are shown!
   </file>
   <file datatype="plaintext" original="TranslatedStrings" source-language="en">
     <body>
+      <trans-unit id="_abortMerge.Text">
+        <source>&amp;Abort merge</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_abortOperation.Text">
+        <source>&amp;Abort operation</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_abortPatch.Text">
+        <source>&amp;Abort patch</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_abortRebase.Text">
+        <source>&amp;Abort rebase</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_activateRemote.Text">
+        <source>Activate remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_addRemote.Text">
+        <source>Add remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_addSubmodule.Text">
+        <source>Add submodule</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_addUpstreamRemote.Text">
         <source>Add upstream remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_amendCommitOption.Text">
+        <source>&amp;Amend last commit</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_annotatedTagOption.Text">
+        <source>Create an annotated tag</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_applyFilter.Text">
+        <source>Filter</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_applyPatchMenu.Text">
+        <source>Apply patch file...</source>
         <target />
       </trans-unit>
       <trans-unit id="_areYouSure.Text">
@@ -10179,11 +10223,44 @@ When OpenSSH is used, command line dialogs are shown!
         <source>Autostash</source>
         <target />
       </trans-unit>
+      <trans-unit id="_autostashRevision.Text">
+        <source>autostash</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_bareRepository.Text">
+        <source>Create a bare repository</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_bisectInProgress.Text">
+        <source>Bisect in progress</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_blameFile.Text">
+        <source>Blame</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_blameLoaded.Text">
+        <source>Blame loaded</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_blameSelectedRevision.Text">
+        <source>Blame selected revision</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_bodyNotLoaded.Text">
         <source>
 
 Full message text is not present in older commits.
 Select this commit to populate the full message.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_branchCheckedOutInWorktree.Text">
+        <source>Cannot delete branch '{0}' because it is checked out in a worktree at:
+{1}</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_branchNamePrompt.Text">
+        <source>Branch name:</source>
         <target />
       </trans-unit>
       <trans-unit id="_branchText.Text">
@@ -10192,6 +10269,10 @@ Select this commit to populate the full message.</source>
       </trans-unit>
       <trans-unit id="_branchesText.Text">
         <source>Branches</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_browseForDirectory.Text">
+        <source>Browse...</source>
         <target />
       </trans-unit>
       <trans-unit id="_buttonCheckoutBranch.Text">
@@ -10230,8 +10311,60 @@ Select this commit to populate the full message.</source>
         <source>This action cannot be undone.</source>
         <target />
       </trans-unit>
+      <trans-unit id="_cannotInitializeRepositoryOnFile.Text">
+        <source>Cannot initialize a repository on a file.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_checkoutBranchDiscardChangesMenu.Text">
+        <source>Discard local changes and checkout...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_checkoutBranchMenu.Text">
+        <source>&amp;Checkout</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_checkoutBranchMergeChangesMenu.Text">
+        <source>Checkout with merge of local changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_checkoutBranchStashChangesMenu.Text">
+        <source>Stash local changes and checkout...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_checkoutFailedChangesStashed.Text">
+        <source>Checkout failed. Changes included by the auto-stash setting are safe in the stash; excluded files may remain in the working tree.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_checkoutRevisionMenu.Text">
+        <source>Checkout revision</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_cherryPickInProgress.Text">
+        <source>Cherry-pick in progress</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_cherryPickMenu.Text">
+        <source>&amp;Cherry pick this commit</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_childrenText.Text">
         <source>{0:Child|Children}</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_chooseDirectory.Text">
+        <source>Please choose a directory.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_clearFilter.Text">
+        <source>Clear</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_clearRecentRepositories.Text">
+        <source>Clear recent repositories</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_clearShortcut.Text">
+        <source>Clear shortcut</source>
         <target />
       </trans-unit>
       <trans-unit id="_closeText.Text">
@@ -10242,16 +10375,32 @@ Select this commit to populate the full message.</source>
         <source>Combined diff</source>
         <target />
       </trans-unit>
+      <trans-unit id="_commandLogTitle.Text">
+        <source>Git Command Log</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_commandText.Text">
         <source>Command</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_commitButton.Text">
+        <source>&amp;Commit</source>
         <target />
       </trans-unit>
       <trans-unit id="_commitDateText.Text">
         <source>{0:Commit date|Commit dates}</source>
         <target />
       </trans-unit>
+      <trans-unit id="_commitFiles.Text">
+        <source>Commit files</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_commitHashText.Text">
         <source>{0:Commit hash|Commit hashes}</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_commitMessageWatermark.Text">
+        <source>Enter commit message</source>
         <target />
       </trans-unit>
       <trans-unit id="_committed.Text">
@@ -10264,6 +10413,66 @@ Select this commit to populate the full message.</source>
       </trans-unit>
       <trans-unit id="_committerText.Text">
         <source>Committer</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmCheckoutDiscardChanges.Text">
+        <source>This may discard tracked changes and untracked files that conflict with checkout '{0}'. Continue?</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDeleteBranch.Text">
+        <source>Delete branch '{0}'?</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDeleteLocalTrackingBranch.Text">
+        <source>Also delete the local tracking branch '{0}'? Git will refuse if it has unmerged commits.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDeleteRemote.Text">
+        <source>Delete remote '{0}'?</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDeleteRemoteBranch.Text">
+        <source>Delete remote branch '{0}' from '{1}'? This may make commits unreachable. The local branch that tracks it, if any, will remain.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDeleteTag.Text">
+        <source>Delete tag '{0}'? This cannot be undone.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDiscardChanges.Text">
+        <source>Discard changes in {0} file(s)? This cannot be undone.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmDiscardChangesAndDelete.Text">
+        <source>Discard changes in {0} file(s)? New files will be deleted. This cannot be undone.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmForceDeleteBranch.Text">
+        <source>Force-delete branch '{0}' even if it is not fully merged?</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmForcePush.Text">
+        <source>Force push '{0}' to '{1}'? This can overwrite commits on the remote.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmHardResetToRevision.Text">
+        <source>Reset to this commit and discard all local changes? This cannot be undone.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmReapplyStashedChanges.Text">
+        <source>Checkout to '{0}' succeeded. Reapply the stashed changes? The stash will be kept.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmRemoveSubmodule.Text">
+        <source>Remove submodule '{0}' from this repository? Its working directory will not be deleted.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmResetAllChanges.Text">
+        <source>Reset all tracked files to HEAD? All staged and unstaged changes will be lost. This cannot be undone.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_confirmStashDrop.Text">
+        <source>Drop '{0}'? The stashed changes will be lost.</source>
         <target />
       </trans-unit>
       <trans-unit id="_contScrollToNextFileOnlyWithAlt.Text">
@@ -10290,12 +10499,36 @@ Select this commit to populate the full message.</source>
         <source>Contained in tags:</source>
         <target />
       </trans-unit>
+      <trans-unit id="_continueRebase.Text">
+        <source>&amp;Continue rebase</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_createBranchMenu.Text">
+        <source>Create &amp;branch here...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_createBranchWithoutCheckoutMenu.Text">
+        <source>Create branch here without checkout...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_createOrphanBranchMenu.Text">
+        <source>Create orphan branch here...</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_createPullRequest.Text">
         <source>Create pull request</source>
         <target />
       </trans-unit>
+      <trans-unit id="_createTagMenu.Text">
+        <source>Create tag...</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_createWorktree.Text">
         <source>Create worktree...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_darkTheme.Text">
+        <source>Dark theme</source>
         <target />
       </trans-unit>
       <trans-unit id="_dateText.Text">
@@ -10306,6 +10539,14 @@ Select this commit to populate the full message.</source>
         <source>{0} {1:day|days} ago</source>
         <target />
       </trans-unit>
+      <trans-unit id="_deactivateRemote.Text">
+        <source>Deactivate remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_deleteBranchMenu.Text">
+        <source>&amp;Delete branch</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_deleteFile.Text">
         <source>{0:Delete file|Delete files}</source>
         <target />
@@ -10314,6 +10555,18 @@ Select this commit to populate the full message.</source>
         <source>{0} is the main worktree of the repository.
 
 Deleting it would delete the repository itself, with all of its branches and stashes, so git refuses to remove it as well.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_deleteRemote.Text">
+        <source>Delete remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_deleteRemoteBranchMenu.Text">
+        <source>Delete remote branch</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_deleteTagMenu.Text">
+        <source>Delete tag</source>
         <target />
       </trans-unit>
       <trans-unit id="_deleteWorktreeCaption.Text">
@@ -10328,6 +10581,10 @@ Deleting it would delete the repository itself, with all of its branches and sta
         <source>Failed to delete worktree: {0}</source>
         <target />
       </trans-unit>
+      <trans-unit id="_detachedHeadPushError.Text">
+        <source>HEAD is detached; check out a branch before pushing</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_diffBaseWith.Text">
         <source>Diff BASE with</source>
         <target />
@@ -10336,8 +10593,16 @@ Deleting it would delete the repository itself, with all of its branches and sta
         <source>Diff contains</source>
         <target />
       </trans-unit>
+      <trans-unit id="_diffLoaded.Text">
+        <source>Diff loaded</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_diffRange.Text">
         <source>Range diff</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_diffSelectedRevision.Text">
+        <source>View selected revision's diff</source>
         <target />
       </trans-unit>
       <trans-unit id="_diffSelectedWithRememberedFile.Text">
@@ -10356,8 +10621,32 @@ Deleting it would delete the repository itself, with all of its branches and sta
         <source>Disable this dropdown</source>
         <target />
       </trans-unit>
+      <trans-unit id="_discardSelectedFiles.Text">
+        <source>&amp;Discard selected</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_dontShowAgain.Text">
         <source>&amp;Don't show me this message again</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_duplicateShortcutError.Text">
+        <source>Each shortcut must be unique.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_editRebaseTodo.Text">
+        <source>Edit todo...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_enterBranchNameError.Text">
+        <source>Please enter a branch name</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_enterCommitMessageError.Text">
+        <source>Please enter commit message</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_enterTagNameError.Text">
+        <source>Please enter a tag name.</source>
         <target />
       </trans-unit>
       <trans-unit id="_error.Text">
@@ -10428,6 +10717,22 @@ Deleting it would delete the repository itself, with all of its branches and sta
 Copy error details to clipboard?</source>
         <target />
       </trans-unit>
+      <trans-unit id="_fetchUrl.Text">
+        <source>Fetch URL:</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_fileHistory.Text">
+        <source>History</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_fileHistoryLoaded.Text">
+        <source>File history loaded</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_fileHistoryWindowTitle.Text">
+        <source>File history: {0}</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_filterFileInGrid.Text">
         <source>Filter file in &amp;grid</source>
         <target />
@@ -10436,8 +10741,20 @@ Copy error details to clipboard?</source>
         <source>Find git...</source>
         <target />
       </trans-unit>
+      <trans-unit id="_forceDeleteBranchMenu.Text">
+        <source>Force delete branch</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_forcePushMenu.Text">
+        <source>Force push (with &amp;lease)</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_forkCloneRepo.Text">
         <source>Fork or clone a repository</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_formatPatchMenu.Text">
+        <source>Format patch...</source>
         <target />
       </trans-unit>
       <trans-unit id="_generalGitConfigExceptionCaption.Text">
@@ -10497,12 +10814,32 @@ To be able to open this repository, you need to either:
         <source>"{0}" is not a Git revision and will be ignored.</source>
         <target />
       </trans-unit>
+      <trans-unit id="_includeUntrackedFilesInStash.Text">
+        <source>Include untracked files</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_indexText.Text">
         <source>Commit index</source>
         <target />
       </trans-unit>
+      <trans-unit id="_initializeRepository.Text">
+        <source>Initialize repository...</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_installGitInstructions.Text">
         <source>Install git...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_invalidBranchNameError.Text">
+        <source>The branch name is not valid</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_invalidMainlineParentError.Text">
+        <source>Enter a number between 1 and {0}.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_invalidTagNameError.Text">
+        <source>The tag name is not valid.</source>
         <target />
       </trans-unit>
       <trans-unit id="_invisibleCommitText.Text">
@@ -10529,6 +10866,26 @@ To be able to open this repository, you need to either:
         <source>is tracking [{0}]</source>
         <target />
       </trans-unit>
+      <trans-unit id="_keepIndexWhenStashing.Text">
+        <source>Keep index</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_keyboardShortcutsHelp.Text">
+        <source>Select a field, then press the shortcut you want to use.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_keyboardShortcutsMenu.Text">
+        <source>Keyboard shortcuts...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_keyboardShortcutsTitle.Text">
+        <source>Keyboard shortcuts</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_lightTheme.Text">
+        <source>Light theme</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_loadingDataText.Text">
         <source>Loading data...</source>
         <target />
@@ -10541,6 +10898,14 @@ To be able to open this repository, you need to either:
         <source>You are not working on a branch</source>
         <target />
       </trans-unit>
+      <trans-unit id="_mainlineParentPrompt.Text">
+        <source>Mainline parent number (1-{0}):</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mainlineParentPromptTitle.Text">
+        <source>Select mainline parent</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_manageWorktrees.Text">
         <source>Manage worktrees...</source>
         <target />
@@ -10551,6 +10916,42 @@ To be able to open this repository, you need to either:
       </trans-unit>
       <trans-unit id="_markBisectAsGood.Text">
         <source>Marked as good in bisect</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeAllowFastForward.Text">
+        <source>Allow fast-forward</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeAllowUnrelatedHistories.Text">
+        <source>Allow unrelated histories</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeBranchMenu.Text">
+        <source>&amp;Merge into current branch</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeExecute.Text">
+        <source>Merge</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeInProgress.Text">
+        <source>Merge in progress</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeNoCommit.Text">
+        <source>Do not commit the merge automatically</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeOptionsBranchPrompt.Text">
+        <source>Merge branch '{0}' into the current branch.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeOptionsTitle.Text">
+        <source>Merge options</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_mergeSquash.Text">
+        <source>Squash commits (do not create a merge commit)</source>
         <target />
       </trans-unit>
       <trans-unit id="_message.Text">
@@ -10581,12 +10982,28 @@ To be able to open this repository, you need to either:
         <source>No changes</source>
         <target />
       </trans-unit>
+      <trans-unit id="_noRemoteConfiguredError.Text">
+        <source>No remote is configured for this repository</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_noResultsFound.Text">
         <source>&lt;No results found&gt;</source>
         <target />
       </trans-unit>
       <trans-unit id="_noRevision.Text">
         <source>No revision</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_noStagedChangesError.Text">
+        <source>There are no staged changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_noSubmodulesConfigured.Text">
+        <source>No submodules are configured.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_noVerifyCommitOption.Text">
+        <source>&amp;Skip hooks (--no-verify)</source>
         <target />
       </trans-unit>
       <trans-unit id="_nonexistingGitRevision.Text">
@@ -10597,6 +11014,14 @@ To be able to open this repository, you need to either:
         <source>{0} not configured</source>
         <target />
       </trans-unit>
+      <trans-unit id="_nothingToStashError.Text">
+        <source>There are no changes to stash</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_offerResolveStashConflicts.Text">
+        <source>Applying this stash caused conflicts. Would you like to open the conflict resolution window?</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_okText.Text">
         <source>OK</source>
         <target />
@@ -10605,8 +11030,20 @@ To be able to open this repository, you need to either:
         <source>Open</source>
         <target />
       </trans-unit>
+      <trans-unit id="_openMergeTool.Text">
+        <source>Open in merge tool</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_openReport.Text">
         <source>Open report</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_openRepositoryShortcut.Text">
+        <source>Open repository</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_openSelectedRepository.Text">
+        <source>Open selected repository</source>
         <target />
       </trans-unit>
       <trans-unit id="_openWithGitExtensions.Text">
@@ -10617,6 +11054,14 @@ To be able to open this repository, you need to either:
         <source>{0:Parent|Parents}</source>
         <target />
       </trans-unit>
+      <trans-unit id="_patchFileReadError.Text">
+        <source>Unable to read the selected patch file.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_patchInProgress.Text">
+        <source>Patch application in progress</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_pathFilter.Text">
         <source>Path filter</source>
         <target />
@@ -10625,14 +11070,158 @@ To be able to open this repository, you need to either:
         <source>Prune worktrees</source>
         <target />
       </trans-unit>
+      <trans-unit id="_pullMergeMenu.Text">
+        <source>&amp;Pull (merge)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_pullRebaseMenu.Text">
+        <source>Pull (&amp;rebase)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_pullShortcut.Text">
+        <source>Pull</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_pushMenu.Text">
+        <source>Pu&amp;sh</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_pushShortcut.Text">
+        <source>Push</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_pushUrl.Text">
+        <source>Push URL (optional):</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseAutoStash.Text">
+        <source>Stash and restore local changes automatically</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseAutosquash.Text">
+        <source>Autosquash fixup commits</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseDetachedHeadError.Text">
+        <source>Cannot rebase while HEAD is detached.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseExecute.Text">
+        <source>Rebase</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseInProgress.Text">
+        <source>Rebase in progress</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseInteractive.Text">
+        <source>Interactive rebase (use the configured editor to edit the commit plan)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseOntoMenu.Text">
+        <source>Rebase current branch onto this branch</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseOperationInProgressError.Text">
+        <source>Another Git operation is already in progress.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseOptionsBranchPrompt.Text">
+        <source>Rebase the current branch onto '{0}'.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseOptionsTitle.Text">
+        <source>Rebase options</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseRangeUpstreamPrompt.Text">
+        <source>Upstream revision (exclusive)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseRangeUpstreamRequired.Text">
+        <source>Enter the upstream revision for the rebase range.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseSameBranchError.Text">
+        <source>The current branch cannot be rebased onto itself.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseSpecificRange.Text">
+        <source>Rebase commits after a specific revision</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_rebaseTargetRequired.Text">
+        <source>Select a branch to rebase onto.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_recentRepositoriesTitle.Text">
+        <source>Recent repositories</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_recoveryActionStateChanged.Text">
+        <source>The repository operation changed; no recovery command was run</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_reflogAction.Text">
+        <source>Action</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_reflogReference.Text">
+        <source>Reference</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_reflogSha.Text">
+        <source>SHA</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_reflogWindowTitle.Text">
+        <source>Reflog</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_refreshConflicts.Text">
+        <source>Refresh conflicts</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_refreshShortcut.Text">
+        <source>Refresh repository</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_remote.Text">
         <source>Remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteAlreadyExistsError.Text">
+        <source>A remote named "{0}" already exists.</source>
         <target />
       </trans-unit>
       <trans-unit id="_remoteInError.Text">
         <source>{0}
 
 Remote: {1}</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteInactive.Text">
+        <source>{0} (inactive)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteManagementMenu.Text">
+        <source>Manage remotes...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteManagementTitle.Text">
+        <source>Manage remotes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteName.Text">
+        <source>Remote name:</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteNameRequiredError.Text">
+        <source>Enter a name for the remote.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_remoteUrlRequiredError.Text">
+        <source>Enter a fetch URL for the remote.</source>
         <target />
       </trans-unit>
       <trans-unit id="_remotesText.Text">
@@ -10643,8 +11232,20 @@ Remote: {1}</source>
         <source>Remove all {0} invalid repositories</source>
         <target />
       </trans-unit>
+      <trans-unit id="_removeFromRecentList.Text">
+        <source>Remove from recent list</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_removeSelectedInvalidRepository.Text">
         <source>Remove the selected invalid repository</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_removeSubmodule.Text">
+        <source>Remove</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_renameBranchMenu.Text">
+        <source>Rename branch</source>
         <target />
       </trans-unit>
       <trans-unit id="_reportBugText.Text">
@@ -10663,8 +11264,40 @@ Remote: {1}</source>
         <source>If you can consistently reproduce the issue, please report it.</source>
         <target />
       </trans-unit>
+      <trans-unit id="_repositoryDirectory.Text">
+        <source>Repository directory</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetAllChangesMenu.Text">
+        <source>&amp;Reset all changes...</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_resetChangesCaption.Text">
         <source>Reset changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetCurrentBranchToRevisionMenu.Text">
+        <source>Reset current branch to this commit</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetHardToRevisionMenu.Text">
+        <source>Hard: discard all local changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetHardToRevisionTitle.Text">
+        <source>Reset current branch</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetKeepToRevisionMenu.Text">
+        <source>Keep: update working tree unless local changes conflict</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetMergeToRevisionMenu.Text">
+        <source>Merge: keep non-conflicting local changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetMixedToRevisionMenu.Text">
+        <source>Mixed: reset index, keep working tree</source>
         <target />
       </trans-unit>
       <trans-unit id="_resetSelectedLines.Text">
@@ -10673,6 +11306,14 @@ Remote: {1}</source>
       </trans-unit>
       <trans-unit id="_resetSelectedLinesConfirmation.Text">
         <source>Are you sure you want to reset the changes to the selected lines?</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resetSoftToRevisionMenu.Text">
+        <source>Soft: keep index and working tree</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_resolveMergeConflicts.Text">
+        <source>Resolve conflicts...</source>
         <target />
       </trans-unit>
       <trans-unit id="_restartApplication.Text">
@@ -10684,8 +11325,48 @@ Remote: {1}</source>
 Sometimes Windows may need to be restarted too.</source>
         <target />
       </trans-unit>
+      <trans-unit id="_returnToRepository.Text">
+        <source>Return to repository</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_revertCommitMenu.Text">
+        <source>&amp;Revert this commit</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_revertInProgress.Text">
+        <source>Revert in progress</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_revisionFilterAuthor.Text">
+        <source>Author</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_revisionFilterCommitter.Text">
+        <source>Committer</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_revisionFilterMessage.Text">
+        <source>Commit message</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_revisionFilterWatermark.Text">
+        <source>Search revisions...</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_rotInactive.Text">
         <source>[ Inactive ]</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_saveRemote.Text">
+        <source>Save remote</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_saveStashOptions.Text">
+        <source>Save</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_saveText.Text">
+        <source>Save</source>
         <target />
       </trans-unit>
       <trans-unit id="_scriptConfirmExecuteText.Text">
@@ -10718,6 +11399,10 @@ Sometimes Windows may need to be restarted too.</source>
       </trans-unit>
       <trans-unit id="_scriptUserInputCaption.Text">
         <source>User input for script '{0}'</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_scriptsMenu.Text">
+        <source>Scripts</source>
         <target />
       </trans-unit>
       <trans-unit id="_searchingFor.Text">
@@ -10770,8 +11455,16 @@ the last selected commit.</source>
         <source>Show reflog</source>
         <target />
       </trans-unit>
+      <trans-unit id="_showReflogMenu.Text">
+        <source>Show reflo&amp;g...</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_showReflogTooltip.Text">
         <source>Show all reflog references</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_signOffCommitOption.Text">
+        <source>S&amp;ign off</source>
         <target />
       </trans-unit>
       <trans-unit id="_simplifyByDecoration.Text">
@@ -10780,6 +11473,10 @@ the last selected commit.</source>
       </trans-unit>
       <trans-unit id="_since.Text">
         <source>Since</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_skipRebase.Text">
+        <source>&amp;Skip commit</source>
         <target />
       </trans-unit>
       <trans-unit id="_sortBy.Text">
@@ -10794,16 +11491,96 @@ the last selected commit.</source>
         <source>&amp;Sort order</source>
         <target />
       </trans-unit>
+      <trans-unit id="_stageConflictResolution.Text">
+        <source>Stage selected resolution</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stageSelectedFiles.Text">
+        <source>&amp;Stage selected</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_stageSelectedLines.Text">
         <source>Stage selected line(s)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stagedChanges.Text">
+        <source>Staged changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashApplyMenu.Text">
+        <source>&amp;Apply stash</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashChangesMenu.Text">
+        <source>&amp;Stash changes...</source>
         <target />
       </trans-unit>
       <trans-unit id="_stashDropConfirmTitle.Text">
         <source>Drop Stash Confirmation</source>
         <target />
       </trans-unit>
+      <trans-unit id="_stashDropMenu.Text">
+        <source>&amp;Drop stash</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashMessagePrompt.Text">
+        <source>Stash message (optional):</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashOptionsMenu.Text">
+        <source>Stash options...</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashOptionsTitle.Text">
+        <source>Stash options</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashPopMenu.Text">
+        <source>&amp;Pop stash</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_stashSelectedFiles.Text">
+        <source>Stash selected</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_stashesText.Text">
         <source>Stashes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleBranch.Text">
+        <source>Branch (optional)</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleForce.Text">
+        <source>Force</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleLocalPath.Text">
+        <source>Local path</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleModified.Text">
+        <source>Modified</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleNotInitialized.Text">
+        <source>Not initialized</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleSync.Text">
+        <source>Synchronize URLs</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleUpToDate.Text">
+        <source>Up-to-date</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleUpdate.Text">
+        <source>Update / initialize</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_submoduleUrl.Text">
+        <source>Path to submodule</source>
         <target />
       </trans-unit>
       <trans-unit id="_submodulesText.Text">
@@ -10820,6 +11597,30 @@ the last selected commit.</source>
       </trans-unit>
       <trans-unit id="_tag.Text">
         <source>Tag</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_tagAlreadyExistsError.Text">
+        <source>A tag with this name already exists.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_tagMessagePrompt.Text">
+        <source>Tag message:</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_tagMessageRequiredError.Text">
+        <source>Enter a message for the annotated tag.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_tagNamePrompt.Text">
+        <source>Tag name:</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_tagOptionsTitle.Text">
+        <source>Create tag</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_tagRevisionRequiredError.Text">
+        <source>Select a commit to create the tag on.</source>
         <target />
       </trans-unit>
       <trans-unit id="_tagsText.Text">
@@ -10839,16 +11640,52 @@ You can change your mind at any time.
 Yes, I allow telemetry!</source>
         <target />
       </trans-unit>
+      <trans-unit id="_toggleDashboardShortcut.Text">
+        <source>Show recent repositories</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_uninterestingDiffOmitted.Text">
         <source>Uninteresting diff hunks are omitted.</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_unrecognizedConflictOperation.Text">
+        <source>Unresolved conflicts are present; the active operation could not be identified</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_unrecognizedOperationInProgress.Text">
+        <source>A Git operation is in progress, but its state could not be identified</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_unresolvedConflicts.Text">
+        <source>Unresolved conflicts remain</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_unstageSelectedFiles.Text">
+        <source>&amp;Unstage selected</source>
         <target />
       </trans-unit>
       <trans-unit id="_unstageSelectedLines.Text">
         <source>Unstage selected line(s)</source>
         <target />
       </trans-unit>
+      <trans-unit id="_unstagedChanges.Text">
+        <source>Unstaged changes</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_unsupportedShortcutKey.Text">
+        <source>This key cannot be used for a shortcut.</source>
+        <target />
+      </trans-unit>
       <trans-unit id="_until.Text">
         <source>Until</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_view.Text">
+        <source>&amp;View</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_viewPatchMenu.Text">
+        <source>View patch file...</source>
         <target />
       </trans-unit>
       <trans-unit id="_viewPullRequest.Text">
@@ -10869,6 +11706,10 @@ Yes, I allow telemetry!</source>
       </trans-unit>
       <trans-unit id="_workingDirectoryText.Text">
         <source>Working directory</source>
+        <target />
+      </trans-unit>
+      <trans-unit id="_workingTree.Text">
+        <source>Working tree</source>
         <target />
       </trans-unit>
       <trans-unit id="_workspaceText.Text">

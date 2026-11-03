@@ -17,9 +17,30 @@ public partial class FileViewer : GitExtensionsControl
         InitializeComponent();
 
         TextEditor.TextArea.TextView.LineTransformers.Add(new DiffLineColorizer());
+        TextEditor.TextArea.SelectionChanged += (_, _) => SelectionChanged?.Invoke(this, EventArgs.Empty);
 
         InitializeComplete();
     }
+
+    /// <summary>
+    ///  Occurs when the selected text changes.
+    /// </summary>
+    public event EventHandler? SelectionChanged;
+
+    /// <summary>
+    ///  Gets the displayed text.
+    /// </summary>
+    public string Text => TextEditor.Document?.Text ?? string.Empty;
+
+    /// <summary>
+    ///  Gets the offset of the current selection.
+    /// </summary>
+    public int SelectionPosition => TextEditor.TextArea.Selection.SurroundingSegment.Offset;
+
+    /// <summary>
+    ///  Gets the length of the current selection.
+    /// </summary>
+    public int SelectionLength => TextEditor.TextArea.Selection.Length;
 
     /// <summary>
     ///  Shows a unified diff (patch) text.
@@ -28,6 +49,7 @@ public partial class FileViewer : GitExtensionsControl
     {
         TextEditor.Document ??= new TextDocument();
         TextEditor.Document.Text = text ?? string.Empty;
+        TextEditor.Select(0, 0);
         TextEditor.ScrollToHome();
     }
 

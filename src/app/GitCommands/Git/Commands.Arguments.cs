@@ -27,6 +27,24 @@ public static partial class Commands
         return new GitArgumentBuilder("rebase") { "--abort" };
     }
 
+    /// <summary>
+    ///  Builds the command to abort the current cherry-pick operation.
+    /// </summary>
+    /// <returns>The cherry-pick abort command.</returns>
+    public static ArgumentString AbortCherryPick()
+    {
+        return new GitArgumentBuilder("cherry-pick") { "--abort" };
+    }
+
+    /// <summary>
+    ///  Builds the command to abort the current revert operation.
+    /// </summary>
+    /// <returns>The revert abort command.</returns>
+    public static ArgumentString AbortRevert()
+    {
+        return new GitArgumentBuilder("revert") { "--abort" };
+    }
+
     public static ArgumentString AddSubmodule(string remotePath, string localPath, string branch, bool force, IEnumerable<GitConfigItem>? configs = null)
     {
         GitArgumentBuilder argsBuilder = new("submodule")
@@ -228,6 +246,24 @@ public static partial class Commands
     public static ArgumentString ContinueRebase()
     {
         return new GitArgumentBuilder("rebase") { "--continue" };
+    }
+
+    /// <summary>
+    ///  Builds the command to continue the current cherry-pick operation.
+    /// </summary>
+    /// <returns>The cherry-pick continue command.</returns>
+    public static ArgumentString ContinueCherryPick()
+    {
+        return new GitArgumentBuilder("cherry-pick") { "--continue" };
+    }
+
+    /// <summary>
+    ///  Builds the command to continue the current revert operation.
+    /// </summary>
+    /// <returns>The revert continue command.</returns>
+    public static ArgumentString ContinueRevert()
+    {
+        return new GitArgumentBuilder("revert") { "--continue" };
     }
 
     /// <summary>Create a new orphan branch from <paramref name="startPoint"/> and switch to it.</summary>

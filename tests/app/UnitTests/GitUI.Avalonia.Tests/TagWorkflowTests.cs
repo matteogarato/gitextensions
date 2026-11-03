@@ -1,0 +1,110 @@
+using System.Diagnostics;
+using GitCommands.Git.Tag;
+using GitExtensions.Extensibility;
+using GitExtensions.Extensibility.Git;
+using GitUI;
+using GitUI.CommandsDialogs;
+using NSubstitute;
+
+namespace GitExtensionsTests;
+
+public sealed class TagWorkflowTests
+{
+    private static readonly ObjectId CommitId = ObjectId.Parse("0123456789012345678901234567890123456789");
+
+    [Fact]
+    public void CanCreateTag_should_reject_artificial_and_zero_revisions()
+    {
+        TagWorkflow.CanCreateTag(ObjectId.IndexId).Should().BeFalse();
+        TagWorkflow.CanCreateTag(default).Should().BeFalse();
+        TagWorkflow.CanCreateTag(CommitId).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ValidateCreate_should_reject_invalid_duplicate_and_incomplete_tags()
+    {
+        IGitModule module = Substitute.For<IGitModule>();
+        module.GetRefs(RefsFilter.Tags).Returns(Array.Empty<IGitRef>());
+
+        TagConfiguration emptyName = new("", CommitId, TagOperation.Lightweight, "");
+        TagWorkflow.ValidateCreate(module, emptyName).Should().Be(TranslatedStrings.EnterTagNameError);
+
+        module.CheckBranchFormat("bad tag").Returns(false);
+        TagConfiguration invalidName = new("bad tag", CommitId, TagOperation.Lightweight, "");
+        TagWorkflow.ValidateCreate(module, invalidName).Should().Be(TranslatedStrings.InvalidTagNameError);
+
+        module.CheckBranchFormat("release").Returns(true);
+        IGitRef existingTag = Substitute.For<IGitRef>();
+        existingTag.Name.Returns("release");
+        module.GetRefs(RefsFilter.Tags).Returns([existingTag]);
+        TagConfiguration duplicate = new("release", CommitId, TagOperation.Lightweight, "");
+        TagWorkflow.ValidateCreate(module, duplicate).Should().Be(TranslatedStrings.TagAlreadyExistsError);
+
+        module.GetRefs(RefsFilter.Tags).Returns(Array.Empty<IGitRef>());
+        TagConfiguration missingMessage = new("release", CommitId, TagOperation.Annotate, " ");
+        TagWorkflow.ValidateCreate(module, missingMessage).Should().Be(TranslatedStrings.TagMessageRequiredError);
+    }
+
+    [Fact]
+    public void BuildDelete_should_quote_tag_name_and_mark_command_as_state_changing()
+    {
+        IGitCommand command = TagWorkflow.BuildDelete("release candidate");
+
+        command.Arguments.Should().Be("tag -d -- \"release candidate\"");
+        command.ChangesRepoState.Should().BeTrue();
+        command.AccessesRemote.Should().BeFalse();
+    }
+
+    [Fact]
+    public void BuildCreate_and_BuildDelete_should_create_and_delete_annotated_tag_in_repository()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"ge-tag-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            Git(directory, "init -q -b main");
+            Git(directory, "config user.name t");
+            Git(directory, "config user.email t@example.com");
+            File.WriteAllText(Path.Combine(directory, "file.txt"), "tag target\n");
+            Git(directory, "add file.txt");
+            Git(directory, "commit -q -m initial");
+            ObjectId commitId = ObjectId.Parse(Git(directory, "rev-parse HEAD"));
+
+            string messageFile = Path.Combine(directory, "tag-message.txt");
+            File.WriteAllText(messageFile, "Release tag message");
+            TagConfiguration configuration = new("v1.0", commitId, TagOperation.Annotate, "Release tag message");
+            Git(directory, TagWorkflow.BuildCreate(configuration, messageFile, path => path).Arguments);
+
+            Git(directory, "cat-file -t refs/tags/v1.0").Should().Be("tag");
+            Git(directory, "cat-file -p refs/tags/v1.0").Should().Contain("Release tag message");
+
+            Git(directory, TagWorkflow.BuildDelete("v1.0").Arguments);
+            Git(directory, "show-ref --verify --quiet refs/tags/v1.0", expectedExitCode: 1);
+        }
+        finally
+        {
+            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static string Git(string workingDirectory, string arguments, int expectedExitCode = 0)
+    {
+        ProcessStartInfo startInfo = new("git", arguments)
+        {
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start git.");
+        string output = process.StandardOutput.ReadToEnd().Trim();
+        string error = process.StandardError.ReadToEnd().Trim();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(expectedExitCode, error);
+        return output;
+    }
+}
