@@ -33,6 +33,7 @@ public partial class WorkingTreePanel : GitExtensionsControl
         btnDiscardStagedSelectedLines.Content = GitUI.TranslatedStrings.DiscardSelectedLines;
         btnDiscardSelected.Content = GitUI.TranslatedStrings.DiscardSelectedFiles;
         btnStashSelected.Content = GitUI.TranslatedStrings.StashSelectedFiles;
+        btnIgnoreSelected.Content = GitUI.TranslatedStrings.AddToGitIgnore;
         btnCommit.Content = GitUI.TranslatedStrings.CommitButton;
         chkAmend.Content = GitUI.TranslatedStrings.AmendCommitOption;
         chkSignOff.Content = GitUI.TranslatedStrings.SignOffCommitOption;
@@ -89,6 +90,7 @@ public partial class WorkingTreePanel : GitExtensionsControl
         btnDiscardStagedSelectedLines.Click += (_, _) => DiscardSelectedLines();
         btnDiscardSelected.Click += (_, _) => DiscardSelectedFiles();
         btnStashSelected.Click += (_, _) => StashSelectedFiles();
+        btnIgnoreSelected.Click += (_, _) => IgnoreSelectedFiles();
         btnCommit.Click += (_, _) => CommitRequested?.Invoke(this, GetCommitRequest());
         btnCommitAndPush.Click += (_, _) => CommitRequested?.Invoke(this, GetCommitRequest(pushAfterCommit: true));
         UpdateCommitSigningState();
@@ -124,6 +126,11 @@ public partial class WorkingTreePanel : GitExtensionsControl
     ///  Occurs when the user asks to stash the selected unstaged files.
     /// </summary>
     public event EventHandler? StashSelectedFilesRequested;
+
+    /// <summary>
+    ///  Raised when the selected untracked files should be added to <c>.gitignore</c>.
+    /// </summary>
+    public event EventHandler? IgnoreSelectedFilesRequested;
 
     /// <summary>
     ///  Occurs when the user asks to commit the staged changes.
@@ -218,6 +225,12 @@ public partial class WorkingTreePanel : GitExtensionsControl
         _selectedCommitTemplate = null;
         txtCommitMessage.Text = message;
     }
+
+    /// <summary>
+    ///  Moves keyboard focus to the commit message editor.
+    /// </summary>
+    public void FocusCommitMessage()
+        => txtCommitMessage.Focus();
 
     public void ResetCommitOptions()
     {
@@ -316,6 +329,17 @@ public partial class WorkingTreePanel : GitExtensionsControl
         if (btnDiscardSelected.IsEnabled)
         {
             DiscardRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    ///  Requests adding the selected untracked files to <c>.gitignore</c>.
+    /// </summary>
+    public void IgnoreSelectedFiles()
+    {
+        if (btnIgnoreSelected.IsEnabled)
+        {
+            IgnoreSelectedFilesRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -443,6 +467,9 @@ public partial class WorkingTreePanel : GitExtensionsControl
             && GetSelectedItems(lstUnstaged).Count > 0;
         btnStageSelectedLines.IsEnabled = btnStageSelected.IsEnabled && _canStageSelectedLines;
         btnDiscardSelected.IsEnabled = btnStageSelected.IsEnabled;
+        btnIgnoreSelected.IsEnabled = !_operationInProgress
+            && statusTabs.SelectedItem != stagedTab
+            && GetSelectedItems(lstUnstaged).Any(item => !item.IsTracked && item.IsNew);
         btnStashSelected.IsEnabled = !_operationInProgress
             && statusTabs.SelectedItem != stagedTab
             && GetSelectedItems(lstUnstaged).Count > 0;

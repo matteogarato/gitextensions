@@ -7,6 +7,17 @@ using ResourceManager;
 
 namespace GitUI;
 
+/// <summary>
+///  Path-related actions offered by the changed-file list context menu.
+/// </summary>
+public enum FileListAction
+{
+    CopyPath,
+    CopyFullPath,
+    Open,
+    ShowInFolder,
+}
+
 // TODO(avalonia-port): grouping, filtering, staging interactions, and the full context menus
 // of the WinForms FileStatusList (2,198 LOC) arrive in later milestones.
 public partial class FileStatusList : GitExtensionsControl
@@ -19,6 +30,23 @@ public partial class FileStatusList : GitExtensionsControl
         btnBlameFile.Content = GitUI.TranslatedStrings.BlameFile;
         btnFileHistory.Click += (_, _) => FileHistoryRequested?.Invoke(this, EventArgs.Empty);
         btnBlameFile.Click += (_, _) => BlameRequested?.Invoke(this, EventArgs.Empty);
+        MenuItem copyPath = new() { Header = GitUI.TranslatedStrings.CopyPathMenu };
+        MenuItem copyFullPath = new() { Header = GitUI.TranslatedStrings.CopyFullPathMenu };
+        MenuItem openFile = new() { Header = GitUI.TranslatedStrings.OpenFileMenu };
+        MenuItem showInFolder = new() { Header = GitUI.TranslatedStrings.ShowInFolderMenu };
+        copyPath.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.CopyPath);
+        copyFullPath.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.CopyFullPath);
+        openFile.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.Open);
+        showInFolder.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.ShowInFolder);
+        ContextMenu menu = new() { ItemsSource = new[] { copyPath, copyFullPath, openFile, showInFolder } };
+        menu.Opening += (_, _) =>
+        {
+            foreach (MenuItem item in new[] { copyPath, copyFullPath, openFile, showInFolder })
+            {
+                item.IsEnabled = SelectedItem is not null;
+            }
+        };
+        lstFiles.ContextMenu = menu;
         lstFiles.ItemTemplate = new FuncDataTemplate<GitItemStatus?>(CreateFileRow, supportsRecycling: false);
         lstFiles.SelectionChanged += (_, _) =>
         {
@@ -44,6 +72,11 @@ public partial class FileStatusList : GitExtensionsControl
     ///  Occurs when the blame action is requested for the selected file.
     /// </summary>
     public event EventHandler? BlameRequested;
+
+    /// <summary>
+    ///  Occurs when a path-related context menu action is requested for the selected file.
+    /// </summary>
+    public event EventHandler<FileListAction>? PathActionRequested;
 
     /// <summary>
     ///  Gets the selected file status item, or <see langword="null"/>.

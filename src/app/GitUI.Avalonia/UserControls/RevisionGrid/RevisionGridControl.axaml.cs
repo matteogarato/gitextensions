@@ -69,6 +69,8 @@ public partial class RevisionGridControl : GitExtensionsControl
         cbxRevisionFilterField.SelectedItem = messageOption;
         btnApplyRevisionFilter.Content = GitUI.TranslatedStrings.ApplyFilter;
         btnClearRevisionFilter.Content = GitUI.TranslatedStrings.ClearFilter;
+        btnMoreRevisionFilters.Content = GitUI.TranslatedStrings.MoreFilters;
+        btnMoreRevisionFilters.Click += (_, _) => ThreadHelper.FileAndForget(ShowMoreFiltersAsync);
         btnApplyRevisionFilter.Click += (_, _) => ApplyRevisionFilter();
         btnClearRevisionFilter.Click += (_, _) => ClearRevisionFilter();
         txtRevisionFilter.KeyDown += (_, e) =>
@@ -164,7 +166,7 @@ public partial class RevisionGridControl : GitExtensionsControl
                 .ToLookup(gitRef => gitRef.ObjectId);
 
             RevisionReader reader = new(module);
-            reader.GetLog(observer, revisionFilter, pathFilter: "", hasNotes: false, autostashLabel: "autostash", cancellationToken);
+            reader.GetLog(observer, revisionFilter, pathFilter: RevisionFilterOptions.BuildPathSpec(_filterInfo.PathFilter), hasNotes: false, autostashLabel: "autostash", cancellationToken);
         });
     }
 
@@ -189,6 +191,54 @@ public partial class RevisionGridControl : GitExtensionsControl
             byAuthor: field == RevisionSearchField.Author,
             byDiffContent: false));
         ReloadRevisions(module);
+    }
+
+    private async Task ShowMoreFiltersAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        if (_module is null || TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        RevisionFilterOptions current = new()
+        {
+            DateFrom = _filterInfo.ByDateFrom ? _filterInfo.DateFrom : null,
+            DateTo = _filterInfo.ByDateTo ? _filterInfo.DateTo : null,
+            PathFilter = _filterInfo.PathFilter,
+            HideMergeCommits = _filterInfo.HideMergeCommits,
+            ShowOnlyFirstParent = _filterInfo.ShowOnlyFirstParent,
+            ShowCurrentBranchOnly = _filterInfo.ShowCurrentBranchOnly,
+            ShowReflogReferences = _filterInfo.ShowReflogReferences,
+            SimplifyByDecoration = _filterInfo.ShowSimplifyByDecoration,
+        };
+        RevisionFilterOptions? result = await new RevisionFilterWindow(current).ShowDialog<RevisionFilterOptions?>(owner);
+        if (result is null)
+        {
+            return;
+        }
+
+        _filterInfo.ByDateFrom = result.DateFrom is not null;
+        if (result.DateFrom is DateTime from)
+        {
+            _filterInfo.DateFrom = from;
+        }
+
+        _filterInfo.ByDateTo = result.DateTo is not null;
+        if (result.DateTo is DateTime to)
+        {
+            // The whole end day is included.
+            _filterInfo.DateTo = to.AddDays(1).AddSeconds(-1);
+        }
+
+        _filterInfo.ByPathFilter = result.PathFilter.Length > 0;
+        _filterInfo.PathFilter = result.PathFilter;
+        _filterInfo.HideMergeCommits = result.HideMergeCommits;
+        _filterInfo.ShowOnlyFirstParent = result.ShowOnlyFirstParent;
+        _filterInfo.ShowCurrentBranchOnly = result.ShowCurrentBranchOnly;
+        _filterInfo.ShowReflogReferences = result.ShowReflogReferences;
+        _filterInfo.ShowSimplifyByDecoration = result.SimplifyByDecoration;
+        ReloadRevisions(_module);
     }
 
     private void ClearRevisionFilter()

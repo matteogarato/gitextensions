@@ -7,6 +7,7 @@
       <ComboBox x:Name="cbxRevisionFilterField" Width="130" />
       <Button x:Name="btnApplyRevisionFilter" />
       <Button x:Name="btnClearRevisionFilter" />
+      <Button x:Name="btnMoreRevisionFilters" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" x:Name="lblLoadingStatus" Margin="4,2" Opacity="0.7" />
     <ListBox x:Name="lstRevisions" SelectionMode="Multiple">

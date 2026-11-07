@@ -21,6 +21,8 @@
         <MenuItem x:Name="cleanupRepositoryMenuItem" />
         <MenuItem x:Name="reflogMenuItem" />
         <MenuItem x:Name="dashboardMenuItem" />
+        <MenuItem x:Name="goToCommitMenuItem" InputGesture="Ctrl+G" />
+        <MenuItem x:Name="goToSuperprojectMenuItem" />
         <Separator />
         <MenuItem x:Name="refreshToolStripMenuItem" Header="_Refresh" />
         <MenuItem x:Name="remoteManagementMenuItem" />
@@ -28,6 +30,7 @@
         <MenuItem x:Name="pluginsMenuItem" />
       </MenuItem>
       <MenuItem x:Name="commandsToolStripMenuItem" Header="_Commands">
+        <MenuItem x:Name="commitMenuItem" InputGesture="Ctrl+K" />
         <MenuItem x:Name="userScriptsMenuItem" />
         <Separator />
         <MenuItem x:Name="formatPatchMenuItem" />
@@ -36,6 +39,8 @@
         <MenuItem x:Name="fetchAllToolStripMenuItem" Header="Fetch _all" />
         <MenuItem x:Name="stashChangesMenuItem" />
         <MenuItem x:Name="stashOptionsMenuItem" />
+        <MenuItem x:Name="stashManagerMenuItem" />
+        <MenuItem x:Name="stashStagedMenuItem" />
         <MenuItem x:Name="resetAllMenuItem" />
         <MenuItem x:Name="undoLastCommitMenuItem" />
         <MenuItem x:Name="pullMergeMenuItem" />
@@ -94,6 +99,9 @@
               <TabControl x:Name="fileListTabs" Grid.Row="1">
                 <TabItem x:Name="commitFilesTab">
                   <gitui:FileStatusList x:Name="fileStatusList" />
+                </TabItem>
+                <TabItem x:Name="revisionTreeTab">
+                  <gitui:RevisionFileTreePanel x:Name="revisionFileTree" />
                 </TabItem>
                 <TabItem x:Name="workingTreeTab">
                   <gitui:WorkingTreePanel x:Name="workingTreePanel" />

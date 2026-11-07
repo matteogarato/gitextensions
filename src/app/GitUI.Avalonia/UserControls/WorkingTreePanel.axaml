@@ -2,7 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="GitUI.WorkingTreePanel">
   <DockPanel>
-    <StackPanel DockPanel.Dock="Bottom" Margin="4" Spacing="4">
+    <ScrollViewer DockPanel.Dock="Bottom" MaxHeight="280" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="4" Spacing="4">
       <TextBox x:Name="txtCommitMessage" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" MaxHeight="160" />
       <WrapPanel>
         <ComboBox x:Name="cbxPreviousCommitMessages" MinWidth="220" />
@@ -24,6 +25,7 @@
         <Button x:Name="btnCommitAndPush" HorizontalAlignment="Left" IsVisible="False" />
       </WrapPanel>
     </StackPanel>
+    </ScrollViewer>
     <TabControl x:Name="statusTabs">
       <TabItem x:Name="unstagedTab">
         <DockPanel Margin="4">
@@ -33,6 +35,7 @@
             <Button x:Name="btnDiscardSelectedLines" />
             <Button x:Name="btnDiscardSelected" />
             <Button x:Name="btnStashSelected" />
+            <Button x:Name="btnIgnoreSelected" />
           </WrapPanel>
           <ListBox x:Name="lstUnstaged" SelectionMode="Multiple" />
         </DockPanel>

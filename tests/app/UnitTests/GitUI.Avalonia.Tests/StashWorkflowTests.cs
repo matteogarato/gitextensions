@@ -40,6 +40,19 @@ public sealed class StashWorkflowTests
     }
 
     [Fact]
+    public void BuildClear_should_clear_all_stashes()
+    {
+        ((string)StashWorkflow.BuildClear()).Should().Be("stash clear");
+    }
+
+    [Fact]
+    public void BuildSaveStaged_should_push_only_the_index_with_the_message()
+    {
+        ((string)StashWorkflow.BuildSaveStaged(" wip ")).Should().Be("stash push --staged -m \"wip\"");
+        ((string)StashWorkflow.BuildSaveStaged(null)).Should().Be("stash push --staged");
+    }
+
+    [Fact]
     public void BuildDrop_should_target_the_stash_name()
     {
         ((string)StashWorkflow.BuildDrop(CreateStash())).Should().Contain("drop").And.Contain("stash@{0}");

@@ -189,6 +189,15 @@ public sealed class ViewConstructionTests
             ?? throw new InvalidOperationException("Reset-all menu item was not created.");
         MenuItem undoLastCommit = form.FindControl<MenuItem>("undoLastCommitMenuItem")
             ?? throw new InvalidOperationException("Undo-last-commit menu item was not created.");
+        MenuItem commitMenu = form.FindControl<MenuItem>("commitMenuItem")
+            ?? throw new InvalidOperationException("Commit menu item was not created.");
+        commitMenu.Header.Should().Be(GitUI.TranslatedStrings.CommitMenu);
+        MenuItem goToCommit = form.FindControl<MenuItem>("goToCommitMenuItem")
+            ?? throw new InvalidOperationException("Go-to-commit menu item was not created.");
+        MenuItem goToSuperproject = form.FindControl<MenuItem>("goToSuperprojectMenuItem")
+            ?? throw new InvalidOperationException("Go-to-parent menu item was not created.");
+        goToCommit.Header.Should().Be(GitUI.TranslatedStrings.GoToCommitMenu);
+        goToSuperproject.Header.Should().Be(GitUI.TranslatedStrings.GoToSuperprojectMenu);
         formatPatch.Header.Should().Be(GitUI.TranslatedStrings.FormatPatchMenu);
         viewMenu.Header.Should().Be("_View");
         pullMerge.Header.Should().Be("_Pull (merge)");

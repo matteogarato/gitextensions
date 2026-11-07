@@ -15,6 +15,9 @@ public static class StashWorkflow
     public static ArgumentString BuildSave(bool includeUntrackedFiles, bool keepIndex, string? message, IReadOnlyList<string>? selectedFiles = null)
         => Commands.StashSave(includeUntrackedFiles, keepIndex, message?.Trim() ?? string.Empty, selectedFiles);
 
+    public static ArgumentString BuildSaveStaged(string? message)
+        => new GitArgumentBuilder("stash") { "push", "--staged", string.IsNullOrWhiteSpace(message) ? null : $"-m {message.Trim().Quote()}" };
+
     public static ArgumentString BuildApply(GitStash stash) => new GitArgumentBuilder("stash") { "apply", stash.Name.Quote() };
 
     public static ArgumentString BuildApplyLatest() => new GitArgumentBuilder("stash") { "apply", "stash@{0}".Quote() };
@@ -22,6 +25,8 @@ public static class StashWorkflow
     public static ArgumentString BuildPop(GitStash? stash) => new GitArgumentBuilder("stash") { "pop", stash?.Name.QuoteNE() };
 
     public static ArgumentString BuildDrop(GitStash stash) => new GitArgumentBuilder("stash") { "drop", stash.Name.Quote() };
+
+    public static ArgumentString BuildClear() => new GitArgumentBuilder("stash") { "clear" };
 
     /// <summary>
     ///  Returns a user-facing error if there is nothing to stash, otherwise <see langword="null"/>.

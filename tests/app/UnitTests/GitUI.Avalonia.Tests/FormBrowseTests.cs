@@ -1875,11 +1875,8 @@ public sealed class FormBrowseTests : IDisposable
 
             await WaitUntilAsync(() =>
                 loadingStatus.Text == "3 revisions"
-                && status.Text?.Contains("UU tracked.txt", StringComparison.Ordinal) is true
-                && status.Text.Contains("A  staged.txt", StringComparison.Ordinal)
-                && status.Text.Contains(" M clean.txt", StringComparison.Ordinal)
-                && status.Text.Contains($" M {unicodeFileName}", StringComparison.Ordinal)
-                && status.Text.Contains("?? untracked.txt", StringComparison.Ordinal));
+                && status.Text?.Contains("1 untracked", StringComparison.Ordinal) is true);
+            status.Text.Should().NotContain("untracked.txt");
 
             Border operationStatusPanel = form.FindControl<Border>("operationStatusPanel")
                 ?? throw new InvalidOperationException("Operation status was not created.");

@@ -1,6 +1,8 @@
-﻿using Avalonia.Controls;
+﻿using System.Diagnostics;
+using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -59,6 +61,7 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         RevisionGrid.SelectionChanged += RevisionGrid_SelectionChanged;
         fileStatusList.SelectedIndexChanged += FileStatusList_SelectedIndexChanged;
         fileStatusList.FileHistoryRequested += (_, _) => OpenSelectedFileHistory(showBlame: false);
+        fileStatusList.PathActionRequested += (_, action) => ThreadHelper.FileAndForget(() => HandleFilePathActionAsync(action));
         fileStatusList.BlameRequested += (_, _) => OpenSelectedFileHistory(showBlame: true);
         workingTreePanel.SelectionChanged += WorkingTreePanel_SelectionChanged;
         workingTreePanel.StageRequested += (_, _) => ApplyWorkingTreeChanges(stage: true);
@@ -112,6 +115,12 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
             isValidWorkingDir: Module.IsValidGitWorkingDir());
         resetAllMenuItem.Header = GitUI.TranslatedStrings.ResetAllChangesMenu;
         resetAllMenuItem.Click += (_, _) => ResetAllChanges();
+        goToCommitMenuItem.Header = GitUI.TranslatedStrings.GoToCommitMenu;
+        goToCommitMenuItem.Click += (_, _) => ThreadHelper.FileAndForget(GoToCommitAsync);
+        goToSuperprojectMenuItem.Header = GitUI.TranslatedStrings.GoToSuperprojectMenu;
+        goToSuperprojectMenuItem.Click += (_, _) => GoToSuperproject();
+        commitMenuItem.Header = GitUI.TranslatedStrings.CommitMenu;
+        commitMenuItem.Click += (_, _) => ShowCommitPanel();
         undoLastCommitMenuItem.Header = GitUI.TranslatedStrings.UndoLastCommitMenu;
         undoLastCommitMenuItem.Click += (_, _) => UndoLastCommit();
         workingTreePanel.CommitRequested += (_, request) => CommitStagedChanges(request);
@@ -121,11 +130,18 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
             string[] selectedFiles = [.. workingTreePanel.SelectedItems.Select(item => item.Name)];
             ThreadHelper.FileAndForget(() => StashChangesAsync(selectedFiles));
         };
+        workingTreePanel.IgnoreSelectedFilesRequested += (_, _) => IgnoreSelectedFiles();
         fileListTabs.SelectionChanged += FileListTabs_SelectionChanged;
+        revisionFileTree.SelectedFileChanged += (_, _) => ShowRevisionTreeFile();
+        revisionFileTree.FileActivated += (_, _) => OpenRevisionTreeFileHistory();
         repoObjectsTree.SelectionChanged += RepoObjectsTree_SelectionChanged;
         InitializeBranchContextMenu();
         stashChangesMenuItem.Header = GitUI.TranslatedStrings.StashChangesMenu;
         stashChangesMenuItem.Click += (_, _) => ThreadHelper.FileAndForget(() => StashChangesAsync());
+        stashStagedMenuItem.Header = GitUI.TranslatedStrings.StashStagedMenu;
+        stashStagedMenuItem.Click += (_, _) => ThreadHelper.FileAndForget(StashStagedAsync);
+        stashManagerMenuItem.Header = GitUI.TranslatedStrings.StashManagerMenu;
+        stashManagerMenuItem.Click += (_, _) => ThreadHelper.FileAndForget(ShowStashManagerAsync);
         stashOptionsMenuItem.Header = GitUI.TranslatedStrings.StashOptionsMenu;
         stashOptionsMenuItem.Click += (_, _) => ThreadHelper.FileAndForget(ConfigureStashOptionsAsync);
         pullMergeMenuItem.Header = GitUI.TranslatedStrings.PullMergeMenu;
@@ -377,6 +393,7 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
             RevisionGrid.ReloadRevisions(module);
             repoObjectsTree.SetRefs([]);
             commitFilesTab.Header = GitUI.TranslatedStrings.CommitFiles;
+            revisionTreeTab.Header = GitUI.TranslatedStrings.FileTree;
             workingTreeTab.Header = GitUI.TranslatedStrings.WorkingTree;
             ThreadHelper.FileAndForget(async () =>
             {
@@ -591,6 +608,9 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         repositoryWorkspace.IsVisible = !showDashboard;
         repositoryInfoPanel.IsVisible = !showDashboard;
         btnDashboardReturn.IsVisible = showDashboard && isValidWorkingDir;
+        goToCommitMenuItem.IsEnabled = isValidWorkingDir;
+        goToSuperprojectMenuItem.IsEnabled = isValidWorkingDir && Module.SuperprojectModule is not null;
+        commitMenuItem.IsEnabled = isValidWorkingDir && !Module.IsBareRepository();
         undoLastCommitMenuItem.IsEnabled = isValidWorkingDir && !Module.IsBareRepository();
 
         if (showDashboard)
@@ -1233,7 +1253,37 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
 
         AppSettings.RebaseAutoStash = configuration.AutoStash;
         long loadVersion = _repositoryLoadVersion;
-        UICommands.StartGitCommandProcessDialog(this, RebaseWorkflow.BuildRebase(configuration));
+        string? todoPath = null;
+        ArgumentString rebaseCommand = RebaseWorkflow.BuildRebase(configuration);
+        if (configuration.Interactive)
+        {
+            IReadOnlyList<RebaseTodoEntry> commits = InteractiveRebaseWorkflow.ListCommits(module, InteractiveRebaseWorkflow.GetRange(configuration));
+            if (commits.Count > 0)
+            {
+                IReadOnlyList<RebaseTodoEntry>? edited = await new InteractiveRebaseWindow(commits).ShowDialog<IReadOnlyList<RebaseTodoEntry>?>(this);
+                if (edited is null)
+                {
+                    return;
+                }
+
+                todoPath = Path.Combine(Path.GetTempPath(), $"gitext-rebase-todo-{Guid.NewGuid():N}.txt");
+                await File.WriteAllTextAsync(todoPath, InteractiveRebaseWorkflow.BuildTodo(edited));
+                rebaseCommand = InteractiveRebaseWorkflow.BuildCommand(configuration, todoPath);
+            }
+        }
+
+        try
+        {
+            UICommands.StartGitCommandProcessDialog(this, rebaseCommand);
+        }
+        finally
+        {
+            if (todoPath is not null)
+            {
+                File.Delete(todoPath);
+            }
+        }
+
         if (!IsCurrentRepositoryLoad(module, loadVersion))
         {
             return;
@@ -1260,6 +1310,18 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         MenuItem cherryPickItem = new() { Header = GitUI.TranslatedStrings.CherryPickMenu };
         MenuItem revertItem = new() { Header = GitUI.TranslatedStrings.RevertCommitMenu };
         MenuItem diffToolItem = new() { Header = GitUI.TranslatedStrings.DiffToolRevisionsMenu };
+        MenuItem compareItem = new() { Header = GitUI.TranslatedStrings.CompareRevisionsMenu };
+        MenuItem compareToHeadItem = new() { Header = GitUI.TranslatedStrings.CompareToHeadMenu };
+        MenuItem copyMenuItem = new() { Header = GitUI.TranslatedStrings.CopyMenu };
+        copyMenuItem.ItemsSource = new[]
+        {
+            CreateCopyItem(GitUI.TranslatedStrings.CopyFullHashMenu, RevisionCopyKind.FullHash),
+            CreateCopyItem(GitUI.TranslatedStrings.CopyShortHashMenu, RevisionCopyKind.ShortHash),
+            CreateCopyItem(GitUI.TranslatedStrings.CopySubjectMenu, RevisionCopyKind.Subject),
+            CreateCopyItem(GitUI.TranslatedStrings.CopyHashAndSubjectMenu, RevisionCopyKind.HashAndSubject),
+            CreateCopyItem(GitUI.TranslatedStrings.CopyAuthorMenu, RevisionCopyKind.Author),
+        };
+        compareToHeadItem.Click += (_, _) => CompareSelectedWithHead();
         MenuItem cherryPickOriginItem = new() { Header = GitUI.TranslatedStrings.CherryPickRecordOriginMenu };
         MenuItem revertNoCommitItem = new() { Header = GitUI.TranslatedStrings.RevertNoCommitMenu };
         MenuItem cherryPickSelectedItem = new() { Header = GitUI.TranslatedStrings.CherryPickSelectedMenu };
@@ -1282,6 +1344,7 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
                 OpenDiffTool(first, second);
             }
         };
+        compareItem.Click += (_, _) => ShowCompareRevisions();
         cherryPickOriginItem.Click += (_, _) => ThreadHelper.FileAndForget(() => RunSelectedRevisionCommandAsync(CommitPickWorkflow.BuildCherryPickRecordingOrigin));
         revertNoCommitItem.Click += (_, _) => ThreadHelper.FileAndForget(() => RunSelectedRevisionCommandAsync(CommitPickWorkflow.BuildRevertWithoutCommit));
         cherryPickSelectedItem.Click += (_, _) => RunSelectedRevisionsSequence(revisions => CommitPickWorkflow.BuildCherryPickSequence(revisions, recordOrigin: false));
@@ -1289,13 +1352,17 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         createTagItem.Click += (_, _) => ThreadHelper.FileAndForget(CreateTagAtSelectedRevisionAsync);
         archiveRevisionItem.Click += (_, _) => ArchiveSelectedRevisions();
 
-        ContextMenu menu = new() { ItemsSource = new[] { checkoutRevisionItem, resetToRevisionItem, diffToolItem, cherryPickItem, cherryPickOriginItem, cherryPickSelectedItem, revertItem, revertNoCommitItem, revertSelectedItem, createTagItem, archiveRevisionItem } };
+        ContextMenu menu = new() { ItemsSource = new[] { checkoutRevisionItem, resetToRevisionItem, compareItem, compareToHeadItem, diffToolItem, copyMenuItem, cherryPickItem, cherryPickOriginItem, cherryPickSelectedItem, revertItem, revertNoCommitItem, revertSelectedItem, createTagItem, archiveRevisionItem } };
         AvaloniaTranslationUtils.NormalizeMenuMnemonics(menu);
         menu.Opening += (_, _) =>
         {
             checkoutRevisionItem.IsEnabled = BranchWorkflow.CanCheckoutRevision(RevisionGrid.SelectedRevision);
             resetToRevisionItem.IsEnabled = ResetWorkflow.CanResetTo(RevisionGrid.SelectedRevision);
             bool canApply = CommitPickWorkflow.CanApply(RevisionGrid.SelectedRevision);
+            bool single0 = RevisionGrid.SelectedRevisions.Count == 1;
+            compareItem.IsEnabled = ExternalToolWorkflow.ResolveComparison([.. RevisionGrid.SelectedRevisions]) is not null;
+            compareToHeadItem.IsEnabled = single0 && !RevisionGrid.SelectedRevisions[0].IsArtificial;
+            copyMenuItem.IsEnabled = RevisionGrid.SelectedRevisions.Count > 0;
             diffToolItem.IsEnabled = ExternalToolWorkflow.ResolveComparison([.. RevisionGrid.SelectedRevisions]) is not null;
             bool single = RevisionGrid.SelectedRevisions.Count == 1;
             bool canApplySequence = !single && CommitPickWorkflow.CanApplySequence(Module, RevisionGrid.SelectedRevisions);
@@ -1309,6 +1376,46 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
             archiveRevisionItem.IsEnabled = RevisionGrid.SelectedRevisions.Count > 0;
         };
         RevisionGrid.ContextMenu = menu;
+    }
+
+    private MenuItem CreateCopyItem(string header, RevisionCopyKind kind)
+    {
+        MenuItem item = new() { Header = header };
+        item.Click += (_, _) => ThreadHelper.FileAndForget(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (Clipboard is { } clipboard && RevisionGrid.SelectedRevisions.Count > 0)
+            {
+                await clipboard.SetTextAsync(RevisionCopyWorkflow.Format(RevisionGrid.SelectedRevisions, kind));
+            }
+        });
+        return item;
+    }
+
+    private void CompareSelectedWithHead()
+    {
+        IGitModule module = Module;
+        ObjectId headId = module.GetCurrentCheckout();
+        if (RevisionGrid.SelectedRevision is not GitRevision selected || headId.IsZero)
+        {
+            return;
+        }
+
+        new CompareRevisionsWindow(module, selected, new GitRevision(headId)).Show(this);
+    }
+
+    private void ShowCompareRevisions()
+    {
+        IReadOnlyList<GitRevision> selection = [.. RevisionGrid.SelectedRevisions];
+        if (ExternalToolWorkflow.ResolveComparison(selection) is not (string first, string second))
+        {
+            return;
+        }
+
+        GitRevision? older = selection.FirstOrDefault(revision => revision.ObjectId.ToString() == first);
+        GitRevision newer = selection.First(revision => revision.ObjectId.ToString() == second);
+        older ??= new GitRevision(newer.FirstParentId);
+        new CompareRevisionsWindow(Module, older, newer).Show(this);
     }
 
     private void ArchiveSelectedRevisions()
@@ -1545,6 +1652,44 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         }
     }
 
+    private async Task ShowStashManagerAsync()
+    {
+        IGitModule module = Module;
+        StashManagerWindow dialog = new(module, module.GetStashes(noLocks: true));
+        StashManagerResult? result = await dialog.ShowDialog<StashManagerResult?>(this);
+        if (result is null)
+        {
+            return;
+        }
+
+        switch (result.Action)
+        {
+            case StashManagerAction.Apply when result.Stash is not null:
+                UICommands.StartGitCommandProcessDialog(this, StashWorkflow.BuildApply(result.Stash));
+                break;
+            case StashManagerAction.Pop when result.Stash is not null:
+                UICommands.StartGitCommandProcessDialog(this, StashWorkflow.BuildPop(result.Stash));
+                break;
+            case StashManagerAction.Drop when result.Stash is not null:
+                if (AppSettings.DontConfirmStashDrop
+                    || MessageBoxes.Show(this, string.Format(GitUI.TranslatedStrings.ConfirmStashDrop, result.Stash.Name), GitUI.TranslatedStrings.StashDropConfirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                {
+                    UICommands.StartGitCommandProcessDialog(this, StashWorkflow.BuildDrop(result.Stash));
+                }
+
+                break;
+            case StashManagerAction.Clear:
+                if (MessageBoxes.Show(this, GitUI.TranslatedStrings.ConfirmStashClear, GitUI.TranslatedStrings.StashDropConfirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                {
+                    UICommands.StartGitCommandProcessDialog(this, StashWorkflow.BuildClear());
+                }
+
+                break;
+        }
+
+        UICommands.RepoChangedNotifier.Notify();
+    }
+
     private void DropSelectedStash()
     {
         if (repoObjectsTree.SelectedStash is not GitStash stash)
@@ -1583,6 +1728,33 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
             AppSettings.StashKeepIndex,
             message,
             selectedFiles));
+    }
+
+    private async Task StashStagedAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        if (!Module.GitVersion.SupportStashStaged)
+        {
+            MessageBoxes.ShowError(this, GitUI.TranslatedStrings.StashStagedMenu + ": git >= 2.35 required.");
+            return;
+        }
+
+        string? error = StashWorkflow.ValidateSave(workingTreePanel.StagedCount);
+        if (error is not null)
+        {
+            lblStatus.Text = error;
+            MessageBoxes.ShowError(this, error);
+            return;
+        }
+
+        TextPromptWindow prompt = new(GitUI.TranslatedStrings.StashStagedMenu, GitUI.TranslatedStrings.StashMessagePrompt);
+        string? message = await prompt.ShowDialog<string?>(this);
+        if (message is null)
+        {
+            return;
+        }
+
+        RunRemoteCommand(StashWorkflow.BuildSaveStaged(message));
     }
 
     private async Task ConfigureStashOptionsAsync()
@@ -2031,6 +2203,85 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         }
     }
 
+    private void IgnoreSelectedFiles()
+    {
+        string[] paths = [.. workingTreePanel.SelectedItems
+            .Where(item => !item.IsTracked && item.IsNew)
+            .Select(item => item.Name)];
+        if (paths.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            IgnoreWorkflow.AddToGitIgnore(Module.WorkingDir, paths);
+            UICommands.RepoChangedNotifier.Notify();
+        }
+        catch (Exception exception)
+        {
+            MessageBoxes.ShowError(this, exception.ToStringWithData());
+        }
+    }
+
+    private async Task GoToCommitAsync()
+    {
+        if (!repositoryWorkspace.IsVisible)
+        {
+            return;
+        }
+
+        IGitModule module = Module;
+        TextPromptWindow prompt = new(GitUI.TranslatedStrings.GoToCommitMenu, GitUI.TranslatedStrings.GoToCommitPrompt, "HEAD");
+        string? expression = (await prompt.ShowDialog<string?>(this))?.Trim();
+        if (string.IsNullOrEmpty(expression) || !ReferenceEquals(Module, module))
+        {
+            return;
+        }
+
+        ObjectId objectId;
+        try
+        {
+            objectId = await Task.Run(() => module.RevParse(expression));
+        }
+        catch (Exception exception)
+        {
+            MessageBoxes.ShowError(this, exception.ToStringWithData());
+            return;
+        }
+
+        if (objectId.IsZero)
+        {
+            MessageBoxes.ShowError(this, GitUI.TranslatedStrings.NoResultsFound);
+            return;
+        }
+
+        RevisionGrid.SelectRevision(objectId);
+        if (RevisionGrid.SelectedRevision?.ObjectId != objectId)
+        {
+            MessageBoxes.ShowError(this, string.Format(GitUI.TranslatedStrings.GoToCommitNotLoaded, objectId.ToShortString()));
+        }
+    }
+
+    private void GoToSuperproject()
+    {
+        if (Module.SuperprojectModule?.WorkingDir is string superprojectDir)
+        {
+            OpenRepository(superprojectDir);
+        }
+    }
+
+    private void ShowCommitPanel()
+    {
+        if (!repositoryWorkspace.IsVisible)
+        {
+            return;
+        }
+
+        fileListTabs.SelectedItem = workingTreeTab;
+        workingTreePanel.FocusCommitMessage();
+    }
+
     private void LoadAmendMessage(bool isAmend)
     {
         if (!isAmend
@@ -2363,43 +2614,12 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
             throw new InvalidOperationException(error.ErrorMessage);
         }
 
-        string[] lines = [.. status
-            .Where(item => !item.IsStatusOnly)
-            .Select(FormatStatusLine)];
+        GitItemStatus[] items = [.. status.Where(item => !item.IsStatusOnly)];
+        int untracked = items.Count(item => !item.IsTracked && item.IsNew);
 
-        return lines.Length > 0
-            ? string.Join(Environment.NewLine, lines)
+        return items.Length > 0
+            ? string.Format(GitUI.TranslatedStrings.WorkingTreeStatusSummary, items.Length - untracked, untracked)
             : GitUI.TranslatedStrings.NoResultsFound;
-
-        static string FormatStatusLine(GitItemStatus item)
-        {
-            if (!item.IsTracked && item.IsNew)
-            {
-                return $"?? {item.Name}";
-            }
-
-            char statusCode = item.IsUnmerged ? GitItemStatusConverter.UnmergedStatus
-                : item.IsNew ? GitItemStatusConverter.AddedStatus
-                : item.IsDeleted ? GitItemStatusConverter.DeletedStatus
-                : item.IsRenamed ? GitItemStatusConverter.RenamedStatus
-                : item.IsCopied ? GitItemStatusConverter.CopiedStatus
-                : item.IsChanged ? GitItemStatusConverter.ModifiedStatus
-                : GitItemStatusConverter.UnmodifiedStatus_v1;
-
-            string statusMarker = item.IsUnmerged ? "UU"
-                : item.Staged switch
-                {
-                    StagedStatus.Index => $"{statusCode} ",
-                    StagedStatus.WorkTree => $" {statusCode}",
-                    _ => $"{statusCode}{statusCode}"
-                };
-
-            string path = item.OldName is null
-                ? item.Name
-                : $"{item.OldName} -> {item.Name}";
-
-            return $"{statusMarker} {path}";
-        }
     }
 
     private void RepoObjectsTree_SelectionChanged(object? sender, EventArgs e)
@@ -2422,6 +2642,7 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         fileStatusList.Clear();
         fileViewer.ViewPatch(string.Empty);
         CommitInfo.Revision = RevisionGrid.SelectedRevision;
+        RefreshRevisionTree();
 
         if (RevisionGrid.SelectedRevision is not GitRevision revision
             || !revision.HasParent)
@@ -2495,6 +2716,50 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         });
     }
 
+    private async Task HandleFilePathActionAsync(FileListAction action)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        if (fileStatusList.SelectedItem is not GitItemStatus file)
+        {
+            return;
+        }
+
+        string workingDir = Module.WorkingDir;
+        string fullPath = FilePathWorkflow.GetFullPath(workingDir, file.Name);
+        switch (action)
+        {
+            case FileListAction.CopyPath or FileListAction.CopyFullPath:
+                if (Clipboard is { } clipboard)
+                {
+                    await clipboard.SetTextAsync(FilePathWorkflow.FormatPaths([file], workingDir, action == FileListAction.CopyFullPath));
+                }
+
+                break;
+            case FileListAction.Open:
+                if (!File.Exists(fullPath))
+                {
+                    MessageBoxes.ShowError(this, fullPath);
+                    return;
+                }
+
+                OpenWithShell(fullPath);
+                break;
+            case FileListAction.ShowInFolder:
+                string? directory = Path.GetDirectoryName(fullPath);
+                if (directory is not null && Directory.Exists(directory))
+                {
+                    OpenWithShell(directory);
+                }
+
+                break;
+        }
+
+        return;
+
+        static void OpenWithShell(string path)
+            => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true })?.Dispose();
+    }
+
     private void OpenSelectedFileHistory(bool showBlame)
     {
         if (fileStatusList.SelectedItem is not GitItemStatus item
@@ -2529,6 +2794,63 @@ public sealed partial class FormBrowse : GitModuleForm, IBrowseRepo
         else if (fileListTabs.SelectedItem == commitFilesTab)
         {
             FileStatusList_SelectedIndexChanged(this, EventArgs.Empty);
+        }
+        else if (fileListTabs.SelectedItem == revisionTreeTab)
+        {
+            RefreshRevisionTree();
+        }
+    }
+
+    private void RefreshRevisionTree()
+    {
+        if (fileListTabs.SelectedItem != revisionTreeTab)
+        {
+            return;
+        }
+
+        if (RevisionGrid.SelectedRevision is GitRevision { IsArtificial: false } revision)
+        {
+            revisionFileTree.Show(Module, revision.ObjectId);
+        }
+        else
+        {
+            revisionFileTree.Clear();
+        }
+
+        fileViewer.ViewPatch(string.Empty);
+    }
+
+    private void ShowRevisionTreeFile()
+    {
+        if (_isClosed || fileListTabs.SelectedItem != revisionTreeTab)
+        {
+            return;
+        }
+
+        if (revisionFileTree.SelectedFile is not RevisionTreeEntry entry)
+        {
+            fileViewer.ViewPatch(string.Empty);
+            return;
+        }
+
+        IGitModule module = Module;
+        CancellationToken cancellationToken = _fileDiffRequestSequence.Next();
+        ThreadHelper.FileAndForget(async () =>
+        {
+            string? text = await Task.Run(() => module.GetFileText(entry.ObjectId, module.FilesEncoding, stripAnsiEscapeCodes: false), cancellationToken);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            if (!cancellationToken.IsCancellationRequested && ReferenceEquals(Module, module))
+            {
+                fileViewer.ViewPatch(text ?? string.Empty);
+            }
+        });
+    }
+
+    private void OpenRevisionTreeFileHistory()
+    {
+        if (revisionFileTree.SelectedFile is RevisionTreeEntry entry)
+        {
+            new FileHistoryWindow(Module, entry.Path, revisionFileTree.Revision).Show(this);
         }
     }
 

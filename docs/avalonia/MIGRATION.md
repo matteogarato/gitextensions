@@ -12,7 +12,7 @@ testing, release, retirement, resume-point, audit). Il dettaglio per-workflow è
   configurato; WinForms resta installato come **Git Extensions (Classic)**.
 - Stato di rilascio: **`INTERNAL_PREVIEW`**; il ritiro di WinForms è **BLOCCATO**. Nessun workflow è `VERIFIED_PARITY`
   (47 workflow: in prevalenza `VERIFIED_PARTIAL`, alcuni `IMPLEMENTED_UNVERIFIED`, `BLOCKED` o `INTENTIONALLY_PLATFORM_SPECIFIC`).
-- Build: soluzione Avalonia a 0 errori. Test Avalonia su Linux: **311/311**.
+- Build: soluzione Avalonia a 0 errori. Test Avalonia su Linux: **330/330**.
 - Piattaforma verificata: Ubuntu 26.04 x64, .NET SDK 10.0.x. Windows (runtime Avalonia, MSI), macOS, altre distro,
   SSH/credential helper e strumenti esterni non sono validati.
 - Le modifiche sono nel working tree, non committate (base `bfeb62ca3`, branch `AvaloniaPorting`).
@@ -27,6 +27,14 @@ testing, release, retirement, resume-point, audit). Il dettaglio per-workflow è
 | Branch/tag | Crea (anche orphan/senza checkout), checkout (merge/reset/stash), rinomina, delete locale/forzato/remoto, tag lightweight/annotated e delete locale |
 | Remoti | Gestione remoti, pull/push con opzioni (`PushWithOptionsAsync`), fetch, clone, init |
 | Merge/rebase/pick | Merge con opzioni, rebase standard/interattivo/range/autosquash, cherry-pick/revert (anche merge commit), banner recovery continue/skip/abort, finestra conflitti + mergetool |
+| Navigazione | Repository > Go to commit (Ctrl+G, qualsiasi espressione rev-parse) e Go to parent repository (da submodule); Commands > Commit... (Ctrl+K) |
+| Working tree extra | Add to .gitignore per file non tracciati (`IgnoreWorkflow`) |
+| Confronto revisioni | Finestra `CompareRevisionsWindow` (file modificati + diff) dal menu contestuale con 1-2 revisioni (HIST-05) |
+| Stash manager | Manage stashes... : lista, file e diff in anteprima, apply/pop/drop/clear all (ADV-09); Commands > Stash staged (git >= 2.35) |
+| Albero file revisione | Tab "File tree": navigazione per directory, contenuto del file nel viewer, doppio click apre la file history (BROW-03) |
+| Filtri storia | Pulsante "More filters...": date da/a, path, hide merges, first parent, solo branch corrente, reflog, simplify by decoration (HIST-03) |
+| Menu revisione | Copy (hash completo/corto, subject, hash+subject, author) e Compare with current HEAD (HIST-04) |
+| Lista file modificati | Menu contestuale: Copy path, Copy full path, Open file, Show in folder (DIFF-03) |
 | Altro | Submodule ricorsivi, patch (create/apply/view), file history/blame, reflog read-only, command log, archive, cleanup, verify, hotkey (5 azioni), script utente, menu Plugins opt-in (`IRepositoryCommandPlugin`), tema chiaro/scuro |
 
 Convenzione per ogni workflow: classe testabile `src/app/GitUI.Avalonia/CommandsDialogs/<X>Workflow.cs` che costruisce
@@ -36,7 +44,7 @@ argomenti con `Commands.*`/`IGitModule` (mai un secondo motore Git); cablaggio i
 ## Limiti e problemi noti
 
 - **Traduzioni**: `English.xlf` non rigenerabile su Linux (`TranslationApp` richiede `Microsoft.WindowsDesktop.App`).
-  Mancano le stringhe delle nuove UI commit (amend confirmation, history, templates, author, GPG, reset author, commit and push, git commit template),
+  Mancano le stringhe delle nuove UI (Menu lista file, Copy revisione, More filters, File tree, Stash manager, Compare revisions, Go to commit, Add to .gitignore, Commit menu, riepilogo stato, amend confirmation, history, templates, author, GPG, reset author, commit and push, git commit template),
   Archive, Verify e Plugins. Non modificare l'XLF a mano: eseguire `update-loc.cmd` su Windows dopo la build.
 - `GitUICommands.StartPushDialog` in Avalonia lancia `NotPorted`; si usa `PushWithOptionsAsync`.
 - `GitCommands.Tests` non parte su Linux (richiede `Microsoft.WindowsDesktop.App`).
