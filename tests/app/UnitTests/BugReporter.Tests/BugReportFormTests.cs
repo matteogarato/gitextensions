@@ -1,6 +1,7 @@
 ﻿using BugReporter;
 
-namespace GitUITests;
+namespace BugReporterTests;
+
 public class BugReportFormTests
 {
     [Theory]

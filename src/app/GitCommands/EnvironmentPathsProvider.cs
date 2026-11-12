@@ -5,43 +5,36 @@ namespace GitCommands;
 public interface IEnvironmentPathsProvider
 {
     /// <summary>
-    /// Gets the list of paths defined under %PATH% environment variable.
+    ///     Gets the list of paths defined under %PATH% environment variable.
     /// </summary>
     /// <returns>The list of paths defined under %PATH% environment variable.</returns>
     IEnumerable<string> GetEnvironmentPaths();
 
     /// <summary>
-    /// Gets the list of valid paths defined under %PATH% environment variable.
+    ///     Gets the list of valid paths defined under %PATH% environment variable.
     /// </summary>
     /// <returns>The list of valid paths defined under %PATH% environment variable.</returns>
     IEnumerable<string> GetEnvironmentValidPaths();
 }
 
-public sealed class EnvironmentPathsProvider : IEnvironmentPathsProvider
+public sealed class EnvironmentPathsProvider(IEnvironmentAbstraction environment) : IEnvironmentPathsProvider
 {
-    private readonly IEnvironmentAbstraction _environment;
-
-    public EnvironmentPathsProvider(IEnvironmentAbstraction environment)
-    {
-        _environment = environment;
-    }
-
     /// <summary>
-    /// Gets the list of paths defined under %PATH% environment variable.
+    ///     Gets the list of paths defined under %PATH% environment variable.
     /// </summary>
     /// <returns>The list of paths defined under %PATH% environment variable.</returns>
-    public IEnumerable<string> GetEnvironmentPaths()
+    IEnumerable<string> IEnvironmentPathsProvider.GetEnvironmentPaths()
     {
-        string? pathVariable = _environment.GetEnvironmentVariable("PATH");
+        var pathVariable = environment.GetEnvironmentVariable("PATH");
 
         if (string.IsNullOrWhiteSpace(pathVariable))
         {
             yield break;
         }
 
-        foreach (string rawDir in pathVariable.LazySplit(Path.PathSeparator))
+        foreach (var rawDir in pathVariable.LazySplit(Path.PathSeparator))
         {
-            string dir = rawDir;
+            var dir = rawDir;
 
             // Usually, paths with spaces are not quoted on %PATH%, but it's well possible, and .NET won't consume a quoted path
             // This does not handle the full grammar of the %PATH%, but at least prevents Illegal Characters in Path exceptions (see #2924)
@@ -56,12 +49,12 @@ public sealed class EnvironmentPathsProvider : IEnvironmentPathsProvider
     }
 
     /// <summary>
-    /// Gets the list of valid paths defined under %PATH% environment variable.
+    ///     Gets the list of valid paths defined under %PATH% environment variable.
     /// </summary>
     /// <returns>The list of valid paths defined under %PATH% environment variable.</returns>
-    public IEnumerable<string> GetEnvironmentValidPaths()
+    IEnumerable<string> IEnvironmentPathsProvider.GetEnvironmentValidPaths()
     {
-        IEnumerable<string> envPaths = GetEnvironmentPaths();
+        var envPaths = GetEnvironmentPaths();
         return envPaths.Where(IsValidPath);
     }
 
@@ -84,7 +77,7 @@ public sealed class EnvironmentPathsProvider : IEnvironmentPathsProvider
         catch (IOException)
         {
             // Querying attributes for UNC paths results in IOException
-            if (Uri.TryCreate(path, UriKind.Absolute, out Uri? uri) && uri.IsUnc)
+            if (Uri.TryCreate(path, UriKind.Absolute, out var uri) && uri.IsUnc)
             {
                 return true;
             }

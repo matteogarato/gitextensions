@@ -1,74 +1,38 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using GitExtensions.Extensibility;
-using GitUI;
+using GitExtUtils.GitUI;
 using Xunit.Sdk;
 
 namespace CommonTestUtils;
 
 public sealed class MockExecutable : IExecutable
 {
-    private readonly ConcurrentDictionary<string, ConcurrentStack<(string output, int? exitCode, string? error)>> _outputStackByArguments = new();
     private readonly ConcurrentDictionary<string, int> _commandArgumentsSet = new();
+
+    private readonly ConcurrentDictionary<string, ConcurrentStack<(string output, int? exitCode, string? error)>>
+        _outputStackByArguments = new();
+
     private readonly List<MockProcess> _processes = [];
     private int _nextCommandId;
 
-    public string Command => "mock-git.exe";
-    public string WorkingDir => ".";
-    public string PrefixArguments => "";
-
-    public IDisposable StageOutput(string arguments, string output, int? exitCode = 0, string? error = null)
+    string IExecutable.Command
     {
-        ConcurrentStack<(string output, int? exitCode, string? error)> stack = _outputStackByArguments.GetOrAdd(
-            arguments,
-            args => new ConcurrentStack<(string output, int? exitCode, string? error)>());
-
-        stack.Push((output, exitCode, error));
-
-        return new DelegateDisposable(
-            () =>
-            {
-                if (_outputStackByArguments.TryGetValue(arguments, out ConcurrentStack<(string output, int? exitCode, string? error)>? queue) &&
-                    queue.TryPeek(out (string output, int? exitCode, string? error) item) &&
-                    output == item.output && error == item.error)
-                {
-                    throw new XunitException($"Staged output should have been consumed.\nArguments: {arguments}\nOutput: {output}\nError: {error}");
-                }
-            });
+        get => "mock-git.exe";
     }
 
-    public IDisposable StageCommand(string arguments)
+    string IExecutable.WorkingDir
     {
-        int id = Interlocked.Increment(ref _nextCommandId);
-        _commandArgumentsSet[arguments] = id;
-
-        return new DelegateDisposable(
-            () =>
-            {
-                if (_commandArgumentsSet.TryGetValue(arguments, out int storedId) && storedId != id)
-                {
-                    throw new XunitException($"Staged command should have been consumed.\nArguments: {arguments}");
-                }
-            });
+        get => ".";
     }
 
-    public bool Exists()
+    string IExecutable.PrefixArguments
     {
-        return true;
+        get => "";
     }
 
-    public void Verify()
-    {
-        _outputStackByArguments.Should().BeEmpty("All staged output should have been consumed.");
-        _commandArgumentsSet.Should().BeEmpty("All staged output should have been consumed.");
-
-        foreach (MockProcess process in _processes)
-        {
-            process.Verify();
-        }
-    }
-
-    public IProcess Start(
+    IProcess IExecutable.Start(
         ArgumentString arguments,
         bool createWindow,
         bool redirectInput,
@@ -78,10 +42,11 @@ public sealed class MockExecutable : IExecutable
         bool throwOnErrorExit = true,
         CancellationToken cancellationToken = default)
     {
-        System.Diagnostics.Debug.WriteLine($"mock-git {arguments}");
+        Debug.WriteLine($"mock-git {arguments}");
 
-        if (_outputStackByArguments.TryRemove(arguments, out ConcurrentStack<(string output, int? exitCode, string? error)>? queue) &&
-            queue.TryPop(out (string output, int? exitCode, string? error) item))
+        if (_outputStackByArguments.TryRemove(arguments,
+                out var queue) &&
+            queue.TryPop(out var item))
         {
             if (queue.IsEmpty)
             {
@@ -104,8 +69,61 @@ public sealed class MockExecutable : IExecutable
         throw new Exception("Unexpected arguments: " + arguments);
     }
 
+    public IDisposable StageOutput(string arguments, string output, int? exitCode = 0, string? error = null)
+    {
+        var stack = _outputStackByArguments.GetOrAdd(
+            arguments,
+            args => new ConcurrentStack<(string output, int? exitCode, string? error)>());
+
+        stack.Push((output, exitCode, error));
+
+        return new DelegateDisposable(() =>
+        {
+            if (_outputStackByArguments.TryGetValue(arguments,
+                    out var queue) &&
+                queue.TryPeek(out var item) &&
+                output == item.output && error == item.error)
+            {
+                throw new XunitException(
+                    $"Staged output should have been consumed.\nArguments: {arguments}\nOutput: {output}\nError: {error}");
+            }
+        });
+    }
+
+    public IDisposable StageCommand(string arguments)
+    {
+        var id = Interlocked.Increment(ref _nextCommandId);
+        _commandArgumentsSet[arguments] = id;
+
+        return new DelegateDisposable(() =>
+        {
+            if (_commandArgumentsSet.TryGetValue(arguments, out var storedId) && storedId != id)
+            {
+                throw new XunitException($"Staged command should have been consumed.\nArguments: {arguments}");
+            }
+        });
+    }
+
+    public bool Exists()
+    {
+        return true;
+    }
+
+    public void Verify()
+    {
+        _outputStackByArguments.Should().BeEmpty("All staged output should have been consumed.");
+        _commandArgumentsSet.Should().BeEmpty("All staged output should have been consumed.");
+
+        foreach (var process in _processes)
+        {
+            process.Verify();
+        }
+    }
+
     private sealed class MockProcess : IProcess
     {
+        private readonly int? _exitCode;
+
         public MockProcess(string? output, int? exitCode = 0, string? error = null)
         {
             StandardOutput = new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(output ?? "")));
@@ -122,46 +140,43 @@ public sealed class MockExecutable : IExecutable
             _exitCode = 0;
         }
 
-        private int? _exitCode;
-        public StreamWriter StandardInput { get; }
-        public StreamReader StandardOutput { get; }
-        public string StandardError { get; }
+        StreamWriter IProcess.StandardInput { get; }
+        StreamReader IProcess.StandardOutput { get; }
+        string IProcess.StandardError { get; }
 
-        public void Kill(bool entireProcessTree)
+        void IProcess.Kill(bool entireProcessTree)
         {
         }
 
-        public int WaitForExit()
+        int IProcess.WaitForExit()
         {
             return ThreadHelper.JoinableTaskFactory.Run(WaitForExitAsync);
         }
 
-        public Task<int> WaitForExitAsync()
+        Task<int> IProcess.WaitForExitAsync()
         {
             if (_exitCode.HasValue)
             {
                 return Task.FromResult(_exitCode.Value);
             }
-            else
-            {
-                using CancellationTokenSource cts = new();
-                CancellationToken ct = cts.Token;
-                ThreadHelper.JoinableTaskFactory.RunAsync(() => cts.CancelAsync());
-                return Task.FromCanceled<int>(ct);
-            }
+
+            using CancellationTokenSource cts = new();
+            var ct = cts.Token;
+            ThreadHelper.JoinableTaskFactory.RunAsync(() => cts.CancelAsync());
+            return Task.FromCanceled<int>(ct);
         }
 
-        public Task<int> WaitForExitAsync(CancellationToken token)
+        Task<int> IProcess.WaitForExitAsync(CancellationToken token)
         {
             return Task.FromResult(_exitCode ?? 0);
         }
 
-        public void WaitForInputIdle()
+        void IProcess.WaitForInputIdle()
         {
             // TODO implement if needed
         }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             // TODO implement if needed
         }
@@ -181,18 +196,11 @@ public sealed class MockExecutable : IExecutable
         }
     }
 
-    private sealed class DelegateDisposable : IDisposable
+    private sealed class DelegateDisposable(Action disposeAction) : IDisposable
     {
-        private readonly Action _disposeAction;
-
-        public DelegateDisposable(Action disposeAction)
+        void IDisposable.Dispose()
         {
-            _disposeAction = disposeAction;
-        }
-
-        public void Dispose()
-        {
-            _disposeAction();
+            disposeAction();
         }
     }
 }

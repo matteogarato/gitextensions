@@ -1,6 +1,7 @@
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.Hotkey;
 using GitUI.Shells;
 using ResourceManager;
@@ -19,6 +20,7 @@ public partial class FormBrowseRepoSettingsPage : SettingsPageWithHeader
 
               Focus the output history and (when displayed as panel) toggle its visibility using the hotkey {0}.
               """);
+
     private readonly IShellProvider _shellProvider;
     private int _cboTerminalPreviousIndex = -1;
 
@@ -29,7 +31,7 @@ public partial class FormBrowseRepoSettingsPage : SettingsPageWithHeader
         cboTerminal.DisplayMember = "Name";
         InitializeComplete();
         _shellProvider = serviceProvider.GetRequiredService<IShellProvider>();
-        string hotkey = serviceProvider.GetRequiredService<IHotkeySettingsManager>()
+        var hotkey = serviceProvider.GetRequiredService<IHotkeySettingsManager>()
             .LoadHotkeys(FormBrowse.HotkeySettingsName)
             .GetShortcutDisplay(FormBrowse.Command.FocusOutputHistoryAndToggleIfPanel);
         chkShowOutputHistoryAsTab.ToolTipText = string.Format(_outputHistoryTooltip.Text, hotkey);
@@ -43,8 +45,10 @@ public partial class FormBrowseRepoSettingsPage : SettingsPageWithHeader
     protected override void OnRuntimeLoad()
     {
         // align 1st columns across all tables
-        tlpnlGeneral.AdjustWidthToSize(0, lblDefaultShell, chkUseBrowseForFileHistory, chkUseDiffViewerForBlame, chkShowFindInCommitFilesGitGrep, chkShowRevisionGridTooltip, chkShowConsoleTab, chkShowGpgInformation);
-        tlpnlTabs.AdjustWidthToSize(0, lblDefaultShell, chkUseBrowseForFileHistory, chkUseDiffViewerForBlame, chkShowFindInCommitFilesGitGrep, chkShowRevisionGridTooltip, chkShowConsoleTab, chkShowGpgInformation);
+        tlpnlGeneral.AdjustWidthToSize(0, lblDefaultShell, chkUseBrowseForFileHistory, chkUseDiffViewerForBlame,
+            chkShowFindInCommitFilesGitGrep, chkShowRevisionGridTooltip, chkShowConsoleTab, chkShowGpgInformation);
+        tlpnlTabs.AdjustWidthToSize(0, lblDefaultShell, chkUseBrowseForFileHistory, chkUseDiffViewerForBlame,
+            chkShowFindInCommitFilesGitGrep, chkShowRevisionGridTooltip, chkShowConsoleTab, chkShowGpgInformation);
 
         base.OnRuntimeLoad();
     }
@@ -58,8 +62,9 @@ public partial class FormBrowseRepoSettingsPage : SettingsPageWithHeader
         AppSettings.ShowFindInCommitFilesGitGrep.Value = chkShowFindInCommitFilesGitGrep.Checked;
         AppSettings.ShowRevisionGridTooltips.Value = chkShowRevisionGridTooltip.Checked;
 
-        int outputHistoryDepth = (int)_NO_TRANSLATE_OutputHistoryDepth.Value;
-        bool changed = AppSettings.ShowOutputHistoryAsTab.Value != chkShowOutputHistoryAsTab.Checked || AppSettings.OutputHistoryDepth.Value != outputHistoryDepth;
+        var outputHistoryDepth = (int)_NO_TRANSLATE_OutputHistoryDepth.Value;
+        var changed = AppSettings.ShowOutputHistoryAsTab.Value != chkShowOutputHistoryAsTab.Checked ||
+                      AppSettings.OutputHistoryDepth.Value != outputHistoryDepth;
         if (changed)
         {
             AppSettings.ShowOutputHistoryAsTab.Value = chkShowOutputHistoryAsTab.Checked;
@@ -81,13 +86,15 @@ public partial class FormBrowseRepoSettingsPage : SettingsPageWithHeader
         chkShowFindInCommitFilesGitGrep.Checked = AppSettings.ShowFindInCommitFilesGitGrep.Value;
         chkShowRevisionGridTooltip.Checked = AppSettings.ShowRevisionGridTooltips.Value;
         chkShowOutputHistoryAsTab.Checked = AppSettings.ShowOutputHistoryAsTab.Value;
-        _NO_TRANSLATE_OutputHistoryDepth.Value = Math.Clamp(AppSettings.OutputHistoryDepth.Value, _NO_TRANSLATE_OutputHistoryDepth.Minimum, _NO_TRANSLATE_OutputHistoryDepth.Maximum);
+        _NO_TRANSLATE_OutputHistoryDepth.Value = Math.Clamp(AppSettings.OutputHistoryDepth.Value,
+            _NO_TRANSLATE_OutputHistoryDepth.Minimum, _NO_TRANSLATE_OutputHistoryDepth.Maximum);
 
-        foreach (IShellDescriptor shell in _shellProvider.GetShells())
+        foreach (var shell in _shellProvider.GetShells())
         {
             cboTerminal.Items.Add(shell);
 
-            if (string.Equals(shell.Name, AppSettings.ConEmuTerminal.Value, StringComparison.InvariantCultureIgnoreCase))
+            if (string.Equals(shell.Name, AppSettings.ConEmuTerminal.Value,
+                    StringComparison.InvariantCultureIgnoreCase))
             {
                 cboTerminal.SelectedItem = shell;
             }

@@ -1,15 +1,15 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace System;
+namespace GitExtUtils.GitUI.Interops;
 
 internal static partial class NativeMethods
 {
     [StructLayout(LayoutKind.Sequential)]
-    internal struct COMBOBOXINFO
+    internal struct Comboboxinfo
     {
         public uint cbSize;
-        public RECT rcItem;
-        public RECT rcButton;
+        public System.NativeMethods.RECT rcItem;
+        public System.NativeMethods.RECT rcButton;
         public ComboBoxButtonState buttonState;
         public nint hwndCombo;
         public nint hwndEdit;

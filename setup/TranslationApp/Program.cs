@@ -1,8 +1,10 @@
 ﻿using BugReporter;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitExtensions.Extensibility.Translations.Xliff;
+using GitExtUtils.GitUI;
 using GitUI;
+using GitUI.Plugin;
 using GitUIPluginInterfaces;
 using Microsoft.VisualStudio.Threading;
 
@@ -11,7 +13,7 @@ namespace TranslationApp;
 internal static class Program
 {
     /// <summary>
-    /// The main entry point for the application.
+    ///     The main entry point for the application.
     /// </summary>
     [STAThread]
     private static void Main()
@@ -40,15 +42,16 @@ internal static class Program
 
         AppSettings.Font = SystemFonts.MessageBoxFont!;
 
-        IDictionary<string, List<TranslationItemWithCategory>> neutralItems = TranslationHelpers.LoadNeutralItems();
-        string filename = Path.Combine(Translator.GetTranslationDir(), "English.xlf");
+        var neutralItems = TranslationHelpers.LoadNeutralItems();
+        var filename = Path.Combine(Translator.GetTranslationDir(), "English.xlf");
         TranslationHelpers.SaveTranslation(null, neutralItems, filename);
 
-        string[] translationsNames = Translator.GetAllTranslations();
-        foreach (string name in translationsNames)
+        var translationsNames = Translator.GetAllTranslations();
+        foreach (var name in translationsNames)
         {
-            IDictionary<string, TranslationFile> translation = Translator.GetTranslation(name);
-            IDictionary<string, List<TranslationItemWithCategory>> translateItems = TranslationHelpers.LoadTranslation(translation, neutralItems);
+            var translation = Translator.GetTranslation(name);
+            var translateItems =
+                TranslationHelpers.LoadTranslation(translation, neutralItems);
             filename = Path.Combine(Translator.GetTranslationDir(), name + ".xlf");
             TranslationHelpers.SaveTranslation(translation.First().Value.TargetLanguage!, translateItems, filename);
         }

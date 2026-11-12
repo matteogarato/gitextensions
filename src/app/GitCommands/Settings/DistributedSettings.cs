@@ -5,65 +5,18 @@ using GitExtensions.Extensibility.Settings;
 namespace GitCommands.Settings;
 
 /// <summary>
-/// Settings that can be distributed with repository.
-/// They can be overridden for a particular repository.
+///     Settings that can be distributed with repository.
+///     They can be overridden for a particular repository.
 /// </summary>
 [DebuggerDisplay("{" + nameof(SettingLevel) + "}: {" + nameof(SettingsCache) + "} << {" + nameof(LowerPriority) + "}")]
 public class DistributedSettings : SettingsContainer<DistributedSettings, GitExtSettingsCache>
 {
-    public DistributedSettings(DistributedSettings? lowerPriority, GitExtSettingsCache settingsCache, SettingLevel settingLevel)
+    public DistributedSettings(DistributedSettings? lowerPriority, GitExtSettingsCache settingsCache,
+        SettingLevel settingLevel)
         : base(lowerPriority, settingsCache)
     {
         SettingLevel = settingLevel;
     }
-
-    #region CreateDistributedSettings
-
-    /// <summary>
-    /// Returns an effective setting object where Git Extensions settings are read from the first available of:
-    /// * Local (in .git dir).
-    /// * Distributed (stored in repo).
-    /// * Global (user home).
-    /// </summary>
-    /// <param name="module">The GitModule.</param>
-    /// <returns>the settings.</returns>
-    public static DistributedSettings CreateEffective(IGitModule module)
-    {
-        return CreateLocal(module, CreateDistributed(module, CreateGlobal()), SettingLevel.Effective);
-    }
-
-    private static DistributedSettings CreateLocal(IGitModule module, DistributedSettings? lowerPriority, SettingLevel settingLevel, bool useSharedCache = true)
-    {
-        return new DistributedSettings(lowerPriority,
-            GitExtSettingsCache.Create(Path.Join(module.GitCommonDirectory, AppSettings.SettingsFileName), useSharedCache),
-            settingLevel);
-    }
-
-    public static DistributedSettings CreateLocal(IGitModule module, bool useSharedCache = true)
-    {
-        return CreateLocal(module, lowerPriority: null, SettingLevel.Local, useSharedCache);
-    }
-
-    private static DistributedSettings CreateDistributed(IGitModule module, DistributedSettings? lowerPriority, bool useSharedCache = true)
-    {
-        return new DistributedSettings(lowerPriority,
-            GitExtSettingsCache.Create(Path.Join(module.WorkingDir, AppSettings.SettingsFileName), useSharedCache),
-            SettingLevel.Distributed);
-    }
-
-    public static DistributedSettings CreateDistributed(IGitModule module, bool useSharedCache = true)
-    {
-        return CreateDistributed(module, lowerPriority: null, useSharedCache);
-    }
-
-    public static DistributedSettings CreateGlobal(bool useSharedCache = true)
-    {
-        return new DistributedSettings(lowerPriority: null,
-            GitExtSettingsCache.Create(AppSettings.SettingsFilePath, useSharedCache),
-            SettingLevel.Global);
-    }
-
-    #endregion
 
     public override void SetValue(string name, string? value)
     {
@@ -74,8 +27,8 @@ public class DistributedSettings : SettingsContainer<DistributedSettings, GitExt
             return;
         }
 
-        bool isEffectiveLevel = LowerPriority?.LowerPriority is not null;
-        bool isDetachedOrGlobal = LowerPriority is null;
+        var isEffectiveLevel = LowerPriority?.LowerPriority is not null;
+        var isDetachedOrGlobal = LowerPriority is null;
 
         if (isDetachedOrGlobal || SettingsCache.HasValue(name))
         {
@@ -111,4 +64,55 @@ public class DistributedSettings : SettingsContainer<DistributedSettings, GitExt
             LowerPriority!.SetValue(name, value);
         }
     }
+
+    #region CreateDistributedSettings
+
+    /// <summary>
+    ///     Returns an effective setting object where Git Extensions settings are read from the first available of:
+    ///     * Local (in .git dir).
+    ///     * Distributed (stored in repo).
+    ///     * Global (user home).
+    /// </summary>
+    /// <param name="module">The GitModule.</param>
+    /// <returns>the settings.</returns>
+    public static DistributedSettings CreateEffective(IGitModule module)
+    {
+        return CreateLocal(module, CreateDistributed(module, CreateGlobal()), SettingLevel.Effective);
+    }
+
+    private static DistributedSettings CreateLocal(IGitModule module, DistributedSettings? lowerPriority,
+        SettingLevel settingLevel, bool useSharedCache = true)
+    {
+        return new DistributedSettings(lowerPriority,
+            GitExtSettingsCache.Create(Path.Join(module.GitCommonDirectory, AppSettings.SettingsFileName),
+                useSharedCache),
+            settingLevel);
+    }
+
+    public static DistributedSettings CreateLocal(IGitModule module, bool useSharedCache = true)
+    {
+        return CreateLocal(module, null, SettingLevel.Local, useSharedCache);
+    }
+
+    private static DistributedSettings CreateDistributed(IGitModule module, DistributedSettings? lowerPriority,
+        bool useSharedCache = true)
+    {
+        return new DistributedSettings(lowerPriority,
+            GitExtSettingsCache.Create(Path.Join(module.WorkingDir, AppSettings.SettingsFileName), useSharedCache),
+            SettingLevel.Distributed);
+    }
+
+    public static DistributedSettings CreateDistributed(IGitModule module, bool useSharedCache = true)
+    {
+        return CreateDistributed(module, null, useSharedCache);
+    }
+
+    public static DistributedSettings CreateGlobal(bool useSharedCache = true)
+    {
+        return new DistributedSettings(null,
+            GitExtSettingsCache.Create(AppSettings.SettingsFilePath, useSharedCache),
+            SettingLevel.Global);
+    }
+
+    #endregion
 }

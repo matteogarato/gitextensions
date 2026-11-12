@@ -9,5 +9,5 @@ public enum DiffLineType
     MinusLeft,
     PlusRight,
     MinusPlus,
-    Grep,
+    Grep
 }

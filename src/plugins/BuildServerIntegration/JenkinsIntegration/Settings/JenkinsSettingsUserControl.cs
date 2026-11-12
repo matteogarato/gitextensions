@@ -3,7 +3,7 @@ using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using ResourceManager;
 
-namespace JenkinsIntegration.Settings;
+namespace GitExtensions.Plugins.JenkinsIntegration.Settings;
 
 [Export(typeof(IBuildServerSettingsUserControl))]
 [BuildServerSettingsUserControlMetadata(JenkinsAdapter.PluginName)]
@@ -20,19 +20,19 @@ public partial class JenkinsSettingsUserControl : GitExtensionsControl, IBuildSe
         Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
     }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
         _defaultProjectName = defaultProjectName;
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
     {
         JenkinsServerUrl.Text = buildServerConfig.GetString("BuildServerUrl", null);
         JenkinsProjectName.Text = buildServerConfig.GetString("ProjectName", _defaultProjectName);
         IgnoreBuildBranch.Text = buildServerConfig.GetString("IgnoreBuildBranch", null);
     }
 
-    public void SaveSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
     {
         buildServerConfig.SetString("BuildServerUrl", JenkinsServerUrl.Text.NullIfEmpty());
         buildServerConfig.SetString("ProjectName", JenkinsProjectName.Text.NullIfEmpty());

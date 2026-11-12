@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using GitExtensions.Extensibility;
-using GitUIPluginInterfaces;
+using GitExtensions.Extensibility.Git;
 
-namespace GitCommands;
+namespace GitCommands.Git;
 
 public static class GitRefName
 {
-    private const string RefsPrefix = "refs/";
+    private const string _refsPrefix = "refs/";
 
     /// <summary>"refs/tags/".</summary>
     public static string RefsTagsPrefix { get; } = "refs/tags/";
@@ -53,24 +53,24 @@ public static class GitRefName
             // This method requires the full form of the ref path, which begins with "refs/".
             // The overload which accepts multiple remote names can be used when the format might
             // be abbreviated to "remote/branch".
-            DebugHelpers.Assert(refName.StartsWith(RefsPrefix), $"Must begin with \"{RefsPrefix}\".");
+            DebugHelpers.Assert(refName.StartsWith(_refsPrefix), $"Must begin with \"{_refsPrefix}\".");
             return string.Empty;
         }
 
-        ReadOnlySpan<char> afterPrefix = refName.AsSpan(RefsRemotesPrefix.Length);
-        int slash = afterPrefix.IndexOf('/');
+        var afterPrefix = refName.AsSpan(RefsRemotesPrefix.Length);
+        var slash = afterPrefix.IndexOf('/');
         return (slash < 0 ? afterPrefix : afterPrefix[..slash]).ToString();
     }
 
     [Pure]
     public static string GetRemoteName(string refName, IEnumerable<string> remotes)
     {
-        if (refName.StartsWith(RefsPrefix))
+        if (refName.StartsWith(_refsPrefix))
         {
             return GetRemoteName(refName);
         }
 
-        foreach (string remote in remotes)
+        foreach (var remote in remotes)
         {
             if (refName.StartsWith(remote) && refName.Length > remote.Length && refName[remote.Length] == '/')
             {
@@ -84,12 +84,12 @@ public static class GitRefName
     [Pure]
     public static string GetRemoteBranch(string refName)
     {
-        if (refName.Length <= GitRefName.RefsRemotesPrefix.Length)
+        if (refName.Length <= RefsRemotesPrefix.Length)
         {
             return string.Empty;
         }
 
-        int startBranch = refName.IndexOf('/', GitRefName.RefsRemotesPrefix.Length);
+        var startBranch = refName.IndexOf('/', RefsRemotesPrefix.Length);
         if (startBranch < 0)
         {
             return string.Empty;
@@ -109,7 +109,7 @@ public static class GitRefName
 
         branch = branch.Trim();
 
-        if (string.IsNullOrEmpty(branch) || branch.StartsWith(RefsPrefix))
+        if (string.IsNullOrEmpty(branch) || branch.StartsWith(_refsPrefix))
         {
             return branch;
         }
@@ -135,7 +135,7 @@ public static class GitRefName
 
         branch = branch.Trim();
 
-        if (string.IsNullOrEmpty(branch) || branch.StartsWith(RefsPrefix))
+        if (string.IsNullOrEmpty(branch) || branch.StartsWith(_refsPrefix))
         {
             return branch;
         }
@@ -160,8 +160,8 @@ public static class GitRefName
         }
 
         // The remote name segment between "refs/remotes/" and "/HEAD" must be non-empty and contain no '/'
-        int remoteStart = RefsRemotesPrefix.Length;
-        int remoteEnd = refName.Length - headSuffix.Length;
+        var remoteStart = RefsRemotesPrefix.Length;
+        var remoteEnd = refName.Length - headSuffix.Length;
         if (remoteEnd <= remoteStart)
         {
             return false;

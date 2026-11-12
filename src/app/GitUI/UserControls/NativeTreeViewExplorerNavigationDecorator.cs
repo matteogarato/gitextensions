@@ -10,11 +10,9 @@
 // to know when a node has been selected (either by Space/Enter, or mouse click).
 public class NativeTreeViewExplorerNavigationDecorator
 {
+    private readonly Func<DateTime> _getCurrentTime;
     private readonly NativeTreeView _treeView;
     private DateTime _lastKeyNavigateTime = DateTime.MinValue;
-    private readonly Func<DateTime> _getCurrentTime;
-
-    public event TreeViewEventHandler? AfterSelect;
 
     public NativeTreeViewExplorerNavigationDecorator(NativeTreeView treeView, Func<DateTime> getCurrentTime)
     {
@@ -31,6 +29,8 @@ public class NativeTreeViewExplorerNavigationDecorator
         : this(treeView, () => DateTime.Now)
     {
     }
+
+    public event TreeViewEventHandler? AfterSelect;
 
     private static void OnKeyDown(object? sender, KeyEventArgs e)
     {
@@ -51,7 +51,7 @@ public class NativeTreeViewExplorerNavigationDecorator
         {
             // Force a reselection of the current node
             _lastKeyNavigateTime = DateTime.MinValue;
-            TreeNode? currNode = _treeView.SelectedNode;
+            var currNode = _treeView.SelectedNode;
             _treeView.SelectedNode = null;
             _treeView.SelectedNode = currNode;
         }
@@ -60,8 +60,8 @@ public class NativeTreeViewExplorerNavigationDecorator
     private void OnAfterSelect(object? sender, TreeViewEventArgs e)
     {
         // If arrow key was used to navigate to this node, don't send OnSelected
-        int delta = (int)_getCurrentTime().Subtract(_lastKeyNavigateTime).TotalMilliseconds;
-        if (delta is (>= 0 and < 500))
+        var delta = (int)_getCurrentTime().Subtract(_lastKeyNavigateTime).TotalMilliseconds;
+        if (delta is >= 0 and < 500)
         {
             return;
         }

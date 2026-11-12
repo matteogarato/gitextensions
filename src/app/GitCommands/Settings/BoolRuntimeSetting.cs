@@ -4,7 +4,7 @@
 public sealed class BoolRuntimeSetting : RuntimeSetting<bool>
 {
     /// <summary>
-    ///  Initializes a new instance of the <see cref="BoolRuntimeSetting"/> class with the settings details.
+    ///     Initializes a new instance of the <see cref="BoolRuntimeSetting" /> class with the settings details.
     /// </summary>
     /// <param name="settingsSource">The source containing the value.</param>
     /// <param name="name">The setting name.</param>
@@ -15,7 +15,7 @@ public sealed class BoolRuntimeSetting : RuntimeSetting<bool>
     }
 
     /// <summary>
-    ///  Toggles the setting value.
+    ///     Toggles the setting value.
     /// </summary>
     public void Toggle()
     {

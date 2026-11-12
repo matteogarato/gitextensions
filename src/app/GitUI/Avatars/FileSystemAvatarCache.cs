@@ -1,19 +1,20 @@
 ﻿using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO.Abstractions;
-using GitCommands;
+using GitCommands.Settings;
+using GitExtUtils.GitUI;
 
 namespace GitUI.Avatars;
 
 /// <summary>
-/// Decorates an avatar provider, adding persistent caching to the file system.
+///     Decorates an avatar provider, adding persistent caching to the file system.
 /// </summary>
 public sealed class FileSystemAvatarCache : IAvatarProvider, IAvatarCacheCleaner
 {
-    private readonly IAvatarProvider _inner;
-    private readonly IFileSystem _fileSystem;
-    private readonly string _cacheDir;
     private readonly int _cacheDays;
+    private readonly string _cacheDir;
+    private readonly IFileSystem _fileSystem;
+    private readonly IAvatarProvider _inner;
 
     public FileSystemAvatarCache(IAvatarProvider inner, IFileSystem? fileSystem = null)
     {
@@ -23,8 +24,8 @@ public sealed class FileSystemAvatarCache : IAvatarProvider, IAvatarCacheCleaner
         _cacheDays = AppSettings.AvatarImageCacheDays;
         if (_cacheDays < 1)
         {
-            const int DefaultCacheDays = 30;
-            _cacheDays = DefaultCacheDays;
+            const int defaultCacheDays = 30;
+            _cacheDays = defaultCacheDays;
         }
 
         _cacheDir = AppSettings.AvatarImageCachePath;
@@ -35,21 +36,65 @@ public sealed class FileSystemAvatarCache : IAvatarProvider, IAvatarCacheCleaner
     }
 
     /// <inheritdoc />
-    public event EventHandler? CacheCleared;
-
-    public bool PerformsIo => true;
+    event EventHandler? IAvatarCacheCleaner.CacheCleared
+    {
+        add => CacheCleared += value;
+        remove => CacheCleared -= value;
+    }
 
     /// <inheritdoc />
-    public async Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    async Task IAvatarCacheCleaner.ClearCacheAsync()
+    {
+        var cachePath = AppSettings.AvatarImageCachePath;
+
+        if (_fileSystem.Directory.Exists(cachePath))
+        {
+            try
+            {
+                foreach (var file in _fileSystem.Directory.GetFiles(cachePath))
+                {
+                    try
+                    {
+                        _fileSystem.File.Delete(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        // do nothing
+                        Trace.WriteLine($"Failed to delete file '{file}'. Error: {ex}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // do nothing
+                Trace.WriteLine($"Failed to enumerate files. Error: {ex}");
+            }
+        }
+
+        if (CacheCleared is not null)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            CacheCleared.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    bool IAvatarProvider.PerformsIo
+    {
+        get => true;
+    }
+
+    /// <inheritdoc />
+    async Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
     {
         if (!_inner.PerformsIo)
         {
             return await _inner.GetAvatarAsync(email, name, imageSize);
         }
 
-        string path = Path.Join(_cacheDir, $"{email}.{imageSize}px.png");
+        var path = Path.Join(_cacheDir, $"{email}.{imageSize}px.png");
 
-        Image? image = ReadImage();
+        var image = ReadImage();
 
         if (image is not null)
         {
@@ -99,7 +144,7 @@ public sealed class FileSystemAvatarCache : IAvatarProvider, IAvatarCacheCleaner
 
             bool HasExpired()
             {
-                IFileInfo info = _fileSystem.FileInfo.New(path);
+                var info = _fileSystem.FileInfo.New(path);
 
                 if (!info.Exists)
                 {
@@ -136,39 +181,5 @@ public sealed class FileSystemAvatarCache : IAvatarProvider, IAvatarCacheCleaner
     }
 
     /// <inheritdoc />
-    public async Task ClearCacheAsync()
-    {
-        string cachePath = AppSettings.AvatarImageCachePath;
-
-        if (_fileSystem.Directory.Exists(cachePath))
-        {
-            try
-            {
-                foreach (string file in _fileSystem.Directory.GetFiles(cachePath))
-                {
-                    try
-                    {
-                        _fileSystem.File.Delete(file);
-                    }
-                    catch (Exception ex)
-                    {
-                        // do nothing
-                        Trace.WriteLine($"Failed to delete file '{file}'. Error: {ex}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // do nothing
-                Trace.WriteLine($"Failed to enumerate files. Error: {ex}");
-            }
-        }
-
-        if (CacheCleared is not null)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-            CacheCleared.Invoke(this, EventArgs.Empty);
-        }
-    }
+    private event EventHandler? CacheCleared;
 }

@@ -1,15 +1,31 @@
 ﻿using System.ComponentModel;
 using System.Reflection;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ControlHotkeyExtensions
 {
+    private static readonly MethodInfo _beginUpdateMethod =
+        typeof(Control).GetMethod("BeginUpdateInternal",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    // there are 2 EndUpdateInternal methods, we are looking the one with parameterless signature
+    private static readonly MethodInfo _endUpdateMethod =
+        typeof(Control).GetMethod("EndUpdateInternal",
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            null,
+            Type.EmptyTypes,
+            [])!;
+
+    private static readonly MethodInfo _setSelectedTextInternalMethod =
+        typeof(TextBoxBase).GetMethod("SetSelectedTextInternal",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
     /// <summary>
-    /// Properly handle Ctrl + Backspace by removing the last word before the cursor.
+    ///     Properly handle Ctrl + Backspace by removing the last word before the cursor.
     /// </summary>
     /// <remarks>
-    /// By default .NET TextBox inserts a strange special character instead.
+    ///     By default .NET TextBox inserts a strange special character instead.
     /// </remarks>
     public static void EnableRemoveWordHotkey(this Control control)
     {
@@ -20,7 +36,7 @@ public static class ControlHotkeyExtensions
             return;
         }
 
-        foreach (Control textInput in control.FindDescendants().Where(c => c is TextBoxBase || c is ComboBox))
+        foreach (var textInput in control.FindDescendants().Where(c => c is TextBoxBase || c is ComboBox))
         {
             textInput.KeyDown += HandleKeyDown;
             textInput.Disposed += HandleDisposed;
@@ -34,9 +50,9 @@ public static class ControlHotkeyExtensions
             e.Handled = true;
             e.SuppressKeyPress = true;
 
-            int selectionStart = GetSelectionStart();
-            int selectionLength = GetSelectionLength();
-            string text = GetText();
+            var selectionStart = GetSelectionStart();
+            var selectionLength = GetSelectionLength();
+            var text = GetText();
 
             if (selectionLength > 0)
             {
@@ -44,7 +60,7 @@ public static class ControlHotkeyExtensions
             }
             else
             {
-                int previousBreak = FindPreviousBreak(text, selectionStart);
+                var previousBreak = FindPreviousBreak(text, selectionStart);
                 if (previousBreak >= 0)
                 {
                     RemoveTextRange(previousBreak, selectionStart - previousBreak);
@@ -55,20 +71,20 @@ public static class ControlHotkeyExtensions
             {
                 // Call begin / end update to prevent flickering transient state,
                 // after the word is selected and before it is erased.
-                _beginUpdateMethod.Invoke(sender, parameters: null);
+                _beginUpdateMethod.Invoke(sender, null);
 
                 SetSelectionStart(from);
                 SetSelectionLength(length);
                 ClearSelectedText();
 
-                _endUpdateMethod.Invoke(sender, parameters: null);
+                _endUpdateMethod.Invoke(sender, null);
 
                 (sender as ComboBox)?.Refresh();
             }
 
             int FindPreviousBreak(string value, int position)
             {
-                for (int i = position - 1; i >= 0; i--)
+                for (var i = position - 1; i >= 0; i--)
                 {
                     if (i == 0)
                     {
@@ -102,8 +118,10 @@ public static class ControlHotkeyExtensions
                 }
             }
 
-            string GetText() =>
-                ((Control)sender!).Text;
+            string GetText()
+            {
+                return ((Control)sender!).Text;
+            }
 
             int GetSelectionStart()
             {
@@ -188,20 +206,4 @@ public static class ControlHotkeyExtensions
             _ => throw new NotSupportedException()
         };
     }
-
-    private static readonly MethodInfo _beginUpdateMethod =
-        typeof(Control).GetMethod("BeginUpdateInternal",
-            BindingFlags.Instance | BindingFlags.NonPublic)!;
-
-    // there are 2 EndUpdateInternal methods, we are looking the one with parameterless signature
-    private static readonly MethodInfo _endUpdateMethod =
-        typeof(Control).GetMethod("EndUpdateInternal",
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            types: Type.EmptyTypes,
-            modifiers: [])!;
-
-    private static readonly MethodInfo _setSelectedTextInternalMethod =
-        typeof(TextBoxBase).GetMethod("SetSelectedTextInternal",
-            BindingFlags.Instance | BindingFlags.NonPublic)!;
 }

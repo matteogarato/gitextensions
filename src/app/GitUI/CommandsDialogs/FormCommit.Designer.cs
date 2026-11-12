@@ -4,6 +4,7 @@ using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Editor;
 using GitUI.SpellChecker;
+using GitUI.UserControls;
 using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.CommandsDialogs;
@@ -32,14 +33,14 @@ partial class FormCommit
         splitLeft = new SplitContainer();
         toolStripContainer1 = new ToolStripContainer();
         Loading = new LoadingControl();
-        Unstaged = new GitUI.FileStatusList();
+        Unstaged = new UserControls.FileStatusList();
         toolStripProgressBar1 = new ToolStripProgressBar();
-        toolbarSelectionFilter = new GitUI.ToolStripEx();
+        toolbarSelectionFilter = new ToolStripEx();
         toolStripLabel1 = new ToolStripLabel();
         selectionFilter = new ToolStripComboBox();
         LoadingStaged = new PictureBox();
-        Staged = new GitUI.FileStatusList();
-        toolbarStaged = new GitUI.ToolStripEx();
+        Staged = new UserControls.FileStatusList();
+        toolbarStaged = new ToolStripEx();
         toolStageAllItem = new ToolStripButton();
         toolStripSeparator10 = new ToolStripSeparator();
         toolStageItem = new ToolStripButton();
@@ -63,7 +64,7 @@ partial class FormCommit
         StashStaged = new Button();
         btnResetAllChanges = new Button();
         btnResetUnstagedChanges = new Button();
-        toolbarCommit = new GitUI.ToolStripEx();
+        toolbarCommit = new ToolStripEx();
         commitMessageToolStripMenuItem = new ToolStripDropDownButton();
         ShowOnlyMyMessagesToolStripMenuItem = new ToolStripMenuItem();
         toolStripMenuItem1 = new ToolStripSeparator();
@@ -776,7 +777,7 @@ partial class FormCommit
         gpgSignCommitToolStripComboBox.MaxDropDownItems = 3;
         gpgSignCommitToolStripComboBox.Name = "gpgSignCommitToolStripComboBox";
         gpgSignCommitToolStripComboBox.Size = new Size(230, 23);
-        gpgSignCommitToolStripComboBox.SelectedIndexChanged += gpgSignCommitChanged;
+        gpgSignCommitToolStripComboBox.SelectedIndexChanged += GpgSignCommitChanged;
         // 
         // toolStripGpgKeyTextBox
         // 
@@ -987,10 +988,10 @@ partial class FormCommit
     private ToolStripMenuItem refreshDialogOnFormFocusToolStripMenuItem;
     private ToolStripMenuItem tsmiSelectStagedOnEnterMessage;
     private GitUI.UserControls.RevisionGrid.LoadingControl Loading;
-    private FileStatusList Unstaged;
+    private UserControls.FileStatusList Unstaged;
     private ToolStripProgressBar toolStripProgressBar1;
     private ToolStripEx toolbarStaged;
-    private FileStatusList Staged;
+    private UserControls.FileStatusList Staged;
     private Button Cancel;
     private ToolStripButton toolStageItem;
     private ToolStripButton toolUnstageItem;

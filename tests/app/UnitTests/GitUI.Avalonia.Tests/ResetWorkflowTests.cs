@@ -3,17 +3,18 @@ using System.Text;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class ResetWorkflowTests
 {
     private static readonly ObjectId _id = ObjectId.Parse("0123456789abcdef0123456789abcdef01234567");
 
     private static GitItemStatus CreateItem(string name, bool isNew = false)
-        => new(name) { Staged = StagedStatus.WorkTree, IsNew = isNew, IsTracked = !isNew };
+    {
+        return new GitItemStatus(name) { Staged = StagedStatus.WorkTree, IsNew = isNew, IsTracked = !isNew };
+    }
 
     [Fact]
     public void BuildDiscardConfirmation_should_be_null_without_files()
@@ -25,32 +26,36 @@ public sealed class ResetWorkflowTests
     public void BuildDiscardConfirmation_should_warn_about_deleting_new_files()
     {
         ResetWorkflow.BuildDiscardConfirmation([CreateItem("a")]).Should().NotContain("deleted");
-        ResetWorkflow.BuildDiscardConfirmation([CreateItem("a"), CreateItem("b", isNew: true)]).Should().Contain("deleted").And.Contain("2");
+        ResetWorkflow.BuildDiscardConfirmation([CreateItem("a"), CreateItem("b", true)]).Should().Contain("deleted").And
+            .Contain("2");
     }
 
     [Fact]
     public void Discard_should_delete_only_when_new_files_are_selected()
     {
-        IGitModule module = Substitute.For<IGitModule>();
-        IFullPathResolver resolver = Substitute.For<IFullPathResolver>();
-        module.ResetChanges(default, Arg.Any<IReadOnlyList<GitItemStatus>>(), Arg.Any<bool>(), resolver, out Arg.Any<StringBuilder>(), null).Returns(call =>
+        var module = Substitute.For<IGitModule>();
+        var resolver = Substitute.For<IFullPathResolver>();
+        module.ResetChanges(default, Arg.Any<IReadOnlyList<GitItemStatus>>(), Arg.Any<bool>(), resolver,
+            out Arg.Any<StringBuilder>(), null).Returns(call =>
         {
             call[4] = new StringBuilder();
             return true;
         });
 
-        ResetWorkflow.Discard(module, [CreateItem("a")], resolver, out string output).Should().BeTrue();
+        ResetWorkflow.Discard(module, [CreateItem("a")], resolver, out var output).Should().BeTrue();
         output.Should().BeEmpty();
-        module.Received(1).ResetChanges(default, Arg.Any<IReadOnlyList<GitItemStatus>>(), false, resolver, out Arg.Any<StringBuilder>(), null);
+        module.Received(1).ResetChanges(default, Arg.Any<IReadOnlyList<GitItemStatus>>(), false, resolver,
+            out Arg.Any<StringBuilder>(), null);
 
-        ResetWorkflow.Discard(module, [CreateItem("b", isNew: true)], resolver, out _);
-        module.Received(1).ResetChanges(default, Arg.Any<IReadOnlyList<GitItemStatus>>(), true, resolver, out Arg.Any<StringBuilder>(), null);
+        ResetWorkflow.Discard(module, [CreateItem("b", true)], resolver, out _);
+        module.Received(1).ResetChanges(default, Arg.Any<IReadOnlyList<GitItemStatus>>(), true, resolver,
+            out Arg.Any<StringBuilder>(), null);
     }
 
     [Fact]
     public void Discard_should_not_touch_git_without_files()
     {
-        IGitModule module = Substitute.For<IGitModule>();
+        var module = Substitute.For<IGitModule>();
 
         ResetWorkflow.Discard(module, [], Substitute.For<IFullPathResolver>(), out _).Should().BeFalse();
         module.ReceivedCalls().Should().BeEmpty();
@@ -59,8 +64,8 @@ public sealed class ResetWorkflowTests
     [Fact]
     public void ResetAll_should_keep_untracked_files()
     {
-        IGitModule module = Substitute.For<IGitModule>();
-        module.ResetAllChanges(clean: false).Returns(true);
+        var module = Substitute.For<IGitModule>();
+        module.ResetAllChanges(false).Returns(true);
 
         ResetWorkflow.ResetAll(module).Should().BeTrue();
         module.Received(1).ResetAllChanges(false);
@@ -77,18 +82,18 @@ public sealed class ResetWorkflowTests
     [Fact]
     public void BuildUndoLastCommit_should_move_head_back_and_keep_commit_changes_staged()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-undo-commit-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-undo-commit-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
             Git("init -q -b main");
             Git("config user.name Test");
             Git("config user.email test@example.com");
-            string filePath = Path.Combine(directory, "tracked.txt");
+            var filePath = Path.Combine(directory, "tracked.txt");
             File.WriteAllText(filePath, "before\n");
             Git("add tracked.txt");
             Git("commit -q -m before");
-            string parentCommit = Git("rev-parse HEAD");
+            var parentCommit = Git("rev-parse HEAD");
 
             File.WriteAllText(filePath, "after\n");
             Git("commit -q -am after");
@@ -100,25 +105,23 @@ public sealed class ResetWorkflowTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
 
         return;
 
         string Git(string arguments)
         {
-            using Process process = Process.Start(new ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo("git", arguments)
             {
-                WorkingDirectory = directory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true
             }) ?? throw new InvalidOperationException("Failed to start git.");
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            var output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
             process.ExitCode.Should().Be(0, process.StandardError.ReadToEnd());
             return output;
@@ -133,7 +136,7 @@ public sealed class ResetWorkflowTests
     [InlineData(ResetMode.Hard, "--hard")]
     public void BuildResetTo_should_select_reset_mode_and_commit(ResetMode mode, string expectedMode)
     {
-        string arguments = ResetWorkflow.BuildResetTo(new GitRevision(_id), mode);
+        string arguments = ResetWorkflow.BuildResetTo(new GitUIPluginInterfaces.GitRevision(_id), mode);
 
         arguments.Should().Contain(expectedMode).And.Contain(_id.ToString());
     }
@@ -142,64 +145,68 @@ public sealed class ResetWorkflowTests
     public void CanResetTo_should_reject_missing_and_artificial_revisions()
     {
         ResetWorkflow.CanResetTo(null).Should().BeFalse();
-        ResetWorkflow.CanResetTo(new GitRevision(ObjectId.WorkTreeId)).Should().BeFalse();
-        ResetWorkflow.CanResetTo(new GitRevision(_id)).Should().BeTrue();
+        ResetWorkflow.CanResetTo(new GitUIPluginInterfaces.GitRevision(ObjectId.WorkTreeId)).Should().BeFalse();
+        ResetWorkflow.CanResetTo(new GitUIPluginInterfaces.GitRevision(_id)).Should().BeTrue();
     }
 
     [Fact]
     public void BuildResetTo_should_reset_a_real_repository_using_selected_modes()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-reset-revision-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-reset-revision-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
             Git(directory, "init -q -b main");
             Git(directory, "config user.name Test");
             Git(directory, "config user.email test@example.com");
-            string filePath = Path.Combine(directory, "tracked.txt");
+            var filePath = Path.Combine(directory, "tracked.txt");
             File.WriteAllText(filePath, "target\n");
             Git(directory, "add tracked.txt");
             Git(directory, "commit -q -m target");
-            string targetCommit = Git(directory, "rev-parse HEAD");
+            var targetCommit = Git(directory, "rev-parse HEAD");
             File.WriteAllText(filePath, "newer\n");
             Git(directory, "commit -q -am newer");
 
             File.WriteAllText(filePath, "local change\n");
-            Git(directory, ResetWorkflow.BuildResetTo(new GitRevision(ObjectId.Parse(targetCommit)), ResetMode.Soft).ToString());
+            Git(directory,
+                ResetWorkflow.BuildResetTo(new GitUIPluginInterfaces.GitRevision(ObjectId.Parse(targetCommit)),
+                    ResetMode.Soft).ToString());
             Git(directory, "rev-parse HEAD").Should().Be(targetCommit);
             Git(directory, "show :tracked.txt").Should().Be("newer");
             File.ReadAllText(filePath).Should().Be("local change\n");
 
-            Git(directory, ResetWorkflow.BuildResetTo(new GitRevision(ObjectId.Parse(targetCommit)), ResetMode.Mixed).ToString());
+            Git(directory,
+                ResetWorkflow.BuildResetTo(new GitUIPluginInterfaces.GitRevision(ObjectId.Parse(targetCommit)),
+                    ResetMode.Mixed).ToString());
             Git(directory, "rev-parse HEAD").Should().Be(targetCommit);
             Git(directory, "show :tracked.txt").Should().Be("target");
             File.ReadAllText(filePath).Should().Be("local change\n");
 
-            Git(directory, ResetWorkflow.BuildResetTo(new GitRevision(ObjectId.Parse(targetCommit)), ResetMode.Hard).ToString());
+            Git(directory,
+                ResetWorkflow.BuildResetTo(new GitUIPluginInterfaces.GitRevision(ObjectId.Parse(targetCommit)),
+                    ResetMode.Hard).ToString());
             Git(directory, "rev-parse HEAD").Should().Be(targetCommit);
             File.ReadAllText(filePath).Should().Be("target\n");
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
 
         return;
 
         static string Git(string workingDirectory, string arguments)
         {
-            using System.Diagnostics.Process process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo("git", arguments)
             {
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                WorkingDirectory = workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true
             })!;
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            var output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
             process.ExitCode.Should().Be(0, process.StandardError.ReadToEnd());
             return output;
@@ -209,7 +216,8 @@ public sealed class ResetWorkflowTests
     [Fact]
     public void BuildResetTo_should_reject_artificial_revisions()
     {
-        Action build = () => ResetWorkflow.BuildResetTo(new GitRevision(ObjectId.WorkTreeId), ResetMode.Hard);
+        Action build = () =>
+            ResetWorkflow.BuildResetTo(new GitUIPluginInterfaces.GitRevision(ObjectId.WorkTreeId), ResetMode.Hard);
 
         build.Should().Throw<ArgumentException>();
     }

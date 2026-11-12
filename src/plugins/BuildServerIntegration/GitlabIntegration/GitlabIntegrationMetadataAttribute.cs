@@ -5,10 +5,5 @@ namespace GitExtensions.Plugins.GitlabIntegration;
 
 [MetadataAttribute]
 [AttributeUsage(AttributeTargets.Class)]
-public class GitlabIntegrationMetadataAttribute : BuildServerAdapterMetadataAttribute
-{
-    public GitlabIntegrationMetadataAttribute(string buildServerType)
-        : base(buildServerType)
-    {
-    }
-}
+public class GitlabIntegrationMetadataAttribute(string buildServerType)
+    : BuildServerAdapterMetadataAttribute(buildServerType);

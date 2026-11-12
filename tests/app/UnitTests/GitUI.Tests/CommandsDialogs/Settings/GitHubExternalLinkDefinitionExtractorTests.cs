@@ -2,6 +2,7 @@
 using GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 
 namespace GitUITests.CommandsDialogs.Settings;
+
 public class GitHubExternalLinkDefinitionExtractorTests
 {
     [Theory]
@@ -12,12 +13,13 @@ public class GitHubExternalLinkDefinitionExtractorTests
     [InlineData("git@github.com/owner/repo.git")]
     public void Should_get_link_definitions(string url)
     {
-        IList<ExternalLinkDefinition> externalLinkDefinitions = new GitHubExternalLinkDefinitionExtractor().GetDefinitions(url);
+        var externalLinkDefinitions =
+            new GitHubExternalLinkDefinitionExtractor().GetDefinitions(url);
         externalLinkDefinitions.Should().HaveCount(3);
-        foreach (ExternalLinkDefinition externalLinkDefinition in externalLinkDefinitions)
+        foreach (var externalLinkDefinition in externalLinkDefinitions)
         {
             externalLinkDefinition.LinkFormats.Should().HaveCountGreaterThanOrEqualTo(1);
-            foreach (ExternalLinkFormat externalLinkFormat in externalLinkDefinition.LinkFormats)
+            foreach (var externalLinkFormat in externalLinkDefinition.LinkFormats)
             {
                 externalLinkFormat.Format.Should().Contain("owner").And.Contain("repo");
             }
@@ -27,12 +29,13 @@ public class GitHubExternalLinkDefinitionExtractorTests
     [Fact]
     public void Should_get_link_definitions_When_no_remote_url_provided()
     {
-        IList<ExternalLinkDefinition> externalLinkDefinitions = new GitHubExternalLinkDefinitionExtractor().GetDefinitions(null!);
+        var externalLinkDefinitions =
+            new GitHubExternalLinkDefinitionExtractor().GetDefinitions(null!);
         externalLinkDefinitions.Should().HaveCount(3);
-        foreach (ExternalLinkDefinition externalLinkDefinition in externalLinkDefinitions)
+        foreach (var externalLinkDefinition in externalLinkDefinitions)
         {
             externalLinkDefinition.LinkFormats.Should().HaveCountGreaterThanOrEqualTo(1);
-            foreach (ExternalLinkFormat externalLinkFormat in externalLinkDefinition.LinkFormats)
+            foreach (var externalLinkFormat in externalLinkDefinition.LinkFormats)
             {
                 externalLinkFormat.Format.Should().Contain("ORGANIZATION_NAME").And.Contain("REPO_NAME");
             }

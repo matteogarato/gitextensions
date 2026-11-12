@@ -3,21 +3,17 @@ using System.Diagnostics;
 namespace GitExtensions.Extensibility.Git;
 
 [DebuggerDisplay("{" + nameof(Filename) + "}")]
-public readonly struct ConflictData
+public readonly struct ConflictData(
+    ConflictedFileData @base,
+    ConflictedFileData local,
+    ConflictedFileData remote)
 {
-    public ConflictData(
-        ConflictedFileData @base,
-        ConflictedFileData local,
-        ConflictedFileData remote)
+    public ConflictedFileData Base { get; } = @base;
+    public ConflictedFileData Local { get; } = local;
+    public ConflictedFileData Remote { get; } = remote;
+
+    public string Filename
     {
-        Base = @base;
-        Local = local;
-        Remote = remote;
+        get => Local.Filename ?? Base.Filename ?? Remote.Filename;
     }
-
-    public ConflictedFileData Base { get; }
-    public ConflictedFileData Local { get; }
-    public ConflictedFileData Remote { get; }
-
-    public string Filename => Local.Filename ?? Base.Filename ?? Remote.Filename;
 }

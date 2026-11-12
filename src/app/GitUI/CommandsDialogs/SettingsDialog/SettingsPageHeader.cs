@@ -31,7 +31,7 @@ public partial class SettingsPageHeader
         InitializeComponent();
         InitializeComplete();
 
-        label1.Font = new Font(label1.Font, System.Drawing.FontStyle.Bold);
+        label1.Font = new Font(label1.Font, FontStyle.Bold);
 
         if (page is not null)
         {
@@ -45,10 +45,7 @@ public partial class SettingsPageHeader
     public bool ReadOnly
     {
         get => !settingsPagePanel.Enabled;
-        private set
-        {
-            settingsPagePanel.Enabled = !value;
-        }
+        private set => settingsPagePanel.Enabled = !value;
     }
 
     private void ConfigureHeader(bool canSaveInsideRepo)

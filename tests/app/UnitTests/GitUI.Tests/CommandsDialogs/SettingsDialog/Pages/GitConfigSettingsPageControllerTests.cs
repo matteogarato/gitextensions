@@ -1,9 +1,10 @@
 ﻿using GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 namespace GitUITests.CommandsDialogs.SettingsDialog.Pages;
+
 public class GitConfigSettingsPageControllerTests
 {
-    private GitConfigSettingsPageController _controller = null!;
+    private readonly GitConfigSettingsPageController _controller = null!;
 
     public GitConfigSettingsPageControllerTests()
     {
@@ -15,9 +16,11 @@ public class GitConfigSettingsPageControllerTests
     [InlineData(null, "")]
     [InlineData("", null)]
     [InlineData("", "")]
-    public void GetInitialDirectory_CalculateInitialDirectory_should_return_ProgramFiles_if_path_and_toolPreferredPath_unset(string? path, string? toolPreferredPath)
+    public void
+        GetInitialDirectory_CalculateInitialDirectory_should_return_ProgramFiles_if_path_and_toolPreferredPath_unset(
+            string? path, string? toolPreferredPath)
     {
-        string expected = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var expected = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
 
         _controller.GetInitialDirectory(path!, toolPreferredPath!).Should().Be(expected);
     }
@@ -25,7 +28,7 @@ public class GitConfigSettingsPageControllerTests
     [Fact]
     public void GetInitialDirectory_CalculateInitialDirectory_should_return_directory_for_supplied_path()
     {
-        string tempFolder = @"c:\";
+        var tempFolder = @"c:\";
         _controller.GetInitialDirectory(tempFolder, null!).Should().Be(@"c:\");
 
         tempFolder = @"c:";
@@ -36,7 +39,7 @@ public class GitConfigSettingsPageControllerTests
 
         _controller.GetInitialDirectory(tempFolder[..^1], null!).Should().Be(tempFolder);
 
-        string tempFile = Path.GetTempFileName(); // something like: C:\Users\user\AppData\Local\Temp\tmp97C5.tmp
+        var tempFile = Path.GetTempFileName(); // something like: C:\Users\user\AppData\Local\Temp\tmp97C5.tmp
         _controller.GetInitialDirectory(tempFile, null!).Should().Be(tempFolder);
     }
 }

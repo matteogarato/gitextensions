@@ -1,28 +1,39 @@
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormDeleteBranch : GitExtensionsDialog
 {
-    private readonly TranslationString _deleteBranchCaption = new("Delete Branches");
-    private readonly TranslationString _cannotDeleteCurrentBranchMessage = new("Cannot delete the branch “{0}” which you are currently on.");
-    private readonly TranslationString _deleteBranchConfirmTitle = new("Delete Confirmation");
-    private readonly TranslationString _deleteBranchQuestion = new("The selected branch(es) have not been merged into HEAD.\r\nProceed?");
-    private readonly TranslationString _useReflogHint = new("Did you know you can use reflog to restore deleted branches?");
-    private readonly TranslationString _branchUsedByWorktreeQuestion = new("The following branches are checked out in worktrees and cannot be deleted directly:\n\n{0}\n\nDo you want to delete the worktrees and branches together?");
-    private readonly TranslationString _cannotDeleteBranchInMainWorktree = new("The branch \u201c{0}\u201d cannot be deleted because it is checked out in the main worktree at:\n{1}");
+    private readonly TranslationString _branchUsedByWorktreeQuestion =
+        new(
+            "The following branches are checked out in worktrees and cannot be deleted directly:\n\n{0}\n\nDo you want to delete the worktrees and branches together?");
+
+    private readonly TranslationString _cannotDeleteBranchInMainWorktree =
+        new("The branch \u201c{0}\u201d cannot be deleted because it is checked out in the main worktree at:\n{1}");
+
+    private readonly TranslationString _cannotDeleteCurrentBranchMessage =
+        new("Cannot delete the branch “{0}” which you are currently on.");
 
     private readonly IEnumerable<string> _defaultBranches;
+    private readonly TranslationString _deleteBranchCaption = new("Delete Branches");
+    private readonly TranslationString _deleteBranchConfirmTitle = new("Delete Confirmation");
+
+    private readonly TranslationString _deleteBranchQuestion =
+        new("The selected branch(es) have not been merged into HEAD.\r\nProceed?");
+
+    private readonly TranslationString _useReflogHint =
+        new("Did you know you can use reflog to restore deleted branches?");
+
     private string? _currentBranch;
     private HashSet<string>? _mergedBranches;
 
-    public FormDeleteBranch(IGitUICommands commands, IEnumerable<string> defaultBranches)
-        : base(commands, enablePositionRestore: false)
+    public FormDeleteBranch(IGitUiCommands commands, IEnumerable<string> defaultBranches)
+        : base(commands, false)
     {
         _defaultBranches = defaultBranches;
 
@@ -46,7 +57,7 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
         else
         {
             _mergedBranches = [];
-            foreach (string branch in Module.GetMergedBranches())
+            foreach (var branch in Module.GetMergedBranches())
             {
                 if (branch.StartsWith("* "))
                 {
@@ -77,7 +88,8 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
 
         if (_currentBranch is not null && selectedBranches.Any(branch => branch.Name == _currentBranch))
         {
-            MessageBoxes.Show(this, string.Format(_cannotDeleteCurrentBranchMessage.Text, _currentBranch), _deleteBranchCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, string.Format(_cannotDeleteCurrentBranchMessage.Text, _currentBranch),
+                _deleteBranchCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
@@ -92,17 +104,20 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
             Validates.NotNull(_mergedBranches);
 
             // always treat branches as unmerged if there is no current branch (HEAD is detached)
-            bool hasUnmergedBranches = _currentBranch is null || DetachedHeadParser.IsDetachedHead(_currentBranch)
-                || selectedBranches.Any(branch => !_mergedBranches.Contains(branch.Name));
+            var hasUnmergedBranches = _currentBranch is null || DetachedHeadParser.IsDetachedHead(_currentBranch)
+                                                             || selectedBranches.Any(branch =>
+                                                                 !_mergedBranches.Contains(branch.Name));
             if (hasUnmergedBranches
-                && !MessageBoxes.ConfirmSuppressible(this, _deleteBranchQuestion.Text, _deleteBranchConfirmTitle.Text, AppSettings.DontConfirmDeleteUnmergedBranch, icon: TaskDialogIcon.Warning, footnote: _useReflogHint.Text, defaultNo: true))
+                && !MessageBoxes.ConfirmSuppressible(this, _deleteBranchQuestion.Text, _deleteBranchConfirmTitle.Text,
+                    AppSettings.DontConfirmDeleteUnmergedBranch, icon: TaskDialogIcon.Warning,
+                    footnote: _useReflogHint.Text, defaultNo: true))
             {
                 return;
             }
         }
 
-        IGitCommand cmd = Commands.DeleteBranch(selectedBranches, force: true);
-        bool success = UICommands.StartCommandLineProcessDialog(Owner, cmd);
+        var cmd = Commands.DeleteBranch(selectedBranches, true);
+        var success = UiCommands.StartCommandLineProcessDialog(Owner, cmd);
         if (success)
         {
             Close();
@@ -110,22 +125,22 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
     }
 
     /// <summary>
-    ///  Checks whether any of <paramref name="selectedBranches"/> are checked out in worktrees
-    ///  other than the current one. For linked worktrees, offers to delete the worktree and branch
-    ///  together. For the main worktree, shows an error. Returns the branches that should proceed
-    ///  to deletion.
+    ///     Checks whether any of <paramref name="selectedBranches" /> are checked out in worktrees
+    ///     other than the current one. For linked worktrees, offers to delete the worktree and branch
+    ///     together. For the main worktree, shows an error. Returns the branches that should proceed
+    ///     to deletion.
     /// </summary>
     private IGitRef[] HandleWorktreeBranches(IGitRef[] selectedBranches)
     {
-        IReadOnlyList<GitWorktree> worktrees = Module.GetWorktrees();
+        var worktrees = Module.GetWorktrees();
         if (worktrees.Count <= 1)
         {
             return selectedBranches;
         }
 
-        string currentWorkingDir = Path.GetFullPath(Module.WorkingDir).TrimEnd(Path.DirectorySeparatorChar);
+        var currentWorkingDir = Path.GetFullPath(Module.WorkingDir).TrimEnd(Path.DirectorySeparatorChar);
 
-        WorktreeBranchClassification classification = ClassifyWorktreeBranches(
+        var classification = ClassifyWorktreeBranches(
             selectedBranches, worktrees, currentWorkingDir);
 
         if (!classification.HasDeletedWorktrees
@@ -139,14 +154,14 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
         // so they no longer block branch deletion.
         if (classification.HasDeletedWorktrees)
         {
-            UICommands.StartCommandLineProcessDialog(Owner, command: null, "worktree prune");
+            UiCommands.StartCommandLineProcessDialog(Owner, null, "worktree prune");
         }
 
         HashSet<string> excludedBranches = [];
 
         if (classification.MainWorktreeBranches.Count > 0)
         {
-            (IGitRef branch, GitWorktree worktree) = classification.MainWorktreeBranches[0];
+            (var branch, var worktree) = classification.MainWorktreeBranches[0];
             MessageBoxes.Show(
                 this,
                 string.Format(_cannotDeleteBranchInMainWorktree.Text, branch.Name, worktree.Path),
@@ -158,9 +173,10 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
 
         if (classification.LinkedWorktreeBranches.Count > 0)
         {
-            string branchList = string.Join(
+            var branchList = string.Join(
                 "\n",
-                classification.LinkedWorktreeBranches.Select(x => $"\u2022 {x.Branch.Name}  \u2192  {x.Worktree.Path}"));
+                classification.LinkedWorktreeBranches.Select(x =>
+                    $"\u2022 {x.Branch.Name}  \u2192  {x.Worktree.Path}"));
 
             TaskDialogPage page = new()
             {
@@ -171,15 +187,15 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
                 Buttons = { TaskDialogButton.Yes, TaskDialogButton.No },
                 DefaultButton = TaskDialogButton.No,
                 AllowCancel = true,
-                SizeToContent = true,
+                SizeToContent = true
             };
 
             if (TaskDialog.ShowDialog(Handle, page) == TaskDialogButton.Yes)
             {
-                bool anyDeleted = false;
-                foreach ((IGitRef branch, GitWorktree worktree) in classification.LinkedWorktreeBranches)
+                var anyDeleted = false;
+                foreach ((var branch, var worktree) in classification.LinkedWorktreeBranches)
                 {
-                    if (worktree.Path.TryDeleteDirectory(out string? errorMessage))
+                    if (worktree.Path.TryDeleteDirectory(out var errorMessage))
                     {
                         anyDeleted = true;
                     }
@@ -197,12 +213,12 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
 
                 if (anyDeleted)
                 {
-                    UICommands.StartCommandLineProcessDialog(Owner, command: null, "worktree prune");
+                    UiCommands.StartCommandLineProcessDialog(Owner, null, "worktree prune");
                 }
             }
             else
             {
-                foreach ((IGitRef branch, _) in classification.LinkedWorktreeBranches)
+                foreach ((var branch, var _) in classification.LinkedWorktreeBranches)
                 {
                     excludedBranches.Add(branch.Name);
                 }
@@ -215,22 +231,22 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
     }
 
     /// <summary>
-    ///  Classifies selected branches by how they relate to worktrees: in the main worktree,
-    ///  in a linked worktree, or in a deleted (stale) worktree. Branches in the current
-    ///  working directory's worktree are excluded (handled separately as "current branch").
+    ///     Classifies selected branches by how they relate to worktrees: in the main worktree,
+    ///     in a linked worktree, or in a deleted (stale) worktree. Branches in the current
+    ///     working directory's worktree are excluded (handled separately as "current branch").
     /// </summary>
     internal static WorktreeBranchClassification ClassifyWorktreeBranches(
         IReadOnlyList<IGitRef> selectedBranches,
         IReadOnlyList<GitWorktree> worktrees,
         string currentWorkingDir)
     {
-        bool hasDeletedWorktrees = false;
+        var hasDeletedWorktrees = false;
         List<(IGitRef Branch, GitWorktree Worktree)> mainWorktreeBranches = [];
         List<(IGitRef Branch, GitWorktree Worktree)> linkedWorktreeBranches = [];
 
-        for (int i = 0; i < worktrees.Count; i++)
+        for (var i = 0; i < worktrees.Count; i++)
         {
-            GitWorktree worktree = worktrees[i];
+            var worktree = worktrees[i];
             if (worktree.Branch is null)
             {
                 continue;
@@ -246,13 +262,13 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
                 continue;
             }
 
-            string worktreeDir = Path.GetFullPath(worktree.Path).TrimEnd(Path.DirectorySeparatorChar);
+            var worktreeDir = Path.GetFullPath(worktree.Path).TrimEnd(Path.DirectorySeparatorChar);
             if (string.Equals(worktreeDir, currentWorkingDir, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            foreach (IGitRef branch in selectedBranches)
+            foreach (var branch in selectedBranches)
             {
                 if (branch.Name == worktree.Branch)
                 {
@@ -270,7 +286,7 @@ public sealed partial class FormDeleteBranch : GitExtensionsDialog
             }
         }
 
-        return new(hasDeletedWorktrees, mainWorktreeBranches, linkedWorktreeBranches);
+        return new WorktreeBranchClassification(hasDeletedWorktrees, mainWorktreeBranches, linkedWorktreeBranches);
     }
 
     internal readonly record struct WorktreeBranchClassification(

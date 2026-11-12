@@ -1,15 +1,14 @@
 using GitCommands;
-using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitExtUtils;
 
 namespace GitUI.CommandsDialogs;
 
 internal enum ArchiveFormat
 {
     Zip,
-    Tar,
+    Tar
 }
 
 internal static class ArchiveWorkflow
@@ -35,26 +34,26 @@ internal static class ArchiveWorkflow
             throw new ArgumentException("At least one path must be selected for a filtered archive.", nameof(paths));
         }
 
-        string? gitOutputPath = module.GetPathForGitExecution(outputPath);
+        var gitOutputPath = module.GetPathForGitExecution(outputPath);
         if (string.IsNullOrWhiteSpace(gitOutputPath))
         {
             throw new ArgumentException("The archive output path is invalid.", nameof(outputPath));
         }
 
-        GitExtUtils.GitArgumentBuilder arguments = new("archive")
+        GitArgumentBuilder arguments = new("archive")
         {
             $"--format={format.ToString().ToLowerInvariant()}",
             $"--output {gitOutputPath.Quote()}",
             revision.Guid.Quote(),
-            { paths is not null, "--" },
+            { paths is not null, "--" }
         };
 
         if (paths is not null)
         {
-            foreach (string path in paths)
+            foreach (var path in paths)
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(path);
-                arguments.Add(path.QuoteNE());
+                arguments.Add(path.QuoteNe());
             }
         }
 

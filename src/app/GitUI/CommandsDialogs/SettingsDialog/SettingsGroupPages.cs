@@ -1,41 +1,26 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
-public class GitSettingsGroup : GroupSettingsPage
+public class GitSettingsGroup() : GroupSettingsPage("Git")
 {
-    public GitSettingsGroup()
-        : base("Git")
-    {
-    }
-
     public static SettingsPageReference GetPageReference()
     {
         return new SettingsPageReferenceByType(typeof(GitSettingsGroup));
     }
 }
 
-public class GitExtensionsSettingsGroup : GroupSettingsPage
+public class GitExtensionsSettingsGroup() : GroupSettingsPage(AppSettings.ApplicationName)
 {
-    public GitExtensionsSettingsGroup()
-        : base(AppSettings.ApplicationName)
-    {
-    }
-
     public static SettingsPageReference GetPageReference()
     {
         return new SettingsPageReferenceByType(typeof(GitExtensionsSettingsGroup));
     }
 }
 
-public class PluginsSettingsGroup : GroupSettingsPage
+public class PluginsSettingsGroup() : GroupSettingsPage("Plugins")
 {
-    public PluginsSettingsGroup()
-        : base("Plugins")
-    {
-    }
-
     public static SettingsPageReference GetPageReference()
     {
         return new SettingsPageReferenceByType(typeof(PluginsSettingsGroup));

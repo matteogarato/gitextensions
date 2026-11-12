@@ -1,21 +1,26 @@
-﻿namespace GitCommands;
+﻿using GitCommands.Settings;
+
+namespace GitCommands.Git;
 
 public static class EnvironmentConfiguration
 {
-    private static readonly IEnvironmentAbstraction Env = new EnvironmentAbstraction();
+    private static readonly IEnvironmentAbstraction _env = new EnvironmentAbstraction();
 
     /// <summary>
-    /// The <c>USER</c> environment variable's value for the user/machine.
+    ///     The <c>USER</c> environment variable's value for the user/machine.
     /// </summary>
-    private static readonly string? UserHomeDir
-        = Env.GetEnvironmentVariable("HOME", EnvironmentVariableTarget.User)
-       ?? Env.GetEnvironmentVariable("HOME", EnvironmentVariableTarget.Machine);
+    private static readonly string? _userHomeDir
+        = _env.GetEnvironmentVariable("HOME", EnvironmentVariableTarget.User)
+          ?? _env.GetEnvironmentVariable("HOME", EnvironmentVariableTarget.Machine);
 
-    public static string? GetEnvironmentVariable(string name) => Env.GetEnvironmentVariable(name);
+    public static string? GetEnvironmentVariable(string name)
+    {
+        return _env.GetEnvironmentVariable(name);
+    }
 
     /// <summary>
-    /// Sets <c>PATH</c>, <c>HOME</c>, <c>TERM</c> and <c>SSH_ASKPASS</c> environment variables
-    /// for the current process.
+    ///     Sets <c>PATH</c>, <c>HOME</c>, <c>TERM</c> and <c>SSH_ASKPASS</c> environment variables
+    ///     for the current process.
     /// </summary>
     public static void SetEnvironmentVariables()
     {
@@ -24,51 +29,51 @@ public static class EnvironmentConfiguration
         if (!string.IsNullOrEmpty(AppSettings.LinuxToolsDir))
         {
             // Ensure the GNU/Linux tools dir is on the path
-            string? path = Env.GetEnvironmentVariable("PATH");
+            var path = _env.GetEnvironmentVariable("PATH");
 
             if (path is null)
             {
-                Env.SetEnvironmentVariable("PATH", AppSettings.LinuxToolsDir);
+                _env.SetEnvironmentVariable("PATH", AppSettings.LinuxToolsDir);
             }
             else if (!path.Contains(AppSettings.LinuxToolsDir))
             {
-                Env.SetEnvironmentVariable("PATH", $"{path}{Path.PathSeparator}{AppSettings.LinuxToolsDir}");
+                _env.SetEnvironmentVariable("PATH", $"{path}{Path.PathSeparator}{AppSettings.LinuxToolsDir}");
             }
         }
 
         // HOME variable
-        Env.SetEnvironmentVariable("HOME", ComputeHomeLocation());
+        _env.SetEnvironmentVariable("HOME", ComputeHomeLocation());
 
         // TERM variable
 
         // to prevent from leaking processes see issue #1092 for details
-        Env.SetEnvironmentVariable("TERM", "msys");
+        _env.SetEnvironmentVariable("TERM", "msys");
 
         // Force a non-empty DISPLAY so ssh uses SSH_ASKPASS if it has no terminal
-        if (string.IsNullOrEmpty(Env.GetEnvironmentVariable("DISPLAY")))
+        if (string.IsNullOrEmpty(_env.GetEnvironmentVariable("DISPLAY")))
         {
-            Env.SetEnvironmentVariable("DISPLAY", ":");
+            _env.SetEnvironmentVariable("DISPLAY", ":");
         }
 
         // SSH_ASKPASS variable
 
         if (OperatingSystem.IsWindows())
         {
-            string sshAskPass = Path.Join(AppSettings.GetInstallDir()!, "GitExtSshAskPass.exe");
+            var sshAskPass = Path.Join(AppSettings.GetInstallDir()!, "GitExtSshAskPass.exe");
 
             if (File.Exists(sshAskPass))
             {
-                Env.SetEnvironmentVariable("SSH_ASKPASS", sshAskPass);
+                _env.SetEnvironmentVariable("SSH_ASKPASS", sshAskPass);
             }
         }
-        else if (string.IsNullOrEmpty(Env.GetEnvironmentVariable("SSH_ASKPASS")))
+        else if (string.IsNullOrEmpty(_env.GetEnvironmentVariable("SSH_ASKPASS")))
         {
-            Env.SetEnvironmentVariable("SSH_ASKPASS", "ssh-askpass");
+            _env.SetEnvironmentVariable("SSH_ASKPASS", "ssh-askpass");
         }
 
-        if (!string.IsNullOrEmpty(Env.GetEnvironmentVariable("SSH_ASKPASS")))
+        if (!string.IsNullOrEmpty(_env.GetEnvironmentVariable("SSH_ASKPASS")))
         {
-            Env.SetEnvironmentVariable("SSH_ASKPASS_REQUIRE", "force");
+            _env.SetEnvironmentVariable("SSH_ASKPASS_REQUIRE", "force");
         }
 
         return;
@@ -82,7 +87,7 @@ public static class EnvironmentConfiguration
 
             if (AppSettings.UserProfileHomeDir)
             {
-                return Env.GetEnvironmentVariable("USERPROFILE");
+                return _env.GetEnvironmentVariable("USERPROFILE");
             }
 
             return GetDefaultHomeDir();
@@ -90,35 +95,35 @@ public static class EnvironmentConfiguration
     }
 
     /// <summary>
-    /// Gets the value of the current process's <c>HOME</c> environment variable.
+    ///     Gets the value of the current process's <c>HOME</c> environment variable.
     /// </summary>
     /// <returns>The variable's value, or an empty string if it is not present.</returns>
     public static string GetHomeDir()
     {
-        return Env.GetEnvironmentVariable("HOME") ?? "";
+        return _env.GetEnvironmentVariable("HOME") ?? "";
     }
 
     public static string? GetDefaultHomeDir()
     {
         // Use the HOME property from the user or machine, as captured at startup
-        if (!string.IsNullOrEmpty(UserHomeDir))
+        if (!string.IsNullOrEmpty(_userHomeDir))
         {
-            return UserHomeDir;
+            return _userHomeDir;
         }
 
         if (OperatingSystem.IsWindows())
         {
             // Use the Windows default home directory
-            string? homeDrive = Env.GetEnvironmentVariable("HOMEDRIVE");
+            var homeDrive = _env.GetEnvironmentVariable("HOMEDRIVE");
 
             if (!string.IsNullOrEmpty(homeDrive))
             {
-                return homeDrive + Env.GetEnvironmentVariable("HOMEPATH");
+                return homeDrive + _env.GetEnvironmentVariable("HOMEPATH");
             }
 
-            return Env.GetEnvironmentVariable("USERPROFILE");
+            return _env.GetEnvironmentVariable("USERPROFILE");
         }
 
-        return Env.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return _env.GetFolderPath(Environment.SpecialFolder.UserProfile);
     }
 }

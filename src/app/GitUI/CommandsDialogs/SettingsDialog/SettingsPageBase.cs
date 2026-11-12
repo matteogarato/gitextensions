@@ -1,16 +1,16 @@
 ﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.SettingControlBindings;
 using JetBrains.Annotations;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
 /// <summary>
-/// set Text property in derived classes to set the title.
+///     set Text property in derived classes to set the title.
 /// </summary>
 public abstract partial class SettingsPageBase : TranslatedControl, ISettingsPage
 {
@@ -37,35 +37,110 @@ public abstract partial class SettingsPageBase : TranslatedControl, ISettingsPag
         }
     }
 
-    protected CheckSettingsLogic CheckSettingsLogic => PageHost.CheckSettingsLogic;
+    protected CheckSettingsLogic CheckSettingsLogic
+    {
+        get => PageHost.CheckSettingsLogic;
+    }
 
-    protected CommonLogic CommonLogic => CheckSettingsLogic.CommonLogic;
+    protected CommonLogic CommonLogic
+    {
+        get => CheckSettingsLogic.CommonLogic;
+    }
 
-    public virtual Control GuiControl => this;
+    public virtual bool ReadOnly
+    {
+        get => false;
+    }
 
-    public virtual bool IsInstantSavePage => false;
-
-    public virtual bool ReadOnly => false;
-
-    protected IGitModule? Module => CommonLogic.Module;
-
-    public virtual SettingsPageReference PageReference => new SettingsPageReferenceByType(GetType());
+    protected IGitModule? Module
+    {
+        get => CommonLogic.Module;
+    }
 
     /// <summary>
-    ///  Gets the instance of <see cref="IServiceProvider"/> as assigned in the constructor.
+    ///     Gets the instance of <see cref="IServiceProvider" /> as assigned in the constructor.
     /// </summary>
     protected internal IServiceProvider ServiceProvider { get; }
 
-    protected ToolTip ToolTip => toolTip1;
+    protected ToolTip ToolTip
+    {
+        get => toolTip1;
+    }
+
+    /// <summary>
+    ///     True during execution of LoadSettings(). Usually derived classes
+    ///     apply settings to GUI controls. Some of controls trigger events -
+    ///     IsLoadingSettings can be used for example to not execute the event action.
+    /// </summary>
+    protected bool IsLoadingSettings { get; private set; }
+
+    /// <summary>
+    ///     Indicates that settings have been loaded to the page.
+    /// </summary>
+    protected bool IsSettingsLoaded { get; private set; }
+
+    public virtual Control GuiControl
+    {
+        get => this;
+    }
+
+    public virtual bool IsInstantSavePage
+    {
+        get => false;
+    }
+
+    public virtual SettingsPageReference PageReference
+    {
+        get => new SettingsPageReferenceByType(GetType());
+    }
+
+    public virtual string GetTitle()
+    {
+        return Text;
+    }
+
+    /// <summary>
+    ///     Called when SettingsPage is shown (again);
+    ///     e. g. after user clicked a tree item.
+    /// </summary>
+    public virtual void OnPageShown()
+    {
+        // to be overridden
+    }
+
+    void ISettingsPage.LoadSettings()
+    {
+        IsLoadingSettings = true;
+        SettingsToPage();
+        IsLoadingSettings = false;
+        IsSettingsLoaded = true;
+    }
+
+    void ISettingsPage.SaveSettings()
+    {
+        if (!ReadOnly)
+        {
+            PageToSettings();
+        }
+    }
+
+    /// <summary>
+    ///     override to provide search keywords.
+    /// </summary>
+    public virtual IEnumerable<string> GetSearchKeywords()
+    {
+        return _childrenText ??= GetChildrenText(this);
+    }
 
     protected virtual void Init(ISettingsPageHost pageHost)
     {
         _pageHost = pageHost;
     }
 
-    public static T Create<[MeansImplicitUse] T>(ISettingsPageHost pageHost, IServiceProvider serviceProvider) where T : SettingsPageBase
+    public static T Create<[MeansImplicitUse] T>(ISettingsPageHost pageHost, IServiceProvider serviceProvider)
+        where T : SettingsPageBase
     {
-        T? result = (T?)Activator.CreateInstance(typeof(T), serviceProvider);
+        var result = (T?)Activator.CreateInstance(typeof(T), serviceProvider);
         Validates.NotNull(result);
 
         result.AdjustForDpiScaling();
@@ -76,51 +151,9 @@ public abstract partial class SettingsPageBase : TranslatedControl, ISettingsPag
         return result;
     }
 
-    public virtual string GetTitle()
-    {
-        return Text;
-    }
-
-    /// <summary>
-    /// Called when SettingsPage is shown (again);
-    /// e. g. after user clicked a tree item.
-    /// </summary>
-    public virtual void OnPageShown()
-    {
-        // to be overridden
-    }
-
-    /// <summary>
-    /// True during execution of LoadSettings(). Usually derived classes
-    /// apply settings to GUI controls. Some of controls trigger events -
-    /// IsLoadingSettings can be used for example to not execute the event action.
-    /// </summary>
-    protected bool IsLoadingSettings { get; private set; }
-
-    /// <summary>
-    /// Indicates that settings have been loaded to the page.
-    /// </summary>
-    protected bool IsSettingsLoaded { get; private set; }
-
-    public void LoadSettings()
-    {
-        IsLoadingSettings = true;
-        SettingsToPage();
-        IsLoadingSettings = false;
-        IsSettingsLoaded = true;
-    }
-
-    public void SaveSettings()
-    {
-        if (!ReadOnly)
-        {
-            PageToSettings();
-        }
-    }
-
     protected virtual void SettingsToPage()
     {
-        foreach (ISettingControlBinding cb in _controlBindings)
+        foreach (var cb in _controlBindings)
         {
             cb.LoadSetting(GetCurrentSettings());
         }
@@ -128,7 +161,7 @@ public abstract partial class SettingsPageBase : TranslatedControl, ISettingsPag
 
     protected virtual void PageToSettings()
     {
-        foreach (ISettingControlBinding cb in _controlBindings)
+        foreach (var cb in _controlBindings)
         {
             cb.SaveSetting(GetCurrentSettings());
         }
@@ -148,16 +181,8 @@ public abstract partial class SettingsPageBase : TranslatedControl, ISettingsPag
     }
 
     /// <summary>
-    /// override to provide search keywords.
-    /// </summary>
-    public virtual IEnumerable<string> GetSearchKeywords()
-    {
-        return _childrenText ??= GetChildrenText(this);
-    }
-
-    /// <summary>
-    /// Gets the <see cref="Control.Text"/> values of <paramref name="control"/>
-    /// and all its descendants.
+    ///     Gets the <see cref="Control.Text" /> values of <paramref name="control" />
+    ///     and all its descendants.
     /// </summary>
     private static IReadOnlyList<string> GetChildrenText(Control control)
     {
@@ -168,7 +193,7 @@ public abstract partial class SettingsPageBase : TranslatedControl, ISettingsPag
 
         while (queue.Count != 0)
         {
-            Control next = queue.Dequeue();
+            var next = queue.Dequeue();
 
             if (!next.Visible || next is NumericUpDown)
             {

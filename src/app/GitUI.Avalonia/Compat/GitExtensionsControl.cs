@@ -1,4 +1,4 @@
-﻿namespace ResourceManager;
+﻿namespace GitUI.Compat;
 
 // Twin of ResourceManager/GitExtensionsControl.cs. Hotkey plumbing arrives with the
 // hotkeys milestone; translation comes from the TranslatedControl base.

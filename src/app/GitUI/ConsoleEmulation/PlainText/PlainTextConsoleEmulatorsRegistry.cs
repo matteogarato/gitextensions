@@ -2,18 +2,24 @@ namespace GitUI.ConsoleEmulation.PlainText;
 
 internal sealed class PlainTextConsoleEmulatorsRegistry : IConsoleEmulatorsRegistry
 {
-    public static PlainTextConsoleEmulatorsRegistry Instance { get; } = new();
-
     private PlainTextConsoleEmulatorsRegistry()
     {
     }
 
-    public IReadOnlyCollection<IConsoleEmulator> AvailableConsoleEmulators => [];
+    public static PlainTextConsoleEmulatorsRegistry Instance { get; } = new();
 
-    public IConsoleCommandRunner CreateCommandController()
+    IReadOnlyCollection<IConsoleEmulator> IConsoleEmulatorsRegistry.AvailableConsoleEmulators
+    {
+        get => [];
+    }
+
+    IConsoleCommandRunner IConsoleEmulatorsRegistry.CreateCommandController()
     {
         return new PlainTextConsoleCommandRunner();
     }
 
-    public IConsoleShellRunner? CreateShellRunner() => null;
+    IConsoleShellRunner? IConsoleEmulatorsRegistry.CreateShellRunner()
+    {
+        return null;
+    }
 }

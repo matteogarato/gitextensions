@@ -1,20 +1,14 @@
 using Microsoft.VisualStudio.Threading;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
-public class ExclusiveTaskRunner : IDisposable
+public class ExclusiveTaskRunner(TaskManager taskManager) : IDisposable
 {
-    private readonly Lock _cancellationTokenSequenceLock = new();
     private readonly CancellationTokenSequence _cancellationTokenSequence = new();
+    private readonly Lock _cancellationTokenSequenceLock = new();
     private JoinableTask? _runningTask;
-    private readonly TaskManager _taskManager;
 
-    public ExclusiveTaskRunner(TaskManager taskManager)
-    {
-        _taskManager = taskManager;
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _cancellationTokenSequence.Dispose();
         _runningTask = null;
@@ -27,25 +21,29 @@ public class ExclusiveTaskRunner : IDisposable
     }
 
     /// <summary>
-    /// Exclusivly run <paramref name="asyncAction"/> asynchronously on the current thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
-    /// A previous task is cancelled and its termination is awaited before.
+    ///     Exclusivly run <paramref name="asyncAction" /> asynchronously on the current thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
+    ///     A previous task is cancelled and its termination is awaited before.
     /// </summary>
     public JoinableTask RunDetached(Func<CancellationToken, Task> asyncAction)
     {
         lock (_cancellationTokenSequenceLock)
         {
-            CancellationToken cancellationToken = _cancellationTokenSequence.Next();
-            JoinableTask? previousTask = _runningTask;
-            _runningTask = _taskManager.JoinableTaskFactory.RunAsync(async () =>
+            var cancellationToken = _cancellationTokenSequence.Next();
+            var previousTask = _runningTask;
+            _runningTask = taskManager.JoinableTaskFactory.RunAsync(async () =>
+            {
+                // Absolutely await the completion or the cancellation of the previous run, i.e. without cancellation
+                if (previousTask is not null)
                 {
-                    // Absolutely await the completion or the cancellation of the previous run, i.e. without cancellation
-                    if (previousTask is not null)
-                    {
-                        await previousTask.JoinAsync();
-                    }
+                    await previousTask.JoinAsync();
+                }
 
-                    await TaskManager.HandleExceptionsAsync(() => asyncAction(cancellationToken).WithCancellation(cancellationToken), _taskManager.ReportExceptionOnMainThreadAsync);
-                });
+                await TaskManager.HandleExceptionsAsync(
+                    () => asyncAction(cancellationToken).WithCancellation(cancellationToken),
+                    taskManager.ReportExceptionOnMainThreadAsync);
+            });
             return _runningTask;
         }
     }

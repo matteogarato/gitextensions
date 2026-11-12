@@ -2,43 +2,50 @@
 using CommonTestUtils;
 using GitCommands;
 using GitCommands.Git;
-using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI;
-using GitUIPluginInterfaces;
 using NSubstitute;
 using ResourceManager;
-using Xunit;
+using UITests;
+using AppSettings = GitCommands.Settings.AppSettings;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitExtensions.UITests.UserControls.CommitInfo;
 
-public class CommitInfoTests : System.IDisposable
+public class CommitInfoTests : IDisposable
 {
+    private readonly MockLinkFactory _mockLinkFactory = null!;
+
     // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
+    private GitUiCommands _commands = null!;
 
     // Created once for each test
     private MockExecutable _gitExecutable = null!;
-    private GitUICommands _commands = null!;
-    private MockLinkFactory _mockLinkFactory = null!;
+
     public CommitInfoTests()
     {
-        _mockLinkFactory = new();
-        ServiceContainer serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
+        _mockLinkFactory = new MockLinkFactory();
+        var serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
         serviceContainer.RemoveService<ILinkFactory>();
         serviceContainer.AddService<ILinkFactory>(_mockLinkFactory);
 
         AppSettings.ShowGitNotes = false;
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(serviceContainer, _referenceRepository.Module);
+        _commands = new GitUiCommands(serviceContainer, _referenceRepository.Module);
 
         // mock git executable
         _gitExecutable = new MockExecutable();
-        GitExecutor.TestAccessor executorAccessor = _referenceRepository.Module.GetTestAccessor().Executor;
+        var executorAccessor = _referenceRepository.Module.GetTestAccessor().Executor;
         executorAccessor.GitExecutable = _gitExecutable;
         executorAccessor.GitWindowsExecutable = _gitExecutable;
         executorAccessor.GitCommandRunner = new GitCommandRunner(_gitExecutable, () => GitModule.SystemEncoding);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -73,12 +80,10 @@ public class CommitInfoTests : System.IDisposable
 
             Dictionary<string, int> expected = new()
             {
-                ["refs/remotes/origin/master"] = 0,
-                ["refs/heads/master"] = 1,
-                ["refs/heads/warning"] = 2
+                ["refs/remotes/origin/master"] = 0, ["refs/heads/master"] = 1, ["refs/heads/warning"] = 2
             };
 
-            IDictionary<string, int> refs = commitInfo.GetTestAccessor().GetSortedTags();
+            var refs = commitInfo.GetTestAccessor().GetSortedTags();
 
             refs.Should().HaveCount(3);
             refs.Should().BeEquivalentTo(expected);
@@ -103,7 +108,7 @@ public class CommitInfoTests : System.IDisposable
                 ["refs/remotes/origin/bugfix/ys-38651-test-twist-changes-r100-on-s375"] = 3
             };
 
-            IDictionary<string, int> refs = commitInfo.GetTestAccessor().GetSortedTags();
+            var refs = commitInfo.GetTestAccessor().GetSortedTags();
 
             refs.Should().HaveCount(4);
             refs.Should().BeEquivalentTo(expected);
@@ -129,7 +134,7 @@ public class CommitInfoTests : System.IDisposable
                 [" refs/tags/v3.1"] = 4
             };
 
-            IDictionary<string, int> refs = commitInfo.GetTestAccessor().GetSortedTags();
+            var refs = commitInfo.GetTestAccessor().GetSortedTags();
 
             refs.Should().HaveCount(5);
             refs.Should().BeEquivalentTo(expected);
@@ -151,10 +156,10 @@ public class CommitInfoTests : System.IDisposable
                 ["refs/remotes/origin/master"] = 0,
                 ["refs/remotes/foo/duplicate"] = 1,
                 ["refs/remotes/foo/bar"] = 2,
-                ["refs/remotes/foo/last"] = 3,
+                ["refs/remotes/foo/last"] = 3
             };
 
-            IDictionary<string, int> refs = commitInfo.GetTestAccessor().GetSortedTags();
+            var refs = commitInfo.GetTestAccessor().GetSortedTags();
 
             refs.Should().HaveCount(4);
             refs.Should().BeEquivalentTo(expected);
@@ -166,19 +171,21 @@ public class CommitInfoTests : System.IDisposable
     [WinFormsFact]
     public void ReloadCommitInfo_should_render_links_correctly()
     {
-        string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
+        var hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
 
         _gitExecutable.StageOutput("rev-parse --git-common-dir", ".git");
 
         // Generate branches: branch01...branch15
-        _gitExecutable.StageOutput($"branch --contains {hash}", string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
+        _gitExecutable.StageOutput($"branch --contains {hash}",
+            string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
 
         // Generate tags: v1.0...v1.15
-        _gitExecutable.StageOutput($"tag --contains {hash}", string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
+        _gitExecutable.StageOutput($"tag --contains {hash}",
+            string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
 
         _gitExecutable.StageOutput($"describe --tags --first-parent --abbrev=40 {hash}", "");
 
-        ObjectId realCommitObjectId = ObjectId.Parse(hash);
+        var realCommitObjectId = ObjectId.Parse(hash);
         GitRevision revision = new(realCommitObjectId)
         {
             Author = "John Doe",
@@ -188,14 +195,14 @@ public class CommitInfoTests : System.IDisposable
             Body = "fix: bugs\r\n\r\nall bugs fixed"
         };
 
-        RunCommitInfoTest(async (commitInfo) =>
+        RunCommitInfoTest(async commitInfo =>
         {
-            commitInfo.SetRevisionWithChildren(revision, children: null);
+            commitInfo.SetRevisionWithChildren(revision, null);
 
             // Wait for pending operations so the Control is loaded completely before testing it
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            await Verifier.Verify(commitInfo.GetTestAccessor().RevisionInfo.Text);
+            await Verify(commitInfo.GetTestAccessor().RevisionInfo.Text);
         });
     }
 
@@ -205,21 +212,23 @@ public class CommitInfoTests : System.IDisposable
     [InlineData("v1.9", 745, "gitext://gototag/v1.9")]
     public void ReloadCommitInfo_should_extract_links_correctly(string refText, int linkStart, string expectedUri)
     {
-        string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
-        string hashInBody = "a48da1aba59a65b2a7f0df7e3512817caf16819a";
-        string hashLink = $"gitext://gotocommit/{hashInBody}";
+        var hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
+        var hashInBody = "a48da1aba59a65b2a7f0df7e3512817caf16819a";
+        var hashLink = $"gitext://gotocommit/{hashInBody}";
 
         _gitExecutable.StageOutput("rev-parse --git-common-dir", ".git");
 
         // Generate branches: branch01...branch15
-        _gitExecutable.StageOutput($"branch --contains {hash}", string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
+        _gitExecutable.StageOutput($"branch --contains {hash}",
+            string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
 
         // Generate tags: v1.0...v1.15
-        _gitExecutable.StageOutput($"tag --contains {hash}", string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
+        _gitExecutable.StageOutput($"tag --contains {hash}",
+            string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
 
         _gitExecutable.StageOutput($"describe --tags --first-parent --abbrev=40 {hash}", "");
 
-        ObjectId realCommitObjectId = ObjectId.Parse(hash);
+        var realCommitObjectId = ObjectId.Parse(hash);
         GitRevision revision = new(realCommitObjectId)
         {
             Author = "John Doe",
@@ -229,23 +238,23 @@ public class CommitInfoTests : System.IDisposable
             Body = $"fix: bugs\r\n\r\nall bugs from {hashInBody} fixed"
         };
 
-        RunCommitInfoTest(async (commitInfo) =>
+        RunCommitInfoTest(async commitInfo =>
         {
             object? commandClickedSender = null;
             commitInfo.CommandClicked += (s, e) => commandClickedSender = s;
-            commitInfo.SetRevisionWithChildren(revision, children: null);
+            commitInfo.SetRevisionWithChildren(revision, null);
 
             // Wait for pending operations so the Control is loaded completely before testing it
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            GitUI.CommitInfo.CommitInfo.TestAccessor ta = commitInfo.GetTestAccessor();
+            var ta = commitInfo.GetTestAccessor();
 
             // simulate a click on refText link
-            ta.LinkClicked(ta.RevisionInfo, new(refText, linkStart, linkLength: refText.Length));
+            ta.LinkClicked(ta.RevisionInfo, new LinkClickedEventArgs(refText, linkStart, refText.Length));
             _mockLinkFactory.LastExecutedLinkUri.Should().Be(expectedUri);
 
             // simulate a click on hash link
-            ta.LinkClicked(ta.CommitMessage, new(hashInBody, linkStart: 25, linkLength: hashInBody.Length));
+            ta.LinkClicked(ta.CommitMessage, new LinkClickedEventArgs(hashInBody, 25, hashInBody.Length));
             _mockLinkFactory.LastExecutedLinkUri.Should().Be(hashLink);
             commandClickedSender.Should().Be(ta.CommitMessage);
         });
@@ -254,19 +263,21 @@ public class CommitInfoTests : System.IDisposable
     [WinFormsFact]
     public void ReloadCommitInfo_should_handle_ShowAll_branches_correctly()
     {
-        string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
+        var hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
 
         _gitExecutable.StageOutput("rev-parse --git-common-dir", ".git");
 
         // Generate branches: branch01...branch15
-        _gitExecutable.StageOutput($"branch --contains {hash}", string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
+        _gitExecutable.StageOutput($"branch --contains {hash}",
+            string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
 
         // Generate tags: v1.0...v1.15
-        _gitExecutable.StageOutput($"tag --contains {hash}", string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
+        _gitExecutable.StageOutput($"tag --contains {hash}",
+            string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
 
         _gitExecutable.StageOutput($"describe --tags --first-parent --abbrev=40 {hash}", "");
 
-        ObjectId realCommitObjectId = ObjectId.Parse(hash);
+        var realCommitObjectId = ObjectId.Parse(hash);
         GitRevision revision = new(realCommitObjectId)
         {
             Author = "John Doe",
@@ -276,38 +287,40 @@ public class CommitInfoTests : System.IDisposable
             Body = "fix: bugs\r\n\r\nall bugs fixed"
         };
 
-        RunCommitInfoTest(async (commitInfo) =>
+        RunCommitInfoTest(async commitInfo =>
         {
-            commitInfo.SetRevisionWithChildren(revision, children: null);
+            commitInfo.SetRevisionWithChildren(revision, null);
 
             // Wait for pending operations so the Control is loaded completely before testing it
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
             // simulate a click on refText link
-            GitUI.CommitInfo.CommitInfo.TestAccessor ta = commitInfo.GetTestAccessor();
-            ta.LinkClicked(ta.RevisionInfo, new("not important", linkStart: 423, linkLength: 0));
+            var ta = commitInfo.GetTestAccessor();
+            ta.LinkClicked(ta.RevisionInfo, new LinkClickedEventArgs("not important", 423, 0));
             _mockLinkFactory.LastExecutedLinkUri.Should().Be("gitext://showall/branches");
 
-            await Verifier.Verify(commitInfo.GetTestAccessor().RevisionInfo.Text);
+            await Verify(commitInfo.GetTestAccessor().RevisionInfo.Text);
         });
     }
 
     [WinFormsFact]
     public void ReloadCommitInfo_should_handle_ShowAll_tags_correctly()
     {
-        string hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
+        var hash = "a48da1aba59a65b2a7f0df7e3512817caf16819f";
 
         _gitExecutable.StageOutput("rev-parse --git-common-dir", ".git");
 
         // Generate branches: branch01...branch15
-        _gitExecutable.StageOutput($"branch --contains {hash}", string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
+        _gitExecutable.StageOutput($"branch --contains {hash}",
+            string.Join('\n', Enumerable.Range(1, 15).Select(i => $"branch{i:00}")));
 
         // Generate tags: v1.0...v1.15
-        _gitExecutable.StageOutput($"tag --contains {hash}", string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
+        _gitExecutable.StageOutput($"tag --contains {hash}",
+            string.Join('\n', Enumerable.Range(0, 15).Select(i => $"v1.{i}")));
 
         _gitExecutable.StageOutput($"describe --tags --first-parent --abbrev=40 {hash}", "");
 
-        ObjectId realCommitObjectId = ObjectId.Parse(hash);
+        var realCommitObjectId = ObjectId.Parse(hash);
         GitRevision revision = new(realCommitObjectId)
         {
             Author = "John Doe",
@@ -317,44 +330,45 @@ public class CommitInfoTests : System.IDisposable
             Body = "fix: bugs\r\n\r\nall bugs fixed"
         };
 
-        RunCommitInfoTest(async (commitInfo) =>
+        RunCommitInfoTest(async commitInfo =>
         {
-            commitInfo.SetRevisionWithChildren(revision, children: null);
+            commitInfo.SetRevisionWithChildren(revision, null);
 
             // Wait for pending operations so the Control is loaded completely before testing it
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
             // simulate a click on refText link
-            GitUI.CommitInfo.CommitInfo.TestAccessor ta = commitInfo.GetTestAccessor();
-            ta.LinkClicked(ta.RevisionInfo, new("not important", linkStart: 774, linkLength: 0));
+            var ta = commitInfo.GetTestAccessor();
+            ta.LinkClicked(ta.RevisionInfo, new LinkClickedEventArgs("not important", 774, 0));
             _mockLinkFactory.LastExecutedLinkUri.Should().Be("gitext://showall/tags");
 
-            await Verifier.Verify(commitInfo.GetTestAccessor().RevisionInfo.Text);
+            await Verify(commitInfo.GetTestAccessor().RevisionInfo.Text);
         });
     }
 
     private void RunCommitInfoTest(Func<GitUI.CommitInfo.CommitInfo, Task> runTestAsync)
     {
-        UITest.RunControl(
-            createControl: form =>
+        UiTest.RunControl(
+            form =>
             {
-                IGitUICommandsSource uiCommandsSource = Substitute.For<IGitUICommandsSource>();
-                uiCommandsSource.UICommands.Returns(x => _commands);
+                var uiCommandsSource = Substitute.For<IGitUiCommandsSource>();
+                uiCommandsSource.UiCommands.Returns(x => _commands);
 
                 // the following assignment of CommitInfo.UICommandsSource will already call this command
-                _gitExecutable.StageOutput(@"for-each-ref --sort=""-taggerdate"" --format=""%(refname)"" refs/tags/", "");
+                _gitExecutable.StageOutput(@"for-each-ref --sort=""-taggerdate"" --format=""%(refname)"" refs/tags/",
+                    "");
 
-                form.Size = new(600, 480);
+                form.Size = new Size(600, 480);
 
                 return new GitUI.CommitInfo.CommitInfo
                 {
                     Dock = DockStyle.Fill,
                     Parent = form,
                     ShowBranchesAsLinks = true,
-                    UICommandsSource = uiCommandsSource,
+                    UiCommandsSource = uiCommandsSource
                 };
             },
-            runTestAsync: async commitInfo =>
+            async commitInfo =>
             {
                 // Wait for pending operations so the Control is loaded completely before testing it
                 await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
@@ -369,31 +383,38 @@ public class CommitInfoTests : System.IDisposable
 
         public string? LastExecutedLinkUri { get; private set; }
 
-        public string CreateBranchLink(string noPrefixBranch)
-            => _linkFactory.CreateBranchLink(noPrefixBranch);
+        string ILinkFactory.CreateBranchLink(string noPrefixBranch)
+        {
+            return _linkFactory.CreateBranchLink(noPrefixBranch);
+        }
 
-        public string CreateCommitLink(ObjectId objectId, string? linkText = null, bool preserveGuidInLinkText = false)
-            => _linkFactory.CreateCommitLink(objectId, linkText, preserveGuidInLinkText);
+        string ILinkFactory.CreateCommitLink(ObjectId objectId, string? linkText = null,
+            bool preserveGuidInLinkText = false)
+        {
+            return _linkFactory.CreateCommitLink(objectId, linkText, preserveGuidInLinkText);
+        }
 
-        public string CreateLink(string? caption, string uri)
-            => _linkFactory.CreateLink(caption, uri);
+        string ILinkFactory.CreateLink(string? caption, string uri)
+        {
+            return _linkFactory.CreateLink(caption, uri);
+        }
 
-        public string CreateShowAllLink(string what)
-            => _linkFactory.CreateShowAllLink(what);
+        string ILinkFactory.CreateShowAllLink(string what)
+        {
+            return _linkFactory.CreateShowAllLink(what);
+        }
 
-        public string CreateTagLink(string tag)
-            => _linkFactory.CreateTagLink(tag);
+        string ILinkFactory.CreateTagLink(string tag)
+        {
+            return _linkFactory.CreateTagLink(tag);
+        }
 
-        public void ExecuteLink(string? linkUri, Action<CommandEventArgs>? handleInternalLink = null, Action<string?>? showAll = null)
+        void ILinkFactory.ExecuteLink(string? linkUri, Action<CommandEventArgs>? handleInternalLink = null,
+            Action<string?>? showAll = null)
         {
             LastExecutedLinkUri = linkUri;
 
             _linkFactory.ExecuteLink(linkUri, handleInternalLink, showAll);
         }
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

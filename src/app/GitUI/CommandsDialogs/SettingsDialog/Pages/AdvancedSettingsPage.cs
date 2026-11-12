@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
@@ -13,9 +13,7 @@ public partial class AdvancedSettingsPage : SettingsPageWithHeader
 
         var autoNormaliseSymbols = new[]
         {
-            new { Key = "_", Value = "_" },
-            new { Key = "-", Value = "-" },
-            new { Key = "(none)", Value = "" },
+            new { Key = "_", Value = "_" }, new { Key = "-", Value = "-" }, new { Key = "(none)", Value = "" }
         };
         cboAutoNormaliseSymbol.DisplayMember = "Key";
         cboAutoNormaliseSymbol.ValueMember = "Value";

@@ -5,12 +5,12 @@ using GitExtensions.Shims.WinForms;
 namespace GitUI.Compat;
 
 /// <summary>
-///  Implements the shim <see cref="IFolderPicker"/> over the Avalonia storage provider
-///  (which uses the XDG desktop portal on Linux).
+///     Implements the shim <see cref="IFolderPicker" /> over the Avalonia storage provider
+///     (which uses the XDG desktop portal on Linux).
 /// </summary>
 public sealed class AvaloniaFolderPicker(IClassicDesktopStyleApplicationLifetime desktop) : IFolderPicker
 {
-    public string? PickFolder(IWin32Window? owner, string? selectedPath)
+    string? IFolderPicker.PickFolder(IWin32Window? owner, string? selectedPath)
     {
         return DispatcherPump.Wait(PickAsync);
 
@@ -27,7 +27,7 @@ public sealed class AvaloniaFolderPicker(IClassicDesktopStyleApplicationLifetime
                 options.SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(selectedPath);
             }
 
-            IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(options);
+            var folders = await storageProvider.OpenFolderPickerAsync(options);
             return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
         }
     }

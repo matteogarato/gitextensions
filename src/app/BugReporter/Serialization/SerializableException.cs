@@ -16,8 +16,8 @@ namespace BugReporter.Serialization;
 public class SerializableException
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SerializableException"/> class.
-    /// Default constructor provided for XML serialization and de-serialization.
+    ///     Initializes a new instance of the <see cref="SerializableException" /> class.
+    ///     Default constructor provided for XML serialization and de-serialization.
     /// </summary>
     public SerializableException()
     {
@@ -27,8 +27,8 @@ public class SerializableException
     {
         OriginalException = exception ?? throw new ArgumentNullException(nameof(exception));
 
-        CultureInfo oldCulture = Thread.CurrentThread.CurrentCulture;
-        CultureInfo oldUICulture = Thread.CurrentThread.CurrentUICulture;
+        var oldCulture = Thread.CurrentThread.CurrentCulture;
+        var oldUiCulture = Thread.CurrentThread.CurrentUICulture;
 
         try
         {
@@ -66,7 +66,7 @@ public class SerializableException
             {
                 InnerExceptions = [];
 
-                foreach (Exception innerException in aggregateException.InnerExceptions)
+                foreach (var innerException in aggregateException.InnerExceptions)
                 {
                     InnerExceptions.Add(new SerializableException(innerException));
                 }
@@ -96,7 +96,7 @@ public class SerializableException
         finally
         {
             Thread.CurrentThread.CurrentCulture = oldCulture;
-            Thread.CurrentThread.CurrentUICulture = oldUICulture;
+            Thread.CurrentThread.CurrentUICulture = oldUiCulture;
         }
     }
 
@@ -135,7 +135,7 @@ public class SerializableException
         output.Append($"{Type}: {Message}");
 
         Stack<SerializableException> inners = new();
-        SerializableException? inner = InnerException;
+        var inner = InnerException;
         while (inner is not null)
         {
             output.Append($" ---> {inner.Type}: {inner.Message}");
@@ -164,7 +164,7 @@ public class SerializableException
         stream.SetLength(0);
         serializer.Serialize(stream, this);
         stream.Position = 0;
-        XDocument doc = XDocument.Load(stream);
+        var doc = XDocument.Load(stream);
         return doc.Root!.ToString();
     }
 
@@ -172,7 +172,7 @@ public class SerializableException
     {
         XmlSerializer serializer = new(typeof(SerializableException));
         using StringReader reader = new(xml);
-        SerializableException? exception = (SerializableException?)serializer.Deserialize(reader);
+        var exception = (SerializableException?)serializer.Deserialize(reader);
 
         if (exception!.StackTrace?.IndexOf(Environment.NewLine) < 0)
         {
@@ -185,27 +185,29 @@ public class SerializableException
 
     private SerializableDictionary<string, object>? GetExtendedInformation(Exception exception)
     {
-        PropertyInfo[] extendedProperties = [.. from property in exception.GetType().GetProperties()
-                                  where
-                                      property.Name != "Data" && property.Name != "InnerExceptions" && property.Name != "InnerException"
-                                      && property.Name != "Message" && property.Name != "Source" && property.Name != "StackTrace"
-                                      && property.Name != "TargetSite" && property.Name != "HelpLink" && property.CanRead
-                                  select property];
+        PropertyInfo[] extendedProperties =
+        [
+            .. from property in exception.GetType().GetProperties()
+            where
+                property.Name != "Data" && property.Name != "InnerExceptions" && property.Name != "InnerException"
+                && property.Name != "Message" && property.Name != "Source" && property.Name != "StackTrace"
+                && property.Name != "TargetSite" && property.Name != "HelpLink" && property.CanRead
+            select property
+        ];
 
         if (extendedProperties.Length != 0)
         {
             SerializableDictionary<string, object> extendedInformation = [];
 
-            foreach (PropertyInfo property in extendedProperties.Where(property => property.GetValue(exception, null) is not null))
+            foreach (var property in extendedProperties.Where(property =>
+                         property.GetValue(exception, null) is not null))
             {
                 extendedInformation.Add(property.Name, property.GetValue(exception, null)!);
             }
 
             return extendedInformation;
         }
-        else
-        {
-            return null;
-        }
+
+        return null;
     }
 }

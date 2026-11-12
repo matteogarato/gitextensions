@@ -1,14 +1,9 @@
 ﻿using System.ComponentModel.Composition;
 using GitUIPluginInterfaces.BuildServerIntegration;
 
-namespace UITests.CommandsDialogs.SettingsDialog.Pages;
+namespace UITests.MEF;
 
 [MetadataAttribute]
 [AttributeUsage(AttributeTargets.Class)]
-public class MockGenericBuildServerIntegrationMetadata : BuildServerAdapterMetadataAttribute
-{
-    public MockGenericBuildServerIntegrationMetadata(string buildServerType)
-        : base(buildServerType)
-    {
-    }
-}
+public class MockGenericBuildServerIntegrationMetadata(string buildServerType)
+    : BuildServerAdapterMetadataAttribute(buildServerType);

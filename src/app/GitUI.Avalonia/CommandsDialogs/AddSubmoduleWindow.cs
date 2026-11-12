@@ -1,39 +1,33 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using GitCommands;
-using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUI;
-using ResourceManager;
+using GitUI.Compat;
 using CheckBox = Avalonia.Controls.CheckBox;
 using TextBox = Avalonia.Controls.TextBox;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Adds a submodule to the current repository.
+///     Adds a submodule to the current repository.
 /// </summary>
 public sealed class AddSubmoduleWindow : GitExtensionsFormBase
 {
-    private readonly IGitUICommands _uiCommands;
-    private readonly TextBox _remotePath = new() { Name = "txtSubmoduleUrl" };
-    private readonly TextBox _localPath = new() { Name = "txtSubmoduleLocalPath" };
+    private readonly Button _add = new() { Name = "btnAddSubmodule", IsDefault = true, IsEnabled = false };
     private readonly TextBox _branch = new() { Name = "txtSubmoduleBranch" };
     private readonly CheckBox _force = new() { Name = "chkSubmoduleForce" };
-    private readonly Button _add = new() { Name = "btnAddSubmodule", IsDefault = true, IsEnabled = false };
+    private readonly TextBox _localPath = new() { Name = "txtSubmoduleLocalPath" };
+    private readonly TextBox _remotePath = new() { Name = "txtSubmoduleUrl" };
+    private readonly IGitUiCommands _uiCommands;
     private string _suggestedLocalPath = string.Empty;
 
     /// <summary>
-    ///  Gets the submodule path entered by the user.
-    /// </summary>
-    public string LocalPath => _localPath.Text ?? string.Empty;
-
-    /// <summary>
-    ///  Initializes a new instance of the <see cref="AddSubmoduleWindow"/> class.
+    ///     Initializes a new instance of the <see cref="AddSubmoduleWindow" /> class.
     /// </summary>
     /// <param name="uiCommands">The commands used to run Git with process feedback.</param>
-    public AddSubmoduleWindow(IGitUICommands uiCommands)
+    public AddSubmoduleWindow(IGitUiCommands uiCommands)
     {
         ArgumentNullException.ThrowIfNull(uiCommands);
 
@@ -46,7 +40,7 @@ public sealed class AddSubmoduleWindow : GitExtensionsFormBase
         nameScope.Register("chkSubmoduleForce", _force);
         nameScope.Register("btnAddSubmodule", _add);
 
-        Title = GitUI.TranslatedStrings.AddSubmodule;
+        Title = TranslatedStrings.AddSubmodule;
         Width = 540;
         Height = 350;
         MinWidth = 440;
@@ -67,10 +61,10 @@ public sealed class AddSubmoduleWindow : GitExtensionsFormBase
                 UpdateActionState();
             }
         };
-        _add.Content = GitUI.TranslatedStrings.AddSubmodule;
+        _add.Content = TranslatedStrings.AddSubmodule;
         _add.Click += (_, _) => AddSubmodule();
-        _force.Content = GitUI.TranslatedStrings.SubmoduleForce;
-        Button cancel = new() { Content = GitUI.TranslatedStrings.Cancel, IsCancel = true };
+        _force.Content = TranslatedStrings.SubmoduleForce;
+        Button cancel = new() { Content = TranslatedStrings.Cancel, IsCancel = true };
         cancel.Click += (_, _) => Close(false);
 
         StackPanel actions = new()
@@ -78,49 +72,47 @@ public sealed class AddSubmoduleWindow : GitExtensionsFormBase
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Margin = new Avalonia.Thickness(0, 8, 0, 0),
-            Children =
-            {
-                _add,
-                cancel,
-            },
+            Margin = new Thickness(0, 8, 0, 0),
+            Children = { _add, cancel }
         };
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 8,
             Children =
             {
-                CreateField(GitUI.TranslatedStrings.SubmoduleUrl, _remotePath),
-                CreateField(GitUI.TranslatedStrings.SubmoduleLocalPath, _localPath),
-                CreateField(GitUI.TranslatedStrings.SubmoduleBranch, _branch),
+                CreateField(TranslatedStrings.SubmoduleUrl, _remotePath),
+                CreateField(TranslatedStrings.SubmoduleLocalPath, _localPath),
+                CreateField(TranslatedStrings.SubmoduleBranch, _branch),
                 _force,
-                actions,
-            },
+                actions
+            }
         };
     }
 
+    /// <summary>
+    ///     Gets the submodule path entered by the user.
+    /// </summary>
+    public string LocalPath
+    {
+        get => _localPath.Text ?? string.Empty;
+    }
+
     private static StackPanel CreateField(string label, TextBox input)
-        => new()
-        {
-            Spacing = 4,
-            Children =
-            {
-                new TextBlock { Text = label },
-                input,
-            },
-        };
+    {
+        return new StackPanel { Spacing = 4, Children = { new TextBlock { Text = label }, input } };
+    }
 
     private void AddSubmodule()
     {
-        string remotePath = _remotePath.Text?.Trim() ?? string.Empty;
-        string localPath = _localPath.Text?.Trim() ?? string.Empty;
+        var remotePath = _remotePath.Text?.Trim() ?? string.Empty;
+        var localPath = _localPath.Text?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(remotePath) || string.IsNullOrWhiteSpace(localPath))
         {
             return;
         }
 
-        ArgumentString command = SubmoduleWorkflow.BuildAdd(
+        var command = SubmoduleWorkflow.BuildAdd(
             remotePath,
             localPath,
             _branch.Text,
@@ -133,7 +125,7 @@ public sealed class AddSubmoduleWindow : GitExtensionsFormBase
 
     private void UpdateSuggestedLocalPath()
     {
-        string suggestedLocalPath = PathUtil.GetRepositoryName(_remotePath.Text ?? string.Empty);
+        var suggestedLocalPath = PathUtil.GetRepositoryName(_remotePath.Text ?? string.Empty);
         if (string.IsNullOrEmpty(_localPath.Text) || _localPath.Text == _suggestedLocalPath)
         {
             _suggestedLocalPath = suggestedLocalPath;
@@ -146,6 +138,6 @@ public sealed class AddSubmoduleWindow : GitExtensionsFormBase
     private void UpdateActionState()
     {
         _add.IsEnabled = !string.IsNullOrWhiteSpace(_remotePath.Text)
-            && !string.IsNullOrWhiteSpace(_localPath.Text);
+                         && !string.IsNullOrWhiteSpace(_localPath.Text);
     }
 }

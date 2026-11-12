@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitExtUtils.GitUI;
@@ -12,16 +13,16 @@ namespace GitExtensions.Plugins.FindLargeFiles;
 public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
 {
     private readonly TranslationString _areYouSureToDelete = new("Are you sure to delete the selected files?");
+    private readonly IGitUiCommands _commands = null!;
     private readonly TranslationString _deleteCaption = new("Delete");
+    private readonly IGitModule _gitModule = null!;
+    private readonly SortableObjectsList _gitObjects = [];
+    private readonly Dictionary<string, GitObject> _list = [];
 
     private readonly float _threshold;
-    private readonly IGitUICommands _commands = null!;
-    private readonly IGitModule _gitModule = null!;
     private string[] _revList = [];
-    private readonly Dictionary<string, GitObject> _list = [];
-    private readonly SortableObjectsList _gitObjects = [];
 
-    public FindLargeFilesForm(float threshold, IGitUICommands? commands)
+    public FindLargeFilesForm(float threshold, IGitUiCommands? commands)
     {
         InitializeComponent();
 
@@ -38,7 +39,7 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
             return;
         }
 
-        sHADataGridViewTextBoxColumn.DataPropertyName = nameof(GitObject.SHA);
+        sHADataGridViewTextBoxColumn.DataPropertyName = nameof(GitObject.Sha);
         pathDataGridViewTextBoxColumn.DataPropertyName = nameof(GitObject.Path);
         sizeDataGridViewTextBoxColumn.DataPropertyName = nameof(GitObject.Size);
         CompressedSize.DataPropertyName = nameof(GitObject.CompressedSize);
@@ -55,20 +56,15 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
     {
         try
         {
-            IEnumerable<GitObject> data = GetLargeFiles(_threshold);
+            var data = GetLargeFiles(_threshold);
             Dictionary<string, DateTime> revData = [];
-            foreach (GitObject d in data)
+            foreach (var d in data)
             {
-                string commit = d.Commit.First();
-                if (!revData.TryGetValue(commit, out DateTime date))
+                var commit = d.Commit.First();
+                if (!revData.TryGetValue(commit, out var date))
                 {
-                    GitArgumentBuilder args = new("show")
-                    {
-                        "-s",
-                        commit,
-                        "--format=\"%ci\""
-                    };
-                    string revDate = _gitModule.GitExecutable.GetOutput(args);
+                    GitArgumentBuilder args = new("show") { "-s", commit, "--format=\"%ci\"" };
+                    var revDate = _gitModule.GitExecutable.GetOutput(args);
                     if (!DateTime.TryParse(revDate, out date))
                     {
                         Trace.WriteLine($"Could not parse date '{revDate}' for commit '{commit}'");
@@ -78,10 +74,10 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
                     revData.Add(commit, date);
                 }
 
-                if (!_list.TryGetValue(d.SHA, out GitObject? curGitObject))
+                if (!_list.TryGetValue(d.Sha, out var curGitObject))
                 {
                     d.LastCommitDate = date;
-                    _list.Add(d.SHA, d);
+                    _list.Add(d.Sha, d);
                     ThreadHelper.JoinableTaskFactory.Run(async () =>
                     {
                         await BranchesGrid.SwitchToMainThreadAsync();
@@ -104,30 +100,26 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
                 }
             }
 
-            string objectsPackDirectory = _gitModule.ResolveGitInternalPath("objects/pack/");
+            var objectsPackDirectory = _gitModule.ResolveGitInternalPath("objects/pack/");
             if (Directory.Exists(objectsPackDirectory))
             {
-                string[] packFiles = Directory.GetFiles(objectsPackDirectory, "pack-*.idx");
-                foreach (string pack in packFiles)
+                var packFiles = Directory.GetFiles(objectsPackDirectory, "pack-*.idx");
+                foreach (var pack in packFiles)
                 {
-                    GitArgumentBuilder args = new("verify-pack")
-                    {
-                        "-v",
-                        pack
-                    };
+                    GitArgumentBuilder args = new("verify-pack") { "-v", pack };
 
-                    string[] objects = _gitModule.GitExecutable.GetOutput(args).Split('\n');
+                    var objects = _gitModule.GitExecutable.GetOutput(args).Split('\n');
                     ThreadHelper.JoinableTaskFactory.Run(async () =>
                     {
                         await pbRevisions.SwitchToMainThreadAsync();
-                        pbRevisions.Value += (int)((_revList.Length * 0.1f) / packFiles.Length);
+                        pbRevisions.Value += (int)(_revList.Length * 0.1f / packFiles.Length);
                     });
-                    foreach (string gitObject in objects.Where(x => x.Contains(" blob ")))
+                    foreach (var gitObject in objects.Where(x => x.Contains(" blob ")))
                     {
-                        string[] dataFields = gitObject.Split([' '], StringSplitOptions.RemoveEmptyEntries);
-                        if (_list.TryGetValue(dataFields[0], out GitObject? curGitObject))
+                        var dataFields = gitObject.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+                        if (_list.TryGetValue(dataFields[0], out var curGitObject))
                         {
-                            if (int.TryParse(dataFields[3], out int compressedSize))
+                            if (int.TryParse(dataFields[3], out var compressedSize))
                             {
                                 curGitObject.CompressedSizeInBytes = compressedSize;
                                 ThreadHelper.JoinableTaskFactory.Run(async () =>
@@ -171,27 +163,24 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
 
     private IEnumerable<GitObject> GetLargeFiles(float threshold)
     {
-        int thresholdSize = (int)(threshold * 1024 * 1024);
-        for (int i = 0; i < _revList.Length; i++)
+        var thresholdSize = (int)(threshold * 1024 * 1024);
+        for (var i = 0; i < _revList.Length; i++)
         {
             ThreadHelper.JoinableTaskFactory.Run(async () =>
             {
                 await pbRevisions.SwitchToMainThreadAsync();
                 pbRevisions.Value = i;
             });
-            string rev = _revList[i];
-            GitArgumentBuilder args = new("ls-tree")
-            {
-                "-zrl",
-                rev.Quote()
-            };
-            string[] objects = _gitModule.GitExecutable.GetOutput(args).Split(['\0'], StringSplitOptions.RemoveEmptyEntries);
-            foreach (string objData in objects)
+            var rev = _revList[i];
+            GitArgumentBuilder args = new("ls-tree") { "-zrl", rev.Quote() };
+            var objects = _gitModule.GitExecutable.GetOutput(args)
+                .Split(['\0'], StringSplitOptions.RemoveEmptyEntries);
+            foreach (var objData in objects)
             {
                 // "100644 blob b17a497cdc6140aa3b9a681344522f44768165ac 2120195\tBin/Dictionaries/de-DE.dic"
-                string[] dataPack = objData.Split('\t');
-                string[] data = dataPack[0].Split([' '], count: 4, StringSplitOptions.RemoveEmptyEntries);
-                if (data[1] == "blob" && int.TryParse(data[3], out int size) && size >= thresholdSize)
+                var dataPack = objData.Split('\t');
+                var data = dataPack[0].Split([' '], 4, StringSplitOptions.RemoveEmptyEntries);
+                if (data[1] == "blob" && int.TryParse(data[3], out var size) && size >= thresholdSize)
                 {
                     yield return new GitObject(data[2], dataPack[1], size, rev);
                 }
@@ -204,12 +193,14 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
         StringBuilder sb = new();
         sb.AppendLine($"SET gitexe=\"{AppSettings.GitCommand}\"");
 
-        foreach (GitObject gitObject in gitObjects.Where(gitObject => gitObject.Delete))
+        foreach (var gitObject in gitObjects.Where(gitObject => gitObject.Delete))
         {
-            sb.AppendLine($"%gitexe% filter-branch --index-filter \"git rm -r -f --cached --ignore-unmatch '{gitObject.Path}'\" --prune-empty -- --all");
+            sb.AppendLine(
+                $"%gitexe% filter-branch --index-filter \"git rm -r -f --cached --ignore-unmatch '{gitObject.Path}'\" --prune-empty -- --all");
         }
 
-        sb.AppendLine("for /f \"usebackq\" %%a IN (`\"%gitexe% for-each-ref --format=\"%%^(refname^)\" refs/original/\"`) DO %gitexe% update-ref -d %%a");
+        sb.AppendLine(
+            "for /f \"usebackq\" %%a IN (`\"%gitexe% for-each-ref --format=\"%%^(refname^)\" refs/original/\"`) DO %gitexe% update-ref -d %%a");
         sb.AppendLine("%gitexe% reflog expire --expire=now --all");
         sb.AppendLine("%gitexe% gc --aggressive --prune=now");
 
@@ -218,7 +209,8 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
 
     private void Delete_Click(object sender, EventArgs e)
     {
-        if (MessageBoxes.Show(this, _areYouSureToDelete.Text, _deleteCaption.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+        if (MessageBoxes.Show(this, _areYouSureToDelete.Text, _deleteCaption.Text, MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) == DialogResult.Yes)
         {
             _commands.StartBatchFileProcessDialog(GenerateCommand(_gitObjects));
         }
@@ -226,10 +218,16 @@ public sealed partial class FindLargeFilesForm : GitExtensionsFormBase
         Close();
     }
 
-    internal static TestAccessor GetTestAccessor() => new();
+    internal static TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor();
+    }
 
     internal readonly struct TestAccessor
     {
-        public string GenerateCommand(SortableObjectsList gitObjects) => FindLargeFilesForm.GenerateCommand(gitObjects);
+        public string GenerateCommand(SortableObjectsList gitObjects)
+        {
+            return FindLargeFilesForm.GenerateCommand(gitObjects);
+        }
     }
 }

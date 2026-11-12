@@ -1,10 +1,10 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Extensions;
 
 namespace ResourceManager.CommitDataRenders;
 
 /// <summary>
-/// Renders commit information in a tabular format with data columns aligned with spaces.
+///     Renders commit information in a tabular format with data columns aligned with spaces.
 /// </summary>
 public sealed class MonospacedHeaderRenderStyleProvider : IHeaderRenderStyleProvider
 {
@@ -26,7 +26,7 @@ public sealed class MonospacedHeaderRenderStyleProvider : IHeaderRenderStyleProv
         _maxLength = strings.Select(s => s.Length).Max() + 2;
     }
 
-    public Font GetFont(Graphics g)
+    Font IHeaderRenderStyleProvider.GetFont(Graphics g)
     {
         if (!AppSettings.Font.IsFixedWidth(g))
         {
@@ -36,7 +36,13 @@ public sealed class MonospacedHeaderRenderStyleProvider : IHeaderRenderStyleProv
         return AppSettings.Font;
     }
 
-    public int GetMaxWidth() => _maxLength;
+    int IHeaderRenderStyleProvider.GetMaxWidth()
+    {
+        return _maxLength;
+    }
 
-    public IEnumerable<int> GetTabStops() => [];
+    IEnumerable<int> IHeaderRenderStyleProvider.GetTabStops()
+    {
+        return [];
+    }
 }

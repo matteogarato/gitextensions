@@ -1,27 +1,22 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace GitUI.UserControls.RevisionGrid.Graph;
 
-internal readonly struct RevisionGraphConfig
+internal readonly struct RevisionGraphConfig()
 {
-    public bool MergeGraphLanesHavingCommonParent { get; }
+    public bool MergeGraphLanesHavingCommonParent { get; } = AppSettings.MergeGraphLanesHavingCommonParent.Value;
 
-    public bool ReduceGraphCrossings => !MergeGraphLanesHavingCommonParent;
+    public bool ReduceGraphCrossings
+    {
+        get => !MergeGraphLanesHavingCommonParent;
+    }
 
-    public bool RenderGraphWithDiagonals { get; }
+    public bool RenderGraphWithDiagonals { get; } = AppSettings.RenderGraphWithDiagonals.Value;
 
-    public bool StraightenGraphDiagonals { get; }
+    public bool StraightenGraphDiagonals { get; } = AppSettings.StraightenGraphDiagonals.Value;
 
     /// <summary>
-    ///  <see cref="AppSettings.StraightenGraphSegmentsLimit"/>
+    ///     <see cref="AppSettings.StraightenGraphSegmentsLimit" />
     /// </summary>
-    public int StraightenGraphSegmentsLimit { get; }
-
-    public RevisionGraphConfig()
-    {
-        MergeGraphLanesHavingCommonParent = AppSettings.MergeGraphLanesHavingCommonParent.Value;
-        RenderGraphWithDiagonals = AppSettings.RenderGraphWithDiagonals.Value;
-        StraightenGraphDiagonals = AppSettings.StraightenGraphDiagonals.Value;
-        StraightenGraphSegmentsLimit = AppSettings.StraightenGraphSegmentsLimit.Value;
-    }
+    public int StraightenGraphSegmentsLimit { get; } = AppSettings.StraightenGraphSegmentsLimit.Value;
 }

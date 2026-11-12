@@ -8,7 +8,10 @@ public struct CmdResult
     public string? StdError;
     public int ExitCode;
 
-    public readonly bool ExitedSuccessfully => ExitCode == 0;
+    public readonly bool ExitedSuccessfully
+    {
+        get => ExitCode == 0;
+    }
 
     public readonly string GetString()
     {

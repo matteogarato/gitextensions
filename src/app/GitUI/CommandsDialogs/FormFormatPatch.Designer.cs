@@ -1,5 +1,7 @@
 ﻿using System.Windows.Forms;
 using GitCommands.Git;
+using GitExtensions.Extensibility.Git;
+using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.CommandsDialogs;
 
@@ -43,7 +45,7 @@ partial class FormFormatPatch
         flowLayoutPanelBranch = new FlowLayoutPanel();
         SelectedBranch = new Label();
         CurrentBranch = new Label();
-        RevisionGrid = new GitUI.RevisionGridControl();
+        RevisionGrid = new RevisionGridControl();
         ((System.ComponentModel.ISupportInitialize)(gitRevisionBindingSource)).BeginInit();
         ((System.ComponentModel.ISupportInitialize)(gitItemBindingSource)).BeginInit();
         tableLayoutPanelSaveTo.SuspendLayout();
@@ -53,7 +55,7 @@ partial class FormFormatPatch
         // 
         // gitRevisionBindingSource
         // 
-        gitRevisionBindingSource.DataSource = typeof(GitUIPluginInterfaces.GitRevision);
+        gitRevisionBindingSource.DataSource = typeof(GitRevision);
         // 
         // gitItemBindingSource
         // 

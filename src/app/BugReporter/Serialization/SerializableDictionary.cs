@@ -12,11 +12,12 @@ using System.Xml.Serialization;
 namespace BugReporter.Serialization;
 
 [XmlRoot("dictionary")]
-public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IXmlSerializable where TKey : notnull where TValue : notnull
+public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IXmlSerializable
+    where TKey : notnull where TValue : notnull
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SerializableDictionary{TKey,TValue}"/> class.
-    /// This is the default constructor provided for XML serializer.
+    ///     Initializes a new instance of the <see cref="SerializableDictionary{TKey,TValue}" /> class.
+    ///     This is the default constructor provided for XML serializer.
     /// </summary>
     public SerializableDictionary()
     {
@@ -26,31 +27,32 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IX
     {
         ArgumentNullException.ThrowIfNull(dictionary);
 
-        foreach (KeyValuePair<TKey, TValue> pair in dictionary)
+        foreach (var pair in dictionary)
         {
             Add(pair.Key, pair.Value);
         }
     }
 
-    public XmlSchema? GetSchema()
+    XmlSchema? IXmlSerializable.GetSchema()
     {
         return null;
     }
 
-    public void ReadXml(XmlReader reader)
+    void IXmlSerializable.ReadXml(XmlReader reader)
     {
         /*if (reader.IsEmptyElement)
         {
             return;
         }*/
-        XmlReader inner = reader.ReadSubtree();
+        var inner = reader.ReadSubtree();
 
-        XElement xElement = XElement.Load(inner);
+        var xElement = XElement.Load(inner);
         if (xElement.HasElements)
         {
-            foreach (XElement element in xElement.Elements())
+            foreach (var element in xElement.Elements())
             {
-                Add((TKey)Convert.ChangeType(element.Name.ToString(), typeof(TKey)), (TValue)Convert.ChangeType(element.Value, typeof(TValue)));
+                Add((TKey)Convert.ChangeType(element.Name.ToString(), typeof(TKey)),
+                    (TValue)Convert.ChangeType(element.Value, typeof(TValue)));
             }
         }
 
@@ -59,9 +61,9 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IX
         reader.ReadEndElement();
     }
 
-    public void WriteXml(XmlWriter writer)
+    void IXmlSerializable.WriteXml(XmlWriter writer)
     {
-        foreach (TKey key in Keys)
+        foreach (var key in Keys)
         {
             writer.WriteStartElement(key.ToString()!.Replace(" ", ""));
 

@@ -4,14 +4,14 @@ using Microsoft;
 namespace GitExtensions.Extensibility;
 
 /// <summary>
-/// Splits a string by a delimiter, producing substrings lazily during enumeration.
+///     Splits a string by a delimiter, producing substrings lazily during enumeration.
 /// </summary>
 /// <remarks>
-/// Unlike <see cref="string.Split(char[])"/> and overloads, <see cref="LazyStringSplit"/>
-/// does not allocate an array for the return, and allocates strings on demand during
-/// enumeration. A custom enumerator type is used so that the only allocations made are
-/// the substrings themselves. We also avoid the large internal arrays assigned by the
-/// methods on <see cref="string"/>.
+///     Unlike <see cref="string.Split(char[])" /> and overloads, <see cref="LazyStringSplit" />
+///     does not allocate an array for the return, and allocates strings on demand during
+///     enumeration. A custom enumerator type is used so that the only allocations made are
+///     the substrings themselves. We also avoid the large internal arrays assigned by the
+///     methods on <see cref="string" />.
 /// </remarks>
 public readonly struct LazyStringSplit : IEnumerable<string>
 {
@@ -21,18 +21,27 @@ public readonly struct LazyStringSplit : IEnumerable<string>
 
     public LazyStringSplit(string input, char delimiter, StringSplitOptions options = StringSplitOptions.None)
     {
-        Requires.NotNull(input, nameof(input));
+        Requires.NotNull(input);
 
         _input = input;
         _delimiter = delimiter;
         _options = options;
     }
 
-    public Enumerator GetEnumerator() => new(this, _options);
+    public Enumerator GetEnumerator()
+    {
+        return new Enumerator(this, _options);
+    }
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
 
-    IEnumerator<string> IEnumerable<string>.GetEnumerator() => GetEnumerator();
+    IEnumerator<string> IEnumerable<string>.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
 
     public struct Enumerator : IEnumerator<string>
     {
@@ -50,13 +59,18 @@ public readonly struct LazyStringSplit : IEnumerable<string>
             Current = null!;
         }
 
-        public string Current { get; private set; }
+        private string Current { get; set; }
 
-        public bool MoveNext()
+        string IEnumerator<string>.Current
+        {
+            get => Current;
+        }
+
+        bool IEnumerator.MoveNext()
         {
             while (_index < _input.Length)
             {
-                int delimiterIndex = _input.IndexOf(_delimiter, _index);
+                var delimiterIndex = _input.IndexOf(_delimiter, _index);
 
                 if (delimiterIndex == -1)
                 {
@@ -65,7 +79,7 @@ public readonly struct LazyStringSplit : IEnumerable<string>
                     return true;
                 }
 
-                int length = delimiterIndex - _index;
+                var length = delimiterIndex - _index;
 
                 if (length == 0)
                 {
@@ -74,11 +88,9 @@ public readonly struct LazyStringSplit : IEnumerable<string>
                     {
                         continue;
                     }
-                    else
-                    {
-                        Current = "";
-                        return true;
-                    }
+
+                    Current = "";
+                    return true;
                 }
 
                 Current = _input.Substring(_index, length);
@@ -97,7 +109,10 @@ public readonly struct LazyStringSplit : IEnumerable<string>
             return false;
         }
 
-        readonly object IEnumerator.Current => Current;
+        readonly object IEnumerator.Current
+        {
+            get => Current;
+        }
 
         void IEnumerator.Reset()
         {
@@ -113,28 +128,30 @@ public readonly struct LazyStringSplit : IEnumerable<string>
 
 public static class LazyStringSplitExtensions
 {
-    public static LazyStringSplit LazySplit(this string s, char delimiter, StringSplitOptions options = StringSplitOptions.None)
+    public static LazyStringSplit LazySplit(this string s, char delimiter,
+        StringSplitOptions options = StringSplitOptions.None)
     {
-        return new(s, delimiter, options);
+        return new LazyStringSplit(s, delimiter, options);
     }
 
     /// <summary>
-    ///  Lazily splits <paramref name="stringToSplit"/> and returns ranges into the original string.
+    ///     Lazily splits <paramref name="stringToSplit" /> and returns ranges into the original string.
     /// </summary>
     /// <param name="stringToSplit">The string to split.</param>
     /// <param name="delimiter">The character that delimits the ranges.</param>
     /// <param name="options">Options controlling trimming and removal of empty ranges.</param>
     /// <returns>The zero-based beginning and length of each resulting range.</returns>
-    public static IEnumerable<(int beginning, int length)> LazySplitRanges(this string stringToSplit, char delimiter, StringSplitOptions options = StringSplitOptions.None)
+    public static IEnumerable<(int beginning, int length)> LazySplitRanges(this string stringToSplit, char delimiter,
+        StringSplitOptions options = StringSplitOptions.None)
     {
-        bool trim = options.HasFlag(StringSplitOptions.TrimEntries);
-        bool removeEmpty = options.HasFlag(StringSplitOptions.RemoveEmptyEntries);
-        for (int start = 0; start <= stringToSplit.Length;)
+        var trim = options.HasFlag(StringSplitOptions.TrimEntries);
+        var removeEmpty = options.HasFlag(StringSplitOptions.RemoveEmptyEntries);
+        for (var start = 0; start <= stringToSplit.Length;)
         {
-            int indexOfNextDelimiter = stringToSplit.IndexOf(delimiter, start);
-            int end = indexOfNextDelimiter < 0 ? stringToSplit.Length : indexOfNextDelimiter;
+            var indexOfNextDelimiter = stringToSplit.IndexOf(delimiter, start);
+            var end = indexOfNextDelimiter < 0 ? stringToSplit.Length : indexOfNextDelimiter;
 
-            (int beginning, int length) range = GetRange(stringToSplit, start, end, trim);
+            var range = GetRange(stringToSplit, start, end, trim);
 
             if (!removeEmpty || range.length != 0)
             {
@@ -170,7 +187,7 @@ public static class LazyStringSplitExtensions
 
     public static IEnumerable<T> Select<T>(this LazyStringSplit split, Func<string, T> func)
     {
-        foreach (string value in split)
+        foreach (var value in split)
         {
             yield return func(value);
         }
@@ -183,13 +200,13 @@ public static class LazyStringSplitExtensions
 
     public static string? FirstOrDefault(this LazyStringSplit split)
     {
-        using LazyStringSplit.Enumerator enumerator = split.GetEnumerator();
+        using var enumerator = split.GetEnumerator();
         return enumerator.MoveNext() ? enumerator.Current : null;
     }
 
     public static string? LastOrDefault(this LazyStringSplit split)
     {
-        using LazyStringSplit.Enumerator enumerator = split.GetEnumerator();
+        using var enumerator = split.GetEnumerator();
 
         if (!enumerator.MoveNext())
         {
@@ -198,7 +215,7 @@ public static class LazyStringSplitExtensions
 
         while (true)
         {
-            string last = enumerator.Current;
+            var last = enumerator.Current;
 
             if (!enumerator.MoveNext())
             {
@@ -209,7 +226,7 @@ public static class LazyStringSplitExtensions
 
     public static IEnumerable<string> Where(this LazyStringSplit split, Func<string, bool> predicate)
     {
-        foreach (string s in split)
+        foreach (var s in split)
         {
             if (predicate(s))
             {

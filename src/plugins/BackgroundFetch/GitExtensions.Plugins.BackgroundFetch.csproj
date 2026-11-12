@@ -5,11 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\app\GitExtUtils\Validates.cs" Link="Validates.cs" />
+    <Compile Include="..\..\app\GitExtUtils\Validates.cs" Link="Validates.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Reactive" />
+    <PackageReference Include="System.Reactive"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -32,13 +32,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Resources\IconBackgroundFetch.png" />
+    <None Include="Resources\IconBackgroundFetch.png"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Resources -->
-    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
-    <Compile Update="Properties\Resources.Designer.cs" AutoGen="True" DependentUpon="Resources.resx" DesignTime="True" />
+    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs"/>
+    <Compile Update="Properties\Resources.Designer.cs" AutoGen="True" DependentUpon="Resources.resx" DesignTime="True"/>
   </ItemGroup>
 
 </Project>

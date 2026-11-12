@@ -1,16 +1,18 @@
 ﻿using System.ComponentModel;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.HelperDialogs;
-using Microsoft;
 using ResourceManager;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 public partial class BranchComboBox : GitExtensionsControl
 {
-    private readonly TranslationString _branchCheckoutError = new("Branch '{0}' is not selectable, this branch has been removed from the selection.");
+    private readonly TranslationString _branchCheckoutError =
+        new("Branch '{0}' is not selectable, this branch has been removed from the selection.");
+
+    private IReadOnlyList<IGitRef>? _branchesToSelect;
 
     public BranchComboBox()
     {
@@ -20,27 +22,23 @@ public partial class BranchComboBox : GitExtensionsControl
         branches.DisplayMember = nameof(IGitRef.Name);
     }
 
-    /// <summary>
-    /// Occurs whenever the branch selection has changed.
-    /// </summary>
-    [Browsable(true)]
-    [Category("Action")]
-    [Description("Occurs whenever the branch selection has changed.")]
-    public event EventHandler? SelectedValueChanged;
-
-    private IReadOnlyList<IGitRef>? _branchesToSelect;
     public IReadOnlyList<IGitRef>? BranchesToSelect
     {
-        get
-        {
-            return _branchesToSelect;
-        }
+        get => _branchesToSelect;
         set
         {
             _branchesToSelect = value;
             LoadBranches();
         }
     }
+
+    /// <summary>
+    ///     Occurs whenever the branch selection has changed.
+    /// </summary>
+    [Browsable(true)]
+    [Category("Action")]
+    [Description("Occurs whenever the branch selection has changed.")]
+    public event EventHandler? SelectedValueChanged;
 
     private void LoadBranches()
     {
@@ -57,12 +55,13 @@ public partial class BranchComboBox : GitExtensionsControl
             yield break;
         }
 
-        foreach (string branch in branches.Text.LazySplit(' ', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var branch in branches.Text.LazySplit(' ', StringSplitOptions.RemoveEmptyEntries))
         {
-            IGitRef? gitHead = _branchesToSelect.FirstOrDefault(g => g.Name == branch);
+            var gitHead = _branchesToSelect.FirstOrDefault(g => g.Name == branch);
             if (gitHead is null)
             {
-                MessageBoxes.Show(string.Format(_branchCheckoutError.Text, branch), TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(string.Format(_branchCheckoutError.Text, branch), TranslatedStrings.Error,
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else
             {
@@ -71,7 +70,10 @@ public partial class BranchComboBox : GitExtensionsControl
         }
     }
 
-    public string GetSelectedText() => branches.Text;
+    public string GetSelectedText()
+    {
+        return branches.Text;
+    }
 
     public void SetSelectedText(string text)
     {
@@ -85,14 +87,14 @@ public partial class BranchComboBox : GitExtensionsControl
         Validates.NotNull(_branchesToSelect);
 
         using FormSelectMultipleBranches formSelectMultipleBranches = new(_branchesToSelect);
-        foreach (IGitRef branch in GetSelectedBranches())
+        foreach (var branch in GetSelectedBranches())
         {
             formSelectMultipleBranches.SelectBranch(branch.Name);
         }
 
         formSelectMultipleBranches.ShowDialog(this);
-        string branchesText = string.Empty;
-        foreach (GitRef branch in formSelectMultipleBranches.GetSelectedBranches().Cast<GitRef>())
+        var branchesText = string.Empty;
+        foreach (var branch in formSelectMultipleBranches.GetSelectedBranches().Cast<GitRef>())
         {
             if (!string.IsNullOrEmpty(branchesText))
             {
@@ -108,7 +110,12 @@ public partial class BranchComboBox : GitExtensionsControl
     }
 
     private void branches_SelectedValueChanged(object sender, EventArgs e)
-        => OnSelectedValueChanged();
+    {
+        OnSelectedValueChanged();
+    }
 
-    private void OnSelectedValueChanged() => SelectedValueChanged?.Invoke(this, EventArgs.Empty);
+    private void OnSelectedValueChanged()
+    {
+        SelectedValueChanged?.Invoke(this, EventArgs.Empty);
+    }
 }

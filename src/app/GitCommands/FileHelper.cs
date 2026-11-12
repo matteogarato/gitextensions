@@ -1,4 +1,5 @@
-﻿using GitExtensions.Extensibility;
+﻿using GitCommands.Git;
+using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 
@@ -6,7 +7,7 @@ namespace GitCommands;
 
 public static class FileHelper
 {
-    private static readonly IEnumerable<string> BinaryExtensions = new[]
+    private static readonly IEnumerable<string> _binaryExtensions = new[]
     {
         ".avi", // movie
         ".bmp", // image
@@ -41,29 +42,26 @@ public static class FileHelper
         ".odt" // Open office
     };
 
-    private static readonly IEnumerable<string> ImageExtensions = new[]
+    private static readonly IEnumerable<string> _imageExtensions = new[]
     {
-        ".bmp",
-        ".gif",
-        ".ico",
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".tif",
-        ".tiff",
+        ".bmp", ".gif", ".ico", ".jpg", ".jpeg", ".png", ".tif", ".tiff"
     };
 
     public static bool IsBinaryFileName(IGitModule module, string? fileName)
     {
         return !string.IsNullOrWhiteSpace(fileName)
                && (IsBinaryAccordingToGitAttributes(module, fileName)
-                   ?? HasMatchingExtension(BinaryExtensions, fileName));
+                   ?? HasMatchingExtension(_binaryExtensions, fileName));
     }
 
     /// <returns>null if no info in .gitattributes (or ambiguous). True if marked as binary, false if marked as text</returns>
     private static bool? IsBinaryAccordingToGitAttributes(IGitModule module, string fileName)
     {
-        string[] diffValues = ["set", "astextplain", "ada", "bibtext", "cpp", "csharp", "css", "dts", "elixir", "fortran", "html", "java", "kotlin", "markdown", "matlab", "objc", "pascal", "perl", "php", "python", "ruby", "rust", "scheme", "tex"];
+        string[] diffValues =
+        [
+            "set", "astextplain", "ada", "bibtext", "cpp", "csharp", "css", "dts", "elixir", "fortran", "html", "java",
+            "kotlin", "markdown", "matlab", "objc", "pascal", "perl", "php", "python", "ruby", "rust", "scheme", "tex"
+        ];
         GitArgumentBuilder cmd = new("check-attr")
         {
             "-z",
@@ -74,20 +72,20 @@ public static class FileHelper
             "--",
             fileName.Quote()
         };
-        ExecutionResult result = module.GitExecutable.Execute(cmd, throwOnErrorExit: false);
+        var result = module.GitExecutable.Execute(cmd, throwOnErrorExit: false);
         if (!result.ExitedSuccessfully)
         {
             return null;
         }
 
-        string[] lines = result.StandardOutput.Split(Delimiters.NullAndLineFeed);
+        var lines = result.StandardOutput.Split(Delimiters.NullAndLineFeed);
         Dictionary<string, string> attributes = [];
-        for (int i = 0; i < lines.Length - 2; i += 3)
+        for (var i = 0; i < lines.Length - 2; i += 3)
         {
             attributes[lines[i + 1].Trim()] = lines[i + 2].Trim();
         }
 
-        if (attributes.TryGetValue("diff", out string? diff))
+        if (attributes.TryGetValue("diff", out var diff))
         {
             if (diff == "unset")
             {
@@ -100,7 +98,7 @@ public static class FileHelper
             }
         }
 
-        if (attributes.TryGetValue("text", out string? text))
+        if (attributes.TryGetValue("text", out var text))
         {
             if (text != "unset" && text != "unspecified")
             {
@@ -108,7 +106,7 @@ public static class FileHelper
             }
         }
 
-        if (attributes.TryGetValue("crlf", out string? crlf))
+        if (attributes.TryGetValue("crlf", out var crlf))
         {
             if (crlf != "unset" && crlf != "unspecified")
             {
@@ -116,7 +114,7 @@ public static class FileHelper
             }
         }
 
-        if (attributes.TryGetValue("eol", out string? eol))
+        if (attributes.TryGetValue("eol", out var eol))
         {
             if (eol != "unset" && eol != "unspecified")
             {
@@ -129,7 +127,7 @@ public static class FileHelper
 
     public static bool IsImage(string fileName)
     {
-        return HasMatchingExtension(ImageExtensions, fileName);
+        return HasMatchingExtension(_imageExtensions, fileName);
     }
 
     private static bool HasMatchingExtension(IEnumerable<string> extensions, string fileName)
@@ -144,8 +142,8 @@ public static class FileHelper
         // Check for binary file.
         if (content?.Length is > 0)
         {
-            int nullCount = 0;
-            foreach (byte b in content)
+            var nullCount = 0;
+            foreach (var b in content)
             {
                 if (b == 0 && ++nullCount > 5)
                 {
@@ -162,8 +160,8 @@ public static class FileHelper
         // Check for binary file.
         if (!string.IsNullOrEmpty(content))
         {
-            int nullCount = 0;
-            foreach (char c in content)
+            var nullCount = 0;
+            foreach (var c in content)
             {
                 if (c == '\0')
                 {

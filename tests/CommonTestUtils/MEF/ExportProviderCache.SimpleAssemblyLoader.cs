@@ -14,10 +14,12 @@ public static partial class ExportProviderCache
     {
         public static readonly IAssemblyLoader Instance = new SimpleAssemblyLoader();
 
-        public Assembly LoadAssembly(AssemblyName assemblyName)
-            => Assembly.Load(assemblyName);
+        Assembly IAssemblyLoader.LoadAssembly(AssemblyName assemblyName)
+        {
+            return Assembly.Load(assemblyName);
+        }
 
-        public Assembly LoadAssembly(string assemblyFullName, string? codeBasePath)
+        Assembly IAssemblyLoader.LoadAssembly(string assemblyFullName, string? codeBasePath)
         {
             AssemblyName assemblyName = new(assemblyFullName);
             if (!string.IsNullOrEmpty(codeBasePath))

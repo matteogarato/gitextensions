@@ -1,46 +1,42 @@
-﻿using GitExtensions.Extensibility;
-using GitExtensions.Extensibility.Git;
-using GitUI.ScriptsEngine;
+﻿using GitUI.ScriptsEngine;
+using GitUI.UserControls;
 
 namespace GitUI.CommandsDialogs;
 
-internal sealed class ScriptOptionsProvider : ScriptOptionsProviderBase
+internal sealed class ScriptOptionsProvider(
+    Func<IEnumerable<string>> getSelectedRelativePaths,
+    Func<int?> getCurrentLineNumber,
+    Func<int?> getCurrentColumnNumber)
+    : ScriptOptionsProviderBase
 {
     private const string _selectedRelativePaths = "SelectedRelativePaths";
-    internal const string _lineNumber = "LineNumber";
+    internal const string LineNumber = "LineNumber";
     private const string _columnNumber = "ColumnNumber";
 
-    private Func<IEnumerable<string>> _getSelectedRelativePaths;
-    private Func<int?> _getCurrentLineNumber;
-    private Func<int?> _getCurrentColumnNumber;
-
-    public ScriptOptionsProvider(Func<IEnumerable<string>> getSelectedRelativePaths, Func<int?> getCurrentLineNumber, Func<int?> getCurrentColumnNumber)
-    {
-        _getSelectedRelativePaths = getSelectedRelativePaths;
-        _getCurrentLineNumber = getCurrentLineNumber;
-        _getCurrentColumnNumber = getCurrentColumnNumber;
-    }
-
-    public ScriptOptionsProvider(FileStatusList fileStatusList, Func<int?> getCurrentLineNumber, Func<int?> getCurrentColumn)
-        : this(getSelectedRelativePaths: () => fileStatusList.SelectedFolder is RelativePath folder
+    public ScriptOptionsProvider(FileStatusList fileStatusList, Func<int?> getCurrentLineNumber,
+        Func<int?> getCurrentColumn)
+        : this(() => fileStatusList.SelectedFolder is { } folder
                 ? [folder.Value]
                 : fileStatusList.SelectedItems.Select(item => item.Item.Name),
             getCurrentLineNumber, getCurrentColumn)
     {
     }
 
-    private static string[] ImplementedOptions => [_selectedRelativePaths, _lineNumber, _columnNumber];
+    private static string[] ImplementedOptions
+    {
+        get => [_selectedRelativePaths, LineNumber, _columnNumber];
+    }
 
     public override IEnumerable<string> GetValues(string option)
     {
         switch (option)
         {
             case _selectedRelativePaths:
-                return _getSelectedRelativePaths().Select(item => item.EscapeForCommandLine());
-            case _lineNumber:
-                return _getCurrentLineNumber() is int lineNumber ? [lineNumber.ToString()] : [];
+                return getSelectedRelativePaths().Select(item => item.EscapeForCommandLine());
+            case LineNumber:
+                return getCurrentLineNumber() is { } lineNumber ? [lineNumber.ToString()] : [];
             case _columnNumber:
-                return _getCurrentColumnNumber() is int columnNumber ? [columnNumber.ToString()] : [];
+                return getCurrentColumnNumber() is { } columnNumber ? [columnNumber.ToString()] : [];
             default:
                 return base.GetValues(option);
         }

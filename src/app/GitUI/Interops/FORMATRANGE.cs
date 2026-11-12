@@ -1,13 +1,13 @@
-﻿namespace System;
+﻿namespace GitUI.Interops;
 
 internal static partial class NativeMethods
 {
-    public struct FORMATRANGE
+    public struct Formatrange
     {
-        public IntPtr hdc;             // Actual DC to draw on
-        public IntPtr hdcTarget;       // Target DC for determining text formatting
-        public RECT rc;                // Region of the DC to draw to (in twips)
-        public RECT rcPage;            // Region of the whole DC (page size) (in twips)
-        public CHARRANGE chrg;         // Range of text to draw (see earlier declaration)
+        public IntPtr Hdc; // Actual DC to draw on
+        public IntPtr HdcTarget; // Target DC for determining text formatting
+        public Rect Rc; // Region of the DC to draw to (in twips)
+        public Rect RcPage; // Region of the whole DC (page size) (in twips)
+        public Charrange Chrg; // Range of text to draw (see earlier declaration)
     }
 }

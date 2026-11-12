@@ -1,10 +1,11 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.CommandsDialogs;
+using GitUI.Properties;
 using GitUI.UserControls.RevisionGrid;
-using ResourceManager;
 using ResourceManager.Hotkey;
 
 namespace GitUI.UserControls;
@@ -13,11 +14,11 @@ internal partial class FilterToolBar : ToolStripEx
 {
     internal const string ReflogButtonName = nameof(tsbShowReflog);
     private static readonly string[] _noResultsFound = [TranslatedStrings.NoResultsFound];
-    private Func<IGitModule>? _getModule;
-    private IRevisionGridFilter? _revisionGridFilter;
-    private bool _isApplyingFilter;
     private bool _filterBeingChanged;
+    private Func<IGitModule>? _getModule;
     private Func<RefsFilter, IReadOnlyList<IGitRef>> _getRefs = null!;
+    private bool _isApplyingFilter;
+    private IRevisionGridFilter? _revisionGridFilter;
     private string _tslblRevisionFilterToolTip = null!;
 
     public FilterToolBar()
@@ -25,14 +26,14 @@ internal partial class FilterToolBar : ToolStripEx
         InitializeComponent();
 
         // Select an option until we get a filter bound.
-        SelectShowBranchesFilterOption(selectedIndex: 0);
+        SelectShowBranchesFilterOption(0);
 
         tstxtRevisionFilter.Items.AddRange(AppSettings.RevisionFilterDropdowns
             .Union([
                 @"--invert-grep --grep=""EXCLUDE_COMMIT_MESSAGE_REGEX_PATTERN""",
                 @"--perl-regexp --author=""^(?!.*EXCLUDE_AUTHOR_REGEX_PATTERN)""",
                 @"--exclude=refs/remotes/EXCLUDE_REMOTE_REGEX_PATTERN"
-                ])
+            ])
             .ToArray());
         tstxtRevisionFilter.ComboBox.ResizeDropDownWidth();
     }
@@ -43,7 +44,7 @@ internal partial class FilterToolBar : ToolStripEx
     }
 
     /// <summary>
-    ///  Applies the preset branch filters, such as "show all", "show current", and "show filtered".
+    ///     Applies the preset branch filters, such as "show all", "show current", and "show filtered".
     /// </summary>
     private void ApplyPresetBranchesFilter(Action filterAction)
     {
@@ -56,7 +57,7 @@ internal partial class FilterToolBar : ToolStripEx
     }
 
     /// <summary>
-    ///  Applies custom branch filters supplied via the filter textbox.
+    ///     Applies custom branch filters supplied via the filter textbox.
     /// </summary>
     private void ApplyCustomBranchFilter(bool checkBranch = true)
     {
@@ -71,17 +72,20 @@ internal partial class FilterToolBar : ToolStripEx
         _filterBeingChanged = false;
 
         // Apply the textbox contents, no check if the (multiple) options is in tscboBranchFilter.Items (or that the list is generated)
-        string filter = tscboBranchFilter.Text == TranslatedStrings.NoResultsFound ? string.Empty : tscboBranchFilter.Text;
+        var filter = tscboBranchFilter.Text == TranslatedStrings.NoResultsFound
+            ? string.Empty
+            : tscboBranchFilter.Text;
         if (checkBranch && !string.IsNullOrWhiteSpace(filter))
         {
             List<string> newFilter = [];
-            IReadOnlyList<IGitRef> refs = _getRefs(RefsFilter.NoFilter);
+            var refs = _getRefs(RefsFilter.NoFilter);
 
             // Split at whitespace (char[])null is default) but with split options.
             // Ignore quoting, Git revisions do not allow spaces.
-            foreach (string branch in filter.Split((char[]?)null, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            foreach (var branch in filter.Split((char[]?)null,
+                         StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
             {
-                bool wildcardBranchFilter = branch.IndexOfAny(Delimiters.WildcardBranchSearchValues) >= 0;
+                var wildcardBranchFilter = branch.IndexOfAny(Delimiters.WildcardBranchSearchValues) >= 0;
                 if (branch.StartsWith("--") || refs.Any(r => r.LocalName == branch) || branch.Contains(".."))
                 {
                     // Added as git-log option or revision filter
@@ -92,8 +96,8 @@ internal partial class FilterToolBar : ToolStripEx
                 }
                 else
                 {
-                    string gitref = branch.StartsWith('^') ? branch[1..] : branch;
-                    ObjectId oid = GetModule().RevParse(gitref);
+                    var gitref = branch.StartsWith('^') ? branch[1..] : branch;
+                    var oid = GetModule().RevParse(gitref);
                     if (oid.IsZero)
                     {
                         TaskDialogPage page = new()
@@ -130,10 +134,10 @@ internal partial class FilterToolBar : ToolStripEx
 
         _isApplyingFilter = true;
         RevisionGridFilter.SetAndApplyRevisionFilter(new RevisionFilter(tstxtRevisionFilter.Text.Trim(),
-                                                                        tsmiCommitFilter.Checked,
-                                                                        tsmiCommitterFilter.Checked,
-                                                                        tsmiAuthorFilter.Checked,
-                                                                        tsmiDiffContainsFilter.Checked));
+            tsmiCommitFilter.Checked,
+            tsmiCommitterFilter.Checked,
+            tsmiAuthorFilter.Checked,
+            tsmiDiffContainsFilter.Checked));
         _isApplyingFilter = false;
     }
 
@@ -190,7 +194,7 @@ internal partial class FilterToolBar : ToolStripEx
             selectedItem = tsmiShowBranchesCurrent;
         }
 
-        int selectedIndex = tssbtnShowBranches.DropDownItems.IndexOf(selectedItem);
+        var selectedIndex = tssbtnShowBranches.DropDownItems.IndexOf(selectedItem);
         SelectShowBranchesFilterOption(selectedIndex);
     }
 
@@ -199,7 +203,7 @@ internal partial class FilterToolBar : ToolStripEx
         tsddbtnRevisionFilter.BackColor = toolBackColor;
         tsddbtnRevisionFilter.ForeColor = toolForeColor;
 
-        Color toolTextBoxBackColor = SystemColors.Window;
+        var toolTextBoxBackColor = SystemColors.Window;
         tscboBranchFilter.BackColor = toolTextBoxBackColor;
         tscboBranchFilter.ForeColor = toolForeColor;
         tstxtRevisionFilter.BackColor = toolTextBoxBackColor;
@@ -213,25 +217,25 @@ internal partial class FilterToolBar : ToolStripEx
             selectedIndex = 0;
         }
 
-        ToolStripItem selectedMenuItem = tssbtnShowBranches.DropDownItems[selectedIndex];
+        var selectedMenuItem = tssbtnShowBranches.DropDownItems[selectedIndex];
         tssbtnShowBranches.Image = selectedMenuItem.Image;
         tssbtnShowBranches.Text = selectedMenuItem.Text;
         tssbtnShowBranches.ToolTipText = selectedMenuItem.ToolTipText;
     }
 
     /// <summary>
-    ///  Sets the branches filter.
-    ///  No check that the branches exist (must be checked already, expected to be called from left panel).
+    ///     Sets the branches filter.
+    ///     No check that the branches exist (must be checked already, expected to be called from left panel).
     /// </summary>
     /// <param name="filter">The branches to filter separated by whitespace.</param>
     public void SetBranchFilter(string? filter)
     {
         tscboBranchFilter.Text = filter;
-        ApplyCustomBranchFilter(checkBranch: false);
+        ApplyCustomBranchFilter(false);
     }
 
     /// <summary>
-    /// If focus on branch filter, focus revision filter otherwise branch filter.
+    ///     If focus on branch filter, focus revision filter otherwise branch filter.
     /// </summary>
     public void SetFocus()
     {
@@ -242,7 +246,7 @@ internal partial class FilterToolBar : ToolStripEx
     }
 
     /// <summary>
-    ///  Sets the revision filter.
+    ///     Sets the revision filter.
     /// </summary>
     /// <param name="filter">The filter to apply.</param>
     public void SetRevisionFilter(string? filter)
@@ -258,7 +262,7 @@ internal partial class FilterToolBar : ToolStripEx
     }
 
     /// <summary>
-    /// Update the function to get refs for branch dropdown filter
+    ///     Update the function to get refs for branch dropdown filter
     /// </summary>
     /// <param name="getRefs">Function to get refs, expected to be cached</param>
     public void RefreshRevisionFunction(Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs)
@@ -268,14 +272,14 @@ internal partial class FilterToolBar : ToolStripEx
     }
 
     /// <summary>
-    /// Update the tscboBranchFilter dropdown items matching the current filter.
-    /// This is called when dropdown clicked or text is manually changed
-    /// (so tscboBranchFilter.Items is not necessarily available when set externally
-    /// from the left panel or FormBrowse).
+    ///     Update the tscboBranchFilter dropdown items matching the current filter.
+    ///     This is called when dropdown clicked or text is manually changed
+    ///     (so tscboBranchFilter.Items is not necessarily available when set externally
+    ///     from the left panel or FormBrowse).
     /// </summary>
     private void UpdateBranchFilterItems()
     {
-        IGitModule module = GetModule();
+        var module = GetModule();
         if (!module.IsValidGitWorkingDir())
         {
             Enabled = false;
@@ -291,8 +295,8 @@ internal partial class FilterToolBar : ToolStripEx
                 return;
             }
 
-            RefsFilter branchesFilter = BranchesFilter();
-            IReadOnlyList<IGitRef> refs = _getRefs(branchesFilter);
+            var branchesFilter = BranchesFilter();
+            var refs = _getRefs(branchesFilter);
             string[] branches = [.. refs.Select(branch => branch.Name)];
 
             await this.SwitchToMainThreadAsync();
@@ -305,30 +309,31 @@ internal partial class FilterToolBar : ToolStripEx
         {
             // Options are interpreted as the refs the search should be limited too
             // If neither option is selected all refs will be queried also including stash and notes
-            RefsFilter refs = (tsmiBranchLocal.Checked ? RefsFilter.Heads : RefsFilter.NoFilter)
-                | (tsmiBranchTag.Checked ? RefsFilter.Tags : RefsFilter.NoFilter)
-                | (tsmiBranchRemote.Checked ? RefsFilter.Remotes : RefsFilter.NoFilter);
+            var refs = (tsmiBranchLocal.Checked ? RefsFilter.Heads : RefsFilter.NoFilter)
+                       | (tsmiBranchTag.Checked ? RefsFilter.Tags : RefsFilter.NoFilter)
+                       | (tsmiBranchRemote.Checked ? RefsFilter.Remotes : RefsFilter.NoFilter);
             return refs;
         }
 
         void BindBranches(string[] branches)
         {
-            IEnumerable<string> autoCompleteList = tscboBranchFilter.AutoCompleteCustomSource.Cast<string>();
+            var autoCompleteList = tscboBranchFilter.AutoCompleteCustomSource.Cast<string>();
             if (!autoCompleteList.SequenceEqual(branches))
             {
                 tscboBranchFilter.AutoCompleteCustomSource.Clear();
                 tscboBranchFilter.AutoCompleteCustomSource.AddRange(branches);
             }
 
-            string filter = tscboBranchFilter.Items.Count > 0 ? tscboBranchFilter.Text : string.Empty;
-            string[] matches = [.. branches.Where(branch => branch.Contains(filter, StringComparison.InvariantCultureIgnoreCase))];
+            var filter = tscboBranchFilter.Items.Count > 0 ? tscboBranchFilter.Text : string.Empty;
+            string[] matches =
+                [.. branches.Where(branch => branch.Contains(filter, StringComparison.InvariantCultureIgnoreCase))];
 
             if (matches.Length == 0)
             {
                 matches = _noResultsFound;
             }
 
-            int index = tscboBranchFilter.SelectionStart;
+            var index = tscboBranchFilter.SelectionStart;
             tscboBranchFilter.BeginUpdate();
             tscboBranchFilter.Items.Clear();
             tscboBranchFilter.Items.AddRange(matches);
@@ -358,14 +363,14 @@ internal partial class FilterToolBar : ToolStripEx
             (e.MessageFilter, tsmiCommitFilter),
             (e.CommitterFilter, tsmiCommitterFilter),
             (e.AuthorFilter, tsmiAuthorFilter),
-            (e.DiffContentFilter, tsmiDiffContainsFilter),
+            (e.DiffContentFilter, tsmiDiffContainsFilter)
         ];
 
         // If there is no filter in filterInfo, clear text but retain checks
         tstxtRevisionFilter.Text = "";
         if (revFilters.Any(item => !string.IsNullOrWhiteSpace(item.filter)))
         {
-            foreach ((string filter, ToolStripMenuItem menuItem) item in revFilters)
+            foreach (var item in revFilters)
             {
                 // Check the first menuitem that matches and following identical filters
                 if (!string.IsNullOrWhiteSpace(item.filter)
@@ -383,8 +388,9 @@ internal partial class FilterToolBar : ToolStripEx
         }
 
         // Add to dropdown and settings, unless already included
-        string filter = tstxtRevisionFilter.Text.Trim();
-        if (!string.IsNullOrWhiteSpace(filter) && (tstxtRevisionFilter.Items.Count == 0 || filter != (string?)tstxtRevisionFilter.Items[0]))
+        var filter = tstxtRevisionFilter.Text.Trim();
+        if (!string.IsNullOrWhiteSpace(filter) &&
+            (tstxtRevisionFilter.Items.Count == 0 || filter != (string?)tstxtRevisionFilter.Items[0]))
         {
             if (tstxtRevisionFilter.Items.Contains(filter))
             {
@@ -394,13 +400,16 @@ internal partial class FilterToolBar : ToolStripEx
             tstxtRevisionFilter.Items.Insert(0, filter);
             tstxtRevisionFilter.Text = filter;
             const int maxFilterItems = 30;
-            AppSettings.RevisionFilterDropdowns = [.. tstxtRevisionFilter.Items.Cast<object>()
-                .Select(item => item.ToString()!).Take(maxFilterItems)];
+            AppSettings.RevisionFilterDropdowns =
+            [
+                .. tstxtRevisionFilter.Items.Cast<object>()
+                    .Select(item => item.ToString()!).Take(maxFilterItems)
+            ];
         }
 
         tsbtnAdvancedFilter.ToolTipText = e.FilterSummary;
         tsbtnAdvancedFilter.AutoToolTip = !string.IsNullOrEmpty(tsbtnAdvancedFilter.ToolTipText);
-        tsbtnAdvancedFilter.Image = e.HasFilter ? Properties.Images.FunnelExclamation : Properties.Images.FunnelPencil;
+        tsbtnAdvancedFilter.Image = e.HasFilter ? Images.FunnelExclamation : Images.FunnelPencil;
         tsmiResetPathFilters.Enabled = !string.IsNullOrEmpty(e.PathFilter);
         tsmiResetAllFilters.Enabled = e.HasFilter;
     }
@@ -450,7 +459,7 @@ internal partial class FilterToolBar : ToolStripEx
     {
         if (e.KeyCode == Keys.Enter)
         {
-            ApplyCustomBranchFilter(checkBranch: true);
+            ApplyCustomBranchFilter();
         }
     }
 
@@ -465,84 +474,216 @@ internal partial class FilterToolBar : ToolStripEx
         UpdateBranchFilterItems();
     }
 
-    private void tsmiDisablePathFilters_Click(object sender, EventArgs e) => RevisionGridFilter.SetAndApplyPathFilter("");
+    private void tsmiDisablePathFilters_Click(object sender, EventArgs e)
+    {
+        RevisionGridFilter.SetAndApplyPathFilter("");
+    }
 
-    private void tsmiDisableAllFilters_Click(object sender, EventArgs e) => RevisionGridFilter.ResetAllFiltersAndRefresh();
+    private void tsmiDisableAllFilters_Click(object sender, EventArgs e)
+    {
+        RevisionGridFilter.ResetAllFiltersAndRefresh();
+    }
 
-    private void tsmiAdvancedFilter_Click(object sender, EventArgs e) => RevisionGridFilter.ShowRevisionFilterDialog();
+    private void tsmiAdvancedFilter_Click(object sender, EventArgs e)
+    {
+        RevisionGridFilter.ShowRevisionFilterDialog();
+    }
 
-    private void tsmiShowReflogBranches_Click(object sender, EventArgs e) => ApplyPresetBranchesFilter(RevisionGridFilter.ShowReflog);
+    private void tsmiShowReflogBranches_Click(object sender, EventArgs e)
+    {
+        ApplyPresetBranchesFilter(RevisionGridFilter.ShowReflog);
+    }
 
-    private void tsmiShowBranchesAll_Click(object sender, EventArgs e) => ApplyPresetBranchesFilter(RevisionGridFilter.ShowAllBranches);
+    private void tsmiShowBranchesAll_Click(object sender, EventArgs e)
+    {
+        ApplyPresetBranchesFilter(RevisionGridFilter.ShowAllBranches);
+    }
 
-    private void tsmiShowBranchesCurrent_Click(object sender, EventArgs e) => ApplyPresetBranchesFilter(RevisionGridFilter.ShowCurrentBranchOnly);
+    private void tsmiShowBranchesCurrent_Click(object sender, EventArgs e)
+    {
+        ApplyPresetBranchesFilter(RevisionGridFilter.ShowCurrentBranchOnly);
+    }
 
-    private void tsmiShowBranchesFiltered_Click(object sender, EventArgs e) => ApplyPresetBranchesFilter(RevisionGridFilter.ShowFilteredBranches);
+    private void tsmiShowBranchesFiltered_Click(object sender, EventArgs e)
+    {
+        ApplyPresetBranchesFilter(RevisionGridFilter.ShowFilteredBranches);
+    }
 
-    private void tsmiShowOnlyFirstParent_Click(object sender, EventArgs e) => RevisionGridFilter.ToggleShowOnlyFirstParent();
+    private void tsmiShowOnlyFirstParent_Click(object sender, EventArgs e)
+    {
+        RevisionGridFilter.ToggleShowOnlyFirstParent();
+    }
 
-    private void tsmiShowReflog_Click(object sender, EventArgs e) => RevisionGridFilter.ToggleShowReflogReferences();
+    private void tsmiShowReflog_Click(object sender, EventArgs e)
+    {
+        RevisionGridFilter.ToggleShowReflogReferences();
+    }
 
-    private void tssbtnShowBranches_Click(object sender, EventArgs e) => tssbtnShowBranches.ShowDropDown();
+    private void tssbtnShowBranches_Click(object sender, EventArgs e)
+    {
+        tssbtnShowBranches.ShowDropDown();
+    }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
+    {
+        return new TestAccessor(this);
+    }
 
     internal void RefreshBrowseDialogShortcutKeys(IReadOnlyList<HotkeyCommand> hotkeys)
     {
         _tslblRevisionFilterToolTip ??= tslblRevisionFilter.ToolTipText!;
 
-        tslblRevisionFilter.ToolTipText = _tslblRevisionFilterToolTip.UpdateSuffix(hotkeys.GetShortcutToolTip(FormBrowse.Command.FocusFilter));
+        tslblRevisionFilter.ToolTipText =
+            _tslblRevisionFilterToolTip.UpdateSuffix(hotkeys.GetShortcutToolTip(FormBrowse.Command.FocusFilter));
     }
 
     internal void RefreshRevisionGridShortcutKeys(IReadOnlyList<HotkeyCommand> hotkeys)
     {
-        tsbShowReflog.ToolTipText = TranslatedStrings.ShowReflogTooltip.UpdateSuffix(hotkeys.GetShortcutToolTip(RevisionGridControl.Command.ShowReflogReferences));
-        tsmiShowOnlyFirstParent.ToolTipText = TranslatedStrings.ShowOnlyFirstParent.UpdateSuffix(hotkeys.GetShortcutToolTip(RevisionGridControl.Command.ShowCurrentBranchOnly));
+        tsbShowReflog.ToolTipText =
+            TranslatedStrings.ShowReflogTooltip.UpdateSuffix(
+                hotkeys.GetShortcutToolTip(RevisionGridControl.Command.ShowReflogReferences));
+        tsmiShowOnlyFirstParent.ToolTipText =
+            TranslatedStrings.ShowOnlyFirstParent.UpdateSuffix(
+                hotkeys.GetShortcutToolTip(RevisionGridControl.Command.ShowCurrentBranchOnly));
 
-        tsmiShowBranchesAll.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(RevisionGridControl.Command.ShowAllBranches);
-        tsmiShowBranchesFiltered.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(RevisionGridControl.Command.ShowFilteredBranches);
-        tsmiShowBranchesCurrent.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(RevisionGridControl.Command.ShowCurrentBranchOnly);
+        tsmiShowBranchesAll.ShortcutKeyDisplayString =
+            hotkeys.GetShortcutDisplay(RevisionGridControl.Command.ShowAllBranches);
+        tsmiShowBranchesFiltered.ShortcutKeyDisplayString =
+            hotkeys.GetShortcutDisplay(RevisionGridControl.Command.ShowFilteredBranches);
+        tsmiShowBranchesCurrent.ShortcutKeyDisplayString =
+            hotkeys.GetShortcutDisplay(RevisionGridControl.Command.ShowCurrentBranchOnly);
     }
 
-    internal readonly struct TestAccessor
+    internal readonly struct TestAccessor(FilterToolBar control)
     {
-        private readonly FilterToolBar _control;
-
-        public TestAccessor(FilterToolBar control)
+        public ToolStripMenuItem TsmiBranchLocal
         {
-            _control = control;
+            get => control.tsmiBranchLocal;
         }
 
-        public ToolStripMenuItem tsmiBranchLocal => _control.tsmiBranchLocal;
-        public ToolStripMenuItem tsmiBranchRemote => _control.tsmiBranchRemote;
-        public ToolStripMenuItem tsmiBranchTag => _control.tsmiBranchTag;
-        public ToolStripMenuItem tsmiCommitFilter => _control.tsmiCommitFilter;
-        public ToolStripMenuItem tsmiCommitterFilter => _control.tsmiCommitterFilter;
-        public ToolStripMenuItem tsmiAuthorFilter => _control.tsmiAuthorFilter;
-        public ToolStripMenuItem tsmiDiffContainsFilter => _control.tsmiDiffContainsFilter;
-        public ToolStripButton tsmiShowOnlyFirstParent => _control.tsmiShowOnlyFirstParent;
-        public ToolStripButton tsbShowReflog => _control.tsbShowReflog;
-        public ToolStripComboBox tstxtRevisionFilter => _control.tstxtRevisionFilter;
-        public ToolStripLabel tslblRevisionFilter => _control.tslblRevisionFilter;
-        public ToolStripSplitButton tsbtnAdvancedFilter => _control.tsbtnAdvancedFilter;
-        public ToolStripSplitButton tssbtnShowBranches => _control.tssbtnShowBranches;
-        public ToolStripMenuItem tsmiShowBranchesAll => _control.tsmiShowBranchesAll;
-        public ToolStripMenuItem tsmiShowBranchesCurrent => _control.tsmiShowBranchesCurrent;
-        public ToolStripMenuItem tsmiShowBranchesFiltered => _control.tsmiShowBranchesFiltered;
-        public ToolStripComboBox tscboBranchFilter => _control.tscboBranchFilter;
-        public void RefreshRevisionFunction(Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs) => _control.RefreshRevisionFunction(getRefs);
-        public ToolStripDropDownButton tsddbtnBranchFilter => _control.tsddbtnBranchFilter;
-        public ToolStripDropDownButton tsddbtnRevisionFilter => _control.tsddbtnRevisionFilter;
-        public bool _isApplyingFilter => _control._isApplyingFilter;
-        public bool _filterBeingChanged => _control._filterBeingChanged;
+        public ToolStripMenuItem TsmiBranchRemote
+        {
+            get => control.tsmiBranchRemote;
+        }
 
-        public IRevisionGridFilter RevisionGridFilter => _control.RevisionGridFilter;
+        public ToolStripMenuItem TsmiBranchTag
+        {
+            get => control.tsmiBranchTag;
+        }
 
-        public void ApplyCustomBranchFilter(bool checkBranch) => _control.ApplyCustomBranchFilter(checkBranch);
+        public ToolStripMenuItem TsmiCommitFilter
+        {
+            get => control.tsmiCommitFilter;
+        }
 
-        public void ApplyRevisionFilter() => _control.ApplyRevisionFilter();
+        public ToolStripMenuItem TsmiCommitterFilter
+        {
+            get => control.tsmiCommitterFilter;
+        }
 
-        public IGitModule GetModule() => _control.GetModule();
+        public ToolStripMenuItem TsmiAuthorFilter
+        {
+            get => control.tsmiAuthorFilter;
+        }
+
+        public ToolStripMenuItem TsmiDiffContainsFilter
+        {
+            get => control.tsmiDiffContainsFilter;
+        }
+
+        public ToolStripButton TsmiShowOnlyFirstParent
+        {
+            get => control.tsmiShowOnlyFirstParent;
+        }
+
+        public ToolStripButton TsbShowReflog
+        {
+            get => control.tsbShowReflog;
+        }
+
+        public ToolStripComboBox TstxtRevisionFilter
+        {
+            get => control.tstxtRevisionFilter;
+        }
+
+        public ToolStripLabel TslblRevisionFilter
+        {
+            get => control.tslblRevisionFilter;
+        }
+
+        public ToolStripSplitButton TsbtnAdvancedFilter
+        {
+            get => control.tsbtnAdvancedFilter;
+        }
+
+        public ToolStripSplitButton TssbtnShowBranches
+        {
+            get => control.tssbtnShowBranches;
+        }
+
+        public ToolStripMenuItem TsmiShowBranchesAll
+        {
+            get => control.tsmiShowBranchesAll;
+        }
+
+        public ToolStripMenuItem TsmiShowBranchesCurrent
+        {
+            get => control.tsmiShowBranchesCurrent;
+        }
+
+        public ToolStripMenuItem TsmiShowBranchesFiltered
+        {
+            get => control.tsmiShowBranchesFiltered;
+        }
+
+        public ToolStripComboBox TscboBranchFilter
+        {
+            get => control.tscboBranchFilter;
+        }
+
+        public void RefreshRevisionFunction(Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs)
+        {
+            control.RefreshRevisionFunction(getRefs);
+        }
+
+        public ToolStripDropDownButton TsddbtnBranchFilter
+        {
+            get => control.tsddbtnBranchFilter;
+        }
+
+        public ToolStripDropDownButton TsddbtnRevisionFilter
+        {
+            get => control.tsddbtnRevisionFilter;
+        }
+
+        public bool IsApplyingFilter
+        {
+            get => control._isApplyingFilter;
+        }
+
+        public bool FilterBeingChanged
+        {
+            get => control._filterBeingChanged;
+        }
+
+        public IRevisionGridFilter RevisionGridFilter
+        {
+            get => control.RevisionGridFilter;
+        }
+
+        public void ApplyCustomBranchFilter(bool checkBranch)
+        {
+            control.ApplyCustomBranchFilter(checkBranch);
+        }
+
+        public void ApplyRevisionFilter()
+        {
+            control.ApplyRevisionFilter();
+        }
+
+        public IGitModule GetModule()
+        {
+            return control.GetModule();
+        }
     }
 }

@@ -7,6 +7,10 @@ public interface IBuildDurationFormatter
 
 public class BuildDurationFormatter : IBuildDurationFormatter
 {
-    public string Format(long? durationMilliseconds)
-        => durationMilliseconds.HasValue ? TimeSpan.FromMilliseconds(durationMilliseconds.Value).ToString(@"mm\:ss") : string.Empty;
+    string IBuildDurationFormatter.Format(long? durationMilliseconds)
+    {
+        return durationMilliseconds.HasValue
+            ? TimeSpan.FromMilliseconds(durationMilliseconds.Value).ToString(@"mm\:ss")
+            : string.Empty;
+    }
 }

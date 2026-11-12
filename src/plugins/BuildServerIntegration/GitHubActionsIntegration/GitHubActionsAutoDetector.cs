@@ -8,15 +8,18 @@ namespace GitExtensions.Plugins.GitHubActionsIntegration;
 [Export(typeof(IBuildServerAutoDetector))]
 internal sealed class GitHubActionsAutoDetector : IBuildServerAutoDetector
 {
-    public string BuildServerType => GitHubActionsAdapter.PluginName;
+    string IBuildServerAutoDetector.BuildServerType
+    {
+        get => GitHubActionsAdapter.PluginName;
+    }
 
-    public bool TryDetect(IReadOnlyList<string> remoteUrls, SettingsSource? settingsSource)
+    bool IBuildServerAutoDetector.TryDetect(IReadOnlyList<string> remoteUrls, SettingsSource? settingsSource)
     {
         GitHubRemoteParser parser = new();
 
-        foreach (string remoteUrl in remoteUrls)
+        foreach (var remoteUrl in remoteUrls)
         {
-            if (parser.TryExtractGitHubDataFromRemoteUrl(remoteUrl, out string? owner, out string? repository))
+            if (parser.TryExtractGitHubDataFromRemoteUrl(remoteUrl, out var owner, out var repository))
             {
                 if (settingsSource is not null)
                 {
@@ -25,7 +28,8 @@ internal sealed class GitHubActionsAutoDetector : IBuildServerAutoDetector
                         settingsSource.SetString(GitHubActionsAdapter.SettingOwner, owner);
                     }
 
-                    if (string.IsNullOrWhiteSpace(settingsSource.GetString(GitHubActionsAdapter.SettingRepository, null)))
+                    if (string.IsNullOrWhiteSpace(
+                            settingsSource.GetString(GitHubActionsAdapter.SettingRepository, null)))
                     {
                         settingsSource.SetString(GitHubActionsAdapter.SettingRepository, repository);
                     }

@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid;
@@ -7,23 +7,22 @@ using Microsoft.VisualStudio.Threading;
 
 namespace GitUI.LeftPanel;
 
-internal abstract class BaseRefTree : BaseRevisionTree
+internal abstract class BaseRefTree(
+    TreeNode treeNode,
+    IGitUiCommandsSource uiCommands,
+    ICheckRefs refsSource,
+    RefsFilter filter)
+    : BaseRevisionTree(treeNode, uiCommands, refsSource)
 {
+    protected readonly RefsFilter RefsFilter = filter;
+
     // Retains the list of currently loaded refs (branches/tags).
     // This is needed to apply filtering without reloading the data.
-    protected IReadOnlyList<IGitRef>? _loadedRefs;
-
-    protected readonly RefsFilter _refsFilter;
-
-    protected BaseRefTree(TreeNode treeNode, IGitUICommandsSource uiCommands, ICheckRefs refsSource, RefsFilter filter)
-        : base(treeNode, uiCommands, refsSource)
-    {
-        _refsFilter = filter;
-    }
+    protected IReadOnlyList<IGitRef>? LoadedRefs;
 
     protected override void OnAttached()
     {
-        _loadedRefs = null;
+        LoadedRefs = null;
         base.OnAttached();
     }
 
@@ -32,19 +31,19 @@ internal abstract class BaseRefTree : BaseRevisionTree
         await TaskScheduler.Default;
         token.ThrowIfCancellationRequested();
 
-        if (_loadedRefs is null)
+        if (LoadedRefs is null)
         {
-            _loadedRefs = getRefs(_refsFilter);
+            LoadedRefs = getRefs(RefsFilter);
             token.ThrowIfCancellationRequested();
         }
 
-        return FillTree(_loadedRefs, token);
+        return FillTree(LoadedRefs, token);
     }
 
     protected abstract Nodes FillTree(IReadOnlyList<IGitRef> branches, CancellationToken token);
 
     /// <summary>
-    /// Requests (from FormBrowse) to refresh the data tree and to apply filtering, if necessary.
+    ///     Requests (from FormBrowse) to refresh the data tree and to apply filtering, if necessary.
     /// </summary>
     /// <param name="getRefs">Function to get refs.</param>
     internal void Refresh(Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs)
@@ -60,12 +59,12 @@ internal abstract class BaseRefTree : BaseRevisionTree
     }
 
     /// <summary>
-    /// Requests to refresh the data tree and to apply filtering, if necessary.
+    ///     Requests to refresh the data tree and to apply filtering, if necessary.
     /// </summary>
     protected internal void RefreshInternal(Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs)
     {
         // Break the local cache to ensure the data is requeried to reflect the required sort order.
-        _loadedRefs = null;
+        LoadedRefs = null;
 
         ReloadNodesDetached(LoadNodesAsync, getRefs);
     }
@@ -87,21 +86,27 @@ internal abstract class BaseRefTree : BaseRevisionTree
 
     protected IEnumerable<RemoteRepoNode> PrioritizedRemotes(IReadOnlyList<RemoteRepoNode> remotes)
     {
-        return OrderByPriority(remotes.OrderBy(node => node.FullPath).ToList(), node => node.FullPath, AppSettings.PrioritizedRemoteNames);
+        return OrderByPriority(remotes.OrderBy(node => node.FullPath).ToList(), node => node.FullPath,
+            AppSettings.PrioritizedRemoteNames);
     }
 
     /// <summary>
-    /// Order the references by the priorities in the setting regex
+    ///     Order the references by the priorities in the setting regex
     /// </summary>
     /// <typeparam name="T">The type to prioritize, e.g. IGitRef.</typeparam>
     /// <param name="references">The branches or remotes to prioritize.</param>
     /// <param name="keySelector">Function in T to get the sorter.</param>
     /// <param name="setting">String with regexes with priorities separated by semicolon.</param>
     /// <returns>The resorted references.</returns>
-    private static IEnumerable<T> OrderByPriority<T>(IReadOnlyList<T> references, Func<T, string> keySelector, string setting)
+    private static IEnumerable<T> OrderByPriority<T>(IReadOnlyList<T> references, Func<T, string> keySelector,
+        string setting)
     {
         // Sort prio branches first (if set) with the compile cache (no need to instantiate)
-        string[] regexes = [.. setting.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(regex => $"^({regex})$")];
+        string[] regexes =
+        [
+            .. setting.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(regex => $"^({regex})$")
+        ];
 
         if (regexes.Length == 0)
         {
@@ -123,12 +128,12 @@ internal abstract class BaseRefTree : BaseRevisionTree
         }
 
         Dictionary<string, int> orderByNodeKey = [];
-        foreach (T node in references)
+        foreach (var node in references)
         {
-            int currentOrder = 0;
-            foreach (string regex in regexes)
+            var currentOrder = 0;
+            foreach (var regex in regexes)
             {
-                string key = keySelector(node);
+                var key = keySelector(node);
                 if (Regex.IsMatch(key, regex, RegexOptions.ExplicitCapture))
                 {
                     orderByNodeKey[key] = currentOrder;

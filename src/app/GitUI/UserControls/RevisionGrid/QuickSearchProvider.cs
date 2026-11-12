@@ -1,21 +1,21 @@
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtUtils.GitUI.Theming;
-using GitUI.UserControls.RevisionGrid;
 using Timer = System.Windows.Forms.Timer;
 
-namespace GitUI;
+namespace GitUI.UserControls.RevisionGrid;
 
 /// <summary>
-/// Provides a 'quick search' capability to <see cref="RevisionGridControl"/> whereby the user may type directly
-/// into the control in order to search for the typed word.
+///     Provides a 'quick search' capability to <see cref="RevisionGridControl" /> whereby the user may type directly
+///     into the control in order to search for the typed word.
 /// </summary>
 internal sealed class QuickSearchProvider
 {
-    private readonly Label _label;
-    private readonly RevisionDataGridView _gridView;
-    private readonly Timer _quickSearchTimer;
     private readonly IGitRevisionTester _gitRevisionTester;
+    private readonly RevisionDataGridView _gridView;
+    private readonly Label _label;
+    private readonly Timer _quickSearchTimer;
 
     private string _lastQuickSearchString = "";
     private string _quickSearchString = "";
@@ -53,7 +53,7 @@ internal sealed class QuickSearchProvider
         // Ctrl+A to Ctrl+Z have codes 1..26 with Ctrl+V being 22
         const char ctrlVChar = (char)('V' - 'A' + 1);
 
-        int curIndex = _gridView.SelectedRows.Count > 0
+        var curIndex = _gridView.SelectedRows.Count > 0
             ? _gridView.SelectedRows[0].Index
             : -1;
 
@@ -67,7 +67,7 @@ internal sealed class QuickSearchProvider
         else if (Control.ModifierKeys == Keys.Control && e.KeyChar == ctrlVChar && Clipboard.ContainsText())
         {
             // paste
-            string text = Clipboard.GetText();
+            var text = Clipboard.GetText();
             UpdateQuickSearchString(string.Concat(_quickSearchString, text));
         }
         else if (!char.IsControl(e.KeyChar))
@@ -107,7 +107,7 @@ internal sealed class QuickSearchProvider
 
     public void NextResult(bool down)
     {
-        int curIndex = -1;
+        var curIndex = -1;
         if (_gridView.SelectedRows.Count > 0)
         {
             curIndex = _gridView.SelectedRows[0].Index;
@@ -115,8 +115,8 @@ internal sealed class QuickSearchProvider
 
         RestartQuickSearchTimer();
 
-        bool reverse = !down;
-        int nextIndex = 0;
+        var reverse = !down;
+        var nextIndex = 0;
         if (curIndex >= 0)
         {
             nextIndex = reverse ? curIndex - 1 : curIndex + 1;
@@ -155,7 +155,7 @@ internal sealed class QuickSearchProvider
             return;
         }
 
-        int? matchIndex = reverse
+        var matchIndex = reverse
             ? SearchBackwards()
             : SearchForward();
 

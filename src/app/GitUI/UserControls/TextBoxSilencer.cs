@@ -3,7 +3,7 @@
 namespace GitUI.UserControls;
 
 /// <summary>
-/// Suppresses invalid cursor movement keypresses in order to avoid the "ding" sound.
+///     Suppresses invalid cursor movement keypresses in order to avoid the "ding" sound.
 /// </summary>
 /// The end positions cannot be retrieved in the KeyDown handler
 /// because they are implemented using SendMessage calls.
@@ -24,14 +24,14 @@ internal sealed class TextBoxSilencer
             return;
         }
 
-        string text = _textBox.Text;
-        int position = _textBox.SelectionStart;
+        var text = _textBox.Text;
+        var position = _textBox.SelectionStart;
 
-        bool isAtFirstColumn = position == _textBox.GetFirstCharIndexOfCurrentLine();
-        bool isAtEndColumn = position == text.GetLineEnd(startIndex: position);
-        bool isAtFirstLine = position <= text.GetLineEnd(startIndex: 0);
-        bool isAtLastLine = text.IndexOfAny(Delimiters.LineFeedAndCarriageReturnSearchValues, position) < 0;
-        bool ctrl = e.Control;
+        var isAtFirstColumn = position == _textBox.GetFirstCharIndexOfCurrentLine();
+        var isAtEndColumn = position == text.GetLineEnd(position);
+        var isAtFirstLine = position <= text.GetLineEnd();
+        var isAtLastLine = text.IndexOfAny(Delimiters.LineFeedAndCarriageReturnSearchValues, position) < 0;
+        var ctrl = e.Control;
 
         switch (e.KeyCode)
         {

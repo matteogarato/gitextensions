@@ -1,21 +1,26 @@
 ﻿using CommonTestUtils;
-using GitCommands;
+using GitCommands.Settings;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls.RevisionGrid;
-using Xunit;
 
-namespace GitExtensions.UITests.UserControls.RevisionGrid;
+namespace UITests.UserControls.RevisionGrid;
 
-public class RevisionGridToolTipProviderTests : System.IDisposable, IClassFixture<RevisionGridToolTipProviderTestsFixture>
+public class RevisionGridToolTipProviderTests : IDisposable, IClassFixture<RevisionGridToolTipProviderTestsFixture>
 {
+    private GitUiCommands _commands = null!;
+
     // Created once for each test
     private ReferenceRepository _referenceRepository = null!;
-    private GitUICommands _commands = null!;
 
     public RevisionGridToolTipProviderTests(RevisionGridToolTipProviderTestsFixture fixture)
     {
         InitializeTest();
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void InitializeTest()
@@ -24,7 +29,8 @@ public class RevisionGridToolTipProviderTests : System.IDisposable, IClassFixtur
         _referenceRepository.CreateCommit("Commit1", "Commit1");
         _referenceRepository.CreateCommit("Commit2", "Commit2");
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
     }
 
     private void DisposeTest()
@@ -37,8 +43,8 @@ public class RevisionGridToolTipProviderTests : System.IDisposable, IClassFixtur
     {
         RunProviderTest(provider =>
         {
-            RevisionGridToolTipProvider.TestAccessor accessor = provider.GetTestAccessor();
-            int autoPopDelay = accessor.ToolTip.AutoPopDelay;
+            var accessor = provider.GetTestAccessor();
+            var autoPopDelay = accessor.ToolTip.AutoPopDelay;
 
             provider.Hide();
 
@@ -54,10 +60,10 @@ public class RevisionGridToolTipProviderTests : System.IDisposable, IClassFixtur
         {
             provider.ShowRevisionGridTooltips = true;
             const int rowIndex = 1;
-            provider.OnCellMouseMove(new DataGridViewCellMouseEventArgs(columnIndex: 1, rowIndex, localX: 0, localY: 0,
-                new MouseEventArgs(MouseButtons.None, clicks: 0, x: 0, y: 0, delta: 0)), hitInfo: null);
+            provider.OnCellMouseMove(new DataGridViewCellMouseEventArgs(1, rowIndex, 0, 0,
+                new MouseEventArgs(MouseButtons.None, 0, 0, 0, 0)), null);
 
-            RevisionGridToolTipProvider.TestAccessor accessor = provider.GetTestAccessor();
+            var accessor = provider.GetTestAccessor();
             accessor.PreviousRowIndex.Should().Be(rowIndex);
 
             provider.Clear();
@@ -69,21 +75,16 @@ public class RevisionGridToolTipProviderTests : System.IDisposable, IClassFixtur
 
     private void RunProviderTest(Action<RevisionGridToolTipProvider> testDriver)
     {
-        UITest.RunForm<FormBrowse>(
-            showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
-            runTestAsync: async formBrowse =>
+        UiTest.RunForm<FormBrowse>(
+            () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+            async formBrowse =>
             {
-                RevisionGridControl revisionGrid = formBrowse.RevisionGridControl;
-                UITest.ProcessUntil("Loading Revisions", () => revisionGrid.GetTestAccessor().IsDataLoadComplete);
+                var revisionGrid = formBrowse.RevisionGridControl;
+                UiTest.ProcessUntil("Loading Revisions", () => revisionGrid.GetTestAccessor().IsDataLoadComplete);
                 await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
                 testDriver(revisionGrid.GetTestAccessor().ToolTipProvider);
             });
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }
 

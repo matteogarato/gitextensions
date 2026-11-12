@@ -4,9 +4,15 @@ namespace GitUI.CommandsDialogs.SettingsDialog;
 
 public interface ISettingsPage
 {
-    string GetTitle();
-
     Control? GuiControl { get; }
+
+    /// <summary>
+    ///     true if the page cannot properly react to cancel or discard.
+    /// </summary>
+    bool IsInstantSavePage { get; }
+
+    SettingsPageReference PageReference { get; }
+    string GetTitle();
 
     void OnPageShown();
 
@@ -14,12 +20,5 @@ public interface ISettingsPage
 
     void SaveSettings();
 
-    /// <summary>
-    /// true if the page cannot properly react to cancel or discard.
-    /// </summary>
-    bool IsInstantSavePage { get; }
-
     IEnumerable<string> GetSearchKeywords();
-
-    SettingsPageReference PageReference { get; }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using GitExtensions.Extensibility.Git;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 [DebuggerDisplay("PatchFile( {" + nameof(Subject) + "} )")]
 public sealed class PatchFile

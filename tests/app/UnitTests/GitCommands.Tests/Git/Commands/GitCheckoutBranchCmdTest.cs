@@ -1,14 +1,15 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 
-namespace GitCommandsTests.Git_Commands;
+namespace GitCommandsTests.Git.Commands;
+
 public sealed class GitCheckoutBranchCmdTest
 {
     [Fact]
     public void TestConstructor()
     {
-        IGitCommand cmd = Commands.CheckoutBranch("branchName", remote: true);
+        var cmd = GitCommands.Git.Commands.CheckoutBranch("branchName", true);
 
         cmd.Should().NotBeNull();
     }
@@ -16,7 +17,7 @@ public sealed class GitCheckoutBranchCmdTest
     [Fact]
     public void TestConstructorRemoteIsFalse()
     {
-        IGitCommand cmd = Commands.CheckoutBranch("branchName", remote: false);
+        var cmd = GitCommands.Git.Commands.CheckoutBranch("branchName", false);
 
         cmd.Should().NotBeNull();
     }
@@ -24,7 +25,7 @@ public sealed class GitCheckoutBranchCmdTest
     [Fact]
     public void TestAccessesRemoteIsFalse()
     {
-        IGitCommand cmd = Commands.CheckoutBranch("branchName", remote: true);
+        var cmd = GitCommands.Git.Commands.CheckoutBranch("branchName", true);
 
         cmd.AccessesRemote.Should().BeFalse();
     }
@@ -34,18 +35,28 @@ public sealed class GitCheckoutBranchCmdTest
     {
         // Merge
 
-        Commands.CheckoutBranch("branchName", remote: false, LocalChangesAction.Merge).Arguments.Should().Be("checkout --merge \"branchName\"");
+        GitCommands.Git.Commands.CheckoutBranch("branchName", false, LocalChangesAction.Merge).Arguments.Should()
+            .Be("checkout --merge \"branchName\"");
 
-        Commands.CheckoutBranch("branchName", remote: true, LocalChangesAction.Merge, CheckoutNewBranchMode.Create, "newBranchName").Arguments.Should().Be("checkout --merge -b \"newBranchName\" --track \"branchName\"");
+        GitCommands.Git.Commands
+            .CheckoutBranch("branchName", true, LocalChangesAction.Merge, CheckoutNewBranchMode.Create, "newBranchName")
+            .Arguments.Should().Be("checkout --merge -b \"newBranchName\" --track \"branchName\"");
 
-        Commands.CheckoutBranch("branchName", remote: true, LocalChangesAction.Merge, CheckoutNewBranchMode.Reset, "newBranchName").Arguments.Should().Be("checkout --merge -B \"newBranchName\" \"branchName\"");
+        GitCommands.Git.Commands
+            .CheckoutBranch("branchName", true, LocalChangesAction.Merge, CheckoutNewBranchMode.Reset, "newBranchName")
+            .Arguments.Should().Be("checkout --merge -B \"newBranchName\" \"branchName\"");
 
         // Reset
 
-        Commands.CheckoutBranch("branchName", remote: false, LocalChangesAction.Reset).Arguments.Should().Be("checkout --force \"branchName\"");
+        GitCommands.Git.Commands.CheckoutBranch("branchName", false, LocalChangesAction.Reset).Arguments.Should()
+            .Be("checkout --force \"branchName\"");
 
-        Commands.CheckoutBranch("branchName", remote: true, LocalChangesAction.Reset, CheckoutNewBranchMode.Create, "newBranchName").Arguments.Should().Be("checkout --force -b \"newBranchName\" --track \"branchName\"");
+        GitCommands.Git.Commands
+            .CheckoutBranch("branchName", true, LocalChangesAction.Reset, CheckoutNewBranchMode.Create, "newBranchName")
+            .Arguments.Should().Be("checkout --force -b \"newBranchName\" --track \"branchName\"");
 
-        Commands.CheckoutBranch("branchName", remote: true, LocalChangesAction.Reset, CheckoutNewBranchMode.Reset, "newBranchName").Arguments.Should().Be("checkout --force -B \"newBranchName\" \"branchName\"");
+        GitCommands.Git.Commands
+            .CheckoutBranch("branchName", true, LocalChangesAction.Reset, CheckoutNewBranchMode.Reset, "newBranchName")
+            .Arguments.Should().Be("checkout --force -B \"newBranchName\" \"branchName\"");
     }
 }

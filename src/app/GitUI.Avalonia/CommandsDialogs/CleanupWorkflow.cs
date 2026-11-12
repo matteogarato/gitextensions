@@ -24,18 +24,13 @@ internal static class CleanupWorkflow
         ValidatePaths(paths, nameof(paths));
         ValidatePaths(excludes, nameof(excludes));
 
-        GitArgumentBuilder arguments = new("clean")
-        {
-            mode,
-            { directories, "-d" },
-            { dryRun, "--dry-run", "-f" },
-        };
+        GitArgumentBuilder arguments = new("clean") { mode, { directories, "-d" }, { dryRun, "--dry-run", "-f" } };
 
         if (excludes is not null)
         {
-            foreach (string exclude in excludes)
+            foreach (var exclude in excludes)
             {
-                arguments.Add($"--exclude={exclude}".QuoteNE());
+                arguments.Add($"--exclude={exclude}".QuoteNe());
             }
         }
 
@@ -53,10 +48,7 @@ internal static class CleanupWorkflow
 
         GitArgumentBuilder arguments = new("submodule")
         {
-            "foreach --recursive git clean",
-            mode,
-            { directories, "-d" },
-            { dryRun, "--dry-run", "-f" },
+            "foreach --recursive git clean", mode, { directories, "-d" }, { dryRun, "--dry-run", "-f" }
         };
 
         AddPathspecs(arguments, paths);
@@ -68,10 +60,10 @@ internal static class CleanupWorkflow
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(selectedPath);
 
-        string repositoryRoot = Path.GetFullPath(workingDirectory);
-        string fullPath = Path.GetFullPath(selectedPath);
-        string relativePath = Path.GetRelativePath(repositoryRoot, fullPath);
-        StringComparison comparison = OperatingSystem.IsWindows()
+        var repositoryRoot = Path.GetFullPath(workingDirectory);
+        var fullPath = Path.GetFullPath(selectedPath);
+        var relativePath = Path.GetRelativePath(repositoryRoot, fullPath);
+        var comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
 
@@ -80,7 +72,7 @@ internal static class CleanupWorkflow
             || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", comparison)
             || relativePath.Equals(".", comparison))
         {
-            throw new ArgumentException(GitUI.TranslatedStrings.CleanupPathOutsideRepository, nameof(selectedPath));
+            throw new ArgumentException(TranslatedStrings.CleanupPathOutsideRepository, nameof(selectedPath));
         }
 
         return relativePath
@@ -96,9 +88,9 @@ internal static class CleanupWorkflow
         }
 
         arguments.Add("--");
-        foreach (string path in paths)
+        foreach (var path in paths)
         {
-            arguments.Add(path.QuoteNE());
+            arguments.Add(path.QuoteNe());
         }
     }
 

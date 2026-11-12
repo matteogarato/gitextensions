@@ -2,13 +2,9 @@
 
 namespace GitUI.SettingControlBindings;
 
-internal class PseudoSettingControlBinding : SettingControlBinding<PseudoSetting, Control>
+internal class PseudoSettingControlBinding(PseudoSetting setting, Control? customControl)
+    : SettingControlBinding<PseudoSetting, Control>(setting, customControl)
 {
-    public PseudoSettingControlBinding(PseudoSetting setting, Control? customControl)
-        : base(setting, customControl)
-    {
-    }
-
     public override Control CreateControl()
     {
         ArgumentNullException.ThrowIfNull(Setting.TextBoxCreator);

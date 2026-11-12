@@ -16,35 +16,35 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\GitExtUtils\Validates.cs" Link="Validates.cs" />
+    <Compile Include="..\GitExtUtils\Validates.cs" Link="Validates.cs"/>
   </ItemGroup>
-  
+
   <ItemGroup>
 
     <!-- Settings -->
-    <None Update="Properties\Settings.settings" Generator="SettingsSingleFileGenerator" LastGenOutput="Settings.Designer.cs" />
-    <Compile Update="Properties\Settings.Designer.cs" AutoGen="True" DependentUpon="Settings.settings" />
+    <None Update="Properties\Settings.settings" Generator="SettingsSingleFileGenerator" LastGenOutput="Settings.Designer.cs"/>
+    <Compile Update="Properties\Settings.Designer.cs" AutoGen="True" DependentUpon="Settings.settings"/>
 
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" />
-    <PackageReference Include="System.IO.Abstractions" />
-    <PackageReference Include="System.Reactive.Linq" />
+    <PackageReference Include="JetBrains.Annotations"/>
+    <PackageReference Include="System.IO.Abstractions"/>
+    <PackageReference Include="System.Reactive.Linq"/>
     <!-- Properties/Settings.Designer.cs (ApplicationSettingsBase); the Windows flavor gets
          this from the WindowsDesktop framework. -->
-    <PackageReference Include="System.Configuration.ConfigurationManager" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Condition="'$(TargetFramework)' == 'net10.0'"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GitExtensions.Extensibility\GitExtensions.Extensibility.csproj" />
-    <ProjectReference Include="..\GitExtUtils\GitExtUtils.csproj" />
-    <ProjectReference Include="..\..\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj" />
+    <ProjectReference Include="..\GitExtensions.Extensibility\GitExtensions.Extensibility.csproj"/>
+    <ProjectReference Include="..\GitExtUtils\GitExtUtils.csproj"/>
+    <ProjectReference Include="..\..\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
-    <Compile Include="..\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs" />
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs"/>
+    <Compile Include="..\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs"/>
   </ItemGroup>
 
 </Project>

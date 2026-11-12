@@ -3,24 +3,23 @@ using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUIPluginInterfaces;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Options for applying a patch file.
+///     Options for applying a patch file.
 /// </summary>
 /// <param name="IgnoreWhitespace">Whether whitespace differences are ignored.</param>
 /// <param name="SignOff">Whether a Signed-off-by line is added to applied mailbox patches.</param>
 public sealed record PatchApplyOptions(bool IgnoreWhitespace = false, bool SignOff = false);
 
 /// <summary>
-///  Builds Git arguments for applying and creating patch files in the Avalonia browser.
+///     Builds Git arguments for applying and creating patch files in the Avalonia browser.
 /// </summary>
 public static class PatchWorkflow
 {
     /// <summary>
-    ///  Reads a patch file without losing its original byte values.
+    ///     Reads a patch file without losing its original byte values.
     /// </summary>
     /// <param name="patchFile">The patch file path.</param>
     /// <returns>The patch text.</returns>
@@ -32,24 +31,24 @@ public static class PatchWorkflow
     }
 
     /// <summary>
-    ///  Determines whether the file is a plain diff (applied with <c>git apply</c>) rather than a mailbox patch.
+    ///     Determines whether the file is a plain diff (applied with <c>git apply</c>) rather than a mailbox patch.
     /// </summary>
     /// <param name="patchFile">The patch file path.</param>
-    /// <returns><see langword="true"/> for a plain diff.</returns>
+    /// <returns><see langword="true" /> for a plain diff.</returns>
     public static bool IsDiffPatch(string patchFile)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(patchFile);
 
         using StreamReader reader = new(patchFile);
-        string? firstLine = reader.ReadLine();
+        var firstLine = reader.ReadLine();
 
         return firstLine is not null
-            && (firstLine.StartsWith("diff ", StringComparison.Ordinal)
-                || firstLine.StartsWith("Index: ", StringComparison.Ordinal));
+               && (firstLine.StartsWith("diff ", StringComparison.Ordinal)
+                   || firstLine.StartsWith("Index: ", StringComparison.Ordinal));
     }
 
     /// <summary>
-    ///  Builds the Git command matching the selected patch file format.
+    ///     Builds the Git command matching the selected patch file format.
     /// </summary>
     /// <param name="module">The repository receiving the patch.</param>
     /// <param name="patchFile">The patch file path.</param>
@@ -64,17 +63,18 @@ public static class PatchWorkflow
 
         return IsDiffPatch(patchFile)
             ? Commands.ApplyDiffPatch(options.IgnoreWhitespace, patchFile, module.GetPathForGitExecution)
-            : Commands.ApplyMailboxPatch(options.SignOff, options.IgnoreWhitespace, patchFile, module.GetPathForGitExecution);
+            : Commands.ApplyMailboxPatch(options.SignOff, options.IgnoreWhitespace, patchFile,
+                module.GetPathForGitExecution);
     }
 
     /// <summary>
-    ///  Builds the Git arguments to create a patch for one revision.
+    ///     Builds the Git arguments to create a patch for one revision.
     /// </summary>
     /// <param name="module">The repository containing the revision.</param>
     /// <param name="from">The parent revision, or an empty string for a root commit.</param>
     /// <param name="to">The revision to format.</param>
     /// <param name="outputDirectory">The directory receiving the patch file.</param>
-    /// <param name="startNumber">The initial patch sequence number, or <see langword="null"/> to use Git's default.</param>
+    /// <param name="startNumber">The initial patch sequence number, or <see langword="null" /> to use Git's default.</param>
     /// <returns>The Git arguments to create the patch.</returns>
     public static ArgumentString BuildFormatPatch(
         IGitModule module,
@@ -88,7 +88,7 @@ public static class PatchWorkflow
         ArgumentException.ThrowIfNullOrWhiteSpace(to);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
 
-        string outputPath = module.GetPathForGitExecution(outputDirectory);
+        var outputPath = module.GetPathForGitExecution(outputDirectory);
 
         return new GitArgumentBuilder("format-patch")
         {
@@ -102,7 +102,7 @@ public static class PatchWorkflow
     }
 
     /// <summary>
-    ///  Builds format-patch commands for selected revisions in chronological order.
+    ///     Builds format-patch commands for selected revisions in chronological order.
     /// </summary>
     /// <param name="module">The repository containing the revisions.</param>
     /// <param name="revisions">The selected revisions in chronological (oldest-first) order.</param>
@@ -146,10 +146,12 @@ public static class PatchWorkflow
                 GetFirstParent(revision),
                 revision.Guid,
                 outputDirectory,
-                startNumber: index + 1))
+                index + 1))
             .ToArray();
 
         static string GetFirstParent(GitRevision revision)
-            => revision.ParentIds is { Count: > 0 } parents ? parents[0].ToString() : string.Empty;
+        {
+            return revision.ParentIds is { Count: > 0 } parents ? parents[0].ToString() : string.Empty;
+        }
     }
 }

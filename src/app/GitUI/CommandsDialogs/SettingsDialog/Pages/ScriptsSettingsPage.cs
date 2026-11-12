@@ -3,20 +3,42 @@ using System.Collections.Frozen;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
-using GitCommands;
+using System.Resources;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtUtils;
 using GitExtUtils.GitUI;
 using GitUI.ScriptsEngine;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class ScriptsSettingsPage : SettingsPageWithHeader
 {
+    private static readonly string[] _watchedProxyPropertiesOnFocusChanged =
+    [
+        nameof(ScriptInfoProxy.Name),
+        nameof(ScriptInfoProxy.Enabled),
+        nameof(ScriptInfoProxy.OnEvent),
+        nameof(ScriptInfoProxy.Command),
+        nameof(ScriptInfoProxy.Arguments)
+    ];
+
+    private static readonly string[] _watchedProxyPropertiesOnValueChanged =
+    [
+        nameof(ScriptInfoProxy.Icon),
+        nameof(ScriptInfoProxy.IconFilePath)
+    ];
+
+    private static readonly ImageList _embeddedIcons = new()
+    {
+        ColorDepth = ColorDepth.Depth32Bit, ImageSize = DpiUtil.Scale(new Size(16, 16))
+    };
+
     private readonly TranslationString _scriptSettingsPageHelpDisplayArgumentsHelp = new("Arguments help");
-    private readonly TranslationString _scriptSettingsPageHelpDisplayContent = new(@"Use {option} for normal replacement.
+
+    private readonly TranslationString _scriptSettingsPageHelpDisplayContent = new(
+        @"Use {option} for normal replacement.
 Use {{option}} for quoted replacement.
 
 User inputs:
@@ -75,27 +97,6 @@ Diff selection:
 {LineNumber}
 {ColumnNumber}");
 
-    private static readonly string[] WatchedProxyPropertiesOnFocusChanged =
-    [
-        nameof(ScriptInfoProxy.Name),
-        nameof(ScriptInfoProxy.Enabled),
-        nameof(ScriptInfoProxy.OnEvent),
-        nameof(ScriptInfoProxy.Command),
-        nameof(ScriptInfoProxy.Arguments),
-    ];
-
-    private static readonly string[] WatchedProxyPropertiesOnValueChanged =
-    [
-        nameof(ScriptInfoProxy.Icon),
-        nameof(ScriptInfoProxy.IconFilePath),
-    ];
-
-    private static readonly ImageList EmbeddedIcons = new()
-    {
-        ColorDepth = ColorDepth.Depth32Bit,
-        ImageSize = DpiUtil.Scale(new Size(16, 16))
-    };
-
     private readonly BindingList<ScriptInfoProxy> _scripts = [];
     private readonly IScriptsManager _scriptsManager;
     private SimpleHelpDisplayDialog? _argumentsCheatSheet;
@@ -123,14 +124,14 @@ Diff selection:
         }
 
         tableLayoutPanel1.Dock = DockStyle.Fill;
-        int margin = propertyGrid1.Margin.Left;
+        var margin = propertyGrid1.Margin.Left;
         propertyGrid1.Margin = new Padding(margin, margin, panelButtons.Width, margin);
 
         propertyGrid1.SelectedGridItemChanged += (_, e) =>
-            UpdateScripts(WatchedProxyPropertiesOnFocusChanged, e.OldSelection?.PropertyDescriptor?.Name ?? "");
+            UpdateScripts(_watchedProxyPropertiesOnFocusChanged, e.OldSelection?.PropertyDescriptor?.Name ?? "");
 
         propertyGrid1.PropertyValueChanged += (_, e) =>
-            UpdateScripts(WatchedProxyPropertiesOnValueChanged, e.ChangedItem?.PropertyDescriptor?.Name ?? "");
+            UpdateScripts(_watchedProxyPropertiesOnValueChanged, e.ChangedItem?.PropertyDescriptor?.Name ?? "");
 
         return;
 
@@ -138,7 +139,7 @@ Diff selection:
         {
             if (watchedProperties.Contains(changedItem))
             {
-                SelectedScript?.SetImages(EmbeddedIcons);
+                SelectedScript?.SetImages(_embeddedIcons);
                 BindScripts(_scripts, SelectedScript);
                 propertyGrid1.Focus();
             }
@@ -164,7 +165,8 @@ Diff selection:
             return;
         }
 
-        bool containsAnyImageWithoutPath = EmbeddedIcons.Images.Keys.Cast<string>().Any(name => !name.ContainsAny(Delimiters.PathSeparatorsSearchValues));
+        var containsAnyImageWithoutPath = _embeddedIcons.Images.Keys.Cast<string>()
+            .Any(name => !name.ContainsAny(Delimiters.PathSeparatorsSearchValues));
         if (!containsAnyImageWithoutPath)
         {
             System.Resources.ResourceManager rm = new("GitUI.Properties.Images", Assembly.GetExecutingAssembly());
@@ -172,13 +174,13 @@ Diff selection:
             // dummy request; for some strange reason the ResourceSets are not loaded until after the first object request... bug?
             rm.GetObject("dummy");
 
-            using System.Resources.ResourceSet? resourceSet = rm.GetResourceSet(CultureInfo.CurrentUICulture, true, true);
+            using var resourceSet = rm.GetResourceSet(CultureInfo.CurrentUICulture, true, true);
             Validates.NotNull(resourceSet);
-            foreach (DictionaryEntry icon in resourceSet.Cast<DictionaryEntry>().OrderBy(icon => icon.Key))
+            foreach (var icon in resourceSet.Cast<DictionaryEntry>().OrderBy(icon => icon.Key))
             {
                 if (icon.Value is Bitmap bitmap)
                 {
-                    EmbeddedIcons.Images.Add(icon.Key.ToString()!, bitmap);
+                    _embeddedIcons.Images.Add(icon.Key.ToString()!, bitmap);
                 }
             }
 
@@ -186,7 +188,7 @@ Diff selection:
             rm.ReleaseAllResources();
         }
 
-        lvScripts.LargeImageList = lvScripts.SmallImageList = EmbeddedIcons;
+        lvScripts.LargeImageList = lvScripts.SmallImageList = _embeddedIcons;
         _imagesLoaded = true;
 
         BindScripts(_scripts, null);
@@ -196,10 +198,10 @@ Diff selection:
     {
         _scripts.Clear();
 
-        foreach (ScriptInfo script in _scriptsManager.GetScripts())
+        foreach (var script in _scriptsManager.GetScripts())
         {
             ScriptInfoProxy scriptProxy = script;
-            scriptProxy.SetImages(EmbeddedIcons);
+            scriptProxy.SetImages(_embeddedIcons);
             _scripts.Add(scriptProxy);
         }
 
@@ -215,10 +217,10 @@ Diff selection:
     {
         // TODO: this is an abomination, the whole script persistence must be scorched and rewritten
 
-        BindingList<ScriptInfo> scripts = _scriptsManager.GetScripts();
+        var scripts = _scriptsManager.GetScripts();
         scripts.Clear();
 
-        foreach (ScriptInfoProxy proxy in _scripts)
+        foreach (var proxy in _scripts)
         {
             scripts.Add(proxy);
         }
@@ -244,16 +246,16 @@ Diff selection:
             }
 
             // script.Icon must match in case because assembly resources are case-sensitive
-            FrozenSet<string> imageKeys = EmbeddedIcons.Images.Keys.Cast<string>().ToFrozenSet();
+            var imageKeys = _embeddedIcons.Images.Keys.Cast<string>().ToFrozenSet();
 
-            foreach (ScriptInfoProxy script in scripts)
+            foreach (var script in scripts)
             {
                 if (script.Icon is not null && !imageKeys.Contains(script.Icon))
                 {
                     script.Icon = null;
                 }
 
-                Color color = !script.Enabled ? SystemColors.GrayText : SystemColors.WindowText;
+                var color = !script.Enabled ? SystemColors.GrayText : SystemColors.WindowText;
 
                 ListViewItem lvitem = new(script.Name)
                 {
@@ -277,7 +279,7 @@ Diff selection:
 
             if (selectedScript is not null)
             {
-                ListViewItem? lvi = lvScripts.Items.Cast<ListViewItem>().FirstOrDefault(x => x.Tag == selectedScript);
+                var lvi = lvScripts.Items.Cast<ListViewItem>().FirstOrDefault(x => x.Tag == selectedScript);
                 if (lvi is not null)
                 {
                     lvi.Selected = true;
@@ -309,8 +311,9 @@ Diff selection:
 
     private void btnAdd_Click(object sender, EventArgs e)
     {
-        ScriptInfoProxy script = _scripts.AddNew();
-        script.HotkeyCommandIdentifier = Math.Max(ScriptsManager.MinimumUserScriptID, _scripts.Max(s => s.HotkeyCommandIdentifier)) + 1;
+        var script = _scripts.AddNew();
+        script.HotkeyCommandIdentifier =
+            Math.Max(ScriptsManager.MinimumUserScriptId, _scripts.Max(s => s.HotkeyCommandIdentifier)) + 1;
         script.Name = "<New Script>";
         script.Enabled = true;
 
@@ -354,9 +357,9 @@ Diff selection:
             return;
         }
 
-        ScriptInfoProxy script = SelectedScript;
+        var script = SelectedScript;
 
-        int index = _scripts.IndexOf(script);
+        var index = _scripts.IndexOf(script);
         _scripts.Remove(script);
         _scripts.Insert(Math.Min(index + 1, _scripts.Count), script);
 
@@ -370,9 +373,9 @@ Diff selection:
             return;
         }
 
-        ScriptInfoProxy script = SelectedScript;
+        var script = SelectedScript;
 
-        int index = _scripts.IndexOf(script);
+        var index = _scripts.IndexOf(script);
         _scripts.Remove(script);
         _scripts.Insert(Math.Max(index - 1, 0), script);
 
@@ -410,21 +413,22 @@ Diff selection:
             propertyGrid1.SelectedObject = script;
         }
 
-        int index = _scripts.IndexOf(script);
+        var index = _scripts.IndexOf(script);
         btnMoveUp.Enabled = index > 0;
         btnMoveDown.Enabled = index < _scripts.Count - 1;
     }
 
     private void lvScripts_Resize(object sender, EventArgs e)
     {
-        lvScripts.Columns[^1].Width = lvScripts.ClientSize.Width - lvScripts.Columns[0].Width - lvScripts.Columns[1].Width;
+        lvScripts.Columns[^1].Width =
+            lvScripts.ClientSize.Width - lvScripts.Columns[0].Width - lvScripts.Columns[1].Width;
     }
 
     private void SetPropertyGridWidthOnce()
     {
         const string widthSetTag = "width_set";
 
-        string? tag = propertyGrid1.GetTag<string?>();
+        var tag = propertyGrid1.GetTag<string?>();
         if (tag != widthSetTag)
         {
             propertyGrid1.SetLabelColumnWidth(DpiUtil.Scale(240));
@@ -432,11 +436,21 @@ Diff selection:
         }
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor(ScriptsSettingsPage page)
     {
-        public ListView lvScripts => page.lvScripts;
-        public PropertyGrid propertyGrid1 => page.propertyGrid1;
+        public ListView LvScripts
+        {
+            get => page.lvScripts;
+        }
+
+        public PropertyGrid PropertyGrid1
+        {
+            get => page.propertyGrid1;
+        }
     }
 }

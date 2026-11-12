@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.UserControls.CommitInfo;
 
@@ -68,7 +68,7 @@ public class BranchComparerTests
             "remotes/other/b1",
             "remotes/other/b2",
             "remotes/z_other/b1",
-            "remotes/z_other/b2",
+            "remotes/z_other/b2"
         ];
 
         if (currentBranch is null)
@@ -95,7 +95,7 @@ public class BranchComparerTests
             Array.Sort(branches, new GitUI.CommitInfo.CommitInfo.BranchComparer(branches, currentBranch ?? ""));
 
             branches.Should().HaveCount(expectedBranches.Count);
-            for (int index = 0; index < branches.Length; ++index)
+            for (var index = 0; index < branches.Length; ++index)
             {
                 branches[index].Should().BeSameAs(expectedBranches[index]);
             }

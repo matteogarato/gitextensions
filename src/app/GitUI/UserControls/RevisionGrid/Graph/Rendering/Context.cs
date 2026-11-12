@@ -1,17 +1,14 @@
 namespace GitUI.UserControls.RevisionGrid.Graph.Rendering;
 
-internal readonly ref struct Context
+internal readonly ref struct Context(
+    RevisionGraphConfig config,
+    Graphics graphics,
+    Pen pen,
+    int laneWidth,
+    int rowHeight)
 {
-    public readonly RevisionGraphConfig Config;
-    public readonly Graphics Graphics;
-    public readonly Pen Pen;
-    public readonly Size CellSize;
-
-    public Context(RevisionGraphConfig config, Graphics graphics, Pen pen, int laneWidth, int rowHeight)
-    {
-        Config = config;
-        Graphics = graphics;
-        Pen = pen;
-        CellSize = new Size(laneWidth, rowHeight);
-    }
+    public readonly RevisionGraphConfig Config = config;
+    public readonly Graphics Graphics = graphics;
+    public readonly Pen Pen = pen;
+    public readonly Size CellSize = new(laneWidth, rowHeight);
 }

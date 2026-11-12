@@ -1,11 +1,11 @@
 using System.Runtime.InteropServices;
 
-namespace System;
+namespace GitUI.Interops.UxTheme;
 
-internal static partial class NativeMethods
+internal static class NativeMethods
 {
     [DllImport(Libraries.UxTheme, ExactSpelling = true, CharSet = CharSet.Unicode)]
-    private static unsafe extern int SetWindowTheme(IntPtr hWnd, char* pszSubAppName, char* pszSubIdList);
+    private static extern unsafe int SetWindowTheme(IntPtr hWnd, char* pszSubAppName, char* pszSubIdList);
 
     public static unsafe int SetWindowTheme(IntPtr hWnd, string subAppName, string? subIdList)
     {

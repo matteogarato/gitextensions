@@ -3,22 +3,27 @@
 namespace GitUI.Avatars;
 
 /// <summary>
-/// A helper provider that wraps another avatar provider.
+///     A helper provider that wraps another avatar provider.
 /// </summary>
 /// <remarks>
-/// The wrapper is used to support hot swapping (changing a provider without changing the reference of the root provider)
-/// It also catches and logs exceptions and works as a simple NullProvider if <see cref="Provider"/> is not set (set to null).
+///     The wrapper is used to support hot swapping (changing a provider without changing the reference of the root
+///     provider)
+///     It also catches and logs exceptions and works as a simple NullProvider if <see cref="Provider" /> is not set (set
+///     to null).
 /// </remarks>
 public sealed class HotSwapAvatarProvider : IAvatarProvider
 {
     /// <summary>
-    /// Gets or sets the currently active provider.
+    ///     Gets or sets the currently active provider.
     /// </summary>
     public IAvatarProvider? Provider { get; set; }
 
-    public bool PerformsIo => Provider?.PerformsIo ?? false;
+    bool IAvatarProvider.PerformsIo
+    {
+        get => Provider?.PerformsIo ?? false;
+    }
 
-    public Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
     {
         try
         {

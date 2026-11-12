@@ -7,7 +7,7 @@ public interface IGitlabApiClientFactory
 
 internal sealed class GitlabApiClientFactory : IGitlabApiClientFactory
 {
-    public IGitlabApiClient CreateGitlabApiClient(string instanceUrl, string apiToken, int projectId)
+    IGitlabApiClient IGitlabApiClientFactory.CreateGitlabApiClient(string instanceUrl, string apiToken, int projectId)
     {
         return new GitlabApiClient(instanceUrl, apiToken, projectId);
     }

@@ -1,34 +1,34 @@
 ﻿{
-  "Name": "file1",
-  "OldName": null,
-  "Path": {
-    "Length": 0,
-    "Value": ""
-  },
-  "ErrorMessage": null,
-  "TreeId": {
-    "IsZero": true,
-    "IsArtificial": false
-  },
-  "RenameCopyPercentage": null,
-  "Staged": 0,
-  "DiffStatus": 0,
-  "GrepString": null,
-  "IsTracked": false,
-  "IsDeleted": false,
-  "IsChanged": false,
-  "IsNew": false,
-  "IsIgnored": false,
-  "IsRenamed": false,
-  "IsCopied": false,
-  "IsUnmerged": true,
-  "IsAssumeUnchanged": false,
-  "IsSkipWorktree": false,
-  "IsSubmodule": false,
-  "IsDirty": false,
-  "IsStatusOnly": false,
-  "IsRangeDiff": false,
-  "IsAdded": false,
-  "IsUncommitted": false,
-  "IsUncommittedAdded": false
+    "Name": "file1",
+    "OldName": null,
+    "Path": {
+        "Length": 0,
+        "Value": ""
+    },
+    "ErrorMessage": null,
+    "TreeId": {
+        "IsZero": true,
+        "IsArtificial": false
+    },
+    "RenameCopyPercentage": null,
+    "Staged": 0,
+    "DiffStatus": 0,
+    "GrepString": null,
+    "IsTracked": false,
+    "IsDeleted": false,
+    "IsChanged": false,
+    "IsNew": false,
+    "IsIgnored": false,
+    "IsRenamed": false,
+    "IsCopied": false,
+    "IsUnmerged": true,
+    "IsAssumeUnchanged": false,
+    "IsSkipWorktree": false,
+    "IsSubmodule": false,
+    "IsDirty": false,
+    "IsStatusOnly": false,
+    "IsRangeDiff": false,
+    "IsAdded": false,
+    "IsUncommitted": false,
+    "IsUncommittedAdded": false
 }

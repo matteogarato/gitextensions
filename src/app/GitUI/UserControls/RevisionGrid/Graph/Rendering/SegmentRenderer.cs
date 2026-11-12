@@ -2,22 +2,22 @@
 
 namespace GitUI.UserControls.RevisionGrid.Graph.Rendering;
 
-internal ref struct SegmentRenderer
+internal ref struct SegmentRenderer(in Context context)
 {
-    public readonly int RowHeight => _context.CellSize.Height;
+    public readonly int RowHeight
+    {
+        get => _context.CellSize.Height;
+    }
 
-    private readonly Context _context;
+    private readonly Context _context = context;
 
     private bool _fromPerpendicularly = true;
     private Point? _fromPoint = null;
 
-    public SegmentRenderer(in Context context)
-    {
-        _context = context;
-    }
-
     public void DrawTo(in int x, in int y, in bool toPerpendicularly = true)
-        => DrawTo(new Point(x, y), toPerpendicularly);
+    {
+        DrawTo(new Point(x, y), toPerpendicularly);
+    }
 
     public void DrawTo(in Point toPoint, in bool toPerpendicularly = true)
     {
@@ -37,10 +37,11 @@ internal ref struct SegmentRenderer
         }
     }
 
-    private static void DrawTo(in Point fromPoint, in Point toPoint, in bool fromPerpendicularly, in bool toPerpendicularly, in Context context)
+    private static void DrawTo(in Point fromPoint, in Point toPoint, in bool fromPerpendicularly,
+        in bool toPerpendicularly, in Context context)
     {
-        Graphics g = context.Graphics;
-        Pen pen = context.Pen;
+        var g = context.Graphics;
+        var pen = context.Pen;
 
         if (fromPoint.X == toPoint.X)
         {
@@ -56,9 +57,9 @@ internal ref struct SegmentRenderer
         PointF e0 = new(antiAliasOffset + fromPoint.X, fromPoint.Y);
         PointF e1 = new(antiAliasOffset + toPoint.X, toPoint.Y);
 
-        int height = toPoint.Y - fromPoint.Y;
-        int width = toPoint.X - fromPoint.X;
-        bool singleLane = Math.Abs(width) <= context.CellSize.Width;
+        var height = toPoint.Y - fromPoint.Y;
+        var width = toPoint.X - fromPoint.X;
+        var singleLane = Math.Abs(width) <= context.CellSize.Width;
         Size cellShift = new(Math.Sign(width) * context.CellSize.Width, context.CellSize.Height);
 
         if (!fromPerpendicularly && !toPerpendicularly && singleLane)
@@ -69,12 +70,12 @@ internal ref struct SegmentRenderer
         }
 
         // Control points for Bezier curve
-        PointF c0 = e0;
-        PointF c1 = e1;
+        var c0 = e0;
+        var c1 = e1;
 
         const float diagonalFractionCurve = 1f / 4f;
         const float perpendicularFraction = diagonalFractionCurve;
-        float perpendicularOffset = perpendicularFraction * cellShift.Height;
+        var perpendicularOffset = perpendicularFraction * cellShift.Height;
 
         if (fromPerpendicularly && toPerpendicularly)
         {
@@ -84,7 +85,7 @@ internal ref struct SegmentRenderer
                 c1.Y -= perpendicularOffset;
 
                 PointF mid = new(1f / 2f * (e0.X + e1.X), 1f / 2f * (e0.Y + e1.Y));
-                SizeF shift = diagonalFractionCurve * cellShift;
+                var shift = diagonalFractionCurve * cellShift;
                 DrawBezier(e0, c0, mid - shift, mid);
                 DrawBezier(e1, c1, mid + shift, mid);
                 return;
@@ -97,7 +98,7 @@ internal ref struct SegmentRenderer
             // Is the end of a diagonal
             if (singleLane)
             {
-                float diagonalFractionStraight = height < cellShift.Height ? 2f / 5f : 1f / 2f;
+                var diagonalFractionStraight = height < cellShift.Height ? 2f / 5f : 1f / 2f;
 
                 if (fromPerpendicularly)
                 {
@@ -120,7 +121,7 @@ internal ref struct SegmentRenderer
             // Is a multi-lane crossing
             else
             {
-                float diagonalFractionStraight = 1f / 6f;
+                var diagonalFractionStraight = 1f / 6f;
 
                 if (fromPerpendicularly)
                 {
@@ -158,8 +159,8 @@ internal ref struct SegmentRenderer
 
         void MoveDrawDiagonallyFrom(ref PointF start, out PointF bezierCenter, in float fractionOfCell)
         {
-            SizeF shift = fractionOfCell * cellShift;
-            PointF end = start + shift;
+            var shift = fractionOfCell * cellShift;
+            var end = start + shift;
             DrawLine(start, end);
 
             start = end;

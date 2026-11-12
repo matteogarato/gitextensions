@@ -42,7 +42,7 @@ partial class FormApplyPatch
         BrowseDir = new Button();
         PatchDirMode = new RadioButton();
         PatchFileMode = new RadioButton();
-        PatchGrid = new GitUI.PatchGrid();
+        PatchGrid = new UserControls.PatchGrid();
         SolveMergeConflicts = new Button();
         IgnoreWhitespace = new CheckBox();
         ContinuePanel = new Panel();
@@ -378,7 +378,7 @@ partial class FormApplyPatch
     private Button Abort;
     private Button Resolved;
     private Button AddFiles;
-    private PatchGrid PatchGrid;
+    private UserControls.PatchGrid PatchGrid;
     private TextBox PatchDir;
     private Button BrowseDir;
     private RadioButton PatchDirMode;

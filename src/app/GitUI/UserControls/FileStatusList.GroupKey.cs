@@ -1,6 +1,6 @@
 ﻿using StrongOf;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusList
 {

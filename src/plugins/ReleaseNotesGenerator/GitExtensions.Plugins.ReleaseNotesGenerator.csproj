@@ -20,11 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="JetBrains.Annotations"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Resources\IconReleaseNotesGenerator.png" />
+    <None Include="Resources\IconReleaseNotesGenerator.png"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -37,7 +37,7 @@
 
   <ItemGroup>
     <!-- Resources -->
-    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
+    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs"/>
   </ItemGroup>
 
 </Project>

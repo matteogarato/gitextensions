@@ -36,7 +36,7 @@
     <Copy SourceFiles="@(TranslationAppPaths)"
           DestinationFolder="$(_GitExtensionsOutputDir)"
           OverwriteReadOnlyFiles="true"
-          ContinueOnError="false" />
+          ContinueOnError="false"/>
 
     <!-- 2. Run TranslationApp.exe to update English*.xlf -->
     <Exec Command="TranslationApp.exe"
@@ -44,13 +44,13 @@
           EchoOff="true"
           ConsoleToMsBuild="true"
           StandardOutputImportance="high">
-      <Output TaskParameter="ExitCode" PropertyName="_TranslationErrorCode" />
+      <Output TaskParameter="ExitCode" PropertyName="_TranslationErrorCode"/>
     </Exec>
     <Error Text="Failed to execute $(_TranslationAppTempPath)TranslationApp.exe"
-           Condition="$(_TranslationErrorCode) != 0" />
+           Condition="$(_TranslationErrorCode) != 0"/>
 
     <!-- 3. Delete TranslationApp.exe so it doesn't get bundled up -->
-    <Delete Files="@(TranslationAppTempPaths)" />
+    <Delete Files="@(TranslationAppTempPaths)"/>
 
     <!-- 4. Copy updated English*.xlf to the source folder -->
     <PropertyGroup>
@@ -65,7 +65,7 @@
     <Copy SourceFiles="@(_TranslationsOutputPaths)"
           DestinationFolder="$(_TranslationsSourceDir)"
           OverwriteReadOnlyFiles="true"
-          ContinueOnError="false" />
+          ContinueOnError="false"/>
 
     <!-- 5. Verify no changes to English*.xlf -->
     <Exec Command="git -c core.autocrlf=false add *.xlf --ignore-errors"
@@ -76,23 +76,23 @@
 
     <Message Text="
 Verifying English translations are up-to date
--------------------------------------------------------" Importance="High" />
+-------------------------------------------------------" Importance="High"/>
     <Exec Command="git status --porcelain | findstr /i /r &quot;English.xlf English.Plugins.xlf&quot; "
           WorkingDirectory="$(RepoRoot)"
           IgnoreExitCode="true"
           ConsoleToMSBuild="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec"/>
     </Exec>
 
     <Message Text="English translations are up-to date" Importance="High"
-           Condition="'$(OutputOfExec)' == ''" />
+             Condition="'$(OutputOfExec)' == ''"/>
     <Error Text="Please update English translations and re-submit the pull-request. Refer to https://github.com/gitextensions/gitextensions/wiki/Translations"
-           Condition="$(ContinuousIntegrationBuild) == true and '$(OutputOfExec)' != ''" />
+           Condition="$(ContinuousIntegrationBuild) == true and '$(OutputOfExec)' != ''"/>
     <Message Text="
 [!] English translations updated, staged and ready to commit
 "
-           Condition="$(ContinuousIntegrationBuild) != true and '$(OutputOfExec)' != ''"
-           Importance="High" />
+             Condition="$(ContinuousIntegrationBuild) != true and '$(OutputOfExec)' != ''"
+             Importance="High"/>
   </Target>
 
 </Project>

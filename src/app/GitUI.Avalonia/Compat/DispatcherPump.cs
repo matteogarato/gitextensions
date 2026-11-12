@@ -3,9 +3,9 @@
 namespace GitUI.Compat;
 
 /// <summary>
-///  Runs an async UI operation to completion with WinForms-like blocking semantics.
-///  On the UI thread a nested dispatcher frame keeps the UI responsive (the WinForms
-///  <c>ShowDialog</c> model); on a background thread the call simply blocks.
+///     Runs an async UI operation to completion with WinForms-like blocking semantics.
+///     On the UI thread a nested dispatcher frame keeps the UI responsive (the WinForms
+///     <c>ShowDialog</c> model); on a background thread the call simply blocks.
 /// </summary>
 public static class DispatcherPump
 {
@@ -19,7 +19,7 @@ public static class DispatcherPump
             return Dispatcher.UIThread.InvokeAsync(asyncFunc).GetAwaiter().GetResult();
         }
 
-        Task<T> task = asyncFunc();
+        var task = asyncFunc();
         if (!task.IsCompleted)
         {
             DispatcherFrame frame = new();

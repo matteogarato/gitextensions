@@ -1,4 +1,4 @@
-﻿namespace GitUI;
+﻿namespace GitExtUtils.GitUI;
 
 internal sealed class ToolStripExProfessionalRenderer : ToolStripProfessionalRenderer
 {

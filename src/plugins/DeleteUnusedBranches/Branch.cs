@@ -1,19 +1,10 @@
 ﻿namespace GitExtensions.Plugins.DeleteUnusedBranches;
 
-public sealed class Branch
+public sealed class Branch(string name, DateTime date, string author, string message, bool delete)
 {
-    public Branch(string name, DateTime date, string author, string message, bool delete)
-    {
-        Name = name;
-        Date = date;
-        Author = author;
-        Message = message;
-        Delete = delete;
-    }
-
-    public string Name { get; }
-    public DateTime Date { get; }
-    public bool Delete { get; set; }
-    public string Author { get; }
-    public string Message { get; }
+    public string Name { get; } = name;
+    public DateTime Date { get; } = date;
+    public bool Delete { get; set; } = delete;
+    public string Author { get; } = author;
+    public string Message { get; } = message;
 }

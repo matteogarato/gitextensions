@@ -1,11 +1,13 @@
 ﻿using System.Diagnostics;
 using GitCommands;
+using GitCommands.Git;
 using GitCommands.Submodules;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.Properties;
-using GitUIPluginInterfaces;
+using GitUI.UserControls.RevisionGrid;
 using Microsoft.VisualStudio.Threading;
 using ResourceManager;
 
@@ -14,14 +16,6 @@ namespace GitUI.LeftPanel;
 // Node representing a submodule
 internal sealed class SubmoduleNode : Node
 {
-    public SubmoduleInfo Info { get; set; }
-    public bool IsCurrent { get; }
-    public IReadOnlyList<GitItemStatus>? GitStatus { get; }
-    public string LocalPath { get; }
-    public string SuperPath { get; }
-    public string SubmoduleName { get; }
-    public string BranchText { get; }
-
     public SubmoduleNode(Tree tree, SubmoduleInfo submoduleInfo, bool isCurrent,
         IReadOnlyList<GitItemStatus>? gitStatus, string localPath, string superPath)
         : base(tree)
@@ -35,11 +29,19 @@ internal sealed class SubmoduleNode : Node
         // Extract submodule name and branch
         // e.g. Info.Text = "Externals/conemu-inside [no branch]"
         // Note that the branch portion won't be there if the user hasn't yet init'd + updated the submodule.
-        string[] pathAndBranch = Info.Text.Split(Delimiters.Space, 2);
+        var pathAndBranch = Info.Text.Split(Delimiters.Space, 2);
         Trace.Assert(pathAndBranch.Length >= 1);
         SubmoduleName = pathAndBranch[0].SubstringAfterLast('/'); // Remove path
         BranchText = pathAndBranch.Length == 2 ? " " + pathAndBranch[1] : "";
     }
+
+    public SubmoduleInfo Info { get; set; }
+    public bool IsCurrent { get; }
+    public IReadOnlyList<GitItemStatus>? GitStatus { get; }
+    public string LocalPath { get; }
+    public string SuperPath { get; }
+    public string SubmoduleName { get; }
+    public string BranchText { get; }
 
     public void RefreshDetails()
     {
@@ -60,24 +62,24 @@ internal sealed class SubmoduleNode : Node
     {
         if (!Directory.Exists(Info.Path))
         {
-            MessageBoxes.SubmoduleDirectoryDoesNotExist(owner: null, Info.Path, Info.Text);
+            MessageBoxes.SubmoduleDirectoryDoesNotExist(null, Info.Path, Info.Text);
             return;
         }
 
         if (Info.Detailed?.RawStatus is not null)
         {
-            UICommands.BrowseRepo?.SetWorkingDir(Info.Path, ObjectId.WorkTreeId, Info.Detailed.RawStatus.OldCommit);
+            UiCommands.BrowseRepo?.SetWorkingDir(Info.Path, ObjectId.WorkTreeId, Info.Detailed.RawStatus.OldCommit);
             return;
         }
 
-        UICommands.BrowseRepo?.SetWorkingDir(Info.Path);
+        UiCommands.BrowseRepo?.SetWorkingDir(Info.Path);
     }
 
     public void LaunchGitExtensions()
     {
         if (!Directory.Exists(Info.Path))
         {
-            MessageBoxes.SubmoduleDirectoryDoesNotExist(owner: null, Info.Path, Info.Text);
+            MessageBoxes.SubmoduleDirectoryDoesNotExist(null, Info.Path, Info.Text);
             return;
         }
 
@@ -86,7 +88,7 @@ internal sealed class SubmoduleNode : Node
         if (IsCurrent)
         {
             // Get the current (most likely) selections from the grid
-            IReadOnlyList<GitRevision> revs = UICommands.BrowseRepo?.GetSelectedRevisions() ?? [];
+            var revs = UiCommands.BrowseRepo?.GetSelectedRevisions() ?? [];
             selected = revs.Count > 0 ? revs[0].ObjectId : default;
             first = revs.Count > 1 ? revs[^1].ObjectId : default;
         }
@@ -97,7 +99,7 @@ internal sealed class SubmoduleNode : Node
             first = Info?.Detailed?.RawStatus?.OldCommit ?? default;
         }
 
-        GitUICommands.LaunchBrowse(workingDir: Info!.Path.EnsureTrailingPathSeparator(), selected, first);
+        GitUiCommands.LaunchBrowse(Info!.Path.EnsureTrailingPathSeparator(), selected, first);
     }
 
     internal override void OnSelected()
@@ -130,7 +132,9 @@ internal sealed class SubmoduleNode : Node
     }
 
     protected override FontStyle GetFontStyle()
-        => base.GetFontStyle() | (IsCurrent ? FontStyle.Bold : FontStyle.Regular);
+    {
+        return base.GetFontStyle() | (IsCurrent ? FontStyle.Bold : FontStyle.Regular);
+    }
 
     private void ApplyStatus()
     {
@@ -168,10 +172,10 @@ internal sealed class SubmoduleNode : Node
         {
             // Prefer submodule status, shows ahead/behind
             toolTip = SubmoduleResources.GetSubmoduleStatusText(
-                new GitModule(UICommands.GetRequiredService<IGitExecutorProvider>(), Info.Path),
+                new GitModule(UiCommands.GetRequiredService<IGitExecutorProvider>(), Info.Path),
                 Info.Detailed.RawStatus,
-                moduleIsParent: false,
-                limitOutput: true);
+                false,
+                true);
         }
         else if (GitStatus is not null)
         {
@@ -182,9 +186,9 @@ internal sealed class SubmoduleNode : Node
         else
         {
             toolTip = SubmoduleResources.GetSubmoduleText(
-                new GitModule(UICommands.GetRequiredService<IGitExecutorProvider>(), "."),
+                new GitModule(UiCommands.GetRequiredService<IGitExecutorProvider>(), "."),
                 Info.Path,
-                hash: "");
+                "");
         }
 
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);

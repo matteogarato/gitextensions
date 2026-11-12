@@ -5,8 +5,8 @@ using Microsoft.VisualStudio.Threading;
 namespace GitExtensions.Extensibility.Git;
 
 /// <summary>
-/// Status if the file can be staged (worktree->index), unstaged or None (normal commits).
-/// The status may not be available or unset for some commands.
+///     Status if the file can be staged (worktree->index), unstaged or None (normal commits).
+///     The status may not be available or unset for some commands.
 /// </summary>
 public enum StagedStatus
 {
@@ -19,6 +19,10 @@ public enum StagedStatus
 
 public sealed class GitItemStatus
 {
+    private Flags _flags;
+
+    private JoinableTask<GitSubmoduleStatus?>? _submoduleStatus;
+
     [Flags]
     private enum Flags
     {
@@ -40,25 +44,22 @@ public sealed class GitItemStatus
         IsRangeDiff = 1 << 14
     }
 
-    private JoinableTask<GitSubmoduleStatus?>? _submoduleStatus;
-
-    private Flags _flags;
-
-    #pragma warning disable CS8618 // Non-nullable property 'Path' must contain a non-null value when exiting constructor.
+#pragma warning disable CS8618 // Non-nullable property 'Path' must contain a non-null value when exiting constructor.
     public GitItemStatus(string name)
     {
-        Requires.NotNull(name, nameof(name));
+        Requires.NotNull(name);
         Name = name;
     }
 
     /// <summary>
-    /// Get a default object for an item unchanged in the WorkTree.
+    ///     Get a default object for an item unchanged in the WorkTree.
     /// </summary>
     /// <param name="name">The file name for the item.</param>
     /// <returns>The default GitItemStatus object.</returns>
     public static GitItemStatus GetDefaultStatus(string name)
     {
-        return GitItemStatusConverter.FromStatusCharacter(StagedStatus.WorkTree, name, GitItemStatusConverter.UnusedCharacter);
+        return GitItemStatusConverter.FromStatusCharacter(StagedStatus.WorkTree, name,
+            GitItemStatusConverter.UnusedCharacter);
     }
 
     public string Name
@@ -73,7 +74,7 @@ public sealed class GitItemStatus
 
             field = value;
 
-            int pathEndIndex = GetPathEndIndex(Name);
+            var pathEndIndex = GetPathEndIndex(Name);
             Path = RelativePath.From(pathEndIndex >= 1 ? Name[..pathEndIndex] : "");
 
             return;
@@ -85,8 +86,8 @@ public sealed class GitItemStatus
                     return 0;
                 }
 
-                int lastIndex = name.Length - 1;
-                int startIndex = name[lastIndex] == '/' ? lastIndex - 1 : lastIndex;
+                var lastIndex = name.Length - 1;
+                var startIndex = name[lastIndex] == '/' ? lastIndex - 1 : lastIndex;
                 return name.LastIndexOf('/', startIndex);
             }
         }
@@ -102,7 +103,7 @@ public sealed class GitItemStatus
     public DiffBranchStatus DiffStatus { get; set; } = DiffBranchStatus.Unknown;
 
     /// <summary>
-    /// The git-grep arguments used to match this file.
+    ///     The git-grep arguments used to match this file.
     /// </summary>
     public string? GrepString { get; set; }
 
@@ -121,8 +122,8 @@ public sealed class GitItemStatus
     }
 
     /// <summary>
-    /// For files, the file is modified
-    /// For submodules, the commit is changed.
+    ///     For files, the file is modified
+    ///     For submodules, the commit is changed.
     /// </summary>
     public bool IsChanged
     {
@@ -182,8 +183,8 @@ public sealed class GitItemStatus
     }
 
     /// <summary>
-    /// Submodule is dirty
-    /// Info from git-status, may be available before GetSubmoduleStatusAsync is evaluated.
+    ///     Submodule is dirty
+    ///     Info from git-status, may be available before GetSubmoduleStatusAsync is evaluated.
     /// </summary>
     public bool IsDirty
     {
@@ -192,8 +193,8 @@ public sealed class GitItemStatus
     }
 
     /// <remarks>
-    /// This item is not a Git item, just status information
-    /// If ErrorMessage is set, this is an error from Git, otherwise just a marker that nothing is changed.
+    ///     This item is not a Git item, just status information
+    ///     If ErrorMessage is set, this is an error from Git, otherwise just a marker that nothing is changed.
     /// </remarks>
     public bool IsStatusOnly
     {
@@ -202,8 +203,8 @@ public sealed class GitItemStatus
     }
 
     /// <remarks>
-    /// This item is not a native git item, but a status information
-    /// calculated with git range-diff command.
+    ///     This item is not a native git item, but a status information
+    ///     calculated with git range-diff command.
     /// </remarks>
     public bool IsRangeDiff
     {
@@ -234,33 +235,40 @@ public sealed class GitItemStatus
     #region Derived Flags
 
     /// <summary>
-    /// Indicates whether the Git item was added in the (artificial or real) commit.
+    ///     Indicates whether the Git item was added in the (artificial or real) commit.
     /// </summary>
     public bool IsAdded
-        => IsNew || IsCopied;
+    {
+        get => IsNew || IsCopied;
+    }
 
     /// <summary>
-    /// Indicates whether the Git item is yet to be committed;
-    /// that is it belongs to either WorkTree or Index (<see cref="Staged"/> must be set).
+    ///     Indicates whether the Git item is yet to be committed;
+    ///     that is it belongs to either WorkTree or Index (<see cref="Staged" /> must be set).
     /// </summary>
     public bool IsUncommitted
-        => Staged is StagedStatus.WorkTree or StagedStatus.Index;
+    {
+        get => Staged is StagedStatus.WorkTree or StagedStatus.Index;
+    }
 
     /// <summary>
-    /// Indicates whether the Git item is new or copied (<see cref="IsAdded"/>) and has not been committed yet (<see cref="IsUncommitted"/>).
+    ///     Indicates whether the Git item is new or copied (<see cref="IsAdded" />) and has not been committed yet (
+    ///     <see cref="IsUncommitted" />).
     /// </summary>
     public bool IsUncommittedAdded
-        => IsUncommitted && IsAdded;
+    {
+        get => IsUncommitted && IsAdded;
+    }
 
     #endregion
 
     /// <summary>
-    /// Gets a task whose result is the submodule status.
+    ///     Gets a task whose result is the submodule status.
     /// </summary>
     /// <returns>
-    /// A null task when <see cref="SetSubmoduleStatus"/> has not been called on this object, or
-    /// a task whose result is the status. The task may also return null if the status could not be
-    /// determined.
+    ///     A null task when <see cref="SetSubmoduleStatus" /> has not been called on this object, or
+    ///     a task whose result is the status. The task may also return null if the status could not be
+    ///     determined.
     /// </returns>
     public Task<GitSubmoduleStatus?> GetSubmoduleStatusAsync()
     {
@@ -278,15 +286,15 @@ public sealed class GitItemStatus
     }
 
     /// <summary>
-    /// Return an object with the status as if the item was created
-    /// with first and second commit reverse selected.
+    ///     Return an object with the status as if the item was created
+    ///     with first and second commit reverse selected.
     /// </summary>
     /// <returns>An inverted copy of the status.</returns>
     public GitItemStatus InvertStatus()
     {
         GitItemStatus gitItemStatus = new(Name)
         {
-            Name = IsRenamed ? (OldName ?? string.Empty) : Name,
+            Name = IsRenamed ? OldName ?? string.Empty : Name,
             OldName = IsRenamed ? Name : OldName,
             ErrorMessage = ErrorMessage,
             TreeId = TreeId,
@@ -303,7 +311,7 @@ public sealed class GitItemStatus
 
     public int CompareName(GitItemStatus other)
     {
-        int value = StringComparer.InvariantCulture.Compare(Name, other.Name);
+        var value = StringComparer.InvariantCulture.Compare(Name, other.Name);
 
         if (value == 0)
         {

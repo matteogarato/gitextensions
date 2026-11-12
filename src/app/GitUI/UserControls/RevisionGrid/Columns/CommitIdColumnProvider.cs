@@ -1,17 +1,20 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
 internal sealed class CommitIdColumnProvider : ColumnProvider
 {
-    private readonly Dictionary<Font, int[]> _widthByLengthByFont = new(capacity: 4);
     private readonly RevisionGridControl _grid;
-    private int? _charCount = null;
-    private readonly int _maxWidth = TextRenderer.MeasureText(GitRevision.WorkTreeGuid, AppSettings.MonospaceFont).Width;
+
+    private readonly int _maxWidth =
+        TextRenderer.MeasureText(GitRevision.WorkTreeGuid, AppSettings.MonospaceFont).Width;
+
+    private readonly Dictionary<Font, int[]> _widthByLengthByFont = new(4);
+    private int? _charCount;
 
     public CommitIdColumnProvider(RevisionGridControl grid)
         : base("Commit ID")
@@ -38,21 +41,26 @@ internal sealed class CommitIdColumnProvider : ColumnProvider
 
     private int GetCharLengthForColumnWidth(int width)
     {
-        Font monospaceFont = AppSettings.MonospaceFont;
-        if (!_widthByLengthByFont.TryGetValue(monospaceFont, out int[]? widthByLength))
+        var monospaceFont = AppSettings.MonospaceFont;
+        if (!_widthByLengthByFont.TryGetValue(monospaceFont, out var widthByLength))
         {
-            widthByLength = [.. Enumerable.Range(0, ObjectId.Sha1CharCount + 1).Select(c => TextRenderer.MeasureText(new string('8', c), monospaceFont).Width)];
+            widthByLength =
+            [
+                .. Enumerable.Range(0, ObjectId.Sha1CharCount + 1).Select(c =>
+                    TextRenderer.MeasureText(new string('8', c), monospaceFont).Width)
+            ];
 
             _widthByLengthByFont[monospaceFont] = widthByLength;
         }
 
-        int i = Array.FindIndex(widthByLength, w => w > width);
+        var i = Array.FindIndex(widthByLength, w => w > width);
 
         if (i == -1 && width >= widthByLength[^1])
         {
             return ObjectId.Sha1CharCount;
         }
-        else if (i > 1)
+
+        if (i > 1)
         {
             return i - 1;
         }
@@ -60,14 +68,15 @@ internal sealed class CommitIdColumnProvider : ColumnProvider
         return 0;
     }
 
-    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
+    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight,
+        in CellStyle style)
     {
         if (string.IsNullOrWhiteSpace(e.FormattedValue as string))
         {
             return;
         }
 
-        _grid.DrawColumnText(e, (string)e.FormattedValue, style.MonospaceFont, style.ForeColor, e.CellBounds, useEllipsis: false);
+        _grid.DrawColumnText(e, (string)e.FormattedValue, style.MonospaceFont, style.ForeColor, e.CellBounds, false);
     }
 
     public override void OnColumnWidthChanged(DataGridViewColumnEventArgs e)
@@ -101,7 +110,8 @@ internal sealed class CommitIdColumnProvider : ColumnProvider
         }
     }
 
-    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
+    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision,
+        [NotNullWhen(true)] out string? toolTip)
     {
         if (revision.ObjectId.IsArtificial)
         {

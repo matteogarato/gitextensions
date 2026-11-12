@@ -1,6 +1,5 @@
-﻿using GitCommands;
+﻿namespace GitUITests.Shells;
 
-namespace GitUITests.Shells;
 public sealed class ShellTests
 {
     // Tests verify that shell command patterns properly quote paths containing spaces,
@@ -11,7 +10,7 @@ public sealed class ShellTests
     public void CmdShell_GetChangeDirCommand_quotes_paths_with_spaces(string path, string expected)
     {
         // Matches CmdShell.GetChangeDirCommand: $"cd /D {path.QuoteNE()}"
-        string result = $"cd /D {path.QuoteNE()}";
+        var result = $"cd /D {path.QuoteNe()}";
         result.Should().Be(expected);
     }
 
@@ -21,7 +20,7 @@ public sealed class ShellTests
     public void PowerShellShell_GetChangeDirCommand_quotes_paths_with_spaces(string path, string expected)
     {
         // Matches PowerShellShell.GetChangeDirCommand and PwshShell.GetChangeDirCommand: $"cd {path.QuoteNE()}"
-        string result = $"cd {path.QuoteNE()}";
+        var result = $"cd {path.QuoteNe()}";
         result.Should().Be(expected);
     }
 
@@ -32,7 +31,7 @@ public sealed class ShellTests
     public void BashShell_ExecutableCommandLine_quotes_paths_with_spaces(string exePath, string expected)
     {
         // Matches BashShell constructor: $"{exePath.Quote()} --login -i"
-        string result = $"{exePath.Quote()} --login -i";
+        var result = $"{exePath.Quote()} --login -i";
         result.Should().Be(expected);
     }
 
@@ -42,7 +41,7 @@ public sealed class ShellTests
     public void Shell_ExecutableCommandLine_quotes_exe_paths_with_spaces(string exePath, string expected)
     {
         // Matches CmdShell/PowerShellShell/PwshShell constructor: exePath.Quote()
-        string result = exePath.Quote();
+        var result = exePath.Quote();
         result.Should().Be(expected);
     }
 }

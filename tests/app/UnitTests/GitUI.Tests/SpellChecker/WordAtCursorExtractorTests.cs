@@ -1,9 +1,10 @@
 ﻿using GitUI.SpellChecker;
 
 namespace GitUITests.SpellChecker;
+
 public class WordAtCursorExtractorTests
 {
-    private WordAtCursorExtractor _wordAtCursorExtractor = null!;
+    private readonly WordAtCursorExtractor _wordAtCursorExtractor = null!;
 
     public WordAtCursorExtractorTests()
     {
@@ -50,7 +51,7 @@ public class WordAtCursorExtractorTests
     [InlineData("0  2", 3, 3, 1)]
     public void Test_GetWordBounds(string text, int index, int expectedStart, int expectedLength)
     {
-        (int start, int length) = _wordAtCursorExtractor.GetWordBounds(text, index);
+        var (start, length) = _wordAtCursorExtractor.GetWordBounds(text, index);
         (start == expectedStart && length == expectedLength).Should().BeTrue();
     }
 

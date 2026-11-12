@@ -24,37 +24,37 @@ public interface IEnvironmentAbstraction
 public sealed class EnvironmentAbstraction : IEnvironmentAbstraction
 {
     /// <inheritdoc />
-    public void Exit(int exitCode)
+    void IEnvironmentAbstraction.Exit(int exitCode)
     {
         Environment.Exit(exitCode);
     }
 
     /// <inheritdoc />
-    public string[] GetCommandLineArgs()
+    string[] IEnvironmentAbstraction.GetCommandLineArgs()
     {
         return Environment.GetCommandLineArgs();
     }
 
     /// <inheritdoc />
-    public string? GetEnvironmentVariable(string variable)
+    string? IEnvironmentAbstraction.GetEnvironmentVariable(string variable)
     {
         return Environment.GetEnvironmentVariable(variable);
     }
 
     /// <inheritdoc />
-    public string? GetEnvironmentVariable(string variable, EnvironmentVariableTarget target)
+    string? IEnvironmentAbstraction.GetEnvironmentVariable(string variable, EnvironmentVariableTarget target)
     {
         return Environment.GetEnvironmentVariable(variable, target);
     }
 
     /// <inheritdoc />
-    public string GetFolderPath(Environment.SpecialFolder folder)
+    string IEnvironmentAbstraction.GetFolderPath(Environment.SpecialFolder folder)
     {
         return Environment.GetFolderPath(folder);
     }
 
     /// <inheritdoc />
-    public void SetEnvironmentVariable(string variable, string? value)
+    void IEnvironmentAbstraction.SetEnvironmentVariable(string variable, string? value)
     {
         Environment.SetEnvironmentVariable(variable, value);
     }

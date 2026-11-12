@@ -1,13 +1,15 @@
-﻿using System.Text;
-using GitCommands;
+﻿using System.Globalization;
+using GitCommands.Git;
 using GitCommands.Logging;
+using GitCommands.Settings;
+using GitExtUtils.GitUI;
 
 namespace GitUI.CommandsDialogs.BrowseDialog;
 
 public sealed partial class FormGitCommandLog : GitExtensionsForm
 {
     private FormGitCommandLog()
-        : base(enablePositionRestore: true)
+        : base(true)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -25,7 +27,10 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
         commandCacheOutput.Font = font;
 
         chkCaptureCallStacks.Checked = AppSettings.LogCaptureCallStacks;
-        chkCaptureCallStacks.CheckedChanged += delegate { AppSettings.LogCaptureCallStacks = chkCaptureCallStacks.Checked; };
+        chkCaptureCallStacks.CheckedChanged += delegate
+        {
+            AppSettings.LogCaptureCallStacks = chkCaptureCallStacks.Checked;
+        };
 
         chkWordWrap.CheckedChanged += delegate
         {
@@ -46,7 +51,7 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
         {
             CommandLog.CommandsChanged -= OnGitCommandLogChanged;
             GitModule.GitCommandCache.Changed -= OnCachedCommandsLogChanged;
-            instance = null;
+            _instance = null;
         };
 
         void OnGitCommandLogChanged()
@@ -78,14 +83,15 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
         if (TabControl.SelectedTab == tabPageCommandCache)
         {
             CommandCacheItems.ValueMember = nameof(CacheItem.DisplayString);
-            RefreshListBox(CommandCacheItems, GitModule.GitCommandCache.GetCachedCommands().Select(key => new CacheItem(key)).ToArray());
+            RefreshListBox(CommandCacheItems,
+                GitModule.GitCommandCache.GetCachedCommands().Select(key => new CacheItem(key)).ToArray());
         }
     }
 
     private static void RefreshListBox(ListBox log, object dataSource)
     {
-        bool isLastIndexSelected = log.Items.Count == 0 || log.SelectedIndex == log.Items.Count - 1;
-        int lastIndex = -1;
+        var isLastIndexSelected = log.Items.Count == 0 || log.SelectedIndex == log.Items.Count - 1;
+        var lastIndex = -1;
         if (!isLastIndexSelected)
         {
             lastIndex = log.SelectedIndex;
@@ -120,9 +126,9 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
 
     private void CommandCacheItems_SelectedIndexChanged(object sender, EventArgs e)
     {
-        string command = ((CacheItem)CommandCacheItems.SelectedItem!).Key;
+        var command = ((CacheItem)CommandCacheItems.SelectedItem!).Key;
 
-        if (GitModule.GitCommandCache.TryGet(command, out string? cmdOut, out string? cmdErr))
+        if (GitModule.GitCommandCache.TryGet(command, out var cmdOut, out var cmdErr))
         {
             commandCacheOutput.Text =
                 command +
@@ -145,13 +151,14 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
                 return str;
             }
 
-            return str.Replace("\0", @"\0").Replace("\r", @"\r").Replace("\n", "\\n\n").Replace("\t", "\u00bb").Replace(" ", "\u00b7").Replace("\u001b", @"\x1b");
+            return str.Replace("\0", @"\0").Replace("\r", @"\r").Replace("\n", "\\n\n").Replace("\t", "\u00bb")
+                .Replace(" ", "\u00b7").Replace("\u001b", @"\x1b");
         }
     }
 
     private void LogItems_SelectedIndexChanged(object sender, EventArgs e)
     {
-        CommandLogEntry entry = (CommandLogEntry)LogItems.SelectedItem!;
+        var entry = (CommandLogEntry)LogItems.SelectedItem!;
 
         LogOutput.Text = entry.Detail;
     }
@@ -179,9 +186,9 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
         };
         if (fileDialog.ShowDialog(this) == DialogResult.OK)
         {
-            string separator = fileDialog.FileName.EndsWith("csv") ?
-                System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator :
-                "\t";
+            var separator = fileDialog.FileName.EndsWith("csv")
+                ? CultureInfo.CurrentCulture.TextInfo.ListSeparator
+                : "\t";
             File.WriteAllLines(
                 fileDialog.FileName,
                 CommandLog.Commands.Select(cle => cle.FullLine(separator)));
@@ -207,31 +214,31 @@ public sealed partial class FormGitCommandLog : GitExtensionsForm
         RefreshCommandCacheItems();
     }
 
-    #region Single instance static members
-
-    private static FormGitCommandLog? instance;
-
-    public static void ShowOrActivate(IWin32Window owner)
-    {
-        if (instance is null)
-        {
-            (instance = new FormGitCommandLog()).Show(owner);
-        }
-        else if (instance.WindowState == FormWindowState.Minimized)
-        {
-            instance.WindowState = FormWindowState.Normal;
-        }
-        else
-        {
-            instance.Activate();
-        }
-    }
-
-    #endregion
-
     private sealed class CacheItem(string key)
     {
         public string Key { get; } = key;
         public string DisplayString { get; } = CommandLogEntry.GetGitArgumentsWithoutConfiguration(key);
     }
+
+    #region Single instance static members
+
+    private static FormGitCommandLog? _instance;
+
+    public static void ShowOrActivate(IWin32Window owner)
+    {
+        if (_instance is null)
+        {
+            (_instance = new FormGitCommandLog()).Show(owner);
+        }
+        else if (_instance.WindowState == FormWindowState.Minimized)
+        {
+            _instance.WindowState = FormWindowState.Normal;
+        }
+        else
+        {
+            _instance.Activate();
+        }
+    }
+
+    #endregion
 }

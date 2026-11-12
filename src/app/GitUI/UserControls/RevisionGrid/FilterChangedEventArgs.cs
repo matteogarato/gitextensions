@@ -1,65 +1,46 @@
-﻿using GitUI.UserControls.RevisionGrid;
+﻿namespace GitUI.UserControls.RevisionGrid;
 
-namespace GitUI;
-
-public class FilterChangedEventArgs : EventArgs
+public class FilterChangedEventArgs(FilterInfo filter) : EventArgs
 {
-    public FilterChangedEventArgs(FilterInfo filter)
-    {
-        ShowAllBranches = filter.IsShowAllBranchesChecked;
-        ShowCurrentBranchOnly = filter.IsShowCurrentBranchOnlyChecked;
-        ShowFilteredBranches = filter.IsShowFilteredBranchesChecked;
-        ShowOnlyFirstParent = filter.ShowOnlyFirstParent;
-        ShowReflogReferences = filter.ShowReflogReferences;
-        HasFilter = filter.HasFilter;
-        PathFilter = filter.PathFilter;
-        BranchFilter = filter.BranchFilter;
-        MessageFilter = filter.Message;
-        CommitterFilter = filter.Committer;
-        AuthorFilter = filter.Author;
-        DiffContentFilter = filter.DiffContent;
-        FilterSummary = filter.GetSummary();
-    }
-
-    public bool ShowAllBranches { get; }
-    public bool ShowCurrentBranchOnly { get; }
-    public bool ShowFilteredBranches { get; }
-    public bool ShowOnlyFirstParent { get; }
-    public bool ShowReflogReferences { get; }
-    public bool HasFilter { get; }
+    public bool ShowAllBranches { get; } = filter.IsShowAllBranchesChecked;
+    public bool ShowCurrentBranchOnly { get; } = filter.IsShowCurrentBranchOnlyChecked;
+    public bool ShowFilteredBranches { get; } = filter.IsShowFilteredBranchesChecked;
+    public bool ShowOnlyFirstParent { get; } = filter.ShowOnlyFirstParent;
+    public bool ShowReflogReferences { get; } = filter.ShowReflogReferences;
+    public bool HasFilter { get; } = filter.HasFilter;
 
     /// <summary>
-    ///  Gets the currently applied Path filter.
+    ///     Gets the currently applied Path filter.
     /// </summary>
-    public string PathFilter { get; }
+    public string PathFilter { get; } = filter.PathFilter;
 
     /// <summary>
-    ///  Gets the currently applied Branch filter.
+    ///     Gets the currently applied Branch filter.
     /// </summary>
-    public string BranchFilter { get; }
+    public string BranchFilter { get; } = filter.BranchFilter;
 
     /// <summary>
-    ///  Gets the currently applied Message filter.
+    ///     Gets the currently applied Message filter.
     /// </summary>
-    public string MessageFilter { get; }
+    public string MessageFilter { get; } = filter.Message;
 
     /// <summary>
-    ///  Gets the currently applied Committer filter.
+    ///     Gets the currently applied Committer filter.
     /// </summary>
-    public string CommitterFilter { get; }
+    public string CommitterFilter { get; } = filter.Committer;
 
     /// <summary>
-    ///  Gets the currently applied Author filter.
+    ///     Gets the currently applied Author filter.
     /// </summary>
-    public string AuthorFilter { get; }
+    public string AuthorFilter { get; } = filter.Author;
 
     /// <summary>
-    ///  Gets the currently applied Diff contains filter.
+    ///     Gets the currently applied Diff contains filter.
     /// </summary>
-    public string DiffContentFilter { get; }
+    public string DiffContentFilter { get; } = filter.DiffContent;
 
     /// <summary>
-    ///  Gets a summary of the current filter.
+    ///     Gets a summary of the current filter.
     /// </summary>
-    public string FilterSummary { get; }
+    public string FilterSummary { get; } = filter.GetSummary();
 }

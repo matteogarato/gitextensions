@@ -8,19 +8,17 @@ using GitExtensions.Extensibility.Settings;
 using GitExtensions.Plugins.GitlabIntegration.ApiClient;
 using GitExtensions.Plugins.GitlabIntegration.ApiClient.Models;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 
 namespace GitExtensions.Plugins.GitlabIntegration;
 
 [Export(typeof(IBuildServerAdapter))]
 [GitlabIntegrationMetadata(PluginName)]
 [PartCreationPolicy(CreationPolicy.NonShared)]
-public sealed class GitlabAdapter : IBuildServerAdapter
+public sealed class GitlabAdapter(IGitlabApiClientFactory apiClientFactory) : IBuildServerAdapter
 {
     public const string PluginName = "Gitlab";
     private readonly ConcurrentDictionary<string, DateTime> _loadedItems = new();
 
-    private readonly IGitlabApiClientFactory _apiClientFactory;
     private IGitlabApiClient? _apiClient;
     private int? _pagesLimit;
 
@@ -29,16 +27,12 @@ public sealed class GitlabAdapter : IBuildServerAdapter
     {
     }
 
-    public GitlabAdapter(IGitlabApiClientFactory apiClientFactory)
-    {
-        _apiClientFactory = apiClientFactory;
-    }
-
-    public void Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
+    void IBuildServerAdapter.Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config,
+        Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
     {
         _loadedItems.Clear();
 
-        _apiClient = _apiClientFactory.CreateGitlabApiClient(
+        _apiClient = apiClientFactory.CreateGitlabApiClient(
             config.GetString("InstanceUrl", string.Empty),
             config.GetString("ApiToken", string.Empty),
             config.GetInt("ProjectId", 0));
@@ -50,7 +44,7 @@ public sealed class GitlabAdapter : IBuildServerAdapter
         }
     }
 
-    public string UniqueKey
+    string IBuildServerAdapter.UniqueKey
     {
         get
         {
@@ -59,59 +53,69 @@ public sealed class GitlabAdapter : IBuildServerAdapter
         }
     }
 
-    public IObservable<BuildInfo> GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
+    IObservable<BuildInfo> IBuildServerAdapter.GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
     {
-        return GetBuilds(sinceDate, false);
+        return GetBuilds(sinceDate);
     }
 
-    public IObservable<BuildInfo> GetRunningBuilds(IScheduler scheduler)
+    IObservable<BuildInfo> IBuildServerAdapter.GetRunningBuilds(IScheduler scheduler)
     {
         return GetBuilds(null, true);
     }
 
-    private IObservable<BuildInfo> GetBuilds(DateTime? sinceDate = null, bool running = false)
+    void IDisposable.Dispose()
     {
-        return Observable.Create<BuildInfo>((observer, cancellationToken) => ObserveBuildsAsync(sinceDate, running, observer, cancellationToken));
+        _apiClient?.Dispose();
     }
 
-    private async Task ObserveBuildsAsync(DateTime? sinceDate, bool running, IObserver<BuildInfo> observer, CancellationToken cancellationToken)
+    private IObservable<BuildInfo> GetBuilds(DateTime? sinceDate = null, bool running = false)
+    {
+        return Observable.Create<BuildInfo>((observer, cancellationToken) =>
+            ObserveBuildsAsync(sinceDate, running, observer, cancellationToken));
+    }
+
+    private async Task ObserveBuildsAsync(DateTime? sinceDate, bool running, IObserver<BuildInfo> observer,
+        CancellationToken cancellationToken)
     {
         Validates.NotNull(_apiClient);
 
         try
         {
-            PagedResponse<GitlabPipeline> firstPage = await _apiClient.GetPipelinesAsync(sinceDate, running, 1, cancellationToken);
+            var firstPage =
+                await _apiClient.GetPipelinesAsync(sinceDate, running, 1, cancellationToken);
             ProcessLoadedBuilds(firstPage.Items, observer);
 
             if (firstPage.TotalPages is > 1)
             {
-                int totalPages = firstPage.TotalPages.Value;
+                var totalPages = firstPage.TotalPages.Value;
                 if (_pagesLimit < totalPages)
                 {
                     totalPages = _pagesLimit.Value;
                 }
 
-                Task<PagedResponse<GitlabPipeline>>[] pagesTasks = new Task<PagedResponse<GitlabPipeline>>[totalPages - 1];
-                for (int i = 2; i <= totalPages; i++)
+                var pagesTasks =
+                    new Task<PagedResponse<GitlabPipeline>>[totalPages - 1];
+                for (var i = 2; i <= totalPages; i++)
                 {
                     pagesTasks[i - 2] = _apiClient.GetPipelinesAsync(sinceDate, running, i, cancellationToken);
                 }
 
-                PagedResponse<GitlabPipeline>[] pages = await Task.WhenAll(pagesTasks);
-                foreach (PagedResponse<GitlabPipeline> page in pages)
+                var pages = await Task.WhenAll(pagesTasks);
+                foreach (var page in pages)
                 {
                     ProcessLoadedBuilds(page.Items, observer);
                 }
             }
             else
             {
-                PagedResponse<GitlabPipeline> currentPage = firstPage;
+                var currentPage = firstPage;
 
                 while (currentPage.NextPage.HasValue
-                       && (_pagesLimit.HasValue == false || currentPage.NextPage.Value <= _pagesLimit.Value)
-                       && cancellationToken.IsCancellationRequested == false)
+                       && (!_pagesLimit.HasValue || currentPage.NextPage.Value <= _pagesLimit.Value)
+                       && !cancellationToken.IsCancellationRequested)
                 {
-                    currentPage = await _apiClient.GetPipelinesAsync(sinceDate, running, currentPage.NextPage.Value, cancellationToken);
+                    currentPage = await _apiClient.GetPipelinesAsync(sinceDate, running, currentPage.NextPage.Value,
+                        cancellationToken);
                     ProcessLoadedBuilds(currentPage.Items, observer);
                 }
             }
@@ -126,18 +130,13 @@ public sealed class GitlabAdapter : IBuildServerAdapter
 
     private void ProcessLoadedBuilds(IEnumerable<GitlabPipeline> items, IObserver<BuildInfo> observer)
     {
-        foreach (GitlabPipeline item in items)
+        foreach (var item in items)
         {
-            if (!_loadedItems.TryGetValue(item.Sha, out DateTime dateTime) || dateTime < item.UpdatedAt)
+            if (!_loadedItems.TryGetValue(item.Sha, out var dateTime) || dateTime < item.UpdatedAt)
             {
                 _loadedItems[item.Sha] = item.UpdatedAt;
                 observer.OnNext(item.ToBuildInfo());
             }
         }
-    }
-
-    public void Dispose()
-    {
-        _apiClient?.Dispose();
     }
 }

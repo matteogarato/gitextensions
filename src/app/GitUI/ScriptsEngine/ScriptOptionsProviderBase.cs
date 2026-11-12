@@ -5,42 +5,35 @@ using System.Text.RegularExpressions;
 namespace GitUI.ScriptsEngine;
 
 /// <summary>
-///  Basic implementation of <see cref="IScriptOptionsProvider"/>.
-///  It replaces all script options of all implementations of <see cref="IScriptOptionsProvider"/> with an empty string.
+///     Basic implementation of <see cref="IScriptOptionsProvider" />.
+///     It replaces all script options of all implementations of <see cref="IScriptOptionsProvider" /> with an empty
+///     string.
 /// </summary>
 internal partial class ScriptOptionsProviderBase : IScriptOptionsProvider
 {
     private static readonly string[] _options;
 
-    /// <summary>
-    ///  Matches assembly names that can be skipped when scanning for <see cref="IScriptOptionsProvider"/> implementations.
-    ///  Excluded prefixes fall into three categories:
-    ///  - .NET runtime assemblies
-    ///  - third-party libraries bundled with the application
-    ///  - test infrastructure assemblies
-    ///  Update this list whenever a new third-party or runtime assembly is added to the application
-    ///  that would otherwise be unnecessarily scanned, or when an excluded assembly is removed from the project.
-    /// </summary>
-    [GeneratedRegex(@"^(System|Microsoft|netstandard|Accessibility|Ben\.Demystifier|BenjaminAbt\.StrongOf|ExCSS|Git\.Hub|ICSharpCode\.TextEditor|ResourceManager|SmartFormat|TestableIO|Testably|PresentationCore|UIAutomationTypes|WindowsBase|ZString)[.,]", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
-    private static partial Regex _excludedAssemblies { get; }
-
     static ScriptOptionsProviderBase()
     {
-        Type interfaceType = typeof(IScriptOptionsProvider);
-        _options = [.. AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(GetTypes)
-            .Where(type => type != interfaceType && interfaceType.IsAssignableFrom(type))
-            .SelectMany(implementingType =>
+        var interfaceType = typeof(IScriptOptionsProvider);
+        _options =
+        [
+            .. AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(GetTypes)
+                .Where(type => type != interfaceType && interfaceType.IsAssignableFrom(type))
+                .SelectMany(implementingType =>
                 {
-                    PropertyInfo? property = implementingType.GetProperty(nameof(ImplementedOptions), BindingFlags.Static | BindingFlags.NonPublic);
-                    return (string[])property!.GetValue(obj: null)!;
-                })];
+                    var property = implementingType.GetProperty(nameof(ImplementedOptions),
+                        BindingFlags.Static | BindingFlags.NonPublic);
+                    return (string[])property!.GetValue(null)!;
+                })
+        ];
 
         static Type[] GetTypes(Assembly assembly)
         {
             try
             {
-                if (assembly.FullName is not string name || _excludedAssemblies.IsMatch(name))
+                if (assembly.FullName is not { } name || ExcludedAssemblies.IsMatch(name))
                 {
                     return [];
                 }
@@ -57,22 +50,45 @@ internal partial class ScriptOptionsProviderBase : IScriptOptionsProvider
     }
 
     /// <summary>
-    ///  The default implementation of <see cref="IScriptOptionsProvider"/> if no specific provider applies.
+    ///     Matches assembly names that can be skipped when scanning for <see cref="IScriptOptionsProvider" /> implementations.
+    ///     Excluded prefixes fall into three categories:
+    ///     - .NET runtime assemblies
+    ///     - third-party libraries bundled with the application
+    ///     - test infrastructure assemblies
+    ///     Update this list whenever a new third-party or runtime assembly is added to the application
+    ///     that would otherwise be unnecessarily scanned, or when an excluded assembly is removed from the project.
+    /// </summary>
+    [GeneratedRegex(
+        @"^(System|Microsoft|netstandard|Accessibility|Ben\.Demystifier|BenjaminAbt\.StrongOf|ExCSS|Git\.Hub|ICSharpCode\.TextEditor|ResourceManager|SmartFormat|TestableIO|Testably|PresentationCore|UIAutomationTypes|WindowsBase|ZString)[.,]",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex ExcludedAssemblies { get; }
+
+    /// <summary>
+    ///     The default implementation of <see cref="IScriptOptionsProvider" /> if no specific provider applies.
     /// </summary>
     public static IScriptOptionsProvider Default { get; } = new ScriptOptionsProviderBase();
 
     /// <summary>
-    ///  This implementation of <see cref="IScriptOptionsProvider"/> does not add script options.
+    ///     This implementation of <see cref="IScriptOptionsProvider" /> does not add script options.
     /// </summary>
     /// <remarks>
-    ///  But the static ctor reads this property values by means of reflection.
+    ///     But the static ctor reads this property values by means of reflection.
     /// </remarks>
-    private static string[] ImplementedOptions => [];
+    private static string[] ImplementedOptions
+    {
+        get => [];
+    }
 
-    IReadOnlyList<string> IScriptOptionsProvider.Options => _options;
+    IReadOnlyList<string> IScriptOptionsProvider.Options
+    {
+        get => _options;
+    }
 
     public virtual IEnumerable<string> GetValues(string option)
-        => _options.Contains(option)
+    {
+        return _options.Contains(option)
             ? []
-            : throw new InvalidOperationException(@$"The {nameof(ScriptsEngine)} shall not ask for values of option ""{option}"" not in {nameof(IScriptOptionsProvider.Options)}");
+            : throw new InvalidOperationException(
+                @$"The {nameof(ScriptsEngine)} shall not ask for values of option ""{option}"" not in {nameof(IScriptOptionsProvider.Options)}");
+    }
 }

@@ -2,55 +2,56 @@
 using NSubstitute;
 
 namespace GitUITests.Avatars;
+
 public sealed class AvatarMemoryCacheTests : AvatarCacheTestBase
 {
     public AvatarMemoryCacheTests()
     {
-        _cache = new AvatarMemoryCache(_inner, capacity: 3);
+        Cache = new AvatarMemoryCache(Inner, 3);
     }
 
     [Fact]
     public async Task GetAvatarAsync_calls_inner_the_first_time()
     {
-        await MissAsync(_email1, _name1, _img1);
-        await HitAsync(_email1, _name1, _img1);
+        await MissAsync(Email1, Name1, Img1);
+        await HitAsync(Email1, Name1, Img1);
     }
 
     [Fact]
     public async Task GetAvatarAsync_calls_inner_when_not_present_in_cache()
     {
-        await MissAsync(_email1, _name1, _img1);
-        await MissAsync(_email2, _name2, _img2);
-        await MissAsync(_email3, _name3, _img3);
-        await MissAsync(_email4, _name4, _img4);
-        await MissAsync(_email1, _name1, _img1);
-        await MissAsync(_email2, _name2, _img2);
-        await MissAsync(_email3, _name3, _img3);
-        await MissAsync(_email4, _name4, _img4);
-        await HitAsync(_email2, _name2, _img2);
-        await HitAsync(_email3, _name3, _img3);
-        await HitAsync(_email4, _name4, _img4);
+        await MissAsync(Email1, Name1, Img1);
+        await MissAsync(Email2, Name2, Img2);
+        await MissAsync(Email3, Name3, Img3);
+        await MissAsync(Email4, Name4, Img4);
+        await MissAsync(Email1, Name1, Img1);
+        await MissAsync(Email2, Name2, Img2);
+        await MissAsync(Email3, Name3, Img3);
+        await MissAsync(Email4, Name4, Img4);
+        await HitAsync(Email2, Name2, Img2);
+        await HitAsync(Email3, Name3, Img3);
+        await HitAsync(Email4, Name4, Img4);
     }
 
     [Fact]
     public async Task GetAvatarAsync_cleans_oldest_images()
     {
         // Populate the cache with three images, so that it is full
-        await MissAsync(_email1, _name1, _img1);
-        await MissAsync(_email2, _name2, _img2);
-        await MissAsync(_email3, _name3, _img3);
+        await MissAsync(Email1, Name1, Img1);
+        await MissAsync(Email2, Name2, Img2);
+        await MissAsync(Email3, Name3, Img3);
 
         // Try getting the first image again
-        await HitAsync(_email1, _name1, _img1);
+        await HitAsync(Email1, Name1, Img1);
 
         // At this point image 2 is the oldest
 
         // Try getting image 4
-        await MissAsync(_email4, _name4, _img4);
+        await MissAsync(Email4, Name4, Img4);
 
         // That should have pushed images 2 and 3 out of the cache
-        await MissAsync(_email2, _name2, _img2);
-        await MissAsync(_email3, _name3, _img3);
+        await MissAsync(Email2, Name2, Img2);
+        await MissAsync(Email3, Name3, Img3);
     }
 
     [Fact]
@@ -60,12 +61,12 @@ public sealed class AvatarMemoryCacheTests : AvatarCacheTestBase
         // before the sibling tests run
         const string email = "cleared@avatar.com";
         const string name = "Cleared Cache";
-        using Bitmap image = new(_size, _size);
-        _inner.GetAvatarAsync(email, name, _size).Returns(Task.FromResult<Image?>(image));
+        using Bitmap image = new(Size, Size);
+        Inner.GetAvatarAsync(email, name, Size).Returns(Task.FromResult<Image?>(image));
 
-        Image? handedOut = await _cache.GetAvatarAsync(email, name, _size);
+        var handedOut = await Cache.GetAvatarAsync(email, name, Size);
 
-        await _cacheCleaner.ClearCacheAsync();
+        await CacheCleaner.ClearCacheAsync();
 
         handedOut.Should().BeSameAs(image);
         ((Action)(() => _ = handedOut!.Size)).Should()

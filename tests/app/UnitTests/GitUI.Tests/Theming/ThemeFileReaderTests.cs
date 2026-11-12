@@ -1,6 +1,7 @@
 ﻿using GitUI.Theming;
 
 namespace GitUITests.Theming;
+
 public class ThemeFileReaderTests
 {
     [Fact]
@@ -10,7 +11,7 @@ public class ThemeFileReaderTests
 
         ThemeFileReader reader = new();
 
-        string tempPath = Path.GetTempFileName();
+        var tempPath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(tempPath, mockThemeContent);
@@ -25,7 +26,7 @@ public class ThemeFileReaderTests
     [Fact]
     public void Should_throw_ThemeException_if_file_does_not_exist()
     {
-        string nonExistingFile = Path.Combine(AppContext.BaseDirectory, "non_existing_theme.css");
+        var nonExistingFile = Path.Combine(AppContext.BaseDirectory, "non_existing_theme.css");
 
         ThemeFileReader reader = new();
         reader.Invoking(_ => _.ReadThemeFile(nonExistingFile))

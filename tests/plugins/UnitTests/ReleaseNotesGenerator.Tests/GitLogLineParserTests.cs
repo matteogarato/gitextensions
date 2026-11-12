@@ -1,15 +1,10 @@
 ﻿using GitExtensions.Plugins.ReleaseNotesGenerator;
-using Xunit;
 
 namespace ReleaseNotesGeneratorTests;
+
 public class GitLogLineParserTests
 {
-    private readonly IGitLogLineParser _parser;
-
-    public GitLogLineParserTests()
-    {
-        _parser = new GitLogLineParser();
-    }
+    private readonly IGitLogLineParser _parser = new GitLogLineParser();
 
     [Theory]
     [InlineData(null)]
@@ -23,18 +18,19 @@ public class GitLogLineParserTests
     [Fact]
     public void Parse_line_should_return_null_non_matching_line()
     {
-        string line = "234_42sfsd@asfkmsa askflsak ";
+        var line = "234_42sfsd@asfkmsa askflsak ";
         _parser.Parse(line).Should().BeNull();
     }
 
     [Theory]
     [InlineData("0824@RevisionDiffProvider Release tests", "0824", "RevisionDiffProvider Release tests")]
     [InlineData("0824e058c@RevisionDiffProvider Release tests", "0824e058c", "RevisionDiffProvider Release tests")]
-    [InlineData("0824e058c0123@RevisionDiffProvider Release tests", "0824e058c0123", "RevisionDiffProvider Release tests")]
+    [InlineData("0824e058c0123@RevisionDiffProvider Release tests", "0824e058c0123",
+        "RevisionDiffProvider Release tests")]
     [InlineData("0824e058c@RevisionDiffProvider@ Release tests", "0824e058c", "RevisionDiffProvider@ Release tests")]
     public void Parse_line_should_parse_correctly(string? line, string expectedHash, string expectedMessage)
     {
-        LogLine? logLine = _parser.Parse(line!);
+        var logLine = _parser.Parse(line!);
 
         logLine.Should().NotBeNull();
         logLine.Commit.Should().Be(expectedHash);
@@ -50,7 +46,8 @@ public class GitLogLineParserTests
     [Fact]
     public void Parse_lines_should_parse_correctly()
     {
-        string log = @"7895ec59f@Merge remote-tracking branch 'gitextensions/master' into feature-4157/n4031-compare-arificial-commits
+        var log =
+            @"7895ec59f@Merge remote-tracking branch 'gitextensions/master' into feature-4157/n4031-compare-arificial-commits
 77fc3cb50@Reset to artificial commits require special handling (#4175)* #4031 Reset to artificial commits require special handling
 
 Reset to Unstaged commits does not make sense at all and should be hidden in the GUI
@@ -94,7 +91,7 @@ so could be removed after this (some were missing from that menu). checkoutBranc
 
         logLines.Should().HaveCount(18);
 
-        LogLine? line = logLines.SingleOrDefault(l => l.Commit == "77fc3cb50");
+        var line = logLines.SingleOrDefault(l => l.Commit == "77fc3cb50");
         line.Should().NotBeNull();
         line.MessageLines.Should().HaveCount(10);
 

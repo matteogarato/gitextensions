@@ -1,25 +1,25 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitUI.Models;
 using Timer = System.Windows.Forms.Timer;
 
 namespace GitUI.UserControls;
 
-internal partial class OutputHistoryPanelController : OutputHistoryControllerBase
+internal class OutputHistoryPanelController : OutputHistoryControllerBase
 {
     private readonly SplitContainer _horizontalSplitContainer;
     private readonly OutputHistoryControl _outputHistoryControl;
     private readonly Action _showVerticalSplitContainer1;
+    private readonly Timer _timer = new() { Interval = 25 };
     private readonly SplitContainer _verticalSplitContainer1;
     private readonly SplitContainer _verticalSplitContainer2;
-    private readonly Timer _timer = new() { Interval = 25 };
 
     internal OutputHistoryPanelController(IOutputHistoryProvider outputHistoryProvider,
-                                          OutputHistoryControl outputHistoryControl,
-                                          Control parent,
-                                          Action showVerticalSplitContainer1,
-                                          SplitContainer verticalSplitContainer1,
-                                          SplitContainer verticalSplitContainer2,
-                                          SplitContainer horizontalSplitContainer)
+        OutputHistoryControl outputHistoryControl,
+        Control parent,
+        Action showVerticalSplitContainer1,
+        SplitContainer verticalSplitContainer1,
+        SplitContainer verticalSplitContainer2,
+        SplitContainer horizontalSplitContainer)
         : base(outputHistoryProvider, outputHistoryControl)
     {
         _outputHistoryControl = outputHistoryControl;
@@ -45,7 +45,9 @@ internal partial class OutputHistoryPanelController : OutputHistoryControllerBas
         _verticalSplitContainer1.SplitterMoved += SetSizeByVerticalSplitContainer1;
         _verticalSplitContainer2.SplitterMoved += SetSizeByVerticalSplitContainer2;
         horizontalSplitContainer.SplitterMoved += SetSizeByVerticalSplitContainer1;
-        for (Control? splitterParent = horizontalSplitContainer.Parent; splitterParent is not null; splitterParent = splitterParent.Parent)
+        for (var splitterParent = horizontalSplitContainer.Parent;
+             splitterParent is not null;
+             splitterParent = splitterParent.Parent)
         {
             splitterParent.VisibleChanged += SetSizeByVerticalSplitContainer1Deferred;
         }
@@ -58,7 +60,9 @@ internal partial class OutputHistoryPanelController : OutputHistoryControllerBas
             _verticalSplitContainer1.SplitterMoved -= SetSizeByVerticalSplitContainer1;
             _verticalSplitContainer2.SplitterMoved -= SetSizeByVerticalSplitContainer2;
             horizontalSplitContainer.SplitterMoved -= SetSizeByVerticalSplitContainer1;
-            for (Control? splitterParent = horizontalSplitContainer.Parent; splitterParent is not null; splitterParent = splitterParent.Parent)
+            for (var splitterParent = horizontalSplitContainer.Parent;
+                 splitterParent is not null;
+                 splitterParent = splitterParent.Parent)
             {
                 splitterParent.VisibleChanged -= SetSizeByVerticalSplitContainer1Deferred;
             }
@@ -67,12 +71,12 @@ internal partial class OutputHistoryPanelController : OutputHistoryControllerBas
 
     internal override bool FocusAndToggleIfPanel()
     {
-        if (!_outputHistoryProvider.Enabled)
+        if (!OutputHistoryProvider.Enabled)
         {
             return false;
         }
 
-        bool show = !AppSettings.OutputHistoryPanelVisible.Value;
+        var show = !AppSettings.OutputHistoryPanelVisible.Value;
         AppSettings.OutputHistoryPanelVisible.Value = show;
         _verticalSplitContainer1.Panel2Collapsed = !show;
         if (show && !_verticalSplitContainer1.Visible)
@@ -84,7 +88,7 @@ internal partial class OutputHistoryPanelController : OutputHistoryControllerBas
 
         if (show)
         {
-            _textBox.FindForm()!.ActiveControl = _textBox;
+            TextBox.FindForm()!.ActiveControl = TextBox;
         }
 
         return true;
@@ -129,18 +133,21 @@ internal partial class OutputHistoryPanelController : OutputHistoryControllerBas
     {
         const int margin = 6;
         const int offset = 1;
-        const int h1offset = 1;
+        const int h1Offset = 1;
 
-        bool visible = !_verticalSplitContainer1.Panel2Collapsed && _verticalSplitContainer1.Visible;
+        var visible = !_verticalSplitContainer1.Panel2Collapsed && _verticalSplitContainer1.Visible;
         _outputHistoryControl.Visible = visible;
         _verticalSplitContainer2.Panel2Collapsed = !visible;
         if (visible)
         {
-            int width = (2 * offset) + GetWidth();
-            _outputHistoryControl.SetBounds(margin, _outputHistoryControl.Parent!.Height - height - offset - margin, width, (2 * offset) + height);
+            var width = (2 * offset) + GetWidth();
+            _outputHistoryControl.SetBounds(margin, _outputHistoryControl.Parent!.Height - height - offset - margin,
+                width, (2 * offset) + height);
 
-            _verticalSplitContainer1.SplitterDistance = Math.Max(0, _verticalSplitContainer1.ClientSize.Height - _verticalSplitContainer1.SplitterWidth - height);
-            _verticalSplitContainer2.SplitterDistance = Math.Max(0, _verticalSplitContainer2.ClientSize.Height - _verticalSplitContainer2.SplitterWidth - height);
+            _verticalSplitContainer1.SplitterDistance = Math.Max(0,
+                _verticalSplitContainer1.ClientSize.Height - _verticalSplitContainer1.SplitterWidth - height);
+            _verticalSplitContainer2.SplitterDistance = Math.Max(0,
+                _verticalSplitContainer2.ClientSize.Height - _verticalSplitContainer2.SplitterWidth - height);
         }
 
         return;
@@ -149,11 +156,13 @@ internal partial class OutputHistoryPanelController : OutputHistoryControllerBas
         {
             if (!_horizontalSplitContainer.Visible)
             {
-                return h1offset + _verticalSplitContainer1.Panel2.ClientSize.Width;
+                return h1Offset + _verticalSplitContainer1.Panel2.ClientSize.Width;
             }
 
-            int left = _verticalSplitContainer1.Panel2.PointToScreen(new(_horizontalSplitContainer.Panel1.ClientRectangle.Left, 0)).X;
-            int right = _horizontalSplitContainer.Panel1.PointToScreen(new(_horizontalSplitContainer.Panel1.ClientRectangle.Right, 0)).X;
+            var left = _verticalSplitContainer1.Panel2
+                .PointToScreen(new Point(_horizontalSplitContainer.Panel1.ClientRectangle.Left, 0)).X;
+            var right = _horizontalSplitContainer.Panel1
+                .PointToScreen(new Point(_horizontalSplitContainer.Panel1.ClientRectangle.Right, 0)).X;
             return right - left;
         }
     }

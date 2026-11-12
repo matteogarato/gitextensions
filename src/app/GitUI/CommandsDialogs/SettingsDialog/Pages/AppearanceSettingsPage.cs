@@ -1,4 +1,5 @@
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.Utils;
 using GitExtensions.Extensibility.Settings;
 using GitExtensions.Extensibility.Translations;
@@ -10,13 +11,18 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class AppearanceSettingsPage : SettingsPageWithHeader
 {
-    private const string _spellingWikiURL = "https://github.com/gitextensions/gitextensions/wiki/Spelling";
-    private const string _translationsWikiURL = "https://github.com/gitextensions/gitextensions/wiki/Translations";
+    private const string _spellingWikiUrl = "https://github.com/gitextensions/gitextensions/wiki/Spelling";
+    private const string _translationsWikiUrl = "https://github.com/gitextensions/gitextensions/wiki/Translations";
+
+    private readonly TranslationString _avatarProviderTooltip = new(
+        "The avatar provider defines the source for user-defined avatar images.\r\nThe \"Default\" provider uses GitHub and Gravatar,\r\nthe \"Custom\" provider allows you to set custom provider URLs and\r\n\"None\" disables user-defined avatars.\r\n\r\nClick this info icon for more details.");
 
     private readonly TranslationString _noDictFile = new("None");
     private readonly TranslationString _noDictFilesFound = new("No dictionary files found in: {0}");
-    private readonly TranslationString _noImageServiceTooltip = new($"A default image, if the provider has no image for the email address.\r\n\r\nClick this info icon for more details.");
-    private readonly TranslationString _avatarProviderTooltip = new($"The avatar provider defines the source for user-defined avatar images.\r\nThe \"Default\" provider uses GitHub and Gravatar,\r\nthe \"Custom\" provider allows you to set custom provider URLs and\r\n\"None\" disables user-defined avatars.\r\n\r\nClick this info icon for more details.");
+
+    private readonly TranslationString _noImageServiceTooltip =
+        new(
+            "A default image, if the provider has no image for the email address.\r\n\r\nClick this info icon for more details.");
 
     public AppearanceSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)
@@ -48,9 +54,12 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
         avatarProviderHelp.Size = DpiUtil.Scale(avatarProviderHelp.Size);
 
         // align 1st columns across all tables
-        tlpnlGeneral.AdjustWidthToSize(0, truncateLongFilenames, lblCacheDays, lblNoImageService, lblLanguage, lblSpellingDictionary);
-        tlpnlAuthor.AdjustWidthToSize(0, truncateLongFilenames, lblCacheDays, lblNoImageService, lblLanguage, lblSpellingDictionary);
-        tlpnlLanguage.AdjustWidthToSize(0, truncateLongFilenames, lblCacheDays, lblNoImageService, lblLanguage, lblSpellingDictionary);
+        tlpnlGeneral.AdjustWidthToSize(0, truncateLongFilenames, lblCacheDays, lblNoImageService, lblLanguage,
+            lblSpellingDictionary);
+        tlpnlAuthor.AdjustWidthToSize(0, truncateLongFilenames, lblCacheDays, lblNoImageService, lblLanguage,
+            lblSpellingDictionary);
+        tlpnlLanguage.AdjustWidthToSize(0, truncateLongFilenames, lblCacheDays, lblNoImageService, lblLanguage,
+            lblSpellingDictionary);
 
         // align 2nd columns across all tables
         truncatePathMethod.AdjustWidthToFitContent();
@@ -94,7 +103,8 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
         }
         else
         {
-            string dictionaryFile = string.Concat(Path.Join(AppSettings.GetDictionaryDir(), AppSettings.Dictionary), ".dic");
+            var dictionaryFile =
+                string.Concat(Path.Join(AppSettings.GetDictionaryDir(), AppSettings.Dictionary), ".dic");
             if (File.Exists(dictionaryFile))
             {
                 Dictionary.Items.Add(AppSettings.Dictionary);
@@ -129,7 +139,7 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
         AppSettings.EnableAutoScale = chkEnableAutoScale.Checked;
         AppSettings.TruncatePathMethod = GetTruncatePathMethodString(truncatePathMethod.SelectedIndex);
 
-        bool shouldClearCache =
+        var shouldClearCache =
             AppSettings.AvatarProvider != (AvatarProvider)AvatarProvider.SelectedValue!
             || AppSettings.AvatarFallbackType != (AvatarFallbackType)_NO_TRANSLATE_NoImageService.SelectedValue!
             || AppSettings.CustomAvatarTemplate != txtCustomAvatarTemplate.Text;
@@ -155,10 +165,10 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
             // Clear the cache directly instead of through a throwaway control, which would never be
             // disposed and would keep listening to the cache
             ThreadHelper.FileAndForget(async () =>
-                {
-                    AvatarService.UpdateAvatarProvider();
-                    await AvatarService.CacheCleaner.ClearCacheAsync();
-                });
+            {
+                AvatarService.UpdateAvatarProvider();
+                await AvatarService.CacheCleaner.ClearCacheAsync();
+            });
         }
 
         AppSettings.Dictionary = Dictionary.SelectedIndex == 0 ? "none" : Dictionary.Text;
@@ -166,26 +176,29 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
         base.PageToSettings();
         return;
 
-        static TruncatePathMethod GetTruncatePathMethodString(int index) => index switch
+        static TruncatePathMethod GetTruncatePathMethodString(int index)
         {
-            1 => TruncatePathMethod.Compact,
-            2 => TruncatePathMethod.TrimStart,
-            3 => TruncatePathMethod.FileNameOnly,
-            _ => TruncatePathMethod.None,
-        };
+            return index switch
+            {
+                1 => TruncatePathMethod.Compact,
+                2 => TruncatePathMethod.TrimStart,
+                3 => TruncatePathMethod.FileNameOnly,
+                _ => TruncatePathMethod.None
+            };
+        }
     }
 
     private void Dictionary_DropDown(object sender, EventArgs e)
     {
         try
         {
-            string currentDictionary = Dictionary.Text;
+            var currentDictionary = Dictionary.Text;
 
             Dictionary.Items.Clear();
             Dictionary.Items.Add(_noDictFile.Text);
             foreach (
-                string fileName in
-                    Directory.GetFiles(AppSettings.GetDictionaryDir(), "*.dic", SearchOption.TopDirectoryOnly))
+                var fileName in
+                Directory.GetFiles(AppSettings.GetDictionaryDir(), "*.dic", SearchOption.TopDirectoryOnly))
             {
                 FileInfo file = new(fileName);
                 Dictionary.Items.Add(file.Name.Replace(".dic", ""));
@@ -195,7 +208,8 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
         }
         catch
         {
-            MessageBoxes.Show(this, string.Format(_noDictFilesFound.Text, AppSettings.GetDictionaryDir()), TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, string.Format(_noDictFilesFound.Text, AppSettings.GetDictionaryDir()),
+                TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -206,19 +220,23 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
 
     private void helpTranslate_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
-        OsShellUtil.OpenUrlInDefaultBrowser(_translationsWikiURL);
+        OsShellUtil.OpenUrlInDefaultBrowser(_translationsWikiUrl);
     }
 
     private void downloadDictionary_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
-        OsShellUtil.OpenUrlInDefaultBrowser(_spellingWikiURL);
+        OsShellUtil.OpenUrlInDefaultBrowser(_spellingWikiUrl);
     }
 
     private void pictureAvatarHelp_Click(object sender, EventArgs e)
-         => OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "author-images-avatar-fallback"));
+    {
+        OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "author-images-avatar-fallback"));
+    }
 
     private void customAvatarHelp_Click(object sender, EventArgs e)
-        => OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "author-images-avatar-provider"));
+    {
+        OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "author-images-avatar-provider"));
+    }
 
     private void AvatarProvider_SelectedIndexChanged(object sender, EventArgs e)
     {
@@ -227,21 +245,16 @@ public partial class AppearanceSettingsPage : SettingsPageWithHeader
 
     private void ManageAvatarOptionsDisplay()
     {
-        bool showCustomTemplate = (AvatarProvider)AvatarProvider.SelectedValue! == GitCommands.AvatarProvider.Custom;
+        var showCustomTemplate =
+            (AvatarProvider)AvatarProvider.SelectedValue! == GitCommands.Settings.AvatarProvider.Custom;
 
         lblCustomAvatarTemplate.Visible = showCustomTemplate;
         txtCustomAvatarTemplate.Visible = showCustomTemplate;
     }
 
-    private sealed class ComboBoxItem<T>
+    private sealed class ComboBoxItem<T>(string text, T value)
     {
-        public string Text { get; }
-        public T Value { get; }
-
-        public ComboBoxItem(string text, T value)
-        {
-            Text = text;
-            Value = value;
-        }
+        public string Text { get; } = text;
+        public T Value { get; } = value;
     }
 }

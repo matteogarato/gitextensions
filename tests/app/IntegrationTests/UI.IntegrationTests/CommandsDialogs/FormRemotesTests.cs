@@ -1,30 +1,34 @@
 ﻿using System.ComponentModel.Design;
-using AwesomeAssertions;
 using CommonTestUtils;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
 using NSubstitute;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormRemotesTests : System.IDisposable
+public class FormRemotesTests : IDisposable
 {
-    private ReferenceRepository _referenceRepository = null!;
-    private GitUICommands _commands = null!;
-    private bool _originalAlwaysShowAdvOpt;
+    private readonly GitUiCommands _commands = null!;
+    private readonly bool _originalAlwaysShowAdvOpt;
+    private readonly ReferenceRepository _referenceRepository = null!;
+
     public FormRemotesTests()
     {
         _originalAlwaysShowAdvOpt = AppSettings.AlwaysShowAdvOpt;
 
         _referenceRepository = new ReferenceRepository();
 
-        ServiceContainer serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
+        var serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
 
-        _commands = new GitUICommands(serviceContainer, _referenceRepository.Module);
+        _commands = new GitUiCommands(serviceContainer, _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -36,13 +40,12 @@ public class FormRemotesTests : System.IDisposable
     [WinFormsFact]
     public void Should_display_remotes_tab_by_default()
     {
-        RunFormTest(
-            form =>
-            {
-                FormRemotes.TestAccessor accessor = form.GetTestAccessor();
-                accessor.TabControl.SelectedTab.Should().NotBeNull();
-                accessor.TabControl.SelectedIndex.Should().Be(0);
-            });
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
+            accessor.TabControl.SelectedTab.Should().NotBeNull();
+            accessor.TabControl.SelectedIndex.Should().Be(0);
+        });
     }
 
     [WinFormsFact]
@@ -52,7 +55,7 @@ public class FormRemotesTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRemotes.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
                 accessor.TabControl.SelectedIndex.Should().Be(0);
             },
             preselectLocal: "master");
@@ -61,40 +64,37 @@ public class FormRemotesTests : System.IDisposable
     [WinFormsFact]
     public void Should_enable_save_button_when_remote_name_is_entered()
     {
-        RunFormTest(
-            form =>
-            {
-                FormRemotes.TestAccessor accessor = form.GetTestAccessor();
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
 
-                accessor.RemoteName.Text = "origin";
-                accessor.Save.Enabled.Should().BeTrue();
+            accessor.RemoteName.Text = "origin";
+            accessor.Save.Enabled.Should().BeTrue();
 
-                accessor.RemoteName.Text = string.Empty;
-                accessor.Save.Enabled.Should().BeFalse();
-            });
+            accessor.RemoteName.Text = string.Empty;
+            accessor.Save.Enabled.Should().BeFalse();
+        });
     }
 
     [WinFormsFact]
     public void Should_disable_delete_and_toggle_buttons_when_no_remotes_configured()
     {
-        RunFormTest(
-            form =>
-            {
-                FormRemotes.TestAccessor accessor = form.GetTestAccessor();
-                accessor.Delete.Enabled.Should().BeFalse();
-                accessor.ToggleState.Enabled.Should().BeFalse();
-            });
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
+            accessor.Delete.Enabled.Should().BeFalse();
+            accessor.ToggleState.Enabled.Should().BeFalse();
+        });
     }
 
     [WinFormsFact]
     public void Should_show_empty_remote_name_when_no_remotes_configured()
     {
-        RunFormTest(
-            form =>
-            {
-                FormRemotes.TestAccessor accessor = form.GetTestAccessor();
-                accessor.RemoteName.Text.Should().BeEmpty();
-            });
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
+            accessor.RemoteName.Text.Should().BeEmpty();
+        });
     }
 
     [WinFormsFact]
@@ -102,23 +102,24 @@ public class FormRemotesTests : System.IDisposable
     {
         AppSettings.AlwaysShowAdvOpt = true;
 
-        IGitBranchNameNormaliser branchNameNormaliser = _commands.GetRequiredService<IGitBranchNameNormaliser>();
-        branchNameNormaliser.Normalise("invalid branch prefix/", Arg.Any<GitBranchNameOptions>()).Returns("invalid-branch-prefix/");
+        var branchNameNormaliser = _commands.GetRequiredService<IGitBranchNameNormaliser>();
+        branchNameNormaliser.Normalise("invalid branch prefix/", Arg.Any<GitBranchNameOptions>())
+            .Returns("invalid-branch-prefix/");
 
-        RunFormTest(
-            form =>
-            {
-                FormRemotes.TestAccessor accessor = form.GetTestAccessor();
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
 
-                accessor.RemotePrefix.Focus();
-                accessor.RemotePrefix.Text = "invalid branch prefix/";
-                accessor.RemoteName.Focus();
+            accessor.RemotePrefix.Focus();
+            accessor.RemotePrefix.Text = "invalid branch prefix/";
+            accessor.RemoteName.Focus();
 
-                accessor.RemotePrefix.Text.Should().Be("invalid-branch-prefix/");
-            });
+            accessor.RemotePrefix.Text.Should().Be("invalid-branch-prefix/");
+        });
     }
 
-    private void RunFormTest(Action<FormRemotes> testDriver, string? preselectRemote = null, string? preselectLocal = null)
+    private void RunFormTest(Action<FormRemotes> testDriver, string? preselectRemote = null,
+        string? preselectLocal = null)
     {
         RunFormTest(
             form =>
@@ -130,18 +131,15 @@ public class FormRemotesTests : System.IDisposable
             preselectLocal);
     }
 
-    private void RunFormTest(Func<FormRemotes, Task> testDriverAsync, string? preselectRemote = null, string? preselectLocal = null)
+    private void RunFormTest(Func<FormRemotes, Task> testDriverAsync, string? preselectRemote = null,
+        string? preselectLocal = null)
     {
-        UITest.RunForm(
+        UiTest.RunForm(
             () =>
             {
-                _commands.StartRemotesDialog(owner: null, preselectRemote: preselectRemote, preselectLocal: preselectLocal);
+                _commands.StartRemotesDialog(owner: null, preselectRemote: preselectRemote,
+                    preselectLocal: preselectLocal);
             },
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

@@ -1,7 +1,9 @@
 using System.Windows.Forms;
 using GitUI.Editor;
+using GitUI.UserControls;
 using GitUI.UserControls.RevisionGrid;
 using GitUIPluginInterfaces;
+using GitStash = GitExtensions.Extensibility.Git.GitStash;
 
 namespace GitUI.CommandsDialogs;
 
@@ -35,8 +37,8 @@ partial class FormStash
         StashMessage = new RichTextBox();
         panel1 = new Panel();
         Loading = new LoadingControl();
-        Stashed = new GitUI.FileStatusList();
-        toolStrip1 = new GitUI.ToolStripEx();
+        Stashed = new UserControls.FileStatusList();
+        toolStrip1 = new ToolStripEx();
         showToolStripLabel = new ToolStripLabel();
         Stashes = new ToolStripComboBox();
         View = new GitUI.Editor.FileViewer();
@@ -347,7 +349,7 @@ partial class FormStash
     private Button Stash;
     private Button Apply;
     private SplitContainer splitContainer1;
-    private FileStatusList Stashed;
+    private UserControls.FileStatusList Stashed;
     private BindingSource gitStashBindingSource;
     private Label messageLabel;
     private RichTextBox StashMessage;

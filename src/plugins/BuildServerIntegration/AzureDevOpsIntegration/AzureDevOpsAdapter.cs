@@ -2,31 +2,25 @@
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Text.Json.Nodes;
-using AzureDevOpsIntegration.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.BuildServerIntegration;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
-using GitUI;
+using GitExtensions.Plugins.AzureDevOpsIntegration.Settings;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 using ResourceManager;
 
-namespace AzureDevOpsIntegration;
+namespace GitExtensions.Plugins.AzureDevOpsIntegration;
 
 [MetadataAttribute]
 [AttributeUsage(AttributeTargets.Class)]
-public class AzureDevOpsIntegrationMetadata : BuildServerAdapterMetadataAttribute
-{
-    public AzureDevOpsIntegrationMetadata(string buildServerType)
-        : base(buildServerType)
-    {
-    }
-}
+public class AzureDevOpsIntegrationMetadata(string buildServerType)
+    : BuildServerAdapterMetadataAttribute(buildServerType);
 
 /// <summary>
-/// Provides build server integration for Azure DevOps (or TFS>=2015) into GitExtensions
+///     Provides build server integration for Azure DevOps (or TFS>=2015) into GitExtensions
 /// </summary>
 [Export(typeof(IBuildServerAdapter))]
 [AzureDevOpsIntegrationMetadata(PluginName)]
@@ -34,15 +28,7 @@ public class AzureDevOpsIntegrationMetadata : BuildServerAdapterMetadataAttribut
 internal sealed class AzureDevOpsAdapter : IBuildServerAdapter
 {
     public const string PluginName = "Azure DevOps and Team Foundation Server (since TFS2015)";
-
-    private bool _firstCallForFinishedBuildsWasIgnored = false;
-    private IBuildServerWatcher? _buildServerWatcher;
-    private IntegrationSettings? _settings;
-    private ApiClient? _apiClient;
     private static readonly IBuildDurationFormatter _buildDurationFormatter = new BuildDurationFormatter();
-    private JoinableTask<string?>? _buildDefinitionsTask;
-    private string? _projectUrl;
-    private string? _buildDefinitions;
 
     // Static variable used to convey the data between the different instances of the class but that doesn't necessarily require synchronization because:
     // * there is only one instance at every given time (link to the revision grid and recreated on revision grid refresh)
@@ -50,19 +36,33 @@ internal sealed class AzureDevOpsAdapter : IBuildServerAdapter
     private static BuildsCache? _buildsCache;
     private static string? _projectOnErrorKey;
 
-    private readonly TranslationString _buildIntegrationErrorCaption = new("Azure DevOps error");
-    private readonly TranslationString _openSettingsButton = new("Open settings");
-    private readonly TranslationString _ignoreButton = new("Ignore");
-    private readonly TranslationString _badTokenErrorMessage = new(@"The personal access token is invalid or has expired. Update it in the 'Build server integration' settings.
+    private readonly TranslationString _badTokenErrorMessage = new(
+        @"The personal access token is invalid or has expired. Update it in the 'Build server integration' settings.
 
 The build server integration has been disabled for this session.");
-    private readonly TranslationString _genericErrorMessage = new(@"An error occurred when requesting build server results.
+
+    private readonly TranslationString _buildIntegrationErrorCaption = new("Azure DevOps error");
+
+    private readonly TranslationString _genericErrorMessage = new(
+        @"An error occurred when requesting build server results.
 
 As a consequence, the build server integration has been disabled for this session.
 
 Detail of the error:");
 
+    private readonly TranslationString _ignoreButton = new("Ignore");
+    private readonly TranslationString _openSettingsButton = new("Open settings");
+    private ApiClient? _apiClient;
+    private string? _buildDefinitions;
+    private JoinableTask<string?>? _buildDefinitionsTask;
+    private IBuildServerWatcher? _buildServerWatcher;
+
+    private bool _firstCallForFinishedBuildsWasIgnored;
+
     private Action? _openSettings;
+    private string? _projectUrl;
+    private IntegrationSettings? _settings;
+
     private string CacheKey
     {
         get
@@ -72,7 +72,8 @@ Detail of the error:");
         }
     }
 
-    public void Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
+    void IBuildServerAdapter.Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config,
+        Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
     {
         if (_buildServerWatcher is not null)
         {
@@ -85,7 +86,8 @@ Detail of the error:");
 
         if (!_settings.IsValid())
         {
-            throw new InvalidOperationException("Azure DevOps integration settings are incomplete (project URL missing).");
+            throw new InvalidOperationException(
+                "Azure DevOps integration settings are incomplete (project URL missing).");
         }
 
         _projectUrl = _buildServerWatcher.ReplaceVariables(_settings.ProjectUrl);
@@ -99,10 +101,9 @@ Detail of the error:");
         if (_buildsCache is null || _buildsCache.Id != CacheKey)
         {
             _buildsCache = null;
-            _buildDefinitionsTask = ThreadHelper.JoinableTaskFactory.RunAsync(
-                () => _apiClient.GetBuildDefinitionsAsync(
-                    _settings.BuildDefinitionFilter,
-                    string.IsNullOrWhiteSpace(_settings.RepositoryName) ? null : _settings.RepositoryName));
+            _buildDefinitionsTask = ThreadHelper.JoinableTaskFactory.RunAsync(() => _apiClient.GetBuildDefinitionsAsync(
+                _settings.BuildDefinitionFilter,
+                string.IsNullOrWhiteSpace(_settings.RepositoryName) ? null : _settings.RepositoryName));
         }
         else
         {
@@ -111,11 +112,15 @@ Detail of the error:");
     }
 
     /// <summary>
-    /// Gets a unique key which identifies this build server.
+    ///     Gets a unique key which identifies this build server.
     /// </summary>
-    public string UniqueKey => _settings?.ProjectUrl ?? throw new InvalidOperationException($"{nameof(AzureDevOpsAdapter)} is not yet initialized");
+    string IBuildServerAdapter.UniqueKey
+    {
+        get => _settings?.ProjectUrl ??
+               throw new InvalidOperationException($"{nameof(AzureDevOpsAdapter)} is not yet initialized");
+    }
 
-    public IObservable<BuildInfo> GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
+    IObservable<BuildInfo> IBuildServerAdapter.GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
     {
         if (!_firstCallForFinishedBuildsWasIgnored)
         {
@@ -123,19 +128,29 @@ Detail of the error:");
             return Observable.Empty<BuildInfo>();
         }
 
-        return GetBuilds(sinceDate, false);
+        return GetBuilds(sinceDate);
     }
 
-    public IObservable<BuildInfo> GetRunningBuilds(IScheduler scheduler)
-        => GetBuilds(null, true);
+    IObservable<BuildInfo> IBuildServerAdapter.GetRunningBuilds(IScheduler scheduler)
+    {
+        return GetBuilds(null, true);
+    }
 
-    public void OnRepositoryChanged()
+    void IBuildServerAdapter.OnRepositoryChanged()
     {
         _buildsCache = null;
     }
 
+    void IDisposable.Dispose()
+    {
+        _apiClient?.Dispose();
+    }
+
     private IObservable<BuildInfo> GetBuilds(DateTime? sinceDate = null, bool running = false)
-        => Observable.Create<BuildInfo>((observer, cancellationToken) => ObserveBuildsAsync(sinceDate, running, observer));
+    {
+        return Observable.Create<BuildInfo>((observer, cancellationToken) =>
+            ObserveBuildsAsync(sinceDate, running, observer));
+    }
 
     private async Task ObserveBuildsAsync(DateTime? sinceDate, bool running, IObserver<BuildInfo> observer)
     {
@@ -147,7 +162,7 @@ Detail of the error:");
 
         try
         {
-            bool isBuildDefinitionsInitializedSuccessfully = await EnsureBuildDefinitionsIsInitializedAsync(observer);
+            var isBuildDefinitionsInitializedSuccessfully = await EnsureBuildDefinitionsIsInitializedAsync(observer);
             if (!isBuildDefinitionsInitializedSuccessfully)
             {
                 return;
@@ -155,8 +170,9 @@ Detail of the error:");
 
             if (running)
             {
-                IEnumerable<Build> builds = FilterRunningBuilds(await _apiClient.QueryRunningBuildsAsync(_buildDefinitions!));
-                foreach (Build build in builds)
+                var builds =
+                    FilterRunningBuilds(await _apiClient.QueryRunningBuildsAsync(_buildDefinitions!));
+                foreach (var build in builds)
                 {
                     observer.OnNext(CreateBuildInfo(build));
                 }
@@ -166,7 +182,7 @@ Detail of the error:");
                 // Display cached builds results
                 if (!sinceDate.HasValue && _buildsCache is not null && _buildsCache.FinishedBuilds.Count != 0)
                 {
-                    foreach (BuildInfo buildInfo in _buildsCache.FinishedBuilds)
+                    foreach (var buildInfo in _buildsCache.FinishedBuilds)
                     {
                         observer.OnNext(buildInfo);
                     }
@@ -176,12 +192,12 @@ Detail of the error:");
                 }
 
                 IEnumerable<Build> builds = await _apiClient.QueryFinishedBuildsAsync(_buildDefinitions!, sinceDate);
-                IEnumerable<IGrouping<string?, Build>> buildsByCommit = builds.GroupBy(b => b.SourceVersion);
+                var buildsByCommit = builds.GroupBy(b => b.SourceVersion);
 
-                foreach (IGrouping<string?, Build> buildsForACommit in buildsByCommit)
+                foreach (var buildsForACommit in buildsByCommit)
                 {
-                    Build buildToDisplay = buildsForACommit.OrderByDescending(b => b.FinishTime).First();
-                    BuildInfo buildInfo = CreateBuildInfo(buildToDisplay);
+                    var buildToDisplay = buildsForACommit.OrderByDescending(b => b.FinishTime).First();
+                    var buildInfo = CreateBuildInfo(buildToDisplay);
                     observer.OnNext(buildInfo);
                     _buildsCache!.FinishedBuilds.Add(buildInfo);
                     if (buildToDisplay.FinishTime.HasValue && buildToDisplay.FinishTime.Value >= _buildsCache.LastCall)
@@ -225,7 +241,7 @@ Detail of the error:");
         }
         catch (UnauthorizedAccessException)
         {
-            string errorMessage = _badTokenErrorMessage.Text;
+            var errorMessage = _badTokenErrorMessage.Text;
             DisplayInitializationErrorInRevisionGrid(errorMessage);
 
             if (_projectOnErrorKey is null || _projectOnErrorKey != CacheKey)
@@ -243,7 +259,7 @@ Detail of the error:");
                     Buttons = { btnOpenSettings, btnIgnore }
                 };
 
-                TaskDialogButton result = await TaskDialog.ShowDialogAsync(page);
+                var result = await TaskDialog.ShowDialogAsync(page);
                 if (result == btnOpenSettings)
                 {
                     _projectOnErrorKey = null;
@@ -254,13 +270,13 @@ Detail of the error:");
         }
         catch (Exception ex)
         {
-            string errorMessage = $"{_genericErrorMessage.Text}{Environment.NewLine}{ex.Message}";
+            var errorMessage = $"{_genericErrorMessage.Text}{Environment.NewLine}{ex.Message}";
             DisplayInitializationErrorInRevisionGrid(errorMessage);
 
             if (_projectOnErrorKey is null || _projectOnErrorKey != CacheKey)
             {
                 _projectOnErrorKey = CacheKey;
-                MessageBoxes.ShowError(owner: null, errorMessage, _buildIntegrationErrorCaption.Text);
+                MessageBoxes.ShowError(null, errorMessage, _buildIntegrationErrorCaption.Text);
             }
         }
 
@@ -269,7 +285,12 @@ Detail of the error:");
         void DisplayInitializationErrorInRevisionGrid(string errorMessage)
         {
             _apiClient = null;
-            observer.OnNext(new BuildInfo { CommitHashList = new[] { ObjectId.WorkTreeId }, Description = errorMessage, Status = BuildStatus.Failure });
+            observer.OnNext(new BuildInfo
+            {
+                CommitHashList = new[] { ObjectId.WorkTreeId },
+                Description = errorMessage,
+                Status = BuildStatus.Failure
+            });
             observer.OnCompleted();
         }
     }
@@ -281,14 +302,14 @@ Detail of the error:");
             return runningBuilds;
         }
 
-        IEnumerable<IGrouping<string?, Build>> byCommitBuilds = runningBuilds.GroupBy(b => b.SourceVersion);
+        var byCommitBuilds = runningBuilds.GroupBy(b => b.SourceVersion);
         runningBuilds = [];
 
         // Filter running builds to display the best build as we can only display one build for a commit
         // by selecting the first started or if none, one that is waiting to start
-        foreach (IGrouping<string?, Build> commitBuilds in byCommitBuilds)
+        foreach (var commitBuilds in byCommitBuilds)
         {
-            Build buildSelected = commitBuilds.Where(b => b.StartTime.HasValue).MinBy(b => b.StartTime)
+            var buildSelected = commitBuilds.Where(b => b.StartTime.HasValue).MinBy(b => b.StartTime)
                                 ?? commitBuilds.First();
             runningBuilds.Add(buildSelected);
         }
@@ -298,7 +319,7 @@ Detail of the error:");
 
     private static (string duration, string tooltip) CreateBuildTooltip(Build buildDetail)
     {
-        string duration = string.Empty;
+        var duration = string.Empty;
 
         if (buildDetail.Status is not null
             && buildDetail.Status != "none"
@@ -307,31 +328,37 @@ Detail of the error:");
             && buildDetail.StartTime.HasValue)
         {
             duration = buildDetail.Status == "inProgress"
-                ? _buildDurationFormatter.Format((long)(DateTime.UtcNow - buildDetail.StartTime.Value).TotalMilliseconds)
-                : buildDetail.FinishTime.HasValue ? _buildDurationFormatter.Format((long)(buildDetail.FinishTime.Value - buildDetail.StartTime.Value).TotalMilliseconds) : "???";
+                ? _buildDurationFormatter.Format(
+                    (long)(DateTime.UtcNow - buildDetail.StartTime.Value).TotalMilliseconds)
+                : buildDetail.FinishTime.HasValue
+                    ? _buildDurationFormatter.Format((long)(buildDetail.FinishTime.Value - buildDetail.StartTime.Value)
+                        .TotalMilliseconds)
+                    : "???";
         }
 
-        return (duration, $"{buildDetail.BuildNumber} {ConvertResult(buildDetail.IsInProgress ? buildDetail.Status : buildDetail.Result)} - {duration} [{buildDetail.Definition?.Name}]");
+        return (duration,
+            $"{buildDetail.BuildNumber} {ConvertResult(buildDetail.IsInProgress ? buildDetail.Status : buildDetail.Result)} - {duration} [{buildDetail.Definition?.Name}]");
     }
 
     private static BuildInfo CreateBuildInfo(Build buildDetail)
     {
-        (string duration, string tooltip) = CreateBuildTooltip(buildDetail);
+        (var duration, var tooltip) = CreateBuildTooltip(buildDetail);
         Validates.NotNull(buildDetail.SourceVersion);
 
-        string pullRequestTooltip = string.Empty;
+        var pullRequestTooltip = string.Empty;
         string? pullRequestUrl = null;
         if (buildDetail.IsPullRequest)
         {
             // It's a PR and we need to dive into "Parameters" json to get the real commit hash
-            JsonNode? pullRequestNode = buildDetail.Parameters is not null ? JsonNode.Parse(buildDetail.Parameters) : null;
-            string? commitHash = GetNodeValue(pullRequestNode, "system.pullRequest.sourceCommitId");
+            var pullRequestNode =
+                buildDetail.Parameters is not null ? JsonNode.Parse(buildDetail.Parameters) : null;
+            var commitHash = GetNodeValue(pullRequestNode, "system.pullRequest.sourceCommitId");
             if (!string.IsNullOrEmpty(commitHash))
             {
                 buildDetail.SourceVersion = commitHash;
             }
 
-            string? pullRequestId = GetNodeValue(pullRequestNode, "system.pullRequest.pullRequestId");
+            var pullRequestId = GetNodeValue(pullRequestNode, "system.pullRequest.pullRequestId");
             if (!string.IsNullOrWhiteSpace(pullRequestId))
             {
                 pullRequestTooltip = $"{Environment.NewLine}PR #{pullRequestId}";
@@ -347,7 +374,7 @@ Detail of the error:");
             Description = duration + " " + buildDetail.BuildNumber,
             Tooltip = tooltip + pullRequestTooltip,
             CommitHashList = [ObjectId.Parse(buildDetail.SourceVersion)],
-            Url = buildDetail._links?.Web?.Href,
+            Url = buildDetail.Links?.Web?.Href,
             ShowInBuildReportTab = false,
             PullRequestUrl = pullRequestUrl
         };
@@ -402,24 +429,22 @@ Detail of the error:");
         };
     }
 
-    public void Dispose()
-    {
-        _apiClient?.Dispose();
-    }
-
     #region TestAccessor
-    internal TestAccessor GetTestAccessor() => new(this);
 
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        public AzureDevOpsAdapter AzureDevOpsAdapter { get; }
-
-        public TestAccessor(AzureDevOpsAdapter azureDevOpsAdapter)
-        {
-            AzureDevOpsAdapter = azureDevOpsAdapter;
-        }
-
-        public IEnumerable<Build> FilterRunningBuilds(IList<Build> runningBuilds) => AzureDevOpsAdapter.FilterRunningBuilds(runningBuilds);
+        return new TestAccessor(this);
     }
+
+    internal readonly struct TestAccessor(AzureDevOpsAdapter azureDevOpsAdapter)
+    {
+        public AzureDevOpsAdapter AzureDevOpsAdapter { get; } = azureDevOpsAdapter;
+
+        public IEnumerable<Build> FilterRunningBuilds(IList<Build> runningBuilds)
+        {
+            return AzureDevOpsAdapter.FilterRunningBuilds(runningBuilds);
+        }
+    }
+
     #endregion
 }

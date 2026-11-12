@@ -2,9 +2,10 @@
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Git;
+
 public class GitTreeParserTests
 {
-    private IGitTreeParser _parser = null!;
+    private readonly IGitTreeParser _parser = null!;
 
     public GitTreeParserTests()
     {
@@ -65,7 +66,7 @@ public class GitTreeParserTests
     public void ParseSingle_should_return_GitItem()
     {
         const string s = "100644 blob 25d7b5d771e84982a3dfd8bd537531d8fb45d491\t.editorconfig";
-        GitItem? item = _parser.ParseSingle(s);
+        var item = _parser.ParseSingle(s);
 
         item!.Guid.Should().Be("25d7b5d771e84982a3dfd8bd537531d8fb45d491");
         item.Mode.Should().Be(100644);
@@ -121,7 +122,8 @@ public class GitTreeParserTests
             "100755 532e4f49ecac926e5ff3881ec9cd46a9d48b5ddd 0\texternals/Directory.Build.targets", "\0",
             "160000 1b0386aea1acdd2ba258977bd79e40a0a7b95665 0\texternals/Git.hub", "\0",
             "120000 be6183dc8f29079ce677b6834c56b05752828f23 0\texternals/ICSharpCode.TextEditor", "\0",
-            "100644 b5400269ebd000ab4b8f44e4530ec3edfe104f8c 0\texternals/NetSpell.SpellChecker/Dictionary/Affix/AffixEntry.cs", "\0",
+            "100644 b5400269ebd000ab4b8f44e4530ec3edfe104f8c 0\texternals/NetSpell.SpellChecker/Dictionary/Affix/AffixEntry.cs",
+            "\0",
             "040000 0c7cce8981b980d03431f65b9b54c680a467fa2e 0\texternals", "\0",
             "040000 illegal-sha 0\texternals");
     }

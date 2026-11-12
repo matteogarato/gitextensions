@@ -4,17 +4,17 @@ using System.Xml.Serialization;
 using GitCommands.ExternalLinks;
 using GitCommands.Remotes;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using JetBrains.Annotations;
 using NSubstitute;
 
 namespace GitCommandsTests.ExternalLinks;
+
 public class ExternalLinkRevisionParserTests
 {
-    private IConfigFileRemoteSettingsManager _remotesManager = null!;
-    private ExternalLinkRevisionParser _parser = null!;
+    private readonly ExternalLinkRevisionParser _parser = null!;
+    private readonly IConfigFileRemoteSettingsManager _remotesManager = null!;
+    private readonly GitRevision _revision = null!;
     private ExternalLinkDefinition _linkDef = null!;
-    private GitRevision _revision = null!;
 
     public ExternalLinkRevisionParserTests()
     {
@@ -34,10 +34,10 @@ public class ExternalLinkRevisionParserTests
         _revision.Body = "Merge pull request #3657 from RussKie/tweak_FormRemotes_tooltips";
         ExternalLink[] expectedLinks =
         [
-            new ExternalLink("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657")
+            new("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657")
         ];
 
-        IEnumerable<ExternalLink> actualLinks = _parser.Parse(_revision, _linkDef);
+        var actualLinks = _parser.Parse(_revision, _linkDef);
         actualLinks.Should().Equal(expectedLinks);
     }
 
@@ -48,10 +48,10 @@ public class ExternalLinkRevisionParserTests
         _revision.Body = "Merge pull request #3657 from RussKie/tweak_FormRemotes_tooltips";
         ExternalLink[] expectedLinks =
         [
-            new ExternalLink("Issue 3657", "https://github.com/jbialobr/gitextensions/issues/3657")
+            new("Issue 3657", "https://github.com/jbialobr/gitextensions/issues/3657")
         ];
 
-        IEnumerable<ExternalLink> actualLinks = _parser.Parse(_revision, _linkDef);
+        var actualLinks = _parser.Parse(_revision, _linkDef);
         actualLinks.Should().Equal(expectedLinks);
     }
 
@@ -62,11 +62,11 @@ public class ExternalLinkRevisionParserTests
         _revision.Body = "Merge pull request #3657 from RussKie/tweak_FormRemotes_tooltips";
         ExternalLink[] expectedLinks =
         [
-            new ExternalLink("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657"),
-            new ExternalLink("Issue 3657", "https://github.com/jbialobr/gitextensions/issues/3657")
+            new("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657"),
+            new("Issue 3657", "https://github.com/jbialobr/gitextensions/issues/3657")
         ];
 
-        IEnumerable<ExternalLink> actualLinks = _parser.Parse(_revision, _linkDef);
+        var actualLinks = _parser.Parse(_revision, _linkDef);
         actualLinks.Should().Equal(expectedLinks);
     }
 
@@ -78,12 +78,12 @@ public class ExternalLinkRevisionParserTests
         _revision.Body = "Merge pull request #3657 from RussKie/tweak_FormRemotes_tooltips";
         ExternalLink[] expectedLinks =
         [
-            new ExternalLink("Issue 3657", "https://github.com/jbialobr/gitextensions/issues/3657"),
-            new ExternalLink("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657"),
-            new ExternalLink("Issue 3657", "https://github.com/russkie/gitextensions/issues/3657")
+            new("Issue 3657", "https://github.com/jbialobr/gitextensions/issues/3657"),
+            new("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657"),
+            new("Issue 3657", "https://github.com/russkie/gitextensions/issues/3657")
         ];
 
-        IEnumerable<ExternalLink> actualLinks = _parser.Parse(_revision, _linkDef);
+        var actualLinks = _parser.Parse(_revision, _linkDef);
         actualLinks.Should().Equal(expectedLinks);
     }
 
@@ -94,10 +94,10 @@ public class ExternalLinkRevisionParserTests
         _revision.Body = "Merge pull request #3657 from RussKie/tweak_FormRemotes_tooltips";
         ExternalLink[] expectedLinks =
         [
-            new ExternalLink("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657")
+            new("Issue 3657", "https://github.com/gitextensions/gitextensions/issues/3657")
         ];
 
-        IEnumerable<ExternalLink> actualLinks = _parser.Parse(_revision, _linkDef);
+        var actualLinks = _parser.Parse(_revision, _linkDef);
         actualLinks.Should().Equal(expectedLinks);
     }
 
@@ -105,21 +105,9 @@ public class ExternalLinkRevisionParserTests
     {
         BindingList<ConfigFileRemote> remotes =
         [
-            new ConfigFileRemote
-            {
-                Name = "origin",
-                Url = "https://github.com/jbialobr/gitextensions.git"
-            },
-            new ConfigFileRemote
-            {
-                Name = "upstream",
-                Url = "https://github.com/gitextensions/gitextensions.git"
-            },
-            new ConfigFileRemote
-            {
-                Name = "RussKie",
-                Url = "https://github.com/russkie/gitextensions.git"
-            },
+            new() { Name = "origin", Url = "https://github.com/jbialobr/gitextensions.git" },
+            new() { Name = "upstream", Url = "https://github.com/gitextensions/gitextensions.git" },
+            new() { Name = "RussKie", Url = "https://github.com/russkie/gitextensions.git" }
         ];
 
         return remotes;

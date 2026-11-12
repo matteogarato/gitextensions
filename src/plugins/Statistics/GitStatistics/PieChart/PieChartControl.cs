@@ -4,7 +4,7 @@ using GitExtensions.Extensibility;
 namespace GitExtensions.Plugins.GitStatistics.PieChart;
 
 /// <summary>
-///   A PieChartControl for showing statistics.
+///     A PieChartControl for showing statistics.
 /// </summary>
 public class PieChartControl : Panel
 {
@@ -28,7 +28,7 @@ public class PieChartControl : Panel
     private decimal[] _values = [];
 
     /// <summary>
-    ///   Initializes the <c>PieChartControl</c>.
+    ///     Initializes the <c>PieChartControl</c>.
     /// </summary>
     public PieChartControl()
     {
@@ -39,13 +39,13 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Gets or sets the tool tips.
+    ///     Gets or sets the tool tips.
     /// </summary>
     /// <value>The tool tips.</value>
     public string[]? ToolTips { get; set; }
 
     /// <summary>
-    ///   Sets the initial angle from which pies are drawn.
+    ///     Sets the initial angle from which pies are drawn.
     /// </summary>
     public float InitialAngle
     {
@@ -58,7 +58,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the left margin for the chart.
+    ///     Sets the left margin for the chart.
     /// </summary>
     public void SetLeftMargin(float value)
     {
@@ -68,7 +68,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the right margin for the chart.
+    ///     Sets the right margin for the chart.
     /// </summary>
     public void SetRightMargin(float value)
     {
@@ -78,7 +78,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the top margin for the chart.
+    ///     Sets the top margin for the chart.
     /// </summary>
     public void SetTopMargin(float value)
     {
@@ -88,7 +88,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the bottom margin for the chart.
+    ///     Sets the bottom margin for the chart.
     /// </summary>
     public void SetBottomMargin(float value)
     {
@@ -98,8 +98,8 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the indicator if chart should fit the bounding rectangle
-    ///   exactly.
+    ///     Sets the indicator if chart should fit the bounding rectangle
+    ///     exactly.
     /// </summary>
     public void SetFitChart(bool value)
     {
@@ -108,7 +108,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets values to be represented by the chart.
+    ///     Sets values to be represented by the chart.
     /// </summary>
     public void SetValues(decimal[] value)
     {
@@ -123,7 +123,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets colors to be used for rendering pie slices.
+    ///     Sets colors to be used for rendering pie slices.
     /// </summary>
     public void SetColors(Color[] value)
     {
@@ -132,7 +132,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets values for slice displacements.
+    ///     Sets values for slice displacements.
     /// </summary>
     public void SetSliceRelativeDisplacements(float[] value)
     {
@@ -141,7 +141,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets pie slice relative height.
+    ///     Sets pie slice relative height.
     /// </summary>
     public void SetSliceRelativeHeight(float value)
     {
@@ -150,7 +150,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the shadow style.
+    ///     Sets the shadow style.
     /// </summary>
     public void SetShadowStyle(ShadowStyle value)
     {
@@ -159,7 +159,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the edge color type.
+    ///     Sets the edge color type.
     /// </summary>
     public void SetEdgeColorType(EdgeColorType value)
     {
@@ -168,7 +168,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets the edge lines width.
+    ///     Sets the edge lines width.
     /// </summary>
     public void SetEdgeLineWidth(float value)
     {
@@ -177,10 +177,10 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Handles <c>OnPaint</c> event.
+    ///     Handles <c>OnPaint</c> event.
     /// </summary>
-    /// <param name = "args">
-    ///   <c>PaintEventArgs</c> object.
+    /// <param name="args">
+    ///     <c>PaintEventArgs</c> object.
     /// </param>
     protected override void OnPaint(PaintEventArgs args)
     {
@@ -188,7 +188,7 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Handles <c>OnResize</c> event.
+    ///     Handles <c>OnResize</c> event.
     /// </summary>
     protected override void OnResize(EventArgs args)
     {
@@ -196,10 +196,10 @@ public class PieChartControl : Panel
     }
 
     /// <summary>
-    ///   Sets values for the chart and draws them.
+    ///     Sets values for the chart and draws them.
     /// </summary>
-    /// <param name = "graphics">
-    ///   Graphics object used for drawing.
+    /// <param name="graphics">
+    ///     Graphics object used for drawing.
     /// </param>
     protected void DoDraw(Graphics graphics)
     {
@@ -209,8 +209,8 @@ public class PieChartControl : Panel
         }
 
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        float width = ClientSize.Width - _leftMargin - _rightMargin;
-        float height = ClientSize.Height - _topMargin - _bottomMargin;
+        var width = ClientSize.Width - _leftMargin - _rightMargin;
+        var height = ClientSize.Height - _topMargin - _bottomMargin;
 
         // if the width or height if <=0 an exception would be thrown -> exit method..
         if (width <= 0 || height <= 0)
@@ -222,7 +222,7 @@ public class PieChartControl : Panel
         if (_colors?.Length is > 0)
         {
             _pieChart = new PieChart3D(_leftMargin, _topMargin, width, height, _values, _colors,
-                                       _sliceRelativeHeight);
+                _sliceRelativeHeight);
         }
         else
         {
@@ -268,7 +268,7 @@ public class PieChartControl : Panel
             return;
         }
 
-        int index = _pieChart.FindPieSliceUnderPoint(new PointF(e.X, e.Y));
+        var index = _pieChart.FindPieSliceUnderPoint(new PointF(e.X, e.Y));
         if (index != -1)
         {
             if (ToolTips is null || ToolTips.Length <= index || ToolTips[index].Length == 0)
@@ -293,7 +293,7 @@ public class PieChartControl : Panel
     {
         if (_pieChart is not null)
         {
-            int index = _pieChart.FindPieSliceUnderPoint(new PointF(e.X, e.Y));
+            var index = _pieChart.FindPieSliceUnderPoint(new PointF(e.X, e.Y));
             if (index != -1)
             {
                 if (ToolTips is null || ToolTips.Length <= index || ToolTips[index].Length == 0)

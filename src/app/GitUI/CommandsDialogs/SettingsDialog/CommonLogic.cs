@@ -1,13 +1,12 @@
 using System.Text;
-using GitCommands;
 using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Configurations;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
-using Microsoft;
 using Microsoft.Win32;
 using ResourceManager;
+using OpenFileDialog = System.Windows.Forms.OpenFileDialog;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
@@ -19,12 +18,12 @@ public sealed class CommonLogic : Translate
     private static readonly TranslationString _cantReadRegistry =
         new("Git Extensions has insufficient permissions to check the registry.");
 
-    private readonly TranslationString _selectFile =
-        new("Select file");
-
     public readonly DistributedSettingsSet DistributedSettingsSet;
     public readonly GitConfigSettingsSet GitConfigSettingsSet;
     public readonly IGitModule Module;
+
+    private readonly TranslationString _selectFile =
+        new("Select file");
 
     private CommonLogic()
     {
@@ -38,11 +37,12 @@ public sealed class CommonLogic : Translate
 
         Module = module;
 
-        DistributedSettings distributedGlobalSettings = DistributedSettings.CreateGlobal(useSharedCache: false);
-        DistributedSettings distributedPulledSettings = DistributedSettings.CreateDistributed(module, useSharedCache: false);
-        DistributedSettings distributedLocalSettings = DistributedSettings.CreateLocal(module, useSharedCache: false);
+        var distributedGlobalSettings = DistributedSettings.CreateGlobal(false);
+        var distributedPulledSettings = DistributedSettings.CreateDistributed(module, false);
+        var distributedLocalSettings = DistributedSettings.CreateLocal(module, false);
         DistributedSettings distributedEffectiveSettings = new(
-            new DistributedSettings(distributedGlobalSettings, distributedPulledSettings.SettingsCache, SettingLevel.Distributed),
+            new DistributedSettings(distributedGlobalSettings, distributedPulledSettings.SettingsCache,
+                SettingLevel.Distributed),
             distributedLocalSettings.SettingsCache,
             SettingLevel.Effective);
         DistributedSettingsSet = new DistributedSettingsSet(
@@ -51,7 +51,7 @@ public sealed class CommonLogic : Translate
             distributedPulledSettings,
             distributedGlobalSettings);
 
-        IExecutable gitExecutable = module.GitExecutable;
+        var gitExecutable = module.GitExecutable;
         GitConfigSettings systemGitConfigSettings = new(gitExecutable, GitSettingLevel.SystemWide);
         GitConfigSettings globalGitConfigSettings = new(gitExecutable, GitSettingLevel.Global);
         GitConfigSettings localGitConfigSettings = new(gitExecutable, GitSettingLevel.Local);
@@ -64,18 +64,18 @@ public sealed class CommonLogic : Translate
     }
 
     /// <summary>
-    /// Reads the registry key.
+    ///     Reads the registry key.
     /// </summary>
     /// <param name="root">Registry root</param>
     /// <param name="subkey">Registry subkey</param>
-    /// <param name="key">Registry key, specify <see langword="null"/> to read default key</param>
+    /// <param name="key">Registry key, specify <see langword="null" /> to read default key</param>
     /// <returns>registry value or empty string in case of error</returns>
     public static string GetRegistryValue(RegistryKey root, string subkey, string? key = null)
     {
         string? value = null;
         try
         {
-            RegistryKey? registryKey = root.OpenSubKey(subkey, writable: false);
+            var registryKey = root.OpenSubKey(subkey, false);
 
             if (registryKey is not null)
             {
@@ -87,7 +87,8 @@ public sealed class CommonLogic : Translate
         }
         catch (UnauthorizedAccessException)
         {
-            MessageBoxes.Show(_cantReadRegistry.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(_cantReadRegistry.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
 
         return value ?? "";
@@ -108,11 +109,9 @@ public sealed class CommonLogic : Translate
 
     public string SelectFile(string initialDirectory, string filter, string prev)
     {
-        using System.Windows.Forms.OpenFileDialog dialog = new()
+        using OpenFileDialog dialog = new()
         {
-            Filter = filter,
-            InitialDirectory = initialDirectory,
-            Title = _selectFile.Text
+            Filter = filter, InitialDirectory = initialDirectory, Title = _selectFile.Text
         };
         return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : prev;
     }

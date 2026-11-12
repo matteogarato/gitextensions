@@ -1,15 +1,13 @@
 using System.ComponentModel.Design;
 using System.Diagnostics;
-using GitCommands;
+using System.IO.Abstractions;
 using GitCommands.Git;
-using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
 using GitUI.CommandsDialogs;
 using NSubstitute;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class ConflictWorkflowTests
 {
@@ -24,12 +22,13 @@ public sealed class ConflictWorkflowTests
     [Fact]
     public void BuildMerge_should_pass_strategy_and_message_file()
     {
-        IGitModule module = Substitute.For<IGitModule>();
+        var module = Substitute.For<IGitModule>();
         module.GetPathForGitExecution(Arg.Any<string?>()).Returns(call => call.Arg<string?>());
-        IGitRef source = Substitute.For<IGitRef>();
+        var source = Substitute.For<IGitRef>();
         source.Name.Returns("feature");
 
-        string arguments = MergeWorkflow.BuildMerge(module, source, MergeOptions.Default with { Strategy = "ours" }, "/tmp/msg.txt").ToString();
+        var arguments = MergeWorkflow
+            .BuildMerge(module, source, MergeOptions.Default with { Strategy = "ours" }, "/tmp/msg.txt").ToString();
 
         arguments.Should().Contain("--strategy=ours").And.Contain("-F \"/tmp/msg.txt\"");
     }
@@ -37,9 +36,9 @@ public sealed class ConflictWorkflowTests
     [Fact]
     public void BuildMerge_should_add_log_only_when_requested()
     {
-        IGitModule module = Substitute.For<IGitModule>();
+        var module = Substitute.For<IGitModule>();
         module.GetPathForGitExecution(Arg.Any<string?>()).Returns(call => call.Arg<string?>());
-        IGitRef source = Substitute.For<IGitRef>();
+        var source = Substitute.For<IGitRef>();
         source.Name.Returns("feature");
 
         MergeWorkflow.BuildMerge(module, source, MergeOptions.Default).ToString().Should().NotContain("--log");
@@ -52,7 +51,7 @@ public sealed class ConflictWorkflowTests
     {
         MergeWorkflow.WriteMessageFile("  ").Should().BeNull();
 
-        string? path = MergeWorkflow.WriteMessageFile("custom message");
+        var path = MergeWorkflow.WriteMessageFile("custom message");
         try
         {
             File.ReadAllText(path!).Should().Be("custom message");
@@ -66,8 +65,8 @@ public sealed class ConflictWorkflowTests
     [Fact]
     public void ResolveWithSide_should_take_side_stage_it_and_offer_continue_in_real_repository()
     {
-        using TestRepository repository = TestRepository.Create();
-        repository.Git("merge feature", expectedExitCode: 1);
+        using var repository = TestRepository.Create();
+        repository.Git("merge feature", 1);
 
         ConflictWorkflow.BuildContinue(repository.Module).Should().NotBeNull();
         ConflictWorkflow.ResolveWithSide(repository.Module, "text.txt", ConflictSide.Theirs).Should().BeNull();
@@ -83,7 +82,7 @@ public sealed class ConflictWorkflowTests
     [Fact]
     public void BuildContinue_should_be_null_without_an_operation_in_progress()
     {
-        using TestRepository repository = TestRepository.Create();
+        using var repository = TestRepository.Create();
 
         ConflictWorkflow.BuildContinue(repository.Module).Should().BeNull();
     }
@@ -96,21 +95,32 @@ public sealed class ConflictWorkflowTests
         {
             Directory = directory;
             GitExtUtils.ServiceContainerRegistry.RegisterServices(_services);
-            System.IO.Abstractions.FileSystem fileSystem = new();
-            _services.AddService<System.IO.Abstractions.IFileSystem>(fileSystem);
+            FileSystem fileSystem = new();
+            _services.AddService<IFileSystem>(fileSystem);
             _services.AddService<IGitDirectoryResolver>(new GitDirectoryResolver(fileSystem));
             GitCommands.ServiceContainerRegistry.RegisterServices(_services);
-            GitUI.ServiceContainerRegistry.RegisterServices(_services);
-            Module = new GitModule(_services.GetRequiredService<IGitExecutorProvider>(), directory);
+            ServiceContainerRegistry.RegisterServices(_services);
+            Module = new GitCommands.GitModule(_services.GetRequiredService<IGitExecutorProvider>(), directory);
         }
 
         public string Directory { get; }
 
-        public GitModule Module { get; }
+        public GitCommands.GitModule Module { get; }
+
+        void IDisposable.Dispose()
+        {
+            _services.Dispose();
+            foreach (var file in System.IO.Directory.EnumerateFiles(Directory, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+
+            System.IO.Directory.Delete(Directory, true);
+        }
 
         public static TestRepository Create()
         {
-            string directory = Path.Combine(Path.GetTempPath(), $"ge-side-{Guid.NewGuid():N}");
+            var directory = Path.Combine(Path.GetTempPath(), $"ge-side-{Guid.NewGuid():N}");
             System.IO.Directory.CreateDirectory(directory);
             TestRepository repository = new(directory);
             repository.Git("init -q -b main");
@@ -137,29 +147,19 @@ public sealed class ConflictWorkflowTests
 
         public string Git(string arguments, int expectedExitCode = 0)
         {
-            using Process process = Process.Start(new ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo("git", arguments)
             {
-                WorkingDirectory = Directory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                WorkingDirectory = Directory, RedirectStandardOutput = true, RedirectStandardError = true
             })!;
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            var output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
             process.ExitCode.Should().Be(expectedExitCode, process.StandardError.ReadToEnd());
             return output;
         }
 
-        public void Dispose()
+        private void Write(string name, string content)
         {
-            _services.Dispose();
-            foreach (string file in System.IO.Directory.EnumerateFiles(Directory, "*", SearchOption.AllDirectories))
-            {
-                File.SetAttributes(file, FileAttributes.Normal);
-            }
-
-            System.IO.Directory.Delete(Directory, recursive: true);
+            File.WriteAllText(Path.Combine(Directory, name), content);
         }
-
-        private void Write(string name, string content) => File.WriteAllText(Path.Combine(Directory, name), content);
     }
 }

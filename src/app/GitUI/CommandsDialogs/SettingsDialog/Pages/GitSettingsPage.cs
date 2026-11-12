@@ -1,4 +1,5 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using ResourceManager;
 
@@ -6,8 +7,8 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class GitSettingsPage : SettingsPageWithHeader
 {
-    private readonly TranslationString _envIsSetToString = new("{0} is set to: {1}");
     private readonly TranslationString _envIsNotSetString = new("{0} is not set.");
+    private readonly TranslationString _envIsSetToString = new("{0} is set to: {1}");
 
     public GitSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)
@@ -30,9 +31,9 @@ public partial class GitSettingsPage : SettingsPageWithHeader
     protected override void SettingsToPage()
     {
         EnvironmentConfiguration.SetEnvironmentVariables();
-        string envName = "GIT_CONFIG_GLOBAL";
-        string? envValue = EnvironmentConfiguration.GetEnvironmentVariable(envName);
-        string additionalText = "";
+        var envName = "GIT_CONFIG_GLOBAL";
+        var envValue = EnvironmentConfiguration.GetEnvironmentVariable(envName);
+        var additionalText = "";
         if (envValue is null)
         {
             additionalText = $"    ({string.Format(_envIsNotSetString.Text, $"%{envName}%")})";
@@ -75,7 +76,7 @@ public partial class GitSettingsPage : SettingsPageWithHeader
     {
         CheckSettingsLogic.SolveLinuxToolsDir(LinuxToolsDir.Text.Trim());
 
-        string? userSelectedPath = OsShellUtil.PickFolder(this, AppSettings.LinuxToolsDir);
+        var userSelectedPath = OsShellUtil.PickFolder(this, AppSettings.LinuxToolsDir);
 
         if (userSelectedPath is not null)
         {
@@ -97,7 +98,8 @@ public partial class GitSettingsPage : SettingsPageWithHeader
 
     private void downloadGitForWindows_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
-        OsShellUtil.OpenUrlInDefaultBrowser(@"https://github.com/gitextensions/gitextensions/wiki/Application-Dependencies#git");
+        OsShellUtil.OpenUrlInDefaultBrowser(
+            @"https://github.com/gitextensions/gitextensions/wiki/Application-Dependencies#git");
     }
 
     private void ChangeHomeButton_Click(object sender, EventArgs e)

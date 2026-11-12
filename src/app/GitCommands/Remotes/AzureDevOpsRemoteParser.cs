@@ -5,30 +5,39 @@ namespace GitCommands.Remotes;
 
 public sealed partial class AzureDevOpsRemoteParser : RemoteParser
 {
-    [GeneratedRegex(@"^https:\/\/(?<owner>[^.]*)\.visualstudio\.com(?:\/DefaultCollection)?\/(?<project>[^\/]*)\/_git\/(?<repo>.*)$", RegexOptions.ExplicitCapture)]
+    private static readonly Regex[] _azureDevopsRegexes =
+        [AzureDevopsHttpsRemoteRegex, AzureDevopsSshRemoteRegex, VstsHttpsRemoteRegex, VstsSshRemoteRegex];
+
+    [GeneratedRegex(
+        @"^https:\/\/(?<owner>[^.]*)\.visualstudio\.com(?:\/DefaultCollection)?\/(?<project>[^\/]*)\/_git\/(?<repo>.*)$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex VstsHttpsRemoteRegex { get; }
 
-    [GeneratedRegex(@"^[^@]*@vs-ssh\.visualstudio\.com:v\d\/(?<owner>[^\/]*)\/(?<project>[^\/]*)\/(?<repo>.*)$", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"^[^@]*@vs-ssh\.visualstudio\.com:v\d\/(?<owner>[^\/]*)\/(?<project>[^\/]*)\/(?<repo>.*)$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex VstsSshRemoteRegex { get; }
 
-    [GeneratedRegex(@"^https:\/\/[^@]*@dev\.azure\.com\/(?<owner>[^\/]*)\/(?<project>[^\/]*)\/_git\/(?<repo>.*)$", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"^https:\/\/[^@]*@dev\.azure\.com\/(?<owner>[^\/]*)\/(?<project>[^\/]*)\/_git\/(?<repo>.*)$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex AzureDevopsHttpsRemoteRegex { get; }
 
-    [GeneratedRegex(@"^git@ssh\.dev\.azure\.com:v\d\/(?<owner>[^\/]*)\/(?<project>[^\/]*)\/(?<repo>.*)$", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"^git@ssh\.dev\.azure\.com:v\d\/(?<owner>[^\/]*)\/(?<project>[^\/]*)\/(?<repo>.*)$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex AzureDevopsSshRemoteRegex { get; }
 
-    private static readonly Regex[] _azureDevopsRegexes = [AzureDevopsHttpsRemoteRegex, AzureDevopsSshRemoteRegex, VstsHttpsRemoteRegex, VstsSshRemoteRegex];
-
     public bool IsValidRemoteUrl(string remoteUrl)
-        => TryExtractAzureDevopsDataFromRemoteUrl(remoteUrl, out _, out _, out _);
+    {
+        return TryExtractAzureDevopsDataFromRemoteUrl(remoteUrl, out _, out _, out _);
+    }
 
-    public bool TryExtractAzureDevopsDataFromRemoteUrl(string remoteUrl, [NotNullWhen(returnValue: true)] out string? owner, [NotNullWhen(returnValue: true)] out string? project, [NotNullWhen(returnValue: true)] out string? repository)
+    public bool TryExtractAzureDevopsDataFromRemoteUrl(string remoteUrl, [NotNullWhen(true)] out string? owner,
+        [NotNullWhen(true)] out string? project, [NotNullWhen(true)] out string? repository)
     {
         owner = null;
         project = null;
         repository = null;
 
-        Match? m = MatchRegExes(remoteUrl, _azureDevopsRegexes);
+        var m = MatchRegExes(remoteUrl, _azureDevopsRegexes);
 
         if (m is null || !m.Success)
         {
@@ -42,9 +51,9 @@ public sealed partial class AzureDevOpsRemoteParser : RemoteParser
     }
 
     /// <summary>
-    ///  Constructs the Azure DevOps project web URL from a remote URL and extracted owner/project names.
+    ///     Constructs the Azure DevOps project web URL from a remote URL and extracted owner/project names.
     /// </summary>
-    /// <returns>The project URL, or <see langword="null"/> if the remote host is not recognized.</returns>
+    /// <returns>The project URL, or <see langword="null" /> if the remote host is not recognized.</returns>
     public static string? BuildProjectUrl(string remoteUrl, string owner, string project)
     {
         if (IsDevAzureCom(remoteUrl))
@@ -61,9 +70,9 @@ public sealed partial class AzureDevOpsRemoteParser : RemoteParser
     }
 
     /// <summary>
-    ///  Constructs the Azure DevOps repository web URL from a remote URL and extracted components.
+    ///     Constructs the Azure DevOps repository web URL from a remote URL and extracted components.
     /// </summary>
-    /// <returns>The repository URL, or <see langword="null"/> if the remote host is not recognized.</returns>
+    /// <returns>The repository URL, or <see langword="null" /> if the remote host is not recognized.</returns>
     public static string? BuildRepositoryUrl(string remoteUrl, string owner, string project, string repository)
     {
         if (IsDevAzureCom(remoteUrl))
@@ -80,8 +89,12 @@ public sealed partial class AzureDevOpsRemoteParser : RemoteParser
     }
 
     private static bool IsDevAzureCom(string remoteUrl)
-        => remoteUrl.Contains("dev.azure.com", StringComparison.OrdinalIgnoreCase);
+    {
+        return remoteUrl.Contains("dev.azure.com", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsVisualStudioCom(string remoteUrl)
-        => remoteUrl.Contains("visualstudio.com", StringComparison.OrdinalIgnoreCase);
+    {
+        return remoteUrl.Contains("visualstudio.com", StringComparison.OrdinalIgnoreCase);
+    }
 }

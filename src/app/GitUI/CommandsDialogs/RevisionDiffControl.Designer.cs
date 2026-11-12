@@ -1,5 +1,6 @@
 using System.Windows.Forms;
 using GitUI.CommandsDialogs.Menus;
+using GitUI.UserControls;
 
 namespace GitUI.CommandsDialogs;
 
@@ -20,9 +21,9 @@ partial class RevisionDiffControl
     {
         DiffSplitContainer = new SplitContainer();
         LeftSplitContainer = new SplitContainer();
-        DiffFiles = new FileStatusList();
+        DiffFiles = new UserControls.FileStatusList();
         DiffText = new GitUI.Editor.FileViewer();
-        BlameControl = new GitUI.Blame.BlameControl();
+        BlameControl = new BlameControl();
         ((System.ComponentModel.ISupportInitialize)DiffSplitContainer).BeginInit();
         DiffSplitContainer.Panel1.SuspendLayout();
         DiffSplitContainer.Panel2.SuspendLayout();
@@ -131,7 +132,7 @@ partial class RevisionDiffControl
     #endregion
     private SplitContainer DiffSplitContainer;
     public SplitContainer LeftSplitContainer;
-    private FileStatusList DiffFiles;
+    private UserControls.FileStatusList DiffFiles;
     private Editor.FileViewer DiffText;
-    private Blame.BlameControl BlameControl;
+    private BlameControl BlameControl;
 }

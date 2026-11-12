@@ -1,4 +1,4 @@
-﻿namespace GitCommands;
+﻿namespace GitCommands.Settings;
 
 public enum TruncatePathMethod
 {

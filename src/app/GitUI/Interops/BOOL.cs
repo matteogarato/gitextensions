@@ -1,28 +1,39 @@
-﻿using static System.Interop;
+﻿using static GitUI.Interops.Interop;
 
-namespace System;
+namespace GitUI.Interops;
 
-internal partial class Interop
+internal class Interop
 {
     /// <summary>
-    ///  Blittable version of Windows BOOL type. It is convenient in situations where
-    ///  manual marshalling is required, or to avoid overhead of regular bool marshalling.
+    ///     Blittable version of Windows BOOL type. It is convenient in situations where
+    ///     manual marshalling is required, or to avoid overhead of regular bool marshalling.
     /// </summary>
     /// <remarks>
-    ///  Some Windows APIs return arbitrary integer values although the return type is defined
-    ///  as BOOL. It is best to never compare BOOL to TRUE. Always use bResult != BOOL.FALSE
-    ///  or bResult == BOOL.FALSE .
+    ///     Some Windows APIs return arbitrary integer values although the return type is defined
+    ///     as BOOL. It is best to never compare BOOL to TRUE. Always use bResult != BOOL.FALSE
+    ///     or bResult == BOOL.FALSE .
     /// </remarks>
-    public enum BOOL : int
+    public enum Bool
     {
-        FALSE = 0,
-        TRUE = 1,
+        False = 0,
+        True = 1
     }
 }
 
 internal static class BoolExtensions
 {
-    public static bool IsTrue(this BOOL b) => b != BOOL.FALSE;
-    public static bool IsFalse(this BOOL b) => b == BOOL.FALSE;
-    public static BOOL ToBOOL(this bool b) => b ? BOOL.TRUE : BOOL.FALSE;
+    public static bool IsTrue(this Bool b)
+    {
+        return b != Bool.False;
+    }
+
+    public static bool IsFalse(this Bool b)
+    {
+        return b == Bool.False;
+    }
+
+    public static Bool ToBool(this bool b)
+    {
+        return b ? Bool.True : Bool.False;
+    }
 }

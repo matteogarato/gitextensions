@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using GitCommands;
 using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs.BrowseDialog;
@@ -10,14 +9,10 @@ namespace GitUI.UserControls.RevisionGrid;
 
 internal sealed class RevisionGridMenuCommands : MenuCommandsBase
 {
-    public event EventHandler? MenuChanged;
-
-    private readonly TranslationString _quickSearchQuickHelp = new("Start typing in revision grid to start quick search.");
+    private readonly TranslationString _quickSearchQuickHelp =
+        new("Start typing in revision grid to start quick search.");
 
     private readonly RevisionGridControl _revisionGrid;
-
-    public IReadOnlyList<MenuCommand> NavigateMenuCommands { get; }
-    public IReadOnlyList<MenuCommand> ViewMenuCommands { get; }
 
     public RevisionGridMenuCommands(RevisionGridControl revisionGrid)
     {
@@ -27,10 +22,18 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
         Translate();
     }
 
-    protected override string TranslationCategoryName => "RevisionGrid";
+    public IReadOnlyList<MenuCommand> NavigateMenuCommands { get; }
+    public IReadOnlyList<MenuCommand> ViewMenuCommands { get; }
+
+    protected override string TranslationCategoryName
+    {
+        get => "RevisionGrid";
+    }
+
+    public event EventHandler? MenuChanged;
 
     /// <summary>
-    /// ... "Update" because the hotkey settings might change.
+    ///     ... "Update" because the hotkey settings might change.
     /// </summary>
     public void CreateOrUpdateMenuCommands()
     {
@@ -46,11 +49,12 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
 
         return;
 
-        void UpdateMenuCommandShortcutKeyDisplayString(IReadOnlyList<MenuCommand> targetList, IEnumerable<MenuCommand> sourceList)
+        void UpdateMenuCommandShortcutKeyDisplayString(IReadOnlyList<MenuCommand> targetList,
+            IEnumerable<MenuCommand> sourceList)
         {
-            foreach (MenuCommand source in sourceList.Where(mc => !mc.IsSeparator))
+            foreach (var source in sourceList.Where(mc => !mc.IsSeparator))
             {
-                MenuCommand target = targetList.Single(mc => !mc.IsSeparator && mc.Name == source.Name);
+                var target = targetList.Single(mc => !mc.IsSeparator && mc.Name == source.Name);
                 target.ShortcutKeyDisplayString = source.ShortcutKeyDisplayString;
             }
         }
@@ -60,7 +64,7 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
     {
         MenuChanged?.Invoke(this, null!);
 
-        foreach (MenuCommand menuCommand in GetMenuCommandsWithoutSeparators())
+        foreach (var menuCommand in GetMenuCommandsWithoutSeparators())
         {
             menuCommand.SetCheckForRegisteredMenuItems();
             menuCommand.UpdateMenuItemsShortcutKeyDisplayString();
@@ -95,7 +99,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "ToggleBetweenArtificialAndHeadCommits",
                 Text = "&Toggle between artificial and HEAD commits",
                 Image = Images.WorkingDirChanges,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ToggleBetweenArtificialAndHeadCommits),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ToggleBetweenArtificialAndHeadCommits),
                 ExecuteAction = () => _revisionGrid.ToggleBetweenArtificialAndHeadCommits()
             },
             new MenuCommand
@@ -103,7 +109,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "GotoCurrentRevision",
                 Text = "Go to c&urrent revision",
                 Image = Images.GotoCurrentRevision,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.SelectCurrentRevision),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .SelectCurrentRevision),
                 ExecuteAction = SelectCurrentRevisionExecute
             },
             new MenuCommand
@@ -111,7 +119,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "GotoCommit",
                 Text = "Go to &commit...",
                 Image = Images.GotoCommit,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.GoToCommit),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .GoToCommit),
                 ExecuteAction = GotoCommitExecute
             },
             MenuCommand.CreateSeparator(),
@@ -120,7 +130,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "GotoChildCommit",
                 Text = "Go to c&hild commit",
                 Image = Images.GoToChildCommit,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.GoToChild),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(
+                        RevisionGridControl.Command.GoToChild),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.GoToChild)
             },
             new MenuCommand
@@ -128,7 +140,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "GotoParentCommit",
                 Text = "Go to &parent commit",
                 Image = Images.GoToParentCommit,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.GoToParent),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .GoToParent),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.GoToParent)
             },
             new MenuCommand
@@ -136,7 +150,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "GotoFirstParentCommit",
                 Text = "Go to f&irst parent commit",
                 Image = Images.GoToFirstParentCommit,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.GoToFirstParent),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .GoToFirstParent),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.GoToFirstParent)
             },
             new MenuCommand
@@ -144,16 +160,21 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "GotoLastParentCommit",
                 Text = "Go to &last parent commit",
                 Image = Images.GoToLastParentCommit,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.GoToLastParent),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .GoToLastParent),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.GoToLastParent)
             },
             new MenuCommand
             {
                 Name = "GotoMergeBaseCommit",
                 Text = "Go to common &ancestor (merge base)",
-                ToolTipText = "Selects the common ancestor commit (merge base), which is the most recent shared ancestor of the selected commits (or if only one commit is selected, between it and the checked out commit (HEAD))",
+                ToolTipText =
+                    "Selects the common ancestor commit (merge base), which is the most recent shared ancestor of the selected commits (or if only one commit is selected, between it and the checked out commit (HEAD))",
                 Image = Images.GoToMergeBaseCommit,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.GoToMergeBase),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .GoToMergeBase),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.GoToMergeBase)
             },
             MenuCommand.CreateSeparator(),
@@ -162,7 +183,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "NavigateBackward",
                 Text = "Navigate &backward",
                 Image = Images.NavigateBackward,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.NavigateBackward),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .NavigateBackward),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.NavigateBackward)
             },
             new MenuCommand
@@ -170,7 +193,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "NavigateForward",
                 Text = "Navigate &forward",
                 Image = Images.NavigateForward,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.NavigateForward),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .NavigateForward),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.NavigateForward)
             },
             MenuCommand.CreateSeparator(),
@@ -179,20 +204,26 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "QuickSearch",
                 Text = "&Quick search",
                 ToolTipText = _quickSearchQuickHelp.Text,
-                ExecuteAction = () => MessageBoxes.Show(_quickSearchQuickHelp.Text, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                ExecuteAction =
+                    () => MessageBoxes.Show(_quickSearchQuickHelp.Text, "Information", MessageBoxButtons.OK,
+                        MessageBoxIcon.Information)
             },
             new MenuCommand
             {
                 Name = "PrevQuickSearch",
                 Text = "Quick search p&revious",
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.PrevQuickSearch),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .PrevQuickSearch),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.PrevQuickSearch)
             },
             new MenuCommand
             {
                 Name = "NextQuickSearch",
                 Text = "Quick search &next",
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.NextQuickSearch),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .NextQuickSearch),
                 ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.NextQuickSearch)
             }
         };
@@ -245,7 +276,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "ShowAllBranches",
                 Text = "Show &all branches",
                 Image = Images.BranchLocal,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowAllBranches),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ShowAllBranches),
                 ExecuteAction = () => _revisionGrid.ShowAllBranches(),
                 IsCheckedFunc = () => _revisionGrid.CurrentFilter.IsShowAllBranchesChecked
             },
@@ -254,7 +287,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "ShowCurrentBranchOnly",
                 Text = "Show &current branch only",
                 Image = Images.BranchFilter,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowCurrentBranchOnly),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ShowCurrentBranchOnly),
                 ExecuteAction = () => _revisionGrid.ShowCurrentBranchOnly(),
                 IsCheckedFunc = () => _revisionGrid.CurrentFilter.IsShowCurrentBranchOnlyChecked
             },
@@ -263,7 +298,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "ShowFilteredBranches",
                 Text = "Show &filtered branches",
                 Image = Images.BranchFilter,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowFilteredBranches),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ShowFilteredBranches),
                 ExecuteAction = () => _revisionGrid.ShowFilteredBranches(),
                 IsCheckedFunc = () => _revisionGrid.CurrentFilter.IsShowFilteredBranchesChecked
             },
@@ -272,24 +309,24 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 Name = "ShowReflogReferences",
                 Text = "Show &reflog references",
                 Image = Images.Book,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowReflogReferences),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ShowReflogReferences),
                 ExecuteAction = () => _revisionGrid.ToggleShowReflogReferences(),
                 IsCheckedFunc = () => _revisionGrid.CurrentFilter.ShowReflogReferences
             },
-
             MenuCommand.CreateSeparator(),
-
             new MenuCommand
             {
                 Name = "filterToolStripMenuItem",
                 Text = "Advanced filter...",
                 Image = Images.EditFilter,
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.RevisionFilter),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .RevisionFilter),
                 ExecuteAction = () => _revisionGrid.ShowRevisionFilterDialog()
             },
-
             MenuCommand.CreateSeparator(),
-
             new MenuCommand
             {
                 Name = "drawNonrelativesGrayToolStripMenuItem",
@@ -301,14 +338,14 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
             {
                 Name = "HighlightSelectedBranch",
                 Text = "Highlight selected branch (until refresh)",
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ToggleHighlightSelectedBranch)
-                + $", {Keys.Alt}+{Keys.LButton}",
-                ExecuteAction = () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.ToggleHighlightSelectedBranch)
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ToggleHighlightSelectedBranch)
+                    + $", {Keys.Alt}+{Keys.LButton}",
+                ExecuteAction =
+                    () => _revisionGrid.ExecuteCommand(RevisionGridControl.Command.ToggleHighlightSelectedBranch)
             },
-
-            MenuCommand.CreateSeparator(),
-
-            MenuCommand.CreateGroupHeader("Commits"),
+            MenuCommand.CreateSeparator(), MenuCommand.CreateGroupHeader("Commits"),
             new MenuCommand
             {
                 Name = "ShowArtificialCommits",
@@ -320,7 +357,8 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
             {
                 Name = "ShowStashes",
                 Text = "Show stashes",
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowStashes),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowStashes),
                 ExecuteAction = () => _revisionGrid.ToggleShowStashes(),
                 IsCheckedFunc = () => AppSettings.ShowStashes
             },
@@ -338,15 +376,14 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 ExecuteAction = () => _revisionGrid.ToggleShowSessionRefs(),
                 IsCheckedFunc = () => AppSettings.ShowSessionRefs
             },
-
-            MenuCommand.CreateSeparator(),
-
-            MenuCommand.CreateGroupHeader("Grid labels"),
+            MenuCommand.CreateSeparator(), MenuCommand.CreateGroupHeader("Grid labels"),
             new MenuCommand
             {
                 Name = "ShowRemoteBranches",
                 Text = "Show remote &branches",
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ShowRemoteBranches),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ShowRemoteBranches),
                 ExecuteAction = () => _revisionGrid.ToggleShowRemoteBranches(),
                 IsCheckedFunc = () => AppSettings.ShowRemoteBranches
             },
@@ -354,7 +391,9 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
             {
                 Name = "showTagsToolStripMenuItem",
                 Text = "Show &tags",
-                ShortcutKeyDisplayString = GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command.ToggleShowTags),
+                ShortcutKeyDisplayString =
+                    GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command
+                        .ToggleShowTags),
                 ExecuteAction = () => _revisionGrid.ToggleShowTags(),
                 IsCheckedFunc = () => AppSettings.ShowTags
             },
@@ -379,10 +418,7 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 ExecuteAction = () => _revisionGrid.ShowSuperprojectBranches_ToolStripMenuItemClick(),
                 IsCheckedFunc = () => AppSettings.ShowSuperprojectBranches
             },
-
-            MenuCommand.CreateSeparator(),
-
-            MenuCommand.CreateGroupHeader("Grid info"),
+            MenuCommand.CreateSeparator(), MenuCommand.CreateGroupHeader("Grid info"),
             new MenuCommand
             {
                 Name = "showBuildStatusIconToolStripMenuItem",
@@ -418,10 +454,7 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 ExecuteAction = () => _revisionGrid.ToggleShowRelativeDate(),
                 IsCheckedFunc = () => AppSettings.RelativeDate
             },
-
-            MenuCommand.CreateSeparator(),
-
-            MenuCommand.CreateGroupHeader("Columns"),
+            MenuCommand.CreateSeparator(), MenuCommand.CreateGroupHeader("Columns"),
             new MenuCommand
             {
                 Name = "showRevisionGraphColumnToolStripMenuItem",
@@ -464,10 +497,7 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 ExecuteAction = () => _revisionGrid.ToggleObjectIdColumn(),
                 IsCheckedFunc = () => AppSettings.ShowObjectIdColumn
             },
-
-            MenuCommand.CreateSeparator(),
-
-            MenuCommand.CreateGroupHeader("Sorting"),
+            MenuCommand.CreateSeparator(), MenuCommand.CreateGroupHeader("Sorting"),
             new MenuCommand
             {
                 Name = "AuthorDateSort",
@@ -482,9 +512,7 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
                 ExecuteAction = () => _revisionGrid.ToggleTopoOrder(),
                 IsCheckedFunc = () => AppSettings.RevisionSortOrder == RevisionSortOrder.Topology
             },
-            MenuCommand.CreateSeparator(),
-
-            MenuCommand.CreateGroupHeader("Settings persistence"),
+            MenuCommand.CreateSeparator(), MenuCommand.CreateGroupHeader("Settings persistence"),
             new MenuCommand
             {
                 Name = "SaveAsDefault",
@@ -494,7 +522,8 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
         };
     }
 
-    public string? GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command revisionGridCommand)
+    public string? GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(
+        RevisionGridControl.Command revisionGridCommand)
     {
         // _revisionGrid is null when TranslationApp is called
         return _revisionGrid?.GetShortcutKeyDisplayString(revisionGridCommand);
@@ -517,13 +546,13 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
 
     public void GotoCommitExecute()
     {
-        using FormGoToCommit formGoToCommit = new(_revisionGrid.UICommands);
+        using FormGoToCommit formGoToCommit = new(_revisionGrid.UiCommands);
         if (formGoToCommit.ShowDialog(_revisionGrid) != DialogResult.OK)
         {
             return;
         }
 
-        ObjectId commitId = formGoToCommit.ValidateAndGetSelectedObjectId();
+        var commitId = formGoToCommit.ValidateAndGetSelectedObjectId();
 
         if (!commitId.IsZero)
         {
@@ -534,18 +563,19 @@ internal sealed class RevisionGridMenuCommands : MenuCommandsBase
         }
         else
         {
-            MessageBoxes.CannotFindGitRevision(owner: _revisionGrid);
+            MessageBoxes.CannotFindGitRevision(_revisionGrid);
         }
     }
 
     /// <summary>
-    ///  Saves all <see cref="IRuntimeSetting"/> values as the default for future sessions.
+    ///     Saves all <see cref="IRuntimeSetting" /> values as the default for future sessions.
     /// </summary>
     public static void SaveCurrentViewSettingsAsDefault()
     {
-        foreach (FieldInfo staticAppSettingField in typeof(AppSettings).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+        foreach (var staticAppSettingField in typeof(AppSettings).GetFields(BindingFlags.Public |
+                                                                            BindingFlags.NonPublic | BindingFlags.Static))
         {
-            IRuntimeSetting? runtimeSetting = staticAppSettingField.GetValue(null) as IRuntimeSetting;
+            var runtimeSetting = staticAppSettingField.GetValue(null) as IRuntimeSetting;
             runtimeSetting?.Save();
         }
 

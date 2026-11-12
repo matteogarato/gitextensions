@@ -2,10 +2,13 @@
 using System.Globalization;
 using System.Text;
 using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Avatars;
 using GitUI.CommandsDialogs;
@@ -13,47 +16,38 @@ using GitUI.Editor;
 using GitUI.HelperDialogs;
 using GitUI.Properties;
 using GitUI.Theming;
-using GitUI.UserControls;
-using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.RepositoryHosts;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 using ResourceManager;
 
-namespace GitUI.Blame;
+namespace GitUI.UserControls;
 
 public sealed partial class BlameControl : GitModuleControl
 {
-    public event EventHandler<CommandEventArgs>? CommandClick;
-
-    /// <summary>
-    /// Raised when the Escape key is pressed (and only when no selection exists, as the default behaviour of escape is to clear the selection).
-    /// </summary>
-    public event Action? EscapePressed;
-
-    private readonly AsyncLoader _blameLoader = new();
-    private int _lineIndex;
-    private GitBlameLine? _lastBlameLine;
-    private GitBlameLine? _clickedBlameLine;
-    private GitBlameCommit? _highlightedCommit;
-    private GitBlame? _blame;
-    private IRevisionGridInfo? _revisionGridInfo;
-    private IRevisionGridFileUpdate? _revisionGridFileUpdate;
-    private ObjectId _blameId;
-    private string? _fileName;
-    private Encoding? _encoding;
-    private int _lastTooltipX = int.MinValue;
-    private int _lastTooltipY = int.MinValue;
-    private GitBlameCommit? _tooltipCommit;
-    private bool _changingScrollPosition;
-    private IRepositoryHostPlugin? _gitHoster;
-    private static readonly Color[] AgeBucketGradientColors = GetAgeBucketGradientColors();
+    private static readonly Color[] _ageBucketGradientColors = GetAgeBucketGradientColors();
     private static readonly TranslationString _blameActualPreviousRevision = new("&Blame previous revision");
     private static readonly TranslationString _blameVisiblePreviousRevision = new("&Blame previous visible revision");
+
+    private readonly AsyncLoader _blameLoader = new();
     private readonly Color _commitHighlightColor;
-    private readonly IGitRevisionSummaryBuilder _gitRevisionSummaryBuilder;
     private readonly IGitBlameParser _gitBlameParser;
+    private readonly IGitRevisionSummaryBuilder _gitRevisionSummaryBuilder;
+    private GitBlame? _blame;
+    private ObjectId _blameId;
+    private bool _changingScrollPosition;
+    private GitBlameLine? _clickedBlameLine;
+    private Encoding? _encoding;
+    private string? _fileName;
+    private IRepositoryHostPlugin? _gitHoster;
+    private GitBlameCommit? _highlightedCommit;
+    private GitBlameLine? _lastBlameLine;
+    private int _lastTooltipX = int.MinValue;
+    private int _lastTooltipY = int.MinValue;
+    private int _lineIndex;
     private bool _loading;
+    private IRevisionGridFileUpdate? _revisionGridFileUpdate;
+    private IRevisionGridInfo? _revisionGridInfo;
+    private GitBlameCommit? _tooltipCommit;
 
     public BlameControl()
     {
@@ -81,16 +75,41 @@ public sealed partial class BlameControl : GitModuleControl
 
         CommitInfo.CommandClicked += commitInfo_CommandClicked;
 
-        _commitHighlightColor = Application.IsDarkModeEnabled ? AppColor.EditorBackground.GetThemeColor().MakeDarkerBy(-0.06) : SystemColors.ControlLight;
+        _commitHighlightColor = Application.IsDarkModeEnabled
+            ? AppColor.EditorBackground.GetThemeColor().MakeDarkerBy(-0.06)
+            : SystemColors.ControlLight;
         _gitRevisionSummaryBuilder = new GitRevisionSummaryBuilder();
-        _gitBlameParser = new GitBlameParser(() => UICommands.Module);
+        _gitBlameParser = new GitBlameParser(() => UiCommands.Module);
     }
+
+    public int CurrentFileColumn
+    {
+        get => BlameFile.CurrentFileColumn;
+    }
+
+    public int CurrentFileLine
+    {
+        get => BlameFile.CurrentFileLine;
+    }
+
+    public DateTime ArtificialOldBoundary
+    {
+        get => DateTime.Now.AddYears(-3);
+    }
+
+    public event EventHandler<CommandEventArgs>? CommandClick;
+
+    /// <summary>
+    ///     Raised when the Escape key is pressed (and only when no selection exists, as the default behaviour of escape is to
+    ///     clear the selection).
+    /// </summary>
+    public event Action? EscapePressed;
 
     public void InitSplitterManager(NestedSplitterManager splitterManager)
     {
         NestedSplitterManager nested = new(splitterManager, Name);
-        nested.AddSplitter(splitContainer1, defaultDistance: splitContainer1.Panel1MinSize + 1);
-        nested.AddSplitter(splitContainer2, defaultDistance: splitContainer2.Panel1MinSize + 1);
+        nested.AddSplitter(splitContainer1, splitContainer1.Panel1MinSize + 1);
+        nested.AddSplitter(splitContainer2, splitContainer2.Panel1MinSize + 1);
     }
 
     public void ConfigureRepositoryHostPlugin(IRepositoryHostPlugin? gitHoster)
@@ -104,9 +123,6 @@ public sealed partial class BlameControl : GitModuleControl
         BlameAuthor.ShowLineNumbers = AppSettings.BlameShowLineNumbers;
     }
 
-    public int CurrentFileColumn => BlameFile.CurrentFileColumn;
-    public int CurrentFileLine => BlameFile.CurrentFileLine;
-
     public void HideCommitInfo()
     {
         splitContainer1.Panel1Collapsed = true;
@@ -114,12 +130,16 @@ public sealed partial class BlameControl : GitModuleControl
         CommitInfo.CommandClicked -= commitInfo_CommandClicked;
     }
 
-    public async Task LoadBlameAsync(GitRevision revision, IReadOnlyList<ObjectId>? children, string fileName, IRevisionGridInfo? revisionGridInfo, IRevisionGridFileUpdate? revisionGridFileUpdate, Control? controlToMask, Encoding encoding, int? initialLine = null, bool force = false, CancellationTokenSequence? cancellationTokenSequence = null)
+    public async Task LoadBlameAsync(GitRevision revision, IReadOnlyList<ObjectId>? children, string fileName,
+        IRevisionGridInfo? revisionGridInfo, IRevisionGridFileUpdate? revisionGridFileUpdate, Control? controlToMask,
+        Encoding encoding, int? initialLine = null, bool force = false,
+        CancellationTokenSequence? cancellationTokenSequence = null)
     {
-        ObjectId objectId = revision.ObjectId;
+        var objectId = revision.ObjectId;
 
         // refresh only when something changed
-        if (!force && objectId == _blameId && fileName == _fileName && revisionGridInfo == _revisionGridInfo && _revisionGridFileUpdate == revisionGridFileUpdate && encoding == _encoding)
+        if (!force && objectId == _blameId && fileName == _fileName && revisionGridInfo == _revisionGridInfo &&
+            _revisionGridFileUpdate == revisionGridFileUpdate && encoding == _encoding)
         {
             if (initialLine is not null && !_loading)
             {
@@ -129,10 +149,11 @@ public sealed partial class BlameControl : GitModuleControl
             return;
         }
 
-        CancellationToken cancellationToken = cancellationTokenSequence?.Next() ?? default;
+        var cancellationToken = cancellationTokenSequence?.Next() ?? default;
         _loading = true;
 
-        int line = _clickedBlameLine?.OriginLineNumber ?? initialLine ?? (fileName == _fileName ? BlameFile.CurrentFileLine : 1);
+        var line = _clickedBlameLine?.OriginLineNumber ??
+                   initialLine ?? (fileName == _fileName ? BlameFile.CurrentFileLine : 1);
         _revisionGridInfo = revisionGridInfo;
         _revisionGridFileUpdate = revisionGridFileUpdate;
         _fileName = fileName;
@@ -148,7 +169,8 @@ public sealed partial class BlameControl : GitModuleControl
         try
         {
             await _blameLoader.LoadAsync(
-                loaderCancellationToken => _blame = Module.Blame(fileName, objectId.ToString(), encoding, lines: null, cancellationToken: loaderCancellationToken.CombineWith(cancellationToken).Token),
+                loaderCancellationToken => _blame = Module.Blame(fileName, objectId.ToString(), encoding, null,
+                    loaderCancellationToken.CombineWith(cancellationToken).Token),
                 () => ProcessBlame(fileName, revision, children, controlToMask, line, cancellationToken));
         }
         catch (ExternalOperationException ex)
@@ -184,7 +206,7 @@ public sealed partial class BlameControl : GitModuleControl
 
         _lineIndex = BlameAuthor.GetLineFromVisualPosY(e.Y);
 
-        GitBlameCommit? blameCommit = _lineIndex < _blame.Lines.Count
+        var blameCommit = _lineIndex < _blame.Lines.Count
             ? _blame.Lines[_lineIndex].Commit
             : null;
 
@@ -195,15 +217,17 @@ public sealed partial class BlameControl : GitModuleControl
             return;
         }
 
-        int newTooltipX = splitContainer2.SplitterDistance + 60;
-        int newTooltipY = e.Y + splitContainer1.SplitterDistance + 20;
+        var newTooltipX = splitContainer2.SplitterDistance + 60;
+        var newTooltipY = e.Y + splitContainer1.SplitterDistance + 20;
 
-        if (_tooltipCommit != blameCommit || Math.Abs(_lastTooltipX - newTooltipX) > 5 || Math.Abs(_lastTooltipY - newTooltipY) > 5)
+        if (_tooltipCommit != blameCommit || Math.Abs(_lastTooltipX - newTooltipX) > 5 ||
+            Math.Abs(_lastTooltipY - newTooltipY) > 5)
         {
             _tooltipCommit = blameCommit;
             _lastTooltipX = newTooltipX;
             _lastTooltipY = newTooltipY;
-            blameTooltip.Show(blameCommit.ToString(_gitRevisionSummaryBuilder.BuildSummary), this, newTooltipX, newTooltipY);
+            blameTooltip.Show(blameCommit.ToString(_gitRevisionSummaryBuilder.BuildSummary), this, newTooltipX,
+                newTooltipY);
         }
     }
 
@@ -214,9 +238,9 @@ public sealed partial class BlameControl : GitModuleControl
             return;
         }
 
-        int lineIndex = BlameFile.GetLineFromVisualPosY(e.Y);
+        var lineIndex = BlameFile.GetLineFromVisualPosY(e.Y);
 
-        GitBlameCommit? blameCommit = lineIndex < _blame.Lines.Count
+        var blameCommit = lineIndex < _blame.Lines.Count
             ? _blame.Lines[lineIndex].Commit
             : null;
 
@@ -242,9 +266,9 @@ public sealed partial class BlameControl : GitModuleControl
 
         Validates.NotNull(_blame);
 
-        int startLine = -1;
-        int prevLine = -1;
-        for (int i = 0; i < _blame.Lines.Count; i++)
+        var startLine = -1;
+        var prevLine = -1;
+        for (var i = 0; i < _blame.Lines.Count; i++)
         {
             if (ReferenceEquals(_blame.Lines[i].Commit, commit))
             {
@@ -275,14 +299,14 @@ public sealed partial class BlameControl : GitModuleControl
 
     private void SelectedLineChanged(object? sender, SelectedLineEventArgs e)
     {
-        int selectedLine = e.SelectedLine;
+        var selectedLine = e.SelectedLine;
 
         if (_blame is null || selectedLine >= _blame.Lines.Count)
         {
             return;
         }
 
-        GitBlameLine newBlameLine = _blame.Lines[selectedLine];
+        var newBlameLine = _blame.Lines[selectedLine];
 
         if (ReferenceEquals(_lastBlameLine?.Commit, newBlameLine.Commit))
         {
@@ -290,8 +314,10 @@ public sealed partial class BlameControl : GitModuleControl
         }
 
         _lastBlameLine = newBlameLine;
-        ObjectId objectId = _lastBlameLine.Commit.ObjectId;
-        CommitInfo.Revision = _revisionGridInfo is null ? Module.GetRevision(objectId) : _revisionGridInfo.GetActualRevision(objectId);
+        var objectId = _lastBlameLine.Commit.ObjectId;
+        CommitInfo.Revision = _revisionGridInfo is null
+            ? Module.GetRevision(objectId)
+            : _revisionGridInfo.GetActualRevision(objectId);
     }
 
     private void BlameAuthor_HScrollPositionChanged(object? sender, EventArgs e)
@@ -308,11 +334,11 @@ public sealed partial class BlameControl : GitModuleControl
             _changingScrollPosition = false;
         }
 
-        Rectangle rect = BlameAuthor.ClientRectangle;
+        var rect = BlameAuthor.ClientRectangle;
         rect = BlameAuthor.RectangleToScreen(rect);
         if (rect.Contains(MousePosition))
         {
-            Point p = BlameAuthor.PointToClient(MousePosition);
+            var p = BlameAuthor.PointToClient(MousePosition);
             MouseEventArgs me = new(0, 0, p.X, p.Y, 0);
             BlameAuthor_MouseMove(this, me);
         }
@@ -330,18 +356,22 @@ public sealed partial class BlameControl : GitModuleControl
         _changingScrollPosition = false;
     }
 
-    private void ProcessBlame(string? filename, GitRevision revision, IReadOnlyList<ObjectId>? children, Control? controlToMask, int lineNumber, CancellationToken cancellationToken = default)
+    private void ProcessBlame(string? filename, GitRevision revision, IReadOnlyList<ObjectId>? children,
+        Control? controlToMask, int lineNumber, CancellationToken cancellationToken = default)
     {
-        int avatarSize = BlameAuthor.Font.Height + 1;
-        (string gutter, string body, List<GitBlameEntry> avatars) = BuildBlameContents(filename, avatarSize);
+        var avatarSize = BlameAuthor.Font.Height + 1;
+        (var gutter, var body, var avatars) = BuildBlameContents(filename, avatarSize);
         cancellationToken.ThrowIfCancellationRequested();
 
         BlameAuthor.SetGitBlameGutter(avatars);
 
         Validates.NotNull(_fileName);
 
-        BlameAuthor.InvokeAndForget(() => BlameAuthor.ViewTextAsync("committer.txt", gutter, cancellationToken: cancellationToken), cancellationToken: cancellationToken);
-        BlameFile.InvokeAndForget(() => BlameFile.ViewTextAsync(_fileName, body, cancellationToken: cancellationToken), cancellationToken: cancellationToken);
+        BlameAuthor.InvokeAndForget(
+            () => BlameAuthor.ViewTextAsync("committer.txt", gutter, cancellationToken: cancellationToken),
+            cancellationToken: cancellationToken);
+        BlameFile.InvokeAndForget(() => BlameFile.ViewTextAsync(_fileName, body, cancellationToken: cancellationToken),
+            cancellationToken: cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         BlameFile.GoToLine(Math.Min(lineNumber, _blame!.Lines.Count));
@@ -356,7 +386,8 @@ public sealed partial class BlameControl : GitModuleControl
         controlToMask?.UnMask();
     }
 
-    private (string gutter, string body, List<GitBlameEntry> gitBlameDisplays) BuildBlameContents(string? filename, int avatarSize)
+    private (string gutter, string body, List<GitBlameEntry> gitBlameDisplays) BuildBlameContents(string? filename,
+        int avatarSize)
     {
         Validates.NotNull(_blame);
 
@@ -365,14 +396,14 @@ public sealed partial class BlameControl : GitModuleControl
             return ("", "", new List<GitBlameEntry>(0));
         }
 
-        StringBuilder body = new(capacity: 4096);
+        StringBuilder body = new(4096);
 
         GitBlameCommit? lastCommit = null;
 
-        bool showAuthorAvatar = AppSettings.BlameShowAuthorAvatar;
-        List<GitBlameEntry> gitBlameDisplays = showAuthorAvatar ? CalculateBlameGutterData(_blame.Lines) : [];
+        var showAuthorAvatar = AppSettings.BlameShowAuthorAvatar;
+        var gitBlameDisplays = showAuthorAvatar ? CalculateBlameGutterData(_blame.Lines) : [];
 
-        string dateTimeFormat = AppSettings.BlameShowAuthorTime
+        var dateTimeFormat = AppSettings.BlameShowAuthorTime
             ? CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " +
               CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern
             : CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
@@ -384,39 +415,41 @@ public sealed partial class BlameControl : GitModuleControl
 
         filename = filename?.ToPosixPath();
 
-        int filePathLengthEstimate = _blame.Lines.Where(l => filename != l.Commit.FileName)
-                                                 .Select(l => l.Commit.FileName.Length)
-                                                 .DefaultIfEmpty(0)
-                                                 .Max();
-        int lineLengthEstimate = 25 + _blame.Lines.Max(l => l.Commit.Author?.Length ?? 0) + filePathLengthEstimate;
-        int lineLength = Math.Max(80, lineLengthEstimate);
+        var filePathLengthEstimate = _blame.Lines.Where(l => filename != l.Commit.FileName)
+            .Select(l => l.Commit.FileName.Length)
+            .DefaultIfEmpty(0)
+            .Max();
+        var lineLengthEstimate = 25 + _blame.Lines.Max(l => l.Commit.Author?.Length ?? 0) + filePathLengthEstimate;
+        var lineLength = Math.Max(80, lineLengthEstimate);
         StringBuilder lineBuilder = new(lineLength + 2);
-        StringBuilder gutter = new(capacity: lineBuilder.Capacity * _blame.Lines.Count);
+        StringBuilder gutter = new(lineBuilder.Capacity * _blame.Lines.Count);
         string emptyLine = new(' ', lineLength);
         Dictionary<string, Image?> cacheAvatars = [];
-        Image noAuthorImage = (Image)new Bitmap(Images.User80, avatarSize, avatarSize);
+        Image noAuthorImage = new Bitmap(Images.User80, avatarSize, avatarSize);
         Dictionary<ObjectId, string> authorLineCache = [];
-        for (int index = 0; index < _blame.Lines.Count; index++)
+        for (var index = 0; index < _blame.Lines.Count; index++)
         {
-            GitBlameLine line = _blame.Lines[index];
+            var line = _blame.Lines[index];
             if (line.Commit == lastCommit)
             {
                 gutter.AppendLine(emptyLine);
             }
             else
             {
-                string? authorEmail = line.Commit.AuthorMail?.Trim('<', '>');
+                var authorEmail = line.Commit.AuthorMail?.Trim('<', '>');
                 if (showAuthorAvatar)
                 {
                     if (authorEmail is not null)
                     {
-                        if (cacheAvatars.TryGetValue(authorEmail, out Image? avatarImage))
+                        if (cacheAvatars.TryGetValue(authorEmail, out var avatarImage))
                         {
                             gitBlameDisplays[index].Avatar = avatarImage;
                         }
                         else
                         {
-                            Image? avatar = ThreadHelper.JoinableTaskFactory.Run(() => AvatarService.DefaultProvider.GetAvatarAsync(authorEmail, line.Commit.Author, avatarSize));
+                            var avatar = ThreadHelper.JoinableTaskFactory.Run(() =>
+                                AvatarService.DefaultProvider.GetAvatarAsync(authorEmail, line.Commit.Author,
+                                    avatarSize));
                             cacheAvatars.Add(authorEmail, avatar);
                             gitBlameDisplays[index].Avatar = avatar;
                         }
@@ -427,9 +460,11 @@ public sealed partial class BlameControl : GitModuleControl
                     }
                 }
 
-                if (!authorLineCache.TryGetValue(line.Commit.ObjectId, out string? authorLine))
+                if (!authorLineCache.TryGetValue(line.Commit.ObjectId, out var authorLine))
                 {
-                    authorLine = BuildAuthorLine(line, lineBuilder, lineLength, dateTimeFormat, filename, AppSettings.BlameShowAuthor, AppSettings.BlameShowAuthorDate, AppSettings.BlameShowOriginalFilePath, AppSettings.BlameDisplayAuthorFirst);
+                    authorLine = BuildAuthorLine(line, lineBuilder, lineLength, dateTimeFormat, filename,
+                        AppSettings.BlameShowAuthor, AppSettings.BlameShowAuthorDate,
+                        AppSettings.BlameShowOriginalFilePath, AppSettings.BlameDisplayAuthorFirst);
                     authorLineCache.Add(line.Commit.ObjectId, authorLine);
                     lineBuilder.Clear();
                 }
@@ -445,7 +480,8 @@ public sealed partial class BlameControl : GitModuleControl
         return (gutter.ToString(), body.ToString(), gitBlameDisplays);
     }
 
-    private static string BuildAuthorLine(GitBlameLine line, StringBuilder authorLineBuilder, int lineLength, string dateTimeFormat,
+    private static string BuildAuthorLine(GitBlameLine line, StringBuilder authorLineBuilder, int lineLength,
+        string dateTimeFormat,
         string? filename, bool showAuthor, bool showAuthorDate, bool showOriginalFilePath, bool displayAuthorFirst)
     {
         if (showAuthor && displayAuthorFirst)
@@ -497,29 +533,26 @@ public sealed partial class BlameControl : GitModuleControl
         ], c => c.AdaptBackColor());
     }
 
-    public DateTime ArtificialOldBoundary => DateTime.Now.AddYears(-3);
-
     private List<GitBlameEntry> CalculateBlameGutterData(IReadOnlyList<GitBlameLine> blameLines)
     {
-        long mostRecentDate = DateTime.Now.Ticks;
-        DateTime artificialOldBoundary = ArtificialOldBoundary;
+        var mostRecentDate = DateTime.Now.Ticks;
+        var artificialOldBoundary = ArtificialOldBoundary;
         List<GitBlameEntry> gitBlameDisplays = new(blameLines.Count);
 
-        long lessRecentDate = Math.Min(artificialOldBoundary.Ticks,
-                                      blameLines.Select(l => l.Commit.AuthorTime)
-                                                .Where(d => d != DateTime.MinValue)
-                                                .DefaultIfEmpty(artificialOldBoundary)
-                                                .Min()
-                                                .Ticks);
-        long intervalSize = (mostRecentDate - lessRecentDate + 1) / AgeBucketGradientColors.Length;
-        foreach (GitBlameLine blame in blameLines)
+        var lessRecentDate = Math.Min(artificialOldBoundary.Ticks,
+            blameLines.Select(l => l.Commit.AuthorTime)
+                .Where(d => d != DateTime.MinValue)
+                .DefaultIfEmpty(artificialOldBoundary)
+                .Min()
+                .Ticks);
+        var intervalSize = (mostRecentDate - lessRecentDate + 1) / _ageBucketGradientColors.Length;
+        foreach (var blame in blameLines)
         {
-            long relativeTicks = Math.Max(0, blame.Commit.AuthorTime.Ticks - lessRecentDate);
-            int ageBucketIndex = Math.Min((int)(relativeTicks / intervalSize), AgeBucketGradientColors.Length - 1);
+            var relativeTicks = Math.Max(0, blame.Commit.AuthorTime.Ticks - lessRecentDate);
+            var ageBucketIndex = Math.Min((int)(relativeTicks / intervalSize), _ageBucketGradientColors.Length - 1);
             GitBlameEntry gitBlameDisplay = new()
             {
-                AgeBucketIndex = ageBucketIndex,
-                AgeBucketColor = AgeBucketGradientColors[ageBucketIndex]
+                AgeBucketIndex = ageBucketIndex, AgeBucketColor = _ageBucketGradientColors[ageBucketIndex]
             };
             gitBlameDisplays.Add(gitBlameDisplay);
         }
@@ -530,7 +563,7 @@ public sealed partial class BlameControl : GitModuleControl
     private void ActiveTextAreaControlDoubleClick(object? sender, EventArgs e)
     {
         if (_lastBlameLine is not null
-            && TryGetRevision(_lastBlameLine.Commit, out (GitRevision? SelectedRevision, string? Filename) blameInfo))
+            && TryGetRevision(_lastBlameLine.Commit, out var blameInfo))
         {
             BlameRevision(_lastBlameLine.Commit.ObjectId, blameInfo.Filename!, _lastBlameLine);
         }
@@ -543,9 +576,9 @@ public sealed partial class BlameControl : GitModuleControl
             return -1;
         }
 
-        Point position = BlameAuthor.PointToClient(MousePosition);
+        var position = BlameAuthor.PointToClient(MousePosition);
 
-        int line = BlameAuthor.GetLineFromVisualPosY(position.Y);
+        var line = BlameAuthor.GetLineFromVisualPosY(position.Y);
         if (line >= _blame.Lines.Count)
         {
             return -1;
@@ -564,7 +597,7 @@ public sealed partial class BlameControl : GitModuleControl
 
         contextMenu.Tag = new GitBlameContext(_fileName, _lineIndex, GetBlameLine(), _blameId);
 
-        if (!TryGetRevision(GetBlameCommit(), out (GitRevision? SelectedRevision, string? Filename) blameinfo))
+        if (!TryGetRevision(GetBlameCommit(), out var blameinfo))
         {
             blameRevisionToolStripMenuItem.Enabled = false;
 
@@ -591,12 +624,14 @@ public sealed partial class BlameControl : GitModuleControl
         return;
 
         bool RevisionHasParent(GitRevision? revision)
-            => (revision?.HasParent is true) && (_revisionGridInfo?.GetRevision(revision!.FirstParentId) is not null);
+        {
+            return revision?.HasParent is true && _revisionGridInfo?.GetRevision(revision!.FirstParentId) is not null;
+        }
     }
 
     private GitBlameCommit? GetBlameCommit()
     {
-        int line = (contextMenu.Tag as GitBlameContext)?.BlameLine ?? -1;
+        var line = (contextMenu.Tag as GitBlameContext)?.BlameLine ?? -1;
         if (line < 0)
         {
             return null;
@@ -614,7 +649,7 @@ public sealed partial class BlameControl : GitModuleControl
 
     private void CopyToClipboard(Func<GitBlameCommit, string> formatter)
     {
-        GitBlameCommit? commit = GetBlameCommit();
+        var commit = GetBlameCommit();
 
         if (commit is null)
         {
@@ -634,7 +669,8 @@ public sealed partial class BlameControl : GitModuleControl
         CopyToClipboard(c => c.ObjectId.ToString());
     }
 
-    private bool TryGetRevision(GitBlameCommit? blameCommit, [NotNullWhen(returnValue: true)] out (GitRevision? selectedRevision, string? filename) blameInfo)
+    private bool TryGetRevision(GitBlameCommit? blameCommit,
+        [NotNullWhen(true)] out (GitRevision? selectedRevision, string? filename) blameInfo)
     {
         if (blameCommit is null)
         {
@@ -648,7 +684,7 @@ public sealed partial class BlameControl : GitModuleControl
 
     private void blameRevisionToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        if (!TryGetRevision(GetBlameCommit(), out (GitRevision? SelectedRevision, string? Filename) blameInfo))
+        if (!TryGetRevision(GetBlameCommit(), out var blameInfo))
         {
             return;
         }
@@ -658,7 +694,7 @@ public sealed partial class BlameControl : GitModuleControl
 
     private void blamePreviousRevisionToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        if (!TryGetRevision(GetBlameCommit(), out (GitRevision? SelectedRevision, string? Filename) blameInfo))
+        if (!TryGetRevision(GetBlameCommit(), out var blameInfo))
         {
             return;
         }
@@ -672,15 +708,18 @@ public sealed partial class BlameControl : GitModuleControl
         }
 
         // Origin line of commit selected is final line of the previous blame commit
-        int finalLineNumberOfPreviousBlame = _lastBlameLine!.OriginLineNumber;
-        int originalLineNumberOfPreviousBlame = _gitBlameParser.GetOriginalLineInPreviousCommit(selectedRevision!, blameInfo.Filename!, finalLineNumberOfPreviousBlame);
+        var finalLineNumberOfPreviousBlame = _lastBlameLine!.OriginLineNumber;
+        var originalLineNumberOfPreviousBlame = _gitBlameParser.GetOriginalLineInPreviousCommit(selectedRevision!,
+            blameInfo.Filename!, finalLineNumberOfPreviousBlame);
 
-        GitBlameLine blameLine = new(_lastBlameLine.Commit, finalLineNumberOfPreviousBlame, originalLineNumberOfPreviousBlame, "Dummy Git blame line used only to store the good 'originLineNumber' value to display and select it");
+        GitBlameLine blameLine = new(_lastBlameLine.Commit, finalLineNumberOfPreviousBlame,
+            originalLineNumberOfPreviousBlame,
+            "Dummy Git blame line used only to store the good 'originLineNumber' value to display and select it");
         BlameRevision(selectedRevision!.FirstParentId, blameInfo.Filename!, blameLine);
     }
 
     /// <summary>
-    /// Blame a specific revision
+    ///     Blame a specific revision
     /// </summary>
     /// <param name="commitId">the commit id to blame</param>
     /// <param name="filename">the relative path of the file to blame in this commit (because it could have been renamed)</param>
@@ -698,20 +737,20 @@ public sealed partial class BlameControl : GitModuleControl
             return;
         }
 
-        using FormCommitDiff frm = new(UICommands, commitId);
+        using FormCommitDiff frm = new(UiCommands, commitId);
         frm.ShowDialog(this);
     }
 
     private void showChangesToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        GitBlameCommit? commit = GetBlameCommit();
+        var commit = GetBlameCommit();
 
         if (commit is null)
         {
             return;
         }
 
-        using FormCommitDiff frm = new(UICommands, commit.ObjectId);
+        using FormCommitDiff frm = new(UiCommands, commit.ObjectId);
         frm.ShowDialog(this);
     }
 
@@ -727,33 +766,43 @@ public sealed partial class BlameControl : GitModuleControl
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
     {
-        private readonly BlameControl _control;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(BlameControl control)
-        {
-            _control = control;
-        }
-
+    internal readonly struct TestAccessor(BlameControl control)
+    {
         public GitBlame? Blame
         {
-            get => _control._blame;
-            set => _control._blame = value;
+            get => control._blame;
+            set => control._blame = value;
         }
 
-        public FileViewer BlameFile => _control.BlameFile;
+        public FileViewer BlameFile
+        {
+            get => control.BlameFile;
+        }
 
-        public DateTime ArtificialOldBoundary => _control.ArtificialOldBoundary;
+        public DateTime ArtificialOldBoundary
+        {
+            get => control.ArtificialOldBoundary;
+        }
 
-        public void BuildAuthorLine(GitBlameLine line, StringBuilder lineBuilder, int lineLength, string dateTimeFormat, string filename, bool showAuthor, bool showAuthorDate, bool showOriginalFilePath, bool displayAuthorFirst)
-            => BlameControl.BuildAuthorLine(line, lineBuilder, lineLength, dateTimeFormat, filename, showAuthor, showAuthorDate, showOriginalFilePath, displayAuthorFirst);
+        public void BuildAuthorLine(GitBlameLine line, StringBuilder lineBuilder, int lineLength, string dateTimeFormat,
+            string filename, bool showAuthor, bool showAuthorDate, bool showOriginalFilePath, bool displayAuthorFirst)
+        {
+            BlameControl.BuildAuthorLine(line, lineBuilder, lineLength, dateTimeFormat, filename, showAuthor,
+                showAuthorDate, showOriginalFilePath, displayAuthorFirst);
+        }
 
-        public (string gutter, string body, List<GitBlameEntry> avatars) BuildBlameContents(string filename) => _control.BuildBlameContents(filename, avatarSize: 10);
+        public (string gutter, string body, List<GitBlameEntry> avatars) BuildBlameContents(string filename)
+        {
+            return control.BuildBlameContents(filename, 10);
+        }
 
         public List<GitBlameEntry> CalculateBlameGutterData(IReadOnlyList<GitBlameLine> blameLines)
-            => _control.CalculateBlameGutterData(blameLines);
+        {
+            return control.CalculateBlameGutterData(blameLines);
+        }
     }
 }

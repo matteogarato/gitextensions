@@ -2,8 +2,10 @@
 
 public static class ControlTagExtensions
 {
-    public static bool HasTag<TValue>(this Control control) =>
-        control.HasTag<TValue>(typeof(TValue).FullName!);
+    public static bool HasTag<TValue>(this Control control)
+    {
+        return control.HasTag<TValue>(typeof(TValue).FullName!);
+    }
 
     public static bool HasTag<TValue>(this Control control, string key)
     {
@@ -13,18 +15,20 @@ public static class ControlTagExtensions
         }
 
         return control.Tag is Dictionary<string, object> dict &&
-            dict.TryGetValue(key, out object? value) &&
-            value is TValue;
+               dict.TryGetValue(key, out var value) &&
+               value is TValue;
     }
 
-    public static TValue? GetTag<TValue>(this Control control) =>
-        GetTag<TValue>(control, typeof(TValue).FullName!);
+    public static TValue? GetTag<TValue>(this Control control)
+    {
+        return control.GetTag<TValue>(typeof(TValue).FullName!);
+    }
 
     public static TValue? GetTag<TValue>(this Control control, string key)
     {
         if (control.Tag is null ||
             control.Tag is not Dictionary<string, object?> dict ||
-            !dict.TryGetValue(key, out object? result))
+            !dict.TryGetValue(key, out var result))
         {
             return default;
         }
@@ -34,8 +38,10 @@ public static class ControlTagExtensions
             : default;
     }
 
-    public static void SetTag<TValue>(this Control control, TValue value) =>
+    public static void SetTag<TValue>(this Control control, TValue value)
+    {
         control.SetTag(typeof(TValue).FullName!, value);
+    }
 
     public static void SetTag<TValue>(this Control control, string key, TValue value)
     {

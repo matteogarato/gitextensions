@@ -1,7 +1,9 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
@@ -17,19 +19,22 @@ public partial class FormInit : GitExtensionsDialog
     private readonly TranslationString _chooseDirectoryNotFile =
         new("Cannot initialize a new repository on a file.\nPlease choose a directory.");
 
+    private readonly EventHandler<GitModuleEventArgs>? _gitModuleChanged;
+
     private readonly TranslationString _initMsgBoxCaption =
         new("Create new repository");
 
-    private readonly EventHandler<GitModuleEventArgs>? _gitModuleChanged;
-
     /// <summary>
-    ///  Initializes a new instance of the <see cref="FormInit"/> class.
+    ///     Initializes a new instance of the <see cref="FormInit" /> class.
     /// </summary>
-    /// <param name="commands">The <see cref="IGitUICommands"/> instance, mainly in its role as <see cref="IServiceProvider"/>.</param>
+    /// <param name="commands">
+    ///     The <see cref="IGitUiCommands" /> instance, mainly in its role as
+    ///     <see cref="IServiceProvider" />.
+    /// </param>
     /// <param name="dir">The initial directory path.</param>
     /// <param name="gitModuleChanged">The event handler for Git module changes.</param>
-    public FormInit(IGitUICommands commands, string dir, EventHandler<GitModuleEventArgs>? gitModuleChanged)
-        : base(commands, enablePositionRestore: true)
+    public FormInit(IGitUiCommands commands, string dir, EventHandler<GitModuleEventArgs>? gitModuleChanged)
+        : base(commands, true)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -38,7 +43,8 @@ public partial class FormInit : GitExtensionsDialog
 
         InitializeComplete();
 
-        IList<Repository> repositoryHistory = ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync);
+        var repositoryHistory =
+            ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync);
         _NO_TRANSLATE_Directory.DataSource = repositoryHistory;
         _NO_TRANSLATE_Directory.DisplayMember = nameof(Repository.Path);
         _NO_TRANSLATE_Directory.SelectedIndex = -1;
@@ -48,28 +54,31 @@ public partial class FormInit : GitExtensionsDialog
 
     private void InitClick(object sender, EventArgs e)
     {
-        string directoryPath = _NO_TRANSLATE_Directory.Text;
+        var directoryPath = _NO_TRANSLATE_Directory.Text;
 
         if (!IsRootedDirectoryPath(directoryPath))
         {
-            MessageBoxes.Show(this, _chooseDirectory.Text, _chooseDirectoryCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _chooseDirectory.Text, _chooseDirectoryCaption.Text, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 
         if (File.Exists(directoryPath))
         {
-            MessageBoxes.Show(this, _chooseDirectoryNotFile.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _chooseDirectoryNotFile.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 
-        GitModule module = new(UICommands.GetRequiredService<IGitExecutorProvider>(), directoryPath);
+        GitModule module = new(UiCommands.GetRequiredService<IGitExecutorProvider>(), directoryPath);
 
-        if (!System.IO.Directory.Exists(module.WorkingDir))
+        if (!Directory.Exists(module.WorkingDir))
         {
-            System.IO.Directory.CreateDirectory(module.WorkingDir);
+            Directory.CreateDirectory(module.WorkingDir);
         }
 
-        MessageBoxes.Show(this, module.Init(Central.Checked, Central.Checked), _initMsgBoxCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBoxes.Show(this, module.Init(Central.Checked, Central.Checked), _initMsgBoxCaption.Text,
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
 
         _gitModuleChanged?.Invoke(this, new GitModuleEventArgs(module));
 
@@ -103,7 +112,7 @@ public partial class FormInit : GitExtensionsDialog
 
     private void BrowseClick(object sender, EventArgs e)
     {
-        string? userSelectedPath = OsShellUtil.PickFolder(this);
+        var userSelectedPath = OsShellUtil.PickFolder(this);
 
         if (userSelectedPath is not null)
         {
@@ -111,18 +120,17 @@ public partial class FormInit : GitExtensionsDialog
         }
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly FormInit _form;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(FormInit form)
+    internal readonly struct TestAccessor(FormInit form)
+    {
+        public ComboBox DirectoryCombo
         {
-            _form = form;
+            get => form._NO_TRANSLATE_Directory;
         }
-
-        public ComboBox DirectoryCombo => _form._NO_TRANSLATE_Directory;
 
         public bool IsRootedDirectoryPath(string path)
         {

@@ -5,7 +5,7 @@ using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces.BuildServerIntegration;
 
-namespace UITests.CommandsDialogs.SettingsDialog.Pages;
+namespace UITests.MEF;
 
 [PartNotDiscoverable]
 [MockGenericBuildServerIntegrationMetadata("GenericBuildServerMock")]
@@ -13,23 +13,24 @@ namespace UITests.CommandsDialogs.SettingsDialog.Pages;
 [PartCreationPolicy(CreationPolicy.NonShared)]
 internal class MockGenericBuildServerAdapter : IBuildServerAdapter
 {
-    public string UniqueKey { get; } = null!;
+    string IBuildServerAdapter.UniqueKey { get; } = null!;
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
     }
 
-    public IObservable<BuildInfo> GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IObservable<BuildInfo> GetRunningBuilds(IScheduler scheduler)
+    IObservable<BuildInfo> IBuildServerAdapter.GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
     {
         throw new NotImplementedException();
     }
 
-    public void Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
+    IObservable<BuildInfo> IBuildServerAdapter.GetRunningBuilds(IScheduler scheduler)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBuildServerAdapter.Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config,
+        Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
     {
     }
 }

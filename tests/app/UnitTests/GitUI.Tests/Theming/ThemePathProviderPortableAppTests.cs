@@ -1,31 +1,30 @@
-﻿using GitCommands;
-using GitExtUtils.GitUI.Theming;
+﻿using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.Theming;
 
 public class ThemePathProviderPortableAppTests : IDisposable
 {
-    private string _originalAppExecutablePath = null!;
-    private Lazy<string?> _originalAppDataPath = null!;
-
     // appInstall and AppData paths are same for portable app
-    private const string MockAppInstallPath = "c:\\portable\\GitExtensions";
-    private const string MockAppDataPath = "c:\\portable\\GitExtensions";
+    private const string _mockAppInstallPath = "c:\\portable\\GitExtensions";
+    private const string _mockAppDataPath = "c:\\portable\\GitExtensions";
+    private readonly Lazy<string?> _originalAppDataPath = null!;
+    private readonly string _originalAppExecutablePath = null!;
 
     public ThemePathProviderPortableAppTests()
     {
-        AppSettings.TestAccessor testAccessor = AppSettings.GetTestAccessor();
+        var testAccessor = AppSettings.GetTestAccessor();
         _originalAppExecutablePath = testAccessor.ApplicationExecutablePath;
-        testAccessor.ApplicationExecutablePath = Path.Combine(MockAppInstallPath, "gitextensions.exe");
+        testAccessor.ApplicationExecutablePath = Path.Combine(_mockAppInstallPath, "gitextensions.exe");
 
         _originalAppDataPath = testAccessor.ApplicationDataPath;
-        testAccessor.ApplicationDataPath = new Lazy<string?>(() => MockAppDataPath);
+        testAccessor.ApplicationDataPath = new Lazy<string?>(() => _mockAppDataPath);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
-        AppSettings.TestAccessor testAccessor = AppSettings.GetTestAccessor();
+        var testAccessor = AppSettings.GetTestAccessor();
         testAccessor.ApplicationExecutablePath = _originalAppExecutablePath;
         testAccessor.ApplicationDataPath = _originalAppDataPath;
     }
@@ -34,7 +33,7 @@ public class ThemePathProviderPortableAppTests : IDisposable
     public void AppThemesDirectory_should_be_inside_app_install()
     {
         new ThemePathProvider().AppThemesDirectory
-            .Should().Be(Path.Combine(MockAppInstallPath, "Themes"));
+            .Should().Be(Path.Combine(_mockAppInstallPath, "Themes"));
     }
 
     [Fact]
@@ -47,8 +46,8 @@ public class ThemePathProviderPortableAppTests : IDisposable
     [Fact]
     public void GetThemePath_should_return_path_inside_app_install_When_theme_is_builtin()
     {
-        new ThemePathProvider().GetThemePath(new ThemeId("arbitrary_name", isBuiltin: true))
-            .Should().Be(Path.Combine(MockAppInstallPath, "Themes", "arbitrary_name.css"));
+        new ThemePathProvider().GetThemePath(new ThemeId("arbitrary_name", true))
+            .Should().Be(Path.Combine(_mockAppInstallPath, "Themes", "arbitrary_name.css"));
     }
 
     [Fact]

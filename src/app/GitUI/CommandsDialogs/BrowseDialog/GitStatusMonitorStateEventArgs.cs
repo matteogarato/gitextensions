@@ -1,11 +1,6 @@
 ﻿namespace GitUI.CommandsDialogs.BrowseDialog;
 
-public class GitStatusMonitorStateEventArgs : EventArgs
+public class GitStatusMonitorStateEventArgs(GitStatusMonitorState state) : EventArgs
 {
-    public GitStatusMonitorStateEventArgs(GitStatusMonitorState state)
-    {
-        State = state;
-    }
-
-    public GitStatusMonitorState State { get; }
+    public GitStatusMonitorState State { get; } = state;
 }

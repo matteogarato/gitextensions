@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace GitCommands;
+namespace GitCommands.Git;
 
 public static class GitConvert
 {
-    private const byte lf = 0x0A;
-    private const byte cr = 0x0D;
+    private const byte _lf = 0x0A;
+    private const byte _cr = 0x0D;
 
     [return: NotNullIfNotNull(nameof(buf))]
     public static byte[]? ConvertCrLfToWorktree(byte[]? buf)
@@ -17,17 +17,17 @@ public static class GitConvert
 
         BufStatistic bufStatistic = new(buf);
 
-        if (bufStatistic.cntLf == 0)
+        if (bufStatistic.CntLf == 0)
         {
             return buf;
         }
 
-        if (bufStatistic.cntLf == bufStatistic.cntCrlf)
+        if (bufStatistic.CntLf == bufStatistic.CntCrlf)
         {
             return buf;
         }
 
-        if (bufStatistic.cntCr != bufStatistic.cntCrlf)
+        if (bufStatistic.CntCr != bufStatistic.CntCrlf)
         {
             return buf;
         }
@@ -41,10 +41,10 @@ public static class GitConvert
 
         if (buf.Length >= 1)
         {
-            if (buf[0] == lf)
+            if (buf[0] == _lf)
             {
-                bytes.Add(cr);
-                bytes.Add(lf);
+                bytes.Add(_cr);
+                bytes.Add(_lf);
             }
             else
             {
@@ -52,18 +52,18 @@ public static class GitConvert
             }
         }
 
-        for (int index = 1; index < buf.Length; index++)
+        for (var index = 1; index < buf.Length; index++)
         {
-            if (buf[index] == lf)
+            if (buf[index] == _lf)
             {
-                if (buf[index - 1] == cr)
+                if (buf[index - 1] == _cr)
                 {
-                    bytes.Add(lf);
+                    bytes.Add(_lf);
                 }
                 else
                 {
-                    bytes.Add(cr);
-                    bytes.Add(lf);
+                    bytes.Add(_cr);
+                    bytes.Add(_lf);
                 }
             }
             else
@@ -76,12 +76,12 @@ public static class GitConvert
 
         bool IsBinary()
         {
-            if (bufStatistic.cntNul > 0)
+            if (bufStatistic.CntNul > 0)
             {
                 return true;
             }
 
-            if ((bufStatistic.cntPrintable / 128) < bufStatistic.cntNonPrintable)
+            if (bufStatistic.CntPrintable / 128 < bufStatistic.CntNonPrintable)
             {
                 return true;
             }
@@ -92,47 +92,47 @@ public static class GitConvert
 
     private readonly struct BufStatistic
     {
-        public readonly long cntNul;
-        public readonly long cntCr;
-        public readonly long cntLf;
-        public readonly long cntCrlf;
-        public readonly long cntPrintable;
-        public readonly long cntNonPrintable;
+        public readonly long CntNul;
+        public readonly long CntCr;
+        public readonly long CntLf;
+        public readonly long CntCrlf;
+        public readonly long CntPrintable;
+        public readonly long CntNonPrintable;
 
         public BufStatistic(byte[] buf)
         {
-            cntNul = 0;
-            cntCr = 0;
-            cntLf = 0;
-            cntCrlf = 0;
-            cntPrintable = 0;
-            cntNonPrintable = 0;
+            CntNul = 0;
+            CntCr = 0;
+            CntLf = 0;
+            CntCrlf = 0;
+            CntPrintable = 0;
+            CntNonPrintable = 0;
 
             for (long i = 0; i < buf.Length; i++)
             {
-                if (buf[i] == cr)
+                if (buf[i] == _cr)
                 {
-                    cntCr++;
+                    CntCr++;
                     if (i + 1 < buf.Length)
                     {
-                        if (buf[i + 1] == lf)
+                        if (buf[i + 1] == _lf)
                         {
-                            cntCrlf++;
+                            CntCrlf++;
                         }
                     }
 
                     continue;
                 }
 
-                if (buf[i] == lf)
+                if (buf[i] == _lf)
                 {
-                    cntLf++;
+                    CntLf++;
                     continue;
                 }
 
                 if (buf[i] == 0x7F)
                 {
-                    cntNonPrintable++;
+                    CntNonPrintable++;
                 }
                 else if (buf[i] < 0x20)
                 {
@@ -142,22 +142,22 @@ public static class GitConvert
                         case 0x09:
                         case 0x1B:
                         case 0x0C:
-                            cntPrintable++;
+                            CntPrintable++;
                             break;
 
                         case 0:
-                            cntNul++;
-                            cntNonPrintable++;
+                            CntNul++;
+                            CntNonPrintable++;
                             break;
 
                         default:
-                            cntNonPrintable++;
+                            CntNonPrintable++;
                             break;
                     }
                 }
                 else
                 {
-                    cntPrintable++;
+                    CntPrintable++;
                 }
             }
 
@@ -165,7 +165,7 @@ public static class GitConvert
             {
                 if (buf[^1] == 0x1A)
                 {
-                    cntNonPrintable--;
+                    CntNonPrintable--;
                 }
             }
         }

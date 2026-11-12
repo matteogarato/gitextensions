@@ -1,4 +1,5 @@
 ﻿using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 
 namespace GitUI.CommandsDialogs;
 
@@ -6,7 +7,7 @@ public partial class FormLog : GitModuleForm
 {
     private readonly CancellationTokenSequence _viewChangesSequence = new();
 
-    public FormLog(IGitUICommands commands)
+    public FormLog(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -17,7 +18,7 @@ public partial class FormLog : GitModuleForm
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -46,7 +47,7 @@ public partial class FormLog : GitModuleForm
         using (WaitCursorScope.Enter())
         {
             _ = diffViewer.ViewChangesAsync(DiffFiles.SelectedItem,
-                cancellationToken: _viewChangesSequence.Next());
+                _viewChangesSequence.Next());
         }
     }
 
@@ -54,7 +55,8 @@ public partial class FormLog : GitModuleForm
     {
         using (WaitCursorScope.Enter())
         {
-            TaskManager.HandleExceptions(() => DiffFiles.SetDiffs(RevisionGrid.GetSelectedRevisions()), Application.OnThreadException);
+            TaskManager.HandleExceptions(() => DiffFiles.SetDiffs(RevisionGrid.GetSelectedRevisions()),
+                Application.OnThreadException);
         }
     }
 

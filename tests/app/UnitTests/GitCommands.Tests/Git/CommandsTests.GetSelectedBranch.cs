@@ -3,10 +3,11 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests.Git;
+
 public partial class CommandsTests : IDisposable
 {
-    private string _tempDir = null!;
-    private string _gitDir = null!;
+    private readonly string _gitDir = null!;
+    private readonly string _tempDir = null!;
 
     public CommandsTests()
     {
@@ -15,39 +16,39 @@ public partial class CommandsTests : IDisposable
         Directory.CreateDirectory(_gitDir);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         if (Directory.Exists(_tempDir))
         {
-            Directory.Delete(_tempDir, recursive: true);
+            Directory.Delete(_tempDir, true);
         }
     }
 
     [Fact]
     public void GetSelectedBranch_should_return_branch_name_from_HEAD_file()
     {
-        IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
+        var gitExecutor = Substitute.For<IGitExecutor>();
         gitExecutor.IsReftableRepo.Returns(false);
         gitExecutor.WorkingDir.Returns(_tempDir);
         gitExecutor.GetGitDirectory().Returns(_gitDir);
 
         File.WriteAllText(Path.Combine(_gitDir, "HEAD"), "ref: refs/heads/main");
 
-        string branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
+        var branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
         branch.Should().Be("main");
     }
 
     [Fact]
     public void GetSelectedBranch_should_return_detached_branch_when_HEAD_is_detached()
     {
-        IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
+        var gitExecutor = Substitute.For<IGitExecutor>();
         gitExecutor.IsReftableRepo.Returns(false);
         gitExecutor.WorkingDir.Returns(_tempDir);
         gitExecutor.GetGitDirectory().Returns(_gitDir);
 
         File.WriteAllText(Path.Combine(_gitDir, "HEAD"), "9601551c564b48208bccd50b705264e9bd68140d");
 
-        string branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
+        var branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
         branch.Should().Be("(no branch)");
     }
 
@@ -55,15 +56,15 @@ public partial class CommandsTests : IDisposable
     public void GetSelectedBranch_should_return_empty_if_HEAD_file_missing()
     {
         MockExecutable executable = new();
-        IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
+        var gitExecutor = Substitute.For<IGitExecutor>();
         gitExecutor.IsReftableRepo.Returns(false);
         gitExecutor.WorkingDir.Returns(_tempDir);
         gitExecutor.GetGitDirectory().Returns(_gitDir);
         gitExecutor.GitExecutable.Returns(executable);
 
-        using (executable.StageOutput("symbolic-ref --quiet HEAD", string.Empty, exitCode: 1))
+        using (executable.StageOutput("symbolic-ref --quiet HEAD", string.Empty, 1))
         {
-            string branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor, emptyIfDetached: true);
+            var branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor, true);
             branch.Should().BeEmpty();
         }
     }
@@ -72,14 +73,14 @@ public partial class CommandsTests : IDisposable
     public void GetSelectedBranch_should_fallback_to_git_command_when_reftable_repo()
     {
         MockExecutable executable = new();
-        IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
+        var gitExecutor = Substitute.For<IGitExecutor>();
         gitExecutor.IsReftableRepo.Returns(true);
         gitExecutor.WorkingDir.Returns(_tempDir);
         gitExecutor.GitExecutable.Returns(executable);
 
         using (executable.StageOutput("symbolic-ref --quiet HEAD", "refs/heads/feature\n"))
         {
-            string branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
+            var branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
             branch.Should().Be("feature");
         }
     }
@@ -88,14 +89,14 @@ public partial class CommandsTests : IDisposable
     public void GetSelectedBranch_should_return_detached_branch_when_command_fails_and_emptyIfDetached_false()
     {
         MockExecutable executable = new();
-        IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
+        var gitExecutor = Substitute.For<IGitExecutor>();
         gitExecutor.IsReftableRepo.Returns(true);
         gitExecutor.WorkingDir.Returns(_tempDir);
         gitExecutor.GitExecutable.Returns(executable);
 
-        using (executable.StageOutput("symbolic-ref --quiet HEAD", string.Empty, exitCode: 1))
+        using (executable.StageOutput("symbolic-ref --quiet HEAD", string.Empty, 1))
         {
-            string branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor, emptyIfDetached: false);
+            var branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor);
             branch.Should().Be("(no branch)");
         }
     }
@@ -104,14 +105,14 @@ public partial class CommandsTests : IDisposable
     public void GetSelectedBranch_should_return_empty_when_command_fails_and_emptyIfDetached_true()
     {
         MockExecutable executable = new();
-        IGitExecutor gitExecutor = Substitute.For<IGitExecutor>();
+        var gitExecutor = Substitute.For<IGitExecutor>();
         gitExecutor.IsReftableRepo.Returns(true);
         gitExecutor.WorkingDir.Returns(_tempDir);
         gitExecutor.GitExecutable.Returns(executable);
 
-        using (executable.StageOutput("symbolic-ref --quiet HEAD", string.Empty, exitCode: 1))
+        using (executable.StageOutput("symbolic-ref --quiet HEAD", string.Empty, 1))
         {
-            string branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor, emptyIfDetached: true);
+            var branch = GitCommands.Git.Commands.GetSelectedBranch(gitExecutor, true);
             branch.Should().BeEmpty();
         }
     }

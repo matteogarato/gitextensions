@@ -3,8 +3,8 @@
 namespace GitCommands.UserRepositoryHistory.Legacy;
 
 /// <summary>
-/// The surrogate is necessary to provide backwards compatibility.
-/// The original implementation persisted user's git repositories under "RepositoryHistory" root node.
+///     The surrogate is necessary to provide backwards compatibility.
+///     The original implementation persisted user's git repositories under "RepositoryHistory" root node.
 /// </summary>
 [XmlRoot("RepositoryHistory")]
 public class RepositoryHistorySurrogate

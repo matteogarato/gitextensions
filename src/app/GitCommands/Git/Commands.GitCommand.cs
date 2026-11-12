@@ -6,27 +6,24 @@ namespace GitCommands.Git;
 public static partial class Commands
 {
     /// <summary>
-    /// Base class for structured git command.
+    ///     Base class for structured git command.
     /// </summary>
     /// Here we can introduce methods which can operate on command structure instead of command string.
-    private sealed class GitCommand : IGitCommand
+    private sealed class GitCommand(bool accessesRemote, bool changesRepoState, GitArgumentBuilder arguments)
+        : IGitCommand
     {
         /// <value>Gets whether this command accesses a remote repository.</value>
-        public bool AccessesRemote { get; }
+        bool IGitCommand.AccessesRemote { get; } = accessesRemote;
 
         /// <value>The arguments for the git command.</value>
-        public string Arguments { get; }
+        string IGitCommand.Arguments { get; } = arguments.ToString();
 
         /// <value>Gets whether executing this command will change the repo state.</value>
-        public bool ChangesRepoState { get; }
+        bool IGitCommand.ChangesRepoState { get; } = changesRepoState;
 
-        public GitCommand(bool accessesRemote, bool changesRepoState, GitArgumentBuilder arguments)
+        public override string ToString()
         {
-            AccessesRemote = accessesRemote;
-            Arguments = arguments.ToString();
-            ChangesRepoState = changesRepoState;
+            return Arguments;
         }
-
-        public override string ToString() => Arguments;
     }
 }

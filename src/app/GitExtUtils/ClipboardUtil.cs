@@ -19,9 +19,9 @@ public static class ClipboardUtil
 
             Clipboard.SetDataObject(
                 text,
-                copy: true, // keep the data on the clipboard, even after Git Extensions exits
-                retryTimes: 5,
-                retryDelay: 100);
+                true, // keep the data on the clipboard, even after Git Extensions exits
+                5,
+                100);
 
             return true;
         }

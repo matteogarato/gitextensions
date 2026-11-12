@@ -1,9 +1,10 @@
 ﻿using GitCommands.UserRepositoryHistory;
 
 namespace GitCommandsTests.UserRepositoryHistory;
+
 public class RepositoryXmlSerialiserTests
 {
-    private RepositoryXmlSerialiser _repositoryXmlSerialiser = null!;
+    private readonly RepositoryXmlSerialiser _repositoryXmlSerialiser = null!;
 
     public RepositoryXmlSerialiserTests()
     {
@@ -47,9 +48,9 @@ public class RepositoryXmlSerialiserTests
   <CategoryType>Repositories</CategoryType>
 </RepositoryHistory>";
 
-        IReadOnlyList<Repository>? repositories = _repositoryXmlSerialiser.Deserialize(settingHistoryValue);
+        var repositories = _repositoryXmlSerialiser.Deserialize(settingHistoryValue);
 
-        await Verifier.Verify(repositories);
+        await Verify(repositories);
     }
 
     [Fact]
@@ -83,9 +84,9 @@ public class RepositoryXmlSerialiserTests
   <CategoryType>Repositories</CategoryType>
 </RepositoryHistory>";
 
-        IReadOnlyList<Repository>? repositories = _repositoryXmlSerialiser.Deserialize(settingHistoryValue);
+        var repositories = _repositoryXmlSerialiser.Deserialize(settingHistoryValue);
 
-        await Verifier.Verify(repositories);
+        await Verify(repositories);
     }
 
     [Fact]
@@ -99,19 +100,15 @@ public class RepositoryXmlSerialiserTests
     {
         List<Repository> history =
         [
-            new Repository(@"C:\Development\gitextensions\"),
-            new Repository(@"C:\Development\gitextensions\Externals\NBug\")
+            new(@"C:\Development\gitextensions\"),
+            new(@"C:\Development\gitextensions\Externals\NBug\") { Anchor = Repository.RepositoryAnchor.AnchoredInTop },
+            new(@"C:\Development\gitextensions\GitExtensionsDoc\")
             {
-                Anchor = Repository.RepositoryAnchor.AnchoredInTop,
-            },
-            new Repository(@"C:\Development\gitextensions\GitExtensionsDoc\")
-            {
-                Anchor = Repository.RepositoryAnchor.AnchoredInRecent,
+                Anchor = Repository.RepositoryAnchor.AnchoredInRecent
             }
-
         ];
 
-        string? xml = _repositoryXmlSerialiser.Serialize(history);
-        await Verifier.VerifyXml(xml);
+        var xml = _repositoryXmlSerialiser.Serialize(history);
+        await VerifyXml(xml);
     }
 }

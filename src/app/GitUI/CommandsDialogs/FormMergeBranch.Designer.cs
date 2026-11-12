@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommandsDialogs;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommandsDialogs;
 
 partial class FormMergeBranch
 {
@@ -50,9 +52,9 @@ partial class FormMergeBranch
         fastForward = new RadioButton();
         currentBranchLabel = new Label();
         Currentbranch = new Label();
-        Branches = new GitUI.BranchComboBox();
+        Branches = new BranchComboBox();
         label2 = new Label();
-        helpImageDisplayUserControl1 = new GitUI.Help.HelpImageDisplayUserControl();
+        helpImageDisplayUserControl1 = new HelpImageDisplayUserControl();
         tableLayoutPanel1.SuspendLayout();
         groupBox1.SuspendLayout();
         tableLayoutPanel2.SuspendLayout();
@@ -438,7 +440,7 @@ partial class FormMergeBranch
     #endregion
     private GroupBox groupBox1;
     private TableLayoutPanel tableLayoutPanel1;
-    private Help.HelpImageDisplayUserControl helpImageDisplayUserControl1;
+    private HelpImageDisplayUserControl helpImageDisplayUserControl1;
     private TableLayoutPanel tableLayoutPanel2;
     private Label currentBranchLabel;
     private Label Currentbranch;

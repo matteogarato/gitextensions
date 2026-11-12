@@ -1,22 +1,24 @@
-﻿using GitCommands;
-using GitExtUtils.GitUI.Theming;
+﻿using GitExtUtils.GitUI.Theming;
 using GitUI.CommandsDialogs.SettingsDialog.Pages;
 using GitUI.Theming;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.CommandsDialogs.SettingsDialog.Pages;
+
 public class ColorsPageSettingsPageControllerTests
 {
-    private ColorSettingsPageTestContext _context = null!;
+    private readonly ColorSettingsPageTestContext _context = null!;
 
     public ColorsPageSettingsPageControllerTests()
     {
         MockColorsSettingsPage page = new();
-        IThemeRepository themeRepository = Substitute.For<IThemeRepository>();
-        IThemePathProvider themePathProvider = Substitute.For<IThemePathProvider>();
+        var themeRepository = Substitute.For<IThemeRepository>();
+        var themePathProvider = Substitute.For<IThemePathProvider>();
         themeRepository
             .GetTheme(Arg.Any<ThemeId>(), Arg.Any<IReadOnlyList<string>>())
-            .Returns(callInfo => new Theme(new Dictionary<AppColor, Color>(), new Dictionary<KnownColor, Color>(), callInfo.Arg<ThemeId>()));
+            .Returns(callInfo => new Theme(new Dictionary<AppColor, Color>(), new Dictionary<KnownColor, Color>(),
+                callInfo.Arg<ThemeId>()));
         ColorsSettingsPageController controller = new(page, themeRepository, themePathProvider);
 
         _context = new ColorSettingsPageTestContext(page, controller, themeRepository);
@@ -35,7 +37,7 @@ public class ColorsPageSettingsPageControllerTests
     [Fact]
     public void When_current_theme_is_non_default_choosing_visual_style_should_be_enabled()
     {
-        AppSettings.ThemeId = new ThemeId("non_default", isBuiltin: true);
+        AppSettings.ThemeId = new ThemeId("non_default", true);
         ThemeModule.TestAccessor.ReloadThemeSettings(_context.ThemeRepository);
 
         _context.Controller.ShowThemeSettings();
@@ -45,7 +47,7 @@ public class ColorsPageSettingsPageControllerTests
     [Fact]
     public void When_user_switches_to_default_theme_UseSystemVisualStyle_should_be_checked()
     {
-        AppSettings.ThemeId = new ThemeId("non_default", isBuiltin: true);
+        AppSettings.ThemeId = new ThemeId("non_default", true);
         AppSettings.UseSystemVisualStyle = false;
         ThemeModule.TestAccessor.ReloadThemeSettings(_context.ThemeRepository);
         _context.Controller.ShowThemeSettings();
@@ -65,7 +67,7 @@ public class ColorsPageSettingsPageControllerTests
         _context.Controller.ShowThemeSettings();
         _context.Page.UseSystemVisualStyle.Should().BeTrue();
 
-        _context.Page.SelectedThemeId = new ThemeId("non_default", isBuiltin: true);
+        _context.Page.SelectedThemeId = new ThemeId("non_default", true);
         _context.Controller.HandleSelectedThemeChanged();
         _context.Page.UseSystemVisualStyle.Should().BeFalse();
     }
@@ -73,7 +75,7 @@ public class ColorsPageSettingsPageControllerTests
     [Fact]
     public void When_user_switches_to_default_theme_UseColorblindVariation_should_be_unchecked()
     {
-        AppSettings.ThemeId = new ThemeId("non_default", isBuiltin: true);
+        AppSettings.ThemeId = new ThemeId("non_default", true);
         AppSettings.ThemeVariations = [ThemeVariations.Colorblind];
         ThemeModule.TestAccessor.ReloadThemeSettings(_context.ThemeRepository);
         _context.Controller.ShowThemeSettings();
@@ -95,7 +97,7 @@ public class ColorsPageSettingsPageControllerTests
         ThemeModule.TestAccessor.ReloadThemeSettings(_context.ThemeRepository);
         _context.Controller.ShowThemeSettings();
 
-        _context.Page.SelectedThemeId = new ThemeId("another_theme", isBuiltin: false);
+        _context.Page.SelectedThemeId = new ThemeId("another_theme");
         _context.Controller.SettingsAreModified.Should().BeTrue();
     }
 
@@ -171,7 +173,7 @@ public class ColorsPageSettingsPageControllerTests
         _context.Page.SelectedThemeId.Should().Be(ThemeId.WindowsAppColorModeId);
 
         // The ThemeId is set from current Windows settings
-        ThemeId id = Application.SystemColorMode == SystemColorMode.Dark
+        var id = Application.SystemColorMode == SystemColorMode.Dark
             ? ThemeId.DefaultDark
             : ThemeId.DefaultLight;
         ThemeModule.Settings.Theme.Id.Should().Be(id);
@@ -181,65 +183,54 @@ public class ColorsPageSettingsPageControllerTests
     {
         yield return new object[]
         {
-            ThemeId.DefaultLight,
-            ThemeVariations.None,
-            true // useSystemVisualStyle
+            ThemeId.DefaultLight, ThemeVariations.None, true // useSystemVisualStyle
         };
 
         yield return new object[]
         {
-            ThemeId.DefaultDark,
-            new[] { ThemeVariations.Colorblind },
-            false // useSystemVisualStyle
+            ThemeId.DefaultDark, new[] { ThemeVariations.Colorblind }, false // useSystemVisualStyle
         };
 
         yield return new object[]
         {
-            ThemeId.WindowsAppColorModeId,
-            new[] { ThemeVariations.Colorblind },
+            ThemeId.WindowsAppColorModeId, new[] { ThemeVariations.Colorblind },
             null! // useSystemVisualStyle, depends on Application.SystemColorMode
         };
 
         yield return new object[]
         {
-            new ThemeId("non_default", isBuiltin: true),
-            new[] { ThemeVariations.Colorblind },
+            new ThemeId("non_default", true), new[] { ThemeVariations.Colorblind },
             null! // useSystemVisualStyle, unknown
         };
     }
 
     private class MockColorsSettingsPage : IColorsSettingsPage
     {
-        public ThemeId SelectedThemeId { get; set; }
-        public string[] SelectedThemeVariations { get; set; } = null!;
-        public bool UseSystemVisualStyle { get; set; }
-        public bool LabelRestartIsNeededVisible { get; set; }
-        public bool IsChoosingVisualStyleEnabled { get; set; }
+        ThemeId IColorsSettingsPage.SelectedThemeId { get; set; }
+        string[] IColorsSettingsPage.SelectedThemeVariations { get; set; } = null!;
+        bool IColorsSettingsPage.UseSystemVisualStyle { get; set; }
+        bool IColorsSettingsPage.LabelRestartIsNeededVisible { get; set; }
+        bool IColorsSettingsPage.IsChoosingVisualStyleEnabled { get; set; }
 
-        public void ShowThemeLoadingErrorMessage(ThemeId themeId, string[] variations, Exception ex) =>
+        void IColorsSettingsPage.ShowThemeLoadingErrorMessage(ThemeId themeId, string[] variations, Exception ex)
+        {
             throw new NotImplementedException();
+        }
 
-        public void PopulateThemeMenu(IEnumerable<ThemeId> themeIds)
+        void IColorsSettingsPage.PopulateThemeMenu(IEnumerable<ThemeId> themeIds)
         {
         }
     }
 
-    private class ColorSettingsPageTestContext
+    private class ColorSettingsPageTestContext(
+        IColorsSettingsPage page,
+        ColorsSettingsPageController controller,
+        IThemeRepository themeRepository)
     {
-        public ColorSettingsPageTestContext(
-            IColorsSettingsPage page,
-            ColorsSettingsPageController controller,
-            IThemeRepository themeRepository)
-        {
-            Page = page;
-            Controller = controller;
-            ThemeRepository = themeRepository;
-        }
+        public IColorsSettingsPage Page { get; } = page;
 
-        public IColorsSettingsPage Page { get; }
+        public ColorsSettingsPageController Controller { get; } = controller;
 
-        public ColorsSettingsPageController Controller { get; }
-
-        public IThemeRepository ThemeRepository { get; }
+        public IThemeRepository ThemeRepository { get; } = themeRepository;
     }
 }

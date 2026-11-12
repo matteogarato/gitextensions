@@ -3,22 +3,17 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls.RevisionGrid;
-using Microsoft;
 
 namespace GitUI.LeftPanel;
 
-internal sealed class LocalBranchTree : BaseRefTree
+internal sealed class LocalBranchTree(
+    TreeNode treeNode,
+    IGitUiCommandsSource uiCommands,
+    IAheadBehindDataProvider? aheadBehindDataProvider,
+    ICheckRefs refsSource,
+    IRevisionGridInfo revisionGridInfo)
+    : BaseRefTree(treeNode, uiCommands, refsSource, RefsFilter.Heads)
 {
-    private readonly IAheadBehindDataProvider? _aheadBehindDataProvider;
-    private readonly IRevisionGridInfo _revisionGridInfo;
-
-    public LocalBranchTree(TreeNode treeNode, IGitUICommandsSource uiCommands, IAheadBehindDataProvider? aheadBehindDataProvider, ICheckRefs refsSource, IRevisionGridInfo revisionGridInfo)
-        : base(treeNode, uiCommands, refsSource, RefsFilter.Heads)
-    {
-        _aheadBehindDataProvider = aheadBehindDataProvider;
-        _revisionGridInfo = revisionGridInfo;
-    }
-
     protected override Nodes FillTree(IReadOnlyList<IGitRef> branches, CancellationToken token)
     {
         #region example
@@ -52,10 +47,10 @@ internal sealed class LocalBranchTree : BaseRefTree
         #endregion
 
         Nodes nodes = new(this);
-        IReadOnlyDictionary<string, AheadBehindData>? aheadBehindData = _aheadBehindDataProvider?.GetData();
-        string currentBranch = _revisionGridInfo.GetCurrentBranch();
+        var aheadBehindData = aheadBehindDataProvider?.GetData();
+        var currentBranch = revisionGridInfo.GetCurrentBranch();
         Dictionary<string, BaseRevisionNode> pathToNode = [];
-        foreach (IGitRef branch in PrioritizedBranches(branches))
+        foreach (var branch in PrioritizedBranches(branches))
         {
             token.ThrowIfCancellationRequested();
 
@@ -64,14 +59,16 @@ internal sealed class LocalBranchTree : BaseRefTree
                 throw new InvalidOperationException($"Branch '{branch.Name}' has no ObjectId.");
             }
 
-            LocalBranchNode localBranchNode = new(this, branch.ObjectId, branch.Name, branch.Name == currentBranch, visible: true);
+            LocalBranchNode localBranchNode =
+                new(this, branch.ObjectId, branch.Name, branch.Name == currentBranch, true);
 
-            if (aheadBehindData?.TryGetValue(localBranchNode.FullPath, out AheadBehindData aheadBehind) is true)
+            if (aheadBehindData?.TryGetValue(localBranchNode.FullPath, out var aheadBehind) is true)
             {
                 localBranchNode.UpdateAheadBehind(aheadBehind.ToDisplay(), aheadBehind.RemoteRef);
             }
 
-            BaseRevisionNode? parent = localBranchNode.CreateRootNode(pathToNode, (tree, parentPath) => new BranchPathNode(tree, parentPath));
+            var parent = localBranchNode.CreateRootNode(pathToNode,
+                (tree, parentPath) => new BranchPathNode(tree, parentPath));
             if (parent is not null)
             {
                 nodes.AddNode(parent);
@@ -100,7 +97,7 @@ internal sealed class LocalBranchTree : BaseRefTree
             return;
         }
 
-        LocalBranchNode? currentBranch = Nodes.DepthEnumerator<LocalBranchNode>().FirstOrDefault(b => b.IsCurrent);
+        var currentBranch = Nodes.DepthEnumerator<LocalBranchNode>().FirstOrDefault(b => b.IsCurrent);
         TreeViewNode.TreeView.SelectedNode = currentBranch?.TreeViewNode;
     }
 }

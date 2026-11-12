@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtUtils;
 
@@ -13,34 +14,32 @@ public interface IAheadBehindDataProvider
     void ResetCache();
 }
 
-public partial class AheadBehindDataProvider : IAheadBehindDataProvider
+public partial class AheadBehindDataProvider(Func<IExecutable> getGitExecutable) : IAheadBehindDataProvider
 {
-    private readonly Func<IExecutable> _getGitExecutable;
+    private readonly Lock _lock = new();
+
+    private readonly string _refFormat =
+        @"%(push:track,nobracket)::%(upstream:track,nobracket)::%(push)::%(upstream)::%(refname:short)";
+
+    private string? _branchName;
+
+    private Lazy<IReadOnlyDictionary<string, AheadBehindData>?>? _lazyData;
 
     // Parse info about remote branches, see below for explanation
     // This assumes that the Git output is not localised
     [GeneratedRegex(@"^((?<gone_p>gone)|((ahead\s(?<ahead_p>\d+))?(,\s)?(behind\s(?<behind_p>\d+))?)|(?<unk_p>.*?))::
                    ((?<gone_u>gone)|((ahead\s(?<ahead_u>\d+))?(,\s)?(behind\s(?<behind_u>\d+))?)|(?<unk_u>.*?))::
                    (?<remote_p>.*?)::(?<remote_u>.*?)::(?<branch>.*)$",
-            RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
+        RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
     private static partial Regex AheadBehindRegex { get; }
-    private readonly string _refFormat = @"%(push:track,nobracket)::%(upstream:track,nobracket)::%(push)::%(upstream)::%(refname:short)";
-    private Lazy<IReadOnlyDictionary<string, AheadBehindData>?>? _lazyData;
-    private string? _branchName;
-    private readonly Lock _lock = new();
 
-    public AheadBehindDataProvider(Func<IExecutable> getGitExecutable)
-    {
-        _getGitExecutable = getGitExecutable;
-    }
-
-    public void ResetCache()
+    void IAheadBehindDataProvider.ResetCache()
     {
         _lazyData = null;
         _branchName = null;
     }
 
-    public IReadOnlyDictionary<string, AheadBehindData>? GetData(string branchName = "")
+    IReadOnlyDictionary<string, AheadBehindData>? IAheadBehindDataProvider.GetData(string branchName = "")
     {
         if (!AppSettings.ShowAheadBehindData)
         {
@@ -59,7 +58,7 @@ public partial class AheadBehindDataProvider : IAheadBehindDataProvider
             // Use Lazy<> to synchronize callers
             if (_lazyData == null)
             {
-                _lazyData = new(() => GetData(null, branchName));
+                _lazyData = new Lazy<IReadOnlyDictionary<string, AheadBehindData>?>(() => GetData(null, branchName));
                 _branchName = branchName;
             }
 
@@ -82,21 +81,21 @@ public partial class AheadBehindDataProvider : IAheadBehindDataProvider
 
         GitArgumentBuilder aheadBehindGitCommand = new("for-each-ref")
         {
-            $"--format=\"{_refFormat}\"",
-            "refs/heads/" + branchName
+            $"--format=\"{_refFormat}\"", "refs/heads/" + branchName
         };
 
-        ExecutionResult result = GetGitExecutable().Execute(aheadBehindGitCommand, outputEncoding: encoding, throwOnErrorExit: false);
+        var result = GetGitExecutable()
+            .Execute(aheadBehindGitCommand, outputEncoding: encoding, throwOnErrorExit: false);
         if (!result.ExitedSuccessfully || string.IsNullOrEmpty(result.StandardOutput))
         {
             return null;
         }
 
-        MatchCollection matches = AheadBehindRegex.Matches(result.StandardOutput);
+        var matches = AheadBehindRegex.Matches(result.StandardOutput);
         Dictionary<string, AheadBehindData> aheadBehindForBranchesData = [];
         foreach (Match match in matches)
         {
-            string branch = match.Groups["branch"].Value;
+            var branch = match.Groups["branch"].Value;
 
             // Use 'remote_p' (the value of '%(push)') if all of the following conditions are met:
             // 1. The value exists
@@ -106,7 +105,8 @@ public partial class AheadBehindDataProvider : IAheadBehindDataProvider
             // The third condition specifically ensures we do not use the value of '%(push)' in cases where the
             // value was provided by a push refspec defined for the remote, but the local branch is not already
             // tracking some remote branch.
-            string remoteRef = (match.Groups["remote_p"].Success && !match.Groups["remote_p"].ValueSpan.IsEmpty && !match.Groups["gone_p"].Success)
+            var remoteRef = match.Groups["remote_p"].Success && !match.Groups["remote_p"].ValueSpan.IsEmpty &&
+                            !match.Groups["gone_p"].Success
                 ? match.Groups["remote_p"].Value
                 : match.Groups["remote_u"].Value;
             if (string.IsNullOrEmpty(branch) || string.IsNullOrEmpty(remoteRef))
@@ -124,29 +124,31 @@ public partial class AheadBehindDataProvider : IAheadBehindDataProvider
                     AheadCount =
                         // Prefer push to upstream for the count
                         match.Groups["ahead_p"].Success
-                        // Single-line comment should be preceded by blank line
-                        ? match.Groups["ahead_p"].Value
-                        // If behind is set for push, ahead is null
-                        : match.Groups["behind_p"].Success
-                        ? string.Empty
-                        : match.Groups["ahead_u"].Success
-                        ? match.Groups["ahead_u"].Value
-                        // No information about the remote branch, it is gone
-                        : match.Groups["gone_p"].Success || match.Groups["gone_u"].Success
-                        ? AheadBehindData.Gone
-                        // If the printout is unknown (translated?), do not assume that there are "0" changes
-                        : (match.Groups["unk_p"].Success && !string.IsNullOrWhiteSpace(match.Groups["unk_p"].Value))
-                            || (match.Groups["unk_u"].Success && !string.IsNullOrWhiteSpace(match.Groups["unk_u"].Value))
-                        ? string.Empty
-                        // A remote exists, but "track" does not display the count if ahead/behind match
-                        : "0",
+                            // Single-line comment should be preceded by blank line
+                            ? match.Groups["ahead_p"].Value
+                            // If behind is set for push, ahead is null
+                            : match.Groups["behind_p"].Success
+                                ? string.Empty
+                                : match.Groups["ahead_u"].Success
+                                    ? match.Groups["ahead_u"].Value
+                                    // No information about the remote branch, it is gone
+                                    : match.Groups["gone_p"].Success || match.Groups["gone_u"].Success
+                                        ? AheadBehindData.Gone
+                                        // If the printout is unknown (translated?), do not assume that there are "0" changes
+                                        : (match.Groups["unk_p"].Success &&
+                                           !string.IsNullOrWhiteSpace(match.Groups["unk_p"].Value))
+                                          || (match.Groups["unk_u"].Success &&
+                                              !string.IsNullOrWhiteSpace(match.Groups["unk_u"].Value))
+                                            ? string.Empty
+                                            // A remote exists, but "track" does not display the count if ahead/behind match
+                                            : "0",
 
                     // Behind do not track '0' or 'gone', only in Ahead
                     BehindCount = match.Groups["behind_p"].Success
                         ? match.Groups["behind_p"].Value
                         : !match.Groups["ahead_p"].Success
-                        ? match.Groups["behind_u"].Value
-                        : string.Empty
+                            ? match.Groups["behind_u"].Value
+                            : string.Empty
                 });
 #pragma warning restore SA1515
         }
@@ -155,20 +157,20 @@ public partial class AheadBehindDataProvider : IAheadBehindDataProvider
     }
 
     private IExecutable GetGitExecutable()
-        => _getGitExecutable() ?? throw new ArgumentException($"Require a valid instance of {nameof(IExecutable)}");
+    {
+        return getGitExecutable() ?? throw new ArgumentException($"Require a valid instance of {nameof(IExecutable)}");
+    }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
     {
-        private readonly AheadBehindDataProvider _provider;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(AheadBehindDataProvider provider)
+    internal readonly struct TestAccessor(AheadBehindDataProvider provider)
+    {
+        public IReadOnlyDictionary<string, AheadBehindData>? GetData(Encoding encoding, string branchName)
         {
-            _provider = provider;
+            return provider.GetData(encoding, branchName);
         }
-
-        public IReadOnlyDictionary<string, AheadBehindData>? GetData(Encoding encoding, string branchName) => _provider.GetData(encoding, branchName);
     }
 }

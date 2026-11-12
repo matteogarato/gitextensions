@@ -1,4 +1,5 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitUI.CommandsDialogs.AboutBoxDialog;
 using GitUI.CommandsDialogs.BrowseDialog;
@@ -9,8 +10,8 @@ namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormAbout : GitExtensionsForm
 {
-    private readonly TranslationString _thanksToContributors = new("Thanks to over {0:#,##0} contributors: ");
     private readonly TranslationString _copyTooltip = new("Copy environment info");
+    private readonly TranslationString _thanksToContributors = new("Thanks to over {0:#,##0} contributors: ");
 
     public FormAbout()
     {
@@ -21,13 +22,19 @@ public sealed partial class FormAbout : GitExtensionsForm
         environmentInfo.SetCopyButtonTooltip(_copyTooltip.Text);
 
         // Click handlers
-        _NO_TRANSLATE_labelProductName.LinkClicked += delegate { OsShellUtil.OpenUrlInDefaultBrowser(@"https://github.com/gitextensions/gitextensions"); };
+        _NO_TRANSLATE_labelProductName.LinkClicked += delegate
+        {
+            OsShellUtil.OpenUrlInDefaultBrowser(@"https://github.com/gitextensions/gitextensions");
+        };
         _NO_TRANSLATE_ThanksTo.LinkClicked += delegate { ShowContributorsForm(); };
         pictureDonate.Click += delegate { OsShellUtil.OpenUrlInDefaultBrowser(FormDonate.DonationUrl); };
-        linkLabelIcons.LinkClicked += delegate { OsShellUtil.OpenUrlInDefaultBrowser(@"http://p.yusukekamiyamane.com/"); };
+        linkLabelIcons.LinkClicked += delegate
+        {
+            OsShellUtil.OpenUrlInDefaultBrowser(@"http://p.yusukekamiyamane.com/");
+        };
 
-        IReadOnlyList<string> contributorsList = GetContributorList();
-        string thanksToContributorsText = string.Format(_thanksToContributors.Text, contributorsList.Count);
+        var contributorsList = GetContributorList();
+        var thanksToContributorsText = string.Format(_thanksToContributors.Text, contributorsList.Count);
 
         Random random = new();
 
@@ -43,13 +50,13 @@ public sealed partial class FormAbout : GitExtensionsForm
         void ShowContributorsForm()
         {
             using FormContributors formContributors = new();
-            formContributors.ShowDialog(owner: this);
+            formContributors.ShowDialog(this);
         }
 
         void ThankNextContributor()
         {
             // Select a contributor at random
-            string contributorName = contributorsList[random.Next(contributorsList.Count)].Trim();
+            var contributorName = contributorsList[random.Next(contributorsList.Count)].Trim();
 
             _NO_TRANSLATE_ThanksTo.Text = thanksToContributorsText + contributorName;
         }

@@ -8,11 +8,6 @@ public sealed class GitCommandConfiguration : IGitCommandConfiguration
     private readonly ConcurrentDictionary<string, GitConfigItem[]> _configByCommand
         = new(StringComparer.Ordinal);
 
-    /// <summary>
-    /// Gets the default configuration for git commands used by Git Extensions.
-    /// </summary>
-    public static GitCommandConfiguration Default { get; }
-
     static GitCommandConfiguration()
     {
         // The set of default configuration items for Git Extensions
@@ -30,20 +25,25 @@ public sealed class GitCommandConfiguration : IGitCommandConfiguration
         Default.Add(new GitConfigItem("core.safecrlf", "false"), "diff");
     }
 
-    public void Add(GitConfigItem configItem, params string[] commands)
+    /// <summary>
+    ///     Gets the default configuration for git commands used by Git Extensions.
+    /// </summary>
+    public static GitCommandConfiguration Default { get; }
+
+    void IGitCommandConfiguration.Add(GitConfigItem configItem, params string[] commands)
     {
-        foreach (string command in commands)
+        foreach (var command in commands)
         {
             _configByCommand.AddOrUpdate(
                 command,
-                addValueFactory: _ => [configItem],
-                updateValueFactory: (_, items) => items.AppendTo(configItem));
+                _ => [configItem],
+                (_, items) => items.AppendTo(configItem));
         }
     }
 
-    public IReadOnlyList<GitConfigItem> Get(string command)
+    IReadOnlyList<GitConfigItem> IGitCommandConfiguration.Get(string command)
     {
-        return _configByCommand.TryGetValue(command, out GitConfigItem[]? items)
+        return _configByCommand.TryGetValue(command, out var items)
             ? items
             : [];
     }

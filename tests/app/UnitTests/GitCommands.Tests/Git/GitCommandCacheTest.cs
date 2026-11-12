@@ -1,9 +1,10 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 
 namespace GitCommandsTests.Git;
+
 public class GitCommandCacheTest
 {
-    private CommandCache _cache = null!;
+    private readonly CommandCache _cache = null!;
 
     public GitCommandCacheTest()
     {
@@ -13,8 +14,8 @@ public class GitCommandCacheTest
     [Fact]
     public void TestAdd()
     {
-        string output = "Git result";
-        string error = "No Git error!";
+        var output = "Git result";
+        var error = "No Git error!";
         string[] expectedCachedCommand = ["git command"];
 
         _cache.Add("git command", output, error);
@@ -32,12 +33,12 @@ public class GitCommandCacheTest
     [Fact]
     public void TestTryGet()
     {
-        string originalOutput = "Another Git result";
-        string originalError = "Still no Git error.";
+        var originalOutput = "Another Git result";
+        var originalError = "Still no Git error.";
 
         _cache.Add("git command", originalOutput, originalError);
 
-        _cache.TryGet("git command", out string? cachedOutput, out string? cachedError).Should().BeTrue();
+        _cache.TryGet("git command", out var cachedOutput, out var cachedError).Should().BeTrue();
         originalOutput.Should().Be(cachedOutput);
         originalError.Should().Be(cachedError);
     }
@@ -45,7 +46,7 @@ public class GitCommandCacheTest
     [Fact]
     public void TestTryGetFails()
     {
-        _cache.TryGet(null, out string? output, out string? error).Should().BeFalse();
+        _cache.TryGet(null, out var output, out var error).Should().BeFalse();
         _cache.TryGet("", out output, out error).Should().BeFalse();
         output.Should().BeNull();
         error.Should().BeNull();

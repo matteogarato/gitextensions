@@ -1,29 +1,18 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
 
-namespace GitUI;
+namespace GitUI.Plugin;
 
-public class GitPluginSettingsContainer : SettingsSource, IGitPluginSettingsContainer
+public class GitPluginSettingsContainer(Guid pluginId, string pluginName) : SettingsSource, IGitPluginSettingsContainer
 {
-    private readonly string _pluginOldCompatibilityPrefix;
-    private readonly string _pluginPrefix;
+    private readonly string _pluginPrefix = pluginId == Guid.Empty ? pluginName : $"{pluginId}.";
     private SettingsSource? _settingsSource;
 
-    public GitPluginSettingsContainer(Guid pluginId, string pluginName)
+    private SettingsSource ExternalSettings
     {
-        _pluginPrefix = pluginId == Guid.Empty ? pluginName : $"{pluginId}.";
-        _pluginOldCompatibilityPrefix = pluginName;
+        get => _settingsSource ?? AppSettings.SettingsContainer;
     }
-
-    public SettingsSource GetSettingsSource() => this;
-
-    public void SetSettingsSource(SettingsSource? settingsSource)
-    {
-        _settingsSource = settingsSource;
-    }
-
-    private SettingsSource ExternalSettings => _settingsSource ?? AppSettings.SettingsContainer;
 
     public override SettingLevel SettingLevel
     {
@@ -31,10 +20,24 @@ public class GitPluginSettingsContainer : SettingsSource, IGitPluginSettingsCont
         init => throw new InvalidOperationException(nameof(SettingLevel));
     }
 
+    SettingsSource IGitPluginSettingsContainer.GetSettingsSource()
+    {
+        return this;
+    }
+
+    void IGitPluginSettingsContainer.SetSettingsSource(SettingsSource? settingsSource)
+    {
+        _settingsSource = settingsSource;
+    }
+
     public override string? GetValue(string name)
-        => ExternalSettings.GetValue($"{_pluginPrefix}{name}")
-            ?? ExternalSettings.GetValue($"{_pluginOldCompatibilityPrefix}{name}");
+    {
+        return ExternalSettings.GetValue($"{_pluginPrefix}{name}")
+               ?? ExternalSettings.GetValue($"{pluginName}{name}");
+    }
 
     public override void SetValue(string name, string? value)
-        => ExternalSettings.SetValue($"{_pluginPrefix}{name}", value);
+    {
+        ExternalSettings.SetValue($"{_pluginPrefix}{name}", value);
+    }
 }

@@ -1,17 +1,17 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using NSubstitute;
 using ResourceManager;
 using ResourceManager.CommitDataRenders;
 
 namespace ResourceManagerTests.CommitDataRenders;
+
 public class CommitDataBodyRendererTests
 {
-    private IGitModule _module = null!;
-    private Func<IGitModule> _getModule = null!;
-    private ILinkFactory _linkFactory = null!;
-    private CommitDataBodyRenderer _renderer = null!;
-    private CommitDataBodyRenderer _rendererReal = null!;
+    private readonly Func<IGitModule> _getModule = null!;
+    private readonly ILinkFactory _linkFactory = null!;
+    private readonly IGitModule _module = null!;
+    private readonly CommitDataBodyRenderer _renderer = null!;
+    private readonly CommitDataBodyRenderer _rendererReal = null!;
 
     public CommitDataBodyRendererTests()
     {
@@ -56,7 +56,7 @@ b3e7944 and 11119447928051cfb3494c9c0ef1a1d0ecde56a8
 @line 42.
 ");
 
-        string result = _rendererReal.Render(data, true);
+        var result = _rendererReal.Render(data, true);
 
         result.Should().Be(@"fix\n\nAllow cherry-picking multiple commits from FormBrowse menu
 
@@ -76,9 +76,11 @@ The ability to do so from the RevisionGrid context menu has been added in commit
             "John Doe <John.Doe@test.com>", DateTime.UtcNow,
             "fix\n\nAllow cherry-picking multiple commits from FormBrowse menu\r\n\r\nThe ability to do so from the RevisionGrid context menu has been added in commit\r\nb3e79447928051cfb3494c9c0ef1a1d0ecde56a8\r\n");
 
-        string result = _rendererReal.Render(data, false);
+        var result = _rendererReal.Render(data, false);
 
         // TODO remove leading newline and achieve padding at the top via the control layout
-        result.Should().Be("fix\n\nAllow cherry-picking multiple commits from FormBrowse menu\r\n\r\nThe ability to do so from the RevisionGrid context menu has been added in commit\r\nb3e79447928051cfb3494c9c0ef1a1d0ecde56a8");
+        result.Should()
+            .Be(
+                "fix\n\nAllow cherry-picking multiple commits from FormBrowse menu\r\n\r\nThe ability to do so from the RevisionGrid context menu has been added in commit\r\nb3e79447928051cfb3494c9c0ef1a1d0ecde56a8");
     }
 }

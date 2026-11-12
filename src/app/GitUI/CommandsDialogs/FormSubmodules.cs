@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using GitCommands;
 using GitCommands.Config;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Configurations;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
@@ -14,15 +14,20 @@ namespace GitUI.CommandsDialogs;
 
 public partial class FormSubmodules : GitModuleForm
 {
-    private readonly SplitterManager _splitterManager = new(new AppSettingsPath("FormSubmodules"));
-    private readonly TranslationString _removeSelectedSubmodule = new("Are you sure you want remove the selected submodule?");
-    private readonly TranslationString _removeSelectedSubmoduleCaption = new("Remove");
+    private readonly BindingList<IGitSubmoduleInfo?> _modules = [];
 
     private readonly Lock _modulesLock = new();
-    private readonly BindingList<IGitSubmoduleInfo?> _modules = [];
+
+    private readonly TranslationString _removeSelectedSubmodule =
+        new("Are you sure you want remove the selected submodule?");
+
+    private readonly TranslationString _removeSelectedSubmoduleCaption = new("Remove");
+    private readonly SplitterManager _splitterManager = new(new AppSettingsPath("FormSubmodules"));
+
+    private BackgroundWorker? _bw;
     private GitSubmoduleInfo? _oldSubmoduleInfo;
 
-    public FormSubmodules(IGitUICommands commands)
+    public FormSubmodules(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -50,7 +55,7 @@ public partial class FormSubmodules : GitModuleForm
 
     private void AddSubmoduleClick(object sender, EventArgs e)
     {
-        using (FormAddSubmodule formAddSubmodule = new(UICommands))
+        using (FormAddSubmodule formAddSubmodule = new(UiCommands))
         {
             formAddSubmodule.ShowDialog(this);
         }
@@ -63,12 +68,10 @@ public partial class FormSubmodules : GitModuleForm
         Initialize();
     }
 
-    private BackgroundWorker? _bw;
-
     private void Initialize()
     {
         _bw?.CancelAsync();
-        WaitCursorScope waitScope = WaitCursorScope.Enter();
+        var waitScope = WaitCursorScope.Enter();
         _oldSubmoduleInfo = null;
         if (Submodules.SelectedRows.Count == 1)
         {
@@ -80,14 +83,11 @@ public partial class FormSubmodules : GitModuleForm
             _modules.Clear();
         }
 
-        _bw = new BackgroundWorker
-        {
-            WorkerReportsProgress = true,
-            WorkerSupportsCancellation = true
-        };
+        _bw = new BackgroundWorker { WorkerReportsProgress = true, WorkerSupportsCancellation = true };
         _bw.DoWork += (sender, e) =>
         {
-            foreach (IGitSubmoduleInfo? oldSubmodule in Module.GetSubmodulesInfo().Where(submodule => submodule is not null))
+            foreach (var oldSubmodule in Module.GetSubmodulesInfo()
+                         .Where(submodule => submodule is not null))
             {
                 if (_bw.CancellationPending)
                 {
@@ -106,7 +106,7 @@ public partial class FormSubmodules : GitModuleForm
 
                 if (_oldSubmoduleInfo is not null)
                 {
-                    DataGridViewRow? row = Submodules.Rows
+                    var row = Submodules.Rows
                         .Cast<DataGridViewRow>()
                         .FirstOrDefault(r => r.DataBoundItem as GitSubmoduleInfo == _oldSubmoduleInfo);
 
@@ -122,7 +122,8 @@ public partial class FormSubmodules : GitModuleForm
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.SubmoduleSync(SubModuleLocalPath.Text), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.SubmoduleSync(SubModuleLocalPath.Text), Module.WorkingDir,
+                null, true);
             Initialize();
         }
     }
@@ -131,7 +132,8 @@ public partial class FormSubmodules : GitModuleForm
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.SubmoduleUpdate(SubModuleLocalPath.Text), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.SubmoduleUpdate(SubModuleLocalPath.Text),
+                Module.WorkingDir, null, true);
             Initialize();
         }
     }
@@ -140,7 +142,7 @@ public partial class FormSubmodules : GitModuleForm
     {
         if (Submodules.SelectedRows.Count != 1 ||
             MessageBoxes.Show(this, _removeSelectedSubmodule.Text, _removeSelectedSubmoduleCaption.Text,
-                            MessageBoxButtons.YesNo, MessageBoxIcon.Warning) !=
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) !=
             DialogResult.Yes)
         {
             return;
@@ -180,9 +182,9 @@ public partial class FormSubmodules : GitModuleForm
 
     private void Pull_Click(object sender, EventArgs e)
     {
-        IGitModule submodule = Module.GetSubmodule(SubModuleLocalPath.Text);
+        var submodule = Module.GetSubmodule(SubModuleLocalPath.Text);
 
-        UICommands.WithGitModule(submodule).StartPullDialog(this);
+        UiCommands.WithGitModule(submodule).StartPullDialog(this);
 
         using (WaitCursorScope.Enter())
         {

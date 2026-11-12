@@ -1,12 +1,7 @@
 ﻿namespace GitExtensions.Extensibility.Git;
 
-public class GitUIPostActionEventArgs : GitUIEventArgs
+public class GitUiPostActionEventArgs(IWin32Window? ownerForm, IGitUiCommands gitUiCommands, bool actionDone)
+    : GitUiEventArgs(ownerForm, gitUiCommands)
 {
-    public bool ActionDone { get; }
-
-    public GitUIPostActionEventArgs(IWin32Window? ownerForm, IGitUICommands gitUICommands, bool actionDone)
-        : base(ownerForm, gitUICommands)
-    {
-        ActionDone = actionDone;
-    }
+    public bool ActionDone { get; } = actionDone;
 }

@@ -6,16 +6,21 @@ namespace GitCommands.Utils;
 
 public class WeakRefCache : IDisposable
 {
-    private readonly Lock _weakMapLock = new();
-    private readonly Dictionary<string, WeakReference> _weakMap = [];
-    private readonly Timer _clearTimer = new(60 * 1000);
-
     public static readonly WeakRefCache Default = new();
+    private readonly Timer _clearTimer = new(60 * 1000);
+    private readonly Dictionary<string, WeakReference> _weakMap = [];
+    private readonly Lock _weakMapLock = new();
 
     public WeakRefCache()
     {
         _clearTimer.Elapsed += OnClearTimer;
         _clearTimer.Start();
+    }
+
+    void IDisposable.Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     // TODO add expiration time (MemoryCache) after change to .net 4 full profile
@@ -26,7 +31,7 @@ public class WeakRefCache : IDisposable
 
         lock (_weakMapLock)
         {
-            if (_weakMap.TryGetValue(objectUniqueKey, out WeakReference? weakReference))
+            if (_weakMap.TryGetValue(objectUniqueKey, out var weakReference))
             {
                 cached = weakReference.Target;
             }
@@ -40,12 +45,15 @@ public class WeakRefCache : IDisposable
             {
                 if (cached is not T)
                 {
-                    throw new InvalidCastException("Incompatible class for object: " + objectUniqueKey + ". Expected: " + typeof(T).FullName + ", found: " + cached.GetType().FullName);
+                    throw new InvalidCastException("Incompatible class for object: " + objectUniqueKey +
+                                                   ". Expected: " + typeof(T).FullName + ", found: " +
+                                                   cached.GetType().FullName);
                 }
             }
         }
 
-        DebugHelpers.Assert(cached is not null, "cached is not null -- if this is violated, the annotations on SettingsContainer<,>.ctor cache are wrong");
+        DebugHelpers.Assert(cached is not null,
+            "cached is not null -- if this is violated, the annotations on SettingsContainer<,>.ctor cache are wrong");
 
         return (T)cached!;
     }
@@ -55,17 +63,11 @@ public class WeakRefCache : IDisposable
         lock (_weakMapLock)
         {
             string[] toRemove = [.. _weakMap.Where(p => !p.Value.IsAlive).Select(p => p.Key)];
-            foreach (string key in toRemove)
+            foreach (var key in toRemove)
             {
                 _weakMap.Remove(key);
             }
         }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 
     protected virtual void Dispose(bool disposing)

@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommandsDialogs;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommandsDialogs;
 
 partial class FormEditor
 {
@@ -34,7 +36,7 @@ partial class FormEditor
         flowLayoutPanel1 = new FlowLayoutPanel();
         label1 = new Label();
         labelWarning = new Label();
-        toolStrip1 = new GitUI.ToolStripEx();
+        toolStrip1 = new ToolStripEx();
         toolStripSaveButton = new ToolStripButton();
         fileViewer = new GitUI.Editor.FileViewer();
         tableLayoutPanel1.SuspendLayout();

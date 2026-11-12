@@ -1,21 +1,27 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid.Graph;
 
-namespace GitUITests.UserControls.RevisionGrid.Graph;
+namespace GitUI.AvaloniaTests;
+
 public class RevisionGraphRowTests
 {
-    private RevisionGraphSegment _segment = new(parent: new(ObjectId.IndexId, guessScore: 0), child: new(ObjectId.WorkTreeId, guessScore: 0));
-    private RevisionGraphSegment _segment1 = new(parent: new(ObjectId.Random(), guessScore: 0), child: new(ObjectId.Random(), guessScore: 0));
-    private RevisionGraphSegment _segment2 = new(parent: new(ObjectId.Random(), guessScore: 0), child: new(ObjectId.Random(), guessScore: 0));
+    private readonly RevisionGraphSegment _segment = new(new RevisionGraphRevision(ObjectId.IndexId, 0),
+        new RevisionGraphRevision(ObjectId.WorkTreeId, 0));
+
+    private readonly RevisionGraphSegment _segment1 = new(new RevisionGraphRevision(ObjectId.Random(), 0),
+        new RevisionGraphRevision(ObjectId.Random(), 0));
+
+    private readonly RevisionGraphSegment _segment2 = new(new RevisionGraphRevision(ObjectId.Random(), 0),
+        new RevisionGraphRevision(ObjectId.Random(), 0));
+
     [Theory]
     [InlineData(-1)]
     [InlineData(0)]
     [InlineData(1)]
-
     public void MoveLanesRight_should_do_nothing_if_empty(int fromLane)
     {
         List<RevisionGraphSegment> segments = [];
-        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, mergeGraphLanesHavingCommonParent: true);
+        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, true);
         revisionGraphRow.GetLaneCount().Should().Be(1);
 
         revisionGraphRow.MoveLanesRight(fromLane);
@@ -32,7 +38,7 @@ public class RevisionGraphRowTests
     public void MoveLanesRight_should_move_single_segment(int fromLane, int expectedLane)
     {
         List<RevisionGraphSegment> segments = [_segment];
-        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, mergeGraphLanesHavingCommonParent: true);
+        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, true);
         revisionGraphRow.GetLaneCount().Should().Be(segments.Count);
 
         revisionGraphRow.MoveLanesRight(fromLane);
@@ -48,10 +54,11 @@ public class RevisionGraphRowTests
     [InlineData(2, 0, 1, 3)]
     [InlineData(3, 0, 1, 2)]
     [InlineData(4, 0, 1, 2)]
-    public void MoveLanesRight_should_move_segments(int fromLane, int expectedLane, int expectedLane1, int expectedLane2)
+    public void MoveLanesRight_should_move_segments(int fromLane, int expectedLane, int expectedLane1,
+        int expectedLane2)
     {
         List<RevisionGraphSegment> segments = [_segment, _segment1, _segment2];
-        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, mergeGraphLanesHavingCommonParent: true);
+        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, true);
         revisionGraphRow.GetLaneCount().Should().Be(3);
 
         revisionGraphRow.MoveLanesRight(fromLane);
@@ -83,10 +90,11 @@ public class RevisionGraphRowTests
     [InlineData(3, 2, 0, 1, 3)]
     [InlineData(3, 3, 0, 1, 2)]
     [InlineData(4, 3, 0, 1, 2)]
-    public void MoveLanesRight_should_move_segments_twice(int fromLane1, int fromLane2, int expectedLane, int expectedLane1, int expectedLane2)
+    public void MoveLanesRight_should_move_segments_twice(int fromLane1, int fromLane2, int expectedLane,
+        int expectedLane1, int expectedLane2)
     {
         List<RevisionGraphSegment> segments = [_segment, _segment1, _segment2];
-        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, mergeGraphLanesHavingCommonParent: true);
+        IRevisionGraphRow revisionGraphRow = new RevisionGraphRow(_segment.Child, segments, true);
         revisionGraphRow.GetLaneCount().Should().Be(3);
 
         revisionGraphRow.MoveLanesRight(fromLane1);

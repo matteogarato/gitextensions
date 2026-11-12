@@ -12,24 +12,24 @@
     <UseWindowsForms Condition="'$(TargetFramework)' == 'net10.0'">false</UseWindowsForms>
     <UseGitExtensionsShims>true</UseGitExtensionsShims>
   </PropertyGroup>
-  
+
   <ItemGroup>
-    <Compile Include="..\..\app\GitExtUtils\Validates.cs" Link="Validates.cs" />
+    <Compile Include="..\..\app\GitExtUtils\Validates.cs" Link="Validates.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" />
-    <PackageReference Include="Microsoft.VisualStudio.Composition" />
-    <PackageReference Include="System.Reactive.Interfaces" />
+    <PackageReference Include="JetBrains.Annotations"/>
+    <PackageReference Include="Microsoft.VisualStudio.Composition"/>
+    <PackageReference Include="System.Reactive.Interfaces"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\app\GitExtUtils\GitExtUtils.csproj" />
+    <ProjectReference Include="..\..\app\GitExtUtils\GitExtUtils.csproj"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
-    <Compile Include="..\..\app\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs" />
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs"/>
+    <Compile Include="..\..\app\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs"/>
   </ItemGroup>
 
 </Project>

@@ -1,14 +1,13 @@
 ﻿using System.Runtime.CompilerServices;
-using GitUI;
 
 namespace GitExtUtils.GitUI.Theming;
 
 public static class ThemeFix
 {
-    private static readonly ConditionalWeakTable<IWin32Window, IWin32Window> AlreadyFixedControls =
+    private static readonly ConditionalWeakTable<IWin32Window, IWin32Window> _alreadyFixedControls =
         [];
 
-    private static readonly ConditionalWeakTable<IWin32Window, IWin32Window> AlreadyFixedContextMenuOwners =
+    private static readonly ConditionalWeakTable<IWin32Window, IWin32Window> _alreadyFixedContextMenuOwners =
         [];
 
     public static ThemeSettings ThemeSettings { private get; set; } = ThemeSettings.Default;
@@ -36,7 +35,7 @@ public static class ThemeFix
         where TControl : Control
     {
         return c.FindDescendantsOfType<TControl>()
-            .Where(control => TryAddToWeakTable(control, AlreadyFixedControls));
+            .Where(control => TryAddToWeakTable(control, _alreadyFixedControls));
     }
 
     // Note: TextBoxBase is not overridden, it looks a little of (requires custom paint).
@@ -49,9 +48,9 @@ public static class ThemeFix
         // * FormBrowse menubar background is not overridden.
         // * LinkColor override (in SetupToolStripStatusLabel()).
         strip.RenderMode = ToolStripRenderMode.Professional;
-        foreach (ToolStripLabel item in strip.Items.OfType<ToolStripLabel>())
+        foreach (var item in strip.Items.OfType<ToolStripLabel>())
         {
-            SetupToolStripStatusLabel(item);
+            item.SetupToolStripStatusLabel();
         }
     }
 
@@ -59,7 +58,8 @@ public static class ThemeFix
     {
         // e.g. FormAbout
         // Use the parent control's BackColor when the label's own BackColor is empty (inherited).
-        Color effectiveBackColor = label.BackColor.IsEmpty ? label.Parent?.BackColor ?? SystemColors.Control : label.BackColor;
+        var effectiveBackColor =
+            label.BackColor.IsEmpty ? label.Parent?.BackColor ?? SystemColors.Control : label.BackColor;
         label.LinkColor = label.LinkColor.AdaptForeColor(effectiveBackColor);
         label.VisitedLinkColor = label.VisitedLinkColor.AdaptForeColor(effectiveBackColor);
         label.ActiveLinkColor = label.ActiveLinkColor.AdaptForeColor(effectiveBackColor);
@@ -69,7 +69,8 @@ public static class ThemeFix
     {
         // e.g. FormCommit
         // Use the owning strip's BackColor when the label's own BackColor is empty (inherited).
-        Color effectiveBackColor = label.BackColor.IsEmpty ? label.Owner?.BackColor ?? SystemColors.Control : label.BackColor;
+        var effectiveBackColor =
+            label.BackColor.IsEmpty ? label.Owner?.BackColor ?? SystemColors.Control : label.BackColor;
         label.LinkColor = label.LinkColor.AdaptForeColor(effectiveBackColor);
         label.VisitedLinkColor = label.VisitedLinkColor.AdaptForeColor(effectiveBackColor);
         label.ActiveLinkColor = label.ActiveLinkColor.AdaptForeColor(effectiveBackColor);
@@ -117,7 +118,8 @@ public static class ThemeFix
         c.BackColor = c.BackColor;
     }
 
-    private static bool TryAddToWeakTable(IWin32Window element, ConditionalWeakTable<IWin32Window, IWin32Window> weakTable)
+    private static bool TryAddToWeakTable(IWin32Window element,
+        ConditionalWeakTable<IWin32Window, IWin32Window> weakTable)
     {
         if (weakTable.TryGetValue(element, out _))
         {

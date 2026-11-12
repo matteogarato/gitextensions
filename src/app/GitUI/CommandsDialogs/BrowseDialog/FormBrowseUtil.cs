@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 
 namespace GitUI.CommandsDialogs.BrowseDialog;
 

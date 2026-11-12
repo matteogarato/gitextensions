@@ -1,17 +1,11 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
-using GitUIPluginInterfaces;
 
 namespace GitUI.UserControls;
 
 public partial class CommitDiff : GitModuleControl
 {
     private readonly CancellationTokenSequence _viewChangesSequence = new();
-
-    /// <summary>
-    /// Raised when the Escape key is pressed (and only when no selection exists, as the default behaviour of escape is to clear the selection).
-    /// </summary>
-    public event Action? EscapePressed;
 
     public CommitDiff()
     {
@@ -28,6 +22,12 @@ public partial class CommitDiff : GitModuleControl
         splitContainer1.SplitterDistance = DpiUtil.Scale(200);
         splitContainer2.SplitterDistance = DpiUtil.Scale(260);
     }
+
+    /// <summary>
+    ///     Raised when the Escape key is pressed (and only when no selection exists, as the default behaviour of escape is to
+    ///     clear the selection).
+    /// </summary>
+    public event Action? EscapePressed;
 
     private void FileViewer_TopScrollReached(object? sender, EventArgs e)
     {
@@ -46,14 +46,14 @@ public partial class CommitDiff : GitModuleControl
         // We cannot use the GitRevision from revision grid. When a filtered commit list
         // is shown (file history/normal filter) the parent guids are not the 'real' parents,
         // but the parents in the filtered list.
-        GitRevision revision = Module.GetRevision(objectId);
+        var revision = Module.GetRevision(objectId);
 
         if (revision is not null)
         {
             DiffFiles.SetDiffs(new[] { revision });
             if (fileToSelect is not null)
             {
-                FileStatusItem? itemToSelect = DiffFiles.AllItems.FirstOrDefault(i => i.Item.Name == fileToSelect);
+                var itemToSelect = DiffFiles.AllItems.FirstOrDefault(i => i.Item.Name == fileToSelect);
                 if (itemToSelect is not null)
                 {
                     DiffFiles.SelectedGitItem = itemToSelect.Item;
@@ -62,12 +62,13 @@ public partial class CommitDiff : GitModuleControl
 
             commitInfo.Revision = revision;
 
-            Text = "Diff - " + revision.ObjectId.ToShortString() + " - " + revision.AuthorDate + " - " + revision.Author + " - " + Module.WorkingDir;
+            Text = "Diff - " + revision.ObjectId.ToShortString() + " - " + revision.AuthorDate + " - " +
+                   revision.Author + " - " + Module.WorkingDir;
         }
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -93,6 +94,6 @@ public partial class CommitDiff : GitModuleControl
 
     private void ViewSelectedDiff()
     {
-        DiffText.InvokeAndForget(() => DiffText.ViewChangesAsync(DiffFiles.SelectedItem, cancellationToken: _viewChangesSequence.Next()));
+        DiffText.InvokeAndForget(() => DiffText.ViewChangesAsync(DiffFiles.SelectedItem, _viewChangesSequence.Next()));
     }
 }

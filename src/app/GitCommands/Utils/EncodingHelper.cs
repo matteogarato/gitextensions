@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics.Contracts;
 using System.Text;
 
-namespace GitCommands;
+namespace GitCommands.Utils;
 
 /// <summary>
-/// Encoding Helper
+///     Encoding Helper
 /// </summary>
 public static class EncodingHelper
 {
@@ -36,7 +36,7 @@ public static class EncodingHelper
     [Pure]
     public static byte[] ConvertTo(Encoding encoding, string s)
     {
-        byte[] unicodeBytes = Encoding.Unicode.GetBytes(s);
+        var unicodeBytes = Encoding.Unicode.GetBytes(s);
 
         return Encoding.Convert(Encoding.Unicode, encoding, unicodeBytes);
     }
@@ -46,7 +46,7 @@ public static class EncodingHelper
     {
         ArgumentNullException.ThrowIfNull(encoding);
 
-        string outputString = "";
+        var outputString = "";
         if (output?.Length is > 0)
         {
             using Stream ms = new MemoryStream(output);

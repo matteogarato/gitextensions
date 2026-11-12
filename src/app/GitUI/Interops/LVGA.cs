@@ -1,15 +1,15 @@
-﻿namespace System;
+﻿namespace GitUI.Interops;
 
 internal static partial class NativeMethods
 {
     [Flags]
-    public enum LVGA : uint
+    public enum Lvga : uint
     {
-        HEADER_LEFT = 0x00000001,
-        HEADER_CENTER = 0x00000002,
-        HEADER_RIGHT = 0x00000004,
-        FOOTER_LEFT = 0x00000008,
-        FOOTER_CENTER = 0x00000010,
-        FOOTER_RIGHT = 0x00000020,
+        HeaderLeft = 0x00000001,
+        HeaderCenter = 0x00000002,
+        HeaderRight = 0x00000004,
+        FooterLeft = 0x00000008,
+        FooterCenter = 0x00000010,
+        FooterRight = 0x00000020
     }
 }

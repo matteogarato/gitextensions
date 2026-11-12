@@ -5,35 +5,39 @@ namespace GitUI;
 
 // NOTE do not make this class abstract as it breaks the WinForms designer in VS
 
-/// <summary>Base class for a Git Extensions <see cref="Form"/>.</summary>
+/// <summary>Base class for a Git Extensions <see cref="Form" />.</summary>
 /// <remarks>Includes support for font, hotkey, icon, translation, and position restore.</remarks>
 public class GitExtensionsForm : GitExtensionsFormBase
 {
-    private IWindowPositionManager _windowPositionManager = new WindowPositionManager();
-    private Func<IReadOnlyList<Rectangle>> _getScreensWorkingArea = () => Screen.AllScreens.Select(screen => screen.WorkingArea).ToArray();
-    private bool _needsPositionRestore;
+    private Func<IReadOnlyList<Rectangle>> _getScreensWorkingArea =
+        () => Screen.AllScreens.Select(screen => screen.WorkingArea).ToArray();
 
-    /// <summary>Creates a new <see cref="GitExtensionsForm"/> without position restore.</summary>
+    private bool _needsPositionRestore;
+    private IWindowPositionManager _windowPositionManager = new WindowPositionManager();
+
+    /// <summary>Creates a new <see cref="GitExtensionsForm" /> without position restore.</summary>
     public GitExtensionsForm()
-        : this(enablePositionRestore: false)
+        : this(false)
     {
     }
 
-    /// <summary>Creates a new <see cref="GitExtensionsForm"/> indicating position restore.</summary>
-    /// <param name="enablePositionRestore">Indicates whether the <see cref="Form"/>'s position
-    /// will be restored upon being re-opened.</param>
+    /// <summary>Creates a new <see cref="GitExtensionsForm" /> indicating position restore.</summary>
+    /// <param name="enablePositionRestore">
+    ///     Indicates whether the <see cref="Form" />'s position
+    ///     will be restored upon being re-opened.
+    /// </param>
     protected GitExtensionsForm(bool enablePositionRestore)
     {
-        bool needsPositionSave = enablePositionRestore;
+        var needsPositionSave = enablePositionRestore;
         _needsPositionRestore = enablePositionRestore;
 
-        FormClosing += GitExtensionsForm_FormClosing;
+        FormClosing += GitExtensionsFormFormClosing;
 
         Button cancelButton = new();
         cancelButton.Click += CancelButtonClick;
         CancelButton = cancelButton;
 
-        void GitExtensionsForm_FormClosing(object? sender, FormClosingEventArgs e)
+        void GitExtensionsFormFormClosing(object? sender, FormClosingEventArgs e)
         {
             if (!needsPositionSave)
             {
@@ -64,16 +68,16 @@ public class GitExtensionsForm : GitExtensionsFormBase
         }
     }
 
-    /// <summary>Invoked at runtime during the <see cref="OnLoad"/> method.</summary>
+    /// <summary>Invoked at runtime during the <see cref="OnLoad" /> method.</summary>
     /// <remarks>In particular, this method is not invoked when running in a designer.</remarks>
     protected virtual void OnRuntimeLoad(EventArgs e)
     {
     }
 
     /// <summary>
-    ///   Restores the position of a form from the user settings. Does
-    ///   nothing if there is no entry for the form in the settings, or the
-    ///   setting would be invisible on the current display configuration.
+    ///     Restores the position of a form from the user settings. Does
+    ///     nothing if there is no entry for the form in the settings, or the
+    ///     setting would be invisible on the current display configuration.
     /// </summary>
     protected virtual void RestorePosition()
     {
@@ -88,7 +92,7 @@ public class GitExtensionsForm : GitExtensionsFormBase
             return;
         }
 
-        WindowPosition? position = _windowPositionManager.LoadPosition(this);
+        var position = _windowPositionManager.LoadPosition(this);
         if (position is null)
         {
             return;
@@ -96,7 +100,7 @@ public class GitExtensionsForm : GitExtensionsFormBase
 
         _needsPositionRestore = false;
 
-        IReadOnlyList<Rectangle> workingAreas = _getScreensWorkingArea();
+        var workingAreas = _getScreensWorkingArea();
         if (!workingAreas.Any(screen => screen.IntersectsWith(position.Rect)))
         {
             if (position.State == FormWindowState.Maximized)
@@ -109,20 +113,21 @@ public class GitExtensionsForm : GitExtensionsFormBase
 
         SuspendLayout();
 
-        bool windowCentred = StartPosition == FormStartPosition.CenterParent;
+        var windowCentred = StartPosition == FormStartPosition.CenterParent;
         StartPosition = FormStartPosition.Manual;
 
         if (FormBorderStyle == FormBorderStyle.Sizable ||
             FormBorderStyle == FormBorderStyle.SizableToolWindow)
         {
-            Size = DpiUtil.Scale(position.Rect.Size, originalDpi: position.DeviceDpi);
+            Size = DpiUtil.Scale(position.Rect.Size, position.DeviceDpi);
         }
 
         if (Owner is null || !windowCentred)
         {
-            Point calculatedLocation = DpiUtil.Scale(position.Rect.Location, originalDpi: position.DeviceDpi);
+            var calculatedLocation = DpiUtil.Scale(position.Rect.Location, position.DeviceDpi);
 
-            DesktopLocation = WindowPositionManager.FitWindowOnScreen(new Rectangle(calculatedLocation, Size), workingAreas);
+            DesktopLocation =
+                WindowPositionManager.FitWindowOnScreen(new Rectangle(calculatedLocation, Size), workingAreas);
         }
         else
         {
@@ -142,27 +147,23 @@ public class GitExtensionsForm : GitExtensionsFormBase
     }
 
     // This is a base class for many forms, which have own GetTestAccessor() methods. This has to be unique
-    internal GitExtensionsFormTestAccessor GetGitExtensionsFormTestAccessor() => new(this);
-
-    internal readonly struct GitExtensionsFormTestAccessor
+    internal GitExtensionsFormTestAccessor GetGitExtensionsFormTestAccessor()
     {
-        private readonly GitExtensionsForm _form;
+        return new GitExtensionsFormTestAccessor(this);
+    }
 
-        public GitExtensionsFormTestAccessor(GitExtensionsForm form)
-        {
-            _form = form;
-        }
-
+    internal readonly struct GitExtensionsFormTestAccessor(GitExtensionsForm form)
+    {
         public IWindowPositionManager WindowPositionManager
         {
-            get => _form._windowPositionManager;
-            set => _form._windowPositionManager = value;
+            get => form._windowPositionManager;
+            set => form._windowPositionManager = value;
         }
 
         public Func<IReadOnlyList<Rectangle>> GetScreensWorkingArea
         {
-            get => _form._getScreensWorkingArea;
-            set => _form._getScreensWorkingArea = value;
+            get => form._getScreensWorkingArea;
+            set => form._getScreensWorkingArea = value;
         }
     }
 }

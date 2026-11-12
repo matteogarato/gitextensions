@@ -1,17 +1,17 @@
 ﻿using System.ComponentModel.Composition;
 using Git.hub;
-using GitCommands;
 using GitCommands.Config;
+using GitCommands.Git;
 using GitCommands.Remotes;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
 using GitExtensions.Plugins.GitHub3.Properties;
-using GitUI;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.RepositoryHosts;
-using Microsoft;
 using ResourceManager;
 
 namespace GitExtensions.Plugins.GitHub3;
@@ -36,16 +36,14 @@ internal static class GitHubLoginInfo
 
             try
             {
-                User user = GitHub3Plugin.GitHub.getCurrentUser();
+                var user = GitHub3Plugin.GitHub.GetCurrentUser();
                 if (user is not null)
                 {
                     _username = user.Login;
                     return _username;
                 }
-                else
-                {
-                    _username = "";
-                }
+
+                _username = "";
 
                 return null;
             }
@@ -63,7 +61,7 @@ internal static class GitHubLoginInfo
         {
             _username = null;
             GitHub3Plugin.Instance.PersonalAccessToken[GitHub3Plugin.Instance.Settings] = value;
-            GitHub3Plugin.GitHub.setOAuth2Token(value);
+            GitHub3Plugin.GitHub.SetOAuth2Token(value);
         }
     }
 }
@@ -73,33 +71,42 @@ internal static class GitHubLoginInfo
 [Export(typeof(IGitPluginForCommit))]
 public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginForCommit
 {
-    private readonly TranslationString _viewInWebSite = new("View in {0}");
-    private readonly TranslationString _tokenAlreadyExist = new("You already have an personal access token. To get a new one, delete your old one in Plugins > Plugin Settings first.");
-    private readonly TranslationString _generateToken = new("Generate a GitHub personal access token");
-    private readonly TranslationString _manageToken = new("Manage GitHub personal access token");
-    private readonly TranslationString _openLinkFailed = new("Fail to open the link. Reason: ");
-    private readonly TranslationString _noteRestartNeeded = new("Note: Git Extensions need to be restarted so that the token is taken into account.");
-    private readonly TranslationString _noTokenError = new("No GitHub personal access token (PAT) defined");
-    private readonly TranslationString _noAssignedIssues = new("No assigned GitHub issues found");
-    private readonly TranslationString _error = new("Error");
-
     public static string GitHubAuthorizationRelativeUrl = "authorizations";
     public static string UpstreamConventionName = "upstream";
-    public readonly StringSetting GitHubHost = new("GitHub (Enterprise) hostname", "github.com");
-    public readonly StringSetting PersonalAccessToken = new("OAuth Token", "Personal Access Token", "");
-    private readonly BoolSetting _issueCommitMessageHelperEnabled = new("IssueCommitMessageHelperEnabled", "Enable commit message issue helper", true);
-    private readonly NumberSetting<int> _issueCommitMessageHelperMaxCount = new("IssueCommitMessageHelperMaxCount", "Maximum number of issues retrieved", 10);
-    public string GitHubApiEndpoint => $"https://api.{GitHubHost.ValueOrDefault(Settings)}";
-    public string GitHubEndpoint => $"https://{GitHubHost.ValueOrDefault(Settings)}";
 
     internal static GitHub3Plugin Instance = null!;
-    internal static Client? _gitHub;
-    internal static Client GitHub => _gitHub ??= new(Instance.GitHubApiEndpoint);
-    internal static GitHubRemoteParser _gitHubRemoteParser = new();
+    internal static Client? GitHub;
 
-    private IGitUICommands? _currentGitUiCommands;
+    internal static GitHubRemoteParser GitHubRemoteParser = new();
+    public readonly StringSetting GitHubHost = new("GitHub (Enterprise) hostname", "github.com");
+    public readonly StringSetting PersonalAccessToken = new("OAuth Token", "Personal Access Token", "");
+    private readonly List<string> _currentMessages = [];
+    private readonly TranslationString _error = new("Error");
+    private readonly TranslationString _generateToken = new("Generate a GitHub personal access token");
+
+    private readonly BoolSetting _issueCommitMessageHelperEnabled =
+        new("IssueCommitMessageHelperEnabled", "Enable commit message issue helper", true);
+
+    private readonly NumberSetting<int> _issueCommitMessageHelperMaxCount =
+        new("IssueCommitMessageHelperMaxCount", "Maximum number of issues retrieved", 10);
+
+    private readonly TranslationString _manageToken = new("Manage GitHub personal access token");
+    private readonly TranslationString _noAssignedIssues = new("No assigned GitHub issues found");
+    private readonly TranslationString _noTokenError = new("No GitHub personal access token (PAT) defined");
+
+    private readonly TranslationString _noteRestartNeeded =
+        new("Note: Git Extensions need to be restarted so that the token is taken into account.");
+
+    private readonly TranslationString _openLinkFailed = new("Fail to open the link. Reason: ");
+
+    private readonly TranslationString _tokenAlreadyExist =
+        new(
+            "You already have an personal access token. To get a new one, delete your old one in Plugins > Plugin Settings first.");
+
+    private readonly TranslationString _viewInWebSite = new("View in {0}");
+
+    private IGitUiCommands? _currentGitUiCommands;
     private IReadOnlyList<IHostedRemote>? _hostedRemotesForModule;
-    private List<string> _currentMessages = [];
 
     public GitHub3Plugin() : base(true)
     {
@@ -110,6 +117,21 @@ public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginFor
         Instance ??= this;
 
         Icon = Resources.IconGitHub;
+    }
+
+    public string GitHubApiEndpoint
+    {
+        get => $"https://api.{GitHubHost.ValueOrDefault(Settings)}";
+    }
+
+    public string GitHubEndpoint
+    {
+        get => $"https://{GitHubHost.ValueOrDefault(Settings)}";
+    }
+
+    internal static Client GitHub
+    {
+        get => _gitHub ??= new(Instance.GitHubApiEndpoint);
     }
 
     public override IEnumerable<ISetting> GetSettings()
@@ -131,9 +153,147 @@ public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginFor
         yield return _issueCommitMessageHelperMaxCount;
     }
 
+    public override void Register(IGitUiCommands gitUiCommands)
+    {
+        _currentGitUiCommands = gitUiCommands;
+        if (!string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken))
+        {
+            GitHub.SetOAuth2Token(GitHubLoginInfo.OAuthToken);
+        }
+
+        gitUiCommands.PreCommit += GitUiCommands_PreCommit;
+        gitUiCommands.PostCommit += GitUiCommands_PostCommit;
+    }
+
+    public override bool Execute(GitUiEventArgs args)
+    {
+        if (string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken))
+        {
+            args.GitUiCommands.StartSettingsDialog(this);
+        }
+        else
+        {
+            MessageBoxes.ShowError(args.OwnerForm, _tokenAlreadyExist.Text, _error.Text);
+        }
+
+        return false;
+    }
+
+    // --
+
+    IReadOnlyList<IHostedRepository> IRepositoryHostPlugin.SearchForRepository(string search)
+    {
+        return GitHub.SearchRepositories(search).Select(repo => (IHostedRepository)new GitHubRepo(repo)).ToList();
+    }
+
+    IReadOnlyList<IHostedRepository> IRepositoryHostPlugin.GetRepositoriesOfUser(string user)
+    {
+        return GitHub.GetRepositories(user).Select(repo => (IHostedRepository)new GitHubRepo(repo)).ToList();
+    }
+
+    IHostedRepository IRepositoryHostPlugin.GetRepository(string user, string repositoryName)
+    {
+        return new GitHubRepo(GitHub.GetRepository(user, repositoryName));
+    }
+
+    IReadOnlyList<IHostedRepository> IRepositoryHostPlugin.GetMyRepos()
+    {
+        return GitHub.GetRepositories().Select(repo => (IHostedRepository)new GitHubRepo(repo)).ToList();
+    }
+
+    bool IRepositoryHostPlugin.ConfigurationOk
+    {
+        get => !string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken);
+    }
+
+    string? IRepositoryHostPlugin.OwnerLogin
+    {
+        get => GitHub.GetCurrentUser()?.Login;
+    }
+
+    async Task<string?> IRepositoryHostPlugin.AddUpstreamRemoteAsync()
+    {
+        Validates.NotNull(_currentGitUiCommands);
+
+        var gitModule = _currentGitUiCommands.Module;
+        var hostedRemote = GetHostedRemotesForModule().FirstOrDefault(r => r.IsOwnedByMe);
+        if (hostedRemote is null)
+        {
+            return null;
+        }
+
+        var hostedRepository = hostedRemote.GetHostedRepository();
+        if (!hostedRepository.IsAFork)
+        {
+            return null;
+        }
+
+        if ((await gitModule.GetRemotesAsync()).Any(r =>
+                r.Name == UpstreamConventionName || r.FetchUrl == hostedRepository.ParentUrl))
+        {
+            return null;
+        }
+
+        gitModule.AddRemote(UpstreamConventionName, hostedRepository.ParentUrl);
+        return UpstreamConventionName;
+    }
+
+    bool IRepositoryHostPlugin.GitModuleIsRelevantToMe()
+    {
+        return _currentGitUiCommands?.Module is not null && GetHostedRemotes().Any();
+    }
+
+    /// <summary>
+    ///     Returns all relevant github-remotes for the current working directory
+    /// </summary>
+    IReadOnlyList<IHostedRemote> IRepositoryHostPlugin.GetHostedRemotesForModule()
+    {
+        return _currentGitUiCommands?.Module is null ? [] : GetHostedRemotes().ToArray();
+    }
+
+    void IRepositoryHostPlugin.ConfigureContextMenu(ContextMenuStrip contextMenu)
+    {
+        const string hostedRemoteMenuItem = "HostedRemoteMenuItem";
+
+        for (var i = contextMenu.Items.Count - 1; i >= 0; i--)
+        {
+            var item = contextMenu.Items[i];
+            if (item is ToolStripMenuItem tsmi && tsmi.Tag as string == hostedRemoteMenuItem)
+            {
+                contextMenu.Items.RemoveAt(i);
+            }
+        }
+
+        _hostedRemotesForModule = GetHostedRemotesForModule();
+        if (_hostedRemotesForModule.Count == 0)
+        {
+            return;
+        }
+
+        ToolStripMenuItem toolStripMenuItem =
+            new(string.Format(_viewInWebSite.Text, Name), Icon) { Tag = hostedRemoteMenuItem };
+        contextMenu.Items.Add(toolStripMenuItem);
+
+        foreach (var hostedRemote in _hostedRemotesForModule.OrderBy(r => r.Data))
+        {
+            var toolStripItem = toolStripMenuItem.DropDownItems.Add(hostedRemote.DisplayData);
+            toolStripItem.Click += (s, e) =>
+            {
+                if (contextMenu.Tag is GitBlameContext blameContext)
+                {
+                    OsShellUtil.OpenUrlInDefaultBrowser(hostedRemote.GetBlameUrl(
+                        blameContext.BlameId.ToString(),
+                        blameContext.FileName,
+                        blameContext.LineIndex + 1));
+                }
+            };
+        }
+    }
+
     private void GenerateTokenLink_Click(object? sender, EventArgs e)
     {
-        OpenLink($"https://{GitHubHost.ValueOrDefault(Instance.Settings)}/settings/tokens/new?description=Token%20for%20GitExtensions&scopes=repo,public_repo");
+        OpenLink(
+            $"https://{GitHubHost.ValueOrDefault(Instance.Settings)}/settings/tokens/new?description=Token%20for%20GitExtensions&scopes=repo,public_repo");
     }
 
     private void ManageTokenLink_Click(object? sender, EventArgs e)
@@ -149,23 +309,12 @@ public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginFor
         }
         catch (Exception ex)
         {
-            MessageBoxes.Show(owner: null, _openLinkFailed.Text + ex.Message, caption: string.Empty, MessageBoxButtons.OK, MessageBoxIcon.None);
+            MessageBoxes.Show(null, _openLinkFailed.Text + ex.Message, string.Empty, MessageBoxButtons.OK,
+                MessageBoxIcon.None);
         }
     }
 
-    public override void Register(IGitUICommands gitUiCommands)
-    {
-        _currentGitUiCommands = gitUiCommands;
-        if (!string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken))
-        {
-            GitHub.setOAuth2Token(GitHubLoginInfo.OAuthToken);
-        }
-
-        gitUiCommands.PreCommit += GitUiCommands_PreCommit;
-        gitUiCommands.PostCommit += GitUiCommands_PostCommit;
-    }
-
-    private void GitUiCommands_PreCommit(object? sender, GitUIEventArgs e)
+    private void GitUiCommands_PreCommit(object? sender, GitUiEventArgs e)
     {
         if (!_issueCommitMessageHelperEnabled.ValueOrDefault(Settings))
         {
@@ -174,7 +323,7 @@ public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginFor
 
         if (string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken))
         {
-            e.GitUICommands.AddCommitTemplate(_noTokenError.Text, () => string.Empty, Icon);
+            e.GitUiCommands.AddCommitTemplate(_noTokenError.Text, () => string.Empty, Icon);
             return;
         }
 
@@ -186,150 +335,84 @@ public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginFor
                 return;
             }
 
-            IReadOnlyList<Issue> issues = GitHub.GetAssignedIssues();
+            var issues = GitHub.GetAssignedIssues();
 
             if (issues?.All(i => i.Number == 0) ?? true)
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                e.GitUICommands.AddCommitTemplate(_noAssignedIssues.Text, () => string.Empty, Icon);
+                e.GitUiCommands.AddCommitTemplate(_noAssignedIssues.Text, () => string.Empty, Icon);
                 return;
             }
 
-            Issue[] recentUserIssues = [.. issues.Where(i => i.Number != 0 && hostedRemotes.Any(r => r.Owner == i.Repository.Owner.Login && r.RemoteRepositoryName == i.Repository.Name))
-                                                        .OrderByDescending(i => i.UpdatedAt)
-                                                        .Take(_issueCommitMessageHelperMaxCount.ValueOrDefault(Settings))];
+            Issue[] recentUserIssues =
+            [
+                .. Enumerable.Where<Issue>(issues,
+                        i => i.Number != 0 && hostedRemotes.Any(r =>
+                            r.Owner == i.Repository.Owner.Login && r.RemoteRepositoryName == i.Repository.Name))
+                    .OrderByDescending(i => i.UpdatedAt)
+                    .Take(_issueCommitMessageHelperMaxCount.ValueOrDefault(Settings))
+            ];
 
-            bool multipleRemotes = hostedRemotes.Length > 1;
+            var multipleRemotes = hostedRemotes.Length > 1;
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            foreach (Issue issue in recentUserIssues)
+            foreach (var issue in recentUserIssues)
             {
-                string remoteData = multipleRemotes ? $" ({issue.Repository.Owner.Login}/{issue.Repository.Name})" : string.Empty;
-                string key = $"{issue.Number}: {issue.Title}{remoteData}";
+                var remoteData = multipleRemotes
+                    ? $" ({issue.Repository.Owner.Login}/{issue.Repository.Name})"
+                    : string.Empty;
+                var key = $"{issue.Number}: {issue.Title}{remoteData}";
                 _currentMessages.Add(key);
-                e.GitUICommands.AddCommitTemplate(key, () => GetIssueDescription(issue), Icon);
+                e.GitUiCommands.AddCommitTemplate(key, () => GetIssueDescription(issue), Icon);
             }
 
             static string GetIssueDescription(Issue issue)
-                => $"""
+            {
+                return $"""
 
-                    Fixes #{issue.Number} : {issue.Title}
+                        Fixes #{issue.Number} : {issue.Title}
 
-                    {issue.Body}
+                        {issue.Body}
 
-                    """;
+                        """;
+            }
         });
     }
 
-    private void GitUiCommands_PostCommit(object? sender, GitUIEventArgs e)
+    private void GitUiCommands_PostCommit(object? sender, GitUiEventArgs e)
     {
         if (_currentMessages.Count == 0)
         {
             return;
         }
 
-        foreach (string key in _currentMessages)
+        foreach (var key in _currentMessages)
         {
-            e.GitUICommands.RemoveCommitTemplate(key);
+            e.GitUiCommands.RemoveCommitTemplate(key);
         }
 
         _currentMessages.Clear();
     }
 
-    public override bool Execute(GitUIEventArgs args)
-    {
-        if (string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken))
-        {
-            args.GitUICommands.StartSettingsDialog(this);
-        }
-        else
-        {
-            MessageBoxes.ShowError(args.OwnerForm, _tokenAlreadyExist.Text, _error.Text);
-        }
-
-        return false;
-    }
-
-    // --
-
-    public IReadOnlyList<IHostedRepository> SearchForRepository(string search)
-    {
-        return GitHub.searchRepositories(search).Select(repo => (IHostedRepository)new GitHubRepo(repo)).ToList();
-    }
-
-    public IReadOnlyList<IHostedRepository> GetRepositoriesOfUser(string user)
-    {
-        return GitHub.getRepositories(user).Select(repo => (IHostedRepository)new GitHubRepo(repo)).ToList();
-    }
-
-    public IHostedRepository GetRepository(string user, string repositoryName)
-    {
-        return new GitHubRepo(GitHub.getRepository(user, repositoryName));
-    }
-
-    public IReadOnlyList<IHostedRepository> GetMyRepos()
-    {
-        return GitHub.getRepositories().Select(repo => (IHostedRepository)new GitHubRepo(repo)).ToList();
-    }
-
-    public bool ConfigurationOk => !string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken);
-
-    public string? OwnerLogin => GitHub.getCurrentUser()?.Login;
-
-    public async Task<string?> AddUpstreamRemoteAsync()
-    {
-        Validates.NotNull(_currentGitUiCommands);
-
-        IGitModule gitModule = _currentGitUiCommands.Module;
-        IHostedRemote? hostedRemote = GetHostedRemotesForModule().FirstOrDefault(r => r.IsOwnedByMe);
-        if (hostedRemote is null)
-        {
-            return null;
-        }
-
-        IHostedRepository hostedRepository = hostedRemote.GetHostedRepository();
-        if (!hostedRepository.IsAFork)
-        {
-            return null;
-        }
-
-        if ((await gitModule.GetRemotesAsync()).Any(r => r.Name == UpstreamConventionName || r.FetchUrl == hostedRepository.ParentUrl))
-        {
-            return null;
-        }
-
-        gitModule.AddRemote(UpstreamConventionName, hostedRepository.ParentUrl);
-        return UpstreamConventionName;
-    }
-
-    public bool GitModuleIsRelevantToMe()
-        => _currentGitUiCommands?.Module is not null && GetHostedRemotes().Any();
-
-    /// <summary>
-    /// Returns all relevant github-remotes for the current working directory
-    /// </summary>
-    public IReadOnlyList<IHostedRemote> GetHostedRemotesForModule()
-        => _currentGitUiCommands?.Module is null ? [] : GetHostedRemotes().ToArray();
-
     private IEnumerable<IHostedRemote> GetHostedRemotes()
     {
         HashSet<IHostedRemote> set = [];
 
-        IGitModule? gitModule = _currentGitUiCommands?.Module;
+        var gitModule = _currentGitUiCommands?.Module;
         if (gitModule is null)
         {
             yield break;
         }
 
-        foreach (string remote in gitModule.GetRemoteNames())
+        foreach (var remote in gitModule.GetRemoteNames())
         {
-            string url = gitModule.GetSetting(string.Format(SettingKeyString.RemoteUrl, remote));
+            var url = gitModule.GetSetting(string.Format(SettingKeyString.RemoteUrl, remote));
 
             if (string.IsNullOrEmpty(url))
             {
                 continue;
             }
 
-            if (_gitHubRemoteParser.TryExtractGitHubDataFromRemoteUrl(url, out string? owner, out string? repository))
+            if (GitHubRemoteParser.TryExtractGitHubDataFromRemoteUrl(url, out var owner, out var repository))
             {
                 GitHubHostedRemote hostedRemote = new(remote, owner, repository, url);
 
@@ -338,47 +421,6 @@ public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin, IGitPluginFor
                     yield return hostedRemote;
                 }
             }
-        }
-    }
-
-    public void ConfigureContextMenu(ContextMenuStrip contextMenu)
-    {
-        const string HostedRemoteMenuItem = "HostedRemoteMenuItem";
-
-        for (int i = contextMenu.Items.Count - 1; i >= 0; i--)
-        {
-            ToolStripItem item = contextMenu.Items[i];
-            if (item is ToolStripMenuItem tsmi && tsmi.Tag as string == HostedRemoteMenuItem)
-            {
-                contextMenu.Items.RemoveAt(i);
-            }
-        }
-
-        _hostedRemotesForModule = GetHostedRemotesForModule();
-        if (_hostedRemotesForModule.Count == 0)
-        {
-            return;
-        }
-
-        ToolStripMenuItem toolStripMenuItem = new(string.Format(_viewInWebSite.Text, Name), Icon)
-        {
-            Tag = HostedRemoteMenuItem
-        };
-        contextMenu.Items.Add(toolStripMenuItem);
-
-        foreach (IHostedRemote hostedRemote in _hostedRemotesForModule.OrderBy(r => r.Data))
-        {
-            ToolStripItem toolStripItem = toolStripMenuItem.DropDownItems.Add(hostedRemote.DisplayData);
-            toolStripItem.Click += (s, e) =>
-            {
-                if (contextMenu.Tag is GitBlameContext blameContext)
-                {
-                    OsShellUtil.OpenUrlInDefaultBrowser(hostedRemote.GetBlameUrl(
-                            blameContext.BlameId.ToString(),
-                            blameContext.FileName,
-                            blameContext.LineIndex + 1));
-                }
-            };
         }
     }
 }

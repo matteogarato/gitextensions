@@ -1,6 +1,7 @@
 ﻿using GitUI;
 
 namespace GitUITests;
+
 public class WindowPositionManagerTests
 {
     [Fact]
@@ -45,7 +46,8 @@ public class WindowPositionManagerTests
     //// clipped on both the left and right
     [InlineData(-500, 100, 2100, 500, true)] // more than 10% visible horizontally
     [InlineData(-2700, 100, 5000, 500, false)] // unexpected case! neither left-middle-rights points are visible
-    public void IsDisplayedOn10Percent_should_return_expected_if_window_partially_fit_on_screen(int x, int y, int width, int height, bool expected)
+    public void IsDisplayedOn10Percent_should_return_expected_if_window_partially_fit_on_screen(int x, int y, int width,
+        int height, bool expected)
     {
         Rectangle screen = new(0, 0, 1920, 1080);
         Rectangle window = new(x, y, width, height);

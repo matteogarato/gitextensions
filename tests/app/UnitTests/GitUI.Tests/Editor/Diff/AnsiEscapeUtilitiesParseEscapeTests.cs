@@ -1,16 +1,17 @@
 ﻿using System.Text;
 using GitUI.Editor.Diff;
-using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
 
 namespace GitUITests.Editor.Diff;
+
 public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
 {
-    private const string _escape_sequence = "\u001b[";
+    private const string _escapeSequence = "\u001b[";
 
     [Fact]
     public void ParseEscape_ShouldAppendTextWithoutEscapeSequence_WhenNoEscapeSequenceIsPresent()
     {
-        string text = "No escape sequence  ";
+        var text = "No escape sequence  ";
         StringBuilder sb = new();
         List<TextMarker> textMarkers = [];
 
@@ -23,28 +24,28 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
     [Fact]
     public void ParseEscape_ShouldAppendTextWithCorrectEscapeSequence_WhenEscapeSequenceIsPresent()
     {
-        string in_text = $"""
-            Text with {_escape_sequence}31mred{_escape_sequence}0m escape sequence
-            extra line
-            Some {_escape_sequence}0;1;31mbold red{_escape_sequence}0m
-            Now {_escape_sequence}101mbold reverse red{_escape_sequence}0m
-            and some {_escape_sequence}2:31mdim red{_escape_sequence}0m
-            {_escape_sequence}31m{_escape_sequence}mdefault not red{_escape_sequence}0m{_escape_sequence}31m, red no end
+        var inText = $"""
+                      Text with {_escapeSequence}31mred{_escapeSequence}0m escape sequence
+                      extra line
+                      Some {_escapeSequence}0;1;31mbold red{_escapeSequence}0m
+                      Now {_escapeSequence}101mbold reverse red{_escapeSequence}0m
+                      and some {_escapeSequence}2:31mdim red{_escapeSequence}0m
+                      {_escapeSequence}31m{_escapeSequence}mdefault not red{_escapeSequence}0m{_escapeSequence}31m, red no end
 
-            """.ReplaceLineEndings("\n");
-        string expected = """
-            Text with red escape sequence
-            extra line
-            Some bold red
-            Now bold reverse red
-            and some dim red
-            default not red, red no end
+                      """.ReplaceLineEndings("\n");
+        var expected = """
+                       Text with red escape sequence
+                       extra line
+                       Some bold red
+                       Now bold reverse red
+                       and some dim red
+                       default not red, red no end
 
-            """.ReplaceLineEndings("\n");
+                       """.ReplaceLineEndings("\n");
         StringBuilder sb = new();
         List<TextMarker> textMarkers = [];
 
-        AnsiEscapeUtilities.ParseEscape(in_text, sb, textMarkers);
+        AnsiEscapeUtilities.ParseEscape(inText, sb, textMarkers);
 
         sb.ToString().Should().Be(expected);
         textMarkers.Should().HaveCount(5);
@@ -78,34 +79,34 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
     [Fact]
     public void ParseEscape_ShouldHandleNonConformingEscapes()
     {
-        string in_text = $"""
-            Text with {_escape_sequence}38;5;196mred without end
-            extra line
-            then {_escape_sequence}0;48:5:46;31;1mreverse green,
-            then {_escape_sequence}38;2;0;0;255mblue,
-            {_escape_sequence}999mcode out of range,
-            {_escape_sequence}99munused code,
-            {_escape_sequence}30mblack to the end
-            {_escape_sequence}incomplete escape1,
-            {_escape_sequence}1xmincomplete escape2
-            """.ReplaceLineEndings("\n");
-        string expected_text = $"""
-            Text with red without end
-            extra line
-            then reverse green,
-            then blue,
-            code out of range,
-            unused code,
-            black to the end
-            {_escape_sequence}incomplete escape1,
-            {_escape_sequence}1xmincomplete escape2
-            """.ReplaceLineEndings("\n");
+        var inText = $"""
+                      Text with {_escapeSequence}38;5;196mred without end
+                      extra line
+                      then {_escapeSequence}0;48:5:46;31;1mreverse green,
+                      then {_escapeSequence}38;2;0;0;255mblue,
+                      {_escapeSequence}999mcode out of range,
+                      {_escapeSequence}99munused code,
+                      {_escapeSequence}30mblack to the end
+                      {_escapeSequence}incomplete escape1,
+                      {_escapeSequence}1xmincomplete escape2
+                      """.ReplaceLineEndings("\n");
+        var expectedText = $"""
+                            Text with red without end
+                            extra line
+                            then reverse green,
+                            then blue,
+                            code out of range,
+                            unused code,
+                            black to the end
+                            {_escapeSequence}incomplete escape1,
+                            {_escapeSequence}1xmincomplete escape2
+                            """.ReplaceLineEndings("\n");
         StringBuilder sb = new();
         List<TextMarker> textMarkers = [];
 
-        AnsiEscapeUtilities.ParseEscape(in_text, sb, textMarkers);
+        AnsiEscapeUtilities.ParseEscape(inText, sb, textMarkers);
 
-        sb.ToString().Should().Be(expected_text);
+        sb.ToString().Should().Be(expectedText);
         textMarkers.Should().HaveCount(4);
 
         textMarkers[0].Offset.Should().Be(10);
@@ -135,34 +136,34 @@ public class AnsiEscapeUtilitiesParseEscapeTests : AnsiEscapeUtilitiesTestBase
         // Insert \r after setting the text newline to \n
         const string carriageReturn = "\r";
         const string carriageReplacer = "%%carriageReplacer%%";
-        string in_text = $"""
-            Text with {_escape_sequence}38;5;196mred over
-            several lines
-            {_escape_sequence}m single newline with sequence{_escape_sequence}31m
-            {_escape_sequence}0;1;31m merge adjacent segments{_escape_sequence}m{_escape_sequence}0;31;1m continue{_escape_sequence}m{_escape_sequence}1;31m here{_escape_sequence}m
-            {_escape_sequence}0;2;31m ignore empty{_escape_sequence}m{_escape_sequence}0;2;31m{_escape_sequence}m
-            {_escape_sequence}0;1;31m ignore carriage return color {_escape_sequence}m{_escape_sequence}0;1;31m{carriageReplacer}{_escape_sequence}m
-            {_escape_sequence}0;1;31m but not space{_escape_sequence}m{_escape_sequence}0;31;1m {_escape_sequence}m
-            {_escape_sequence}0;31m merge ending with carriage return newline{_escape_sequence}m{carriageReplacer}
-            {_escape_sequence}0;31m some text{_escape_sequence}m
-            """.ReplaceLineEndings("\n").Replace(carriageReplacer, carriageReturn);
-        string expected_text = $"""
-            Text with red over
-            several lines
-             single newline with sequence
-             merge adjacent segments continue here
-             ignore empty
-             ignore carriage return color {carriageReplacer}
-             but not space
-             merge ending with carriage return newline{carriageReplacer}
-             some text
-            """.ReplaceLineEndings("\n").Replace(carriageReplacer, carriageReturn);
+        var inText = $"""
+                      Text with {_escapeSequence}38;5;196mred over
+                      several lines
+                      {_escapeSequence}m single newline with sequence{_escapeSequence}31m
+                      {_escapeSequence}0;1;31m merge adjacent segments{_escapeSequence}m{_escapeSequence}0;31;1m continue{_escapeSequence}m{_escapeSequence}1;31m here{_escapeSequence}m
+                      {_escapeSequence}0;2;31m ignore empty{_escapeSequence}m{_escapeSequence}0;2;31m{_escapeSequence}m
+                      {_escapeSequence}0;1;31m ignore carriage return color {_escapeSequence}m{_escapeSequence}0;1;31m{carriageReplacer}{_escapeSequence}m
+                      {_escapeSequence}0;1;31m but not space{_escapeSequence}m{_escapeSequence}0;31;1m {_escapeSequence}m
+                      {_escapeSequence}0;31m merge ending with carriage return newline{_escapeSequence}m{carriageReplacer}
+                      {_escapeSequence}0;31m some text{_escapeSequence}m
+                      """.ReplaceLineEndings("\n").Replace(carriageReplacer, carriageReturn);
+        var expectedText = $"""
+                            Text with red over
+                            several lines
+                             single newline with sequence
+                             merge adjacent segments continue here
+                             ignore empty
+                             ignore carriage return color {carriageReplacer}
+                             but not space
+                             merge ending with carriage return newline{carriageReplacer}
+                             some text
+                            """.ReplaceLineEndings("\n").Replace(carriageReplacer, carriageReturn);
         StringBuilder sb = new();
         List<TextMarker> textMarkers = [];
 
-        AnsiEscapeUtilities.ParseEscape(in_text, sb, textMarkers);
+        AnsiEscapeUtilities.ParseEscape(inText, sb, textMarkers);
 
-        sb.ToString().Should().Be(expected_text);
+        sb.ToString().Should().Be(expectedText);
         textMarkers.Should().HaveCount(6);
 
         textMarkers[0].Offset.Should().Be(10);

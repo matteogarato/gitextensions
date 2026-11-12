@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace GitCommands;
+namespace GitCommands.Git;
 
 public interface IGitRevisionSummaryBuilder
 {
@@ -9,34 +9,36 @@ public interface IGitRevisionSummaryBuilder
 
 public class GitRevisionSummaryBuilder : IGitRevisionSummaryBuilder
 {
-    private const int CommitSummaryMaxLineLength = 150;
-    private const int CommitSummaryMaxNumberOfLines = 30;
+    private const int _commitSummaryMaxLineLength = 150;
+    private const int _commitSummaryMaxNumberOfLines = 30;
 
-    private const int LineEllipsisLength = 7;
-    private const int CommitSummaryEllipsisLength = 5;
+    private const int _lineEllipsisLength = 7;
+    private const int _commitSummaryEllipsisLength = 5;
 
     // Maximum size of the commit summary with ellipsis strings on each lines and at the end
-    private const int CommitSummaryWorstCaseLength = (CommitSummaryMaxNumberOfLines * (CommitSummaryMaxLineLength + LineEllipsisLength)) + CommitSummaryEllipsisLength;
+    private const int _commitSummaryWorstCaseLength =
+        (_commitSummaryMaxNumberOfLines * (_commitSummaryMaxLineLength + _lineEllipsisLength)) +
+        _commitSummaryEllipsisLength;
 
-    public string? BuildSummary(string? body)
+    string? IGitRevisionSummaryBuilder.BuildSummary(string? body)
     {
         if (string.IsNullOrWhiteSpace(body))
         {
             return null;
         }
 
-        StringBuilder s = new(Math.Min(body.Length, CommitSummaryWorstCaseLength));
+        StringBuilder s = new(Math.Min(body.Length, _commitSummaryWorstCaseLength));
 
-        int lineCount = 0;
-        int lineStartPos = 0;
+        var lineCount = 0;
+        var lineStartPos = 0;
         int pos;
         for (pos = 0; pos < body.Length; ++pos)
         {
             if (body[pos] == '\n')
             {
-                if (pos - lineStartPos > CommitSummaryMaxLineLength)
+                if (pos - lineStartPos > _commitSummaryMaxLineLength)
                 {
-                    AppendLine(CommitSummaryMaxLineLength, withEllipsis: true);
+                    AppendLine(_commitSummaryMaxLineLength, true);
                 }
                 else
                 {
@@ -45,7 +47,7 @@ public class GitRevisionSummaryBuilder : IGitRevisionSummaryBuilder
 
                 lineStartPos = pos + 1;
 
-                if (++lineCount == CommitSummaryMaxNumberOfLines)
+                if (++lineCount == _commitSummaryMaxNumberOfLines)
                 {
                     return s.Append("[...]").ToString();
                 }
@@ -53,9 +55,9 @@ public class GitRevisionSummaryBuilder : IGitRevisionSummaryBuilder
 
             if (pos == body.Length - 1)
             {
-                if (pos - lineStartPos > CommitSummaryMaxLineLength)
+                if (pos - lineStartPos > _commitSummaryMaxLineLength)
                 {
-                    AppendLine(CommitSummaryMaxLineLength, withEllipsis: true);
+                    AppendLine(_commitSummaryMaxLineLength, true);
                 }
                 else
                 {

@@ -6,37 +6,31 @@ namespace GitCommands.Git;
 public interface IIndexLockManager
 {
     /// <summary>
-    /// Determines whether the given repository has index.lock file.
+    ///     Determines whether the given repository has index.lock file.
     /// </summary>
-    /// <returns><see langword="true"/> if index is locked; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if index is locked; otherwise <see langword="false" />.</returns>
     bool IsIndexLocked();
 
     /// <summary>
-    /// Delete index.lock in the current working folder.
+    ///     Delete index.lock in the current working folder.
     /// </summary>
     /// <param name="includeSubmodules">
-    ///     If <see langword="true"/> all submodules will be scanned for index.lock files and have them delete, if found.
+    ///     If <see langword="true" /> all submodules will be scanned for index.lock files and have them delete, if found.
     /// </param>
     /// <exception cref="FileDeleteException">Unable to delete specific index.lock.</exception>
     void UnlockIndex(bool includeSubmodules = true);
 }
 
 /// <summary>
-/// Facilitates detection and deletion of index.lock files.
+///     Facilitates detection and deletion of index.lock files.
 /// </summary>
-public sealed class IndexLockManager : IIndexLockManager
+public sealed class IndexLockManager(
+    IGitModule module,
+    IGitDirectoryResolver gitDirectoryResolver,
+    IFileSystem fileSystem)
+    : IIndexLockManager
 {
-    private const string IndexLock = "index.lock";
-    private readonly IGitModule _module;
-    private readonly IGitDirectoryResolver _gitDirectoryResolver;
-    private readonly IFileSystem _fileSystem;
-
-    public IndexLockManager(IGitModule module, IGitDirectoryResolver gitDirectoryResolver, IFileSystem fileSystem)
-    {
-        _module = module;
-        _gitDirectoryResolver = gitDirectoryResolver;
-        _fileSystem = fileSystem;
-    }
+    private const string _indexLock = "index.lock";
 
     public IndexLockManager(IGitModule module)
         : this(module, new GitDirectoryResolver(), new FileSystem())
@@ -44,25 +38,25 @@ public sealed class IndexLockManager : IIndexLockManager
     }
 
     /// <summary>
-    /// Determines whether the given repository has index.lock file.
+    ///     Determines whether the given repository has index.lock file.
     /// </summary>
-    /// <returns><see langword="true"/> if index is locked; otherwise <see langword="false"/>.</returns>
-    public bool IsIndexLocked()
+    /// <returns><see langword="true" /> if index is locked; otherwise <see langword="false" />.</returns>
+    bool IIndexLockManager.IsIndexLocked()
     {
-        string indexLockFile = Path.Join(_gitDirectoryResolver.Resolve(_module.WorkingDir), IndexLock);
-        return _fileSystem.File.Exists(indexLockFile);
+        var indexLockFile = Path.Join(gitDirectoryResolver.Resolve(module.WorkingDir), _indexLock);
+        return fileSystem.File.Exists(indexLockFile);
     }
 
     /// <summary>
-    /// Delete index.lock in the current working folder.
+    ///     Delete index.lock in the current working folder.
     /// </summary>
     /// <param name="includeSubmodules">
-    ///     If <see langword="true"/> all submodules will be scanned for index.lock files and have them delete, if found.
+    ///     If <see langword="true" /> all submodules will be scanned for index.lock files and have them delete, if found.
     /// </param>
     /// <exception cref="FileDeleteException">Unable to delete specific index.lock.</exception>
-    public void UnlockIndex(bool includeSubmodules = true)
+    void IIndexLockManager.UnlockIndex(bool includeSubmodules = true)
     {
-        string workingFolderIndexLock = Path.Join(_gitDirectoryResolver.Resolve(_module.WorkingDir), IndexLock);
+        var workingFolderIndexLock = Path.Join(gitDirectoryResolver.Resolve(module.WorkingDir), _indexLock);
         if (!includeSubmodules)
         {
             DeleteIndexLock(workingFolderIndexLock);
@@ -70,15 +64,15 @@ public sealed class IndexLockManager : IIndexLockManager
         }
 
         // get the list of files to delete
-        IReadOnlyList<string> submodules = _module.GetSubmodulesLocalPaths();
-        IEnumerable<string> list = submodules.Select(sm =>
+        var submodules = module.GetSubmodulesLocalPaths();
+        var list = submodules.Select(sm =>
         {
-            string submodulePath = _module.GetSubmoduleFullPath(sm);
-            string submoduleIndexLock = Path.Join(_gitDirectoryResolver.Resolve(submodulePath), IndexLock);
+            var submodulePath = module.GetSubmoduleFullPath(sm);
+            var submoduleIndexLock = Path.Join(gitDirectoryResolver.Resolve(submodulePath), _indexLock);
             return submoduleIndexLock;
         }).Union(new[] { workingFolderIndexLock });
 
-        foreach (string indexLock in list)
+        foreach (var indexLock in list)
         {
             DeleteIndexLock(indexLock);
         }
@@ -86,14 +80,14 @@ public sealed class IndexLockManager : IIndexLockManager
 
     private void DeleteIndexLock(string fileName)
     {
-        if (!_fileSystem.File.Exists(fileName))
+        if (!fileSystem.File.Exists(fileName))
         {
             return;
         }
 
         try
         {
-            _fileSystem.File.Delete(fileName);
+            fileSystem.File.Delete(fileName);
         }
         catch (Exception ex)
         {

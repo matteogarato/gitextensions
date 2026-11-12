@@ -1,12 +1,14 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid.Graph;
 using NSubstitute;
+using Xunit.Sdk;
 
-namespace GitUITests.UserControls.RevisionGrid.Graph;
+namespace GitUI.AvaloniaTests;
+
 public class LaneNodeLocatorTests
 {
-    private IRevisionGraphRowProvider _revisionGraphRowProvider = null!;
-    private LaneNodeLocator _laneNodeLocator = null!;
+    private readonly LaneNodeLocator _laneNodeLocator = null!;
+    private readonly IRevisionGraphRowProvider _revisionGraphRowProvider = null!;
 
     public LaneNodeLocatorTests()
     {
@@ -14,10 +16,11 @@ public class LaneNodeLocatorTests
         _laneNodeLocator = new LaneNodeLocator(_revisionGraphRowProvider);
     }
 
-    private RevisionGraphRevision SetupLaneRow(int row, int lane, int laneCount, int nodeLane = -1, RevisionGraphSegment firstSegment = null!, RevisionGraphRevision child = null!)
+    private RevisionGraphRevision SetupLaneRow(int row, int lane, int laneCount, int nodeLane = -1,
+        RevisionGraphSegment firstSegment = null!, RevisionGraphRevision child = null!)
     {
         RevisionGraphRevision node = new(ObjectId.WorkTreeId, 0);
-        IRevisionGraphRow revisionGraphRow = Substitute.For<IRevisionGraphRow>();
+        var revisionGraphRow = Substitute.For<IRevisionGraphRow>();
 
         List<RevisionGraphSegment> segments = [];
         if (firstSegment is not null)
@@ -77,7 +80,7 @@ public class LaneNodeLocatorTests
     {
         const int row = 100;
         const int lane = 0;
-        RevisionGraphRevision node = SetupLaneRow(row, lane, laneCount: 0, nodeLane: lane);
+        var node = SetupLaneRow(row, lane, 0, lane);
 
         // row.GetCurrentRevisionLane() == lane
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((node, true, null));
@@ -88,7 +91,7 @@ public class LaneNodeLocatorTests
     {
         const int row = 100;
         const int lane = 10;
-        SetupLaneRow(row, lane, laneCount: lane);
+        SetupLaneRow(row, lane, lane);
 
         // lane >= _revisionGraphRowProvider.GetSegmentsForRow(rowIndex).Count
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((null, false, null));
@@ -99,8 +102,9 @@ public class LaneNodeLocatorTests
     {
         const int row = 100;
         const int lane = 3;
-        SetupLaneRow(row, lane, laneCount: lane + 1);
-        _revisionGraphRowProvider!.GetSegmentsForRow(row)!.GetSegmentsForIndex(lane).Returns(x => new List<RevisionGraphSegment>());
+        SetupLaneRow(row, lane, lane + 1);
+        _revisionGraphRowProvider!.GetSegmentsForRow(row)!.GetSegmentsForIndex(lane)
+            .Returns(x => new List<RevisionGraphSegment>());
 
         // segmentsForLane.Count() <= 0
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((null, false, null));
@@ -111,7 +115,7 @@ public class LaneNodeLocatorTests
     {
         const int row = 100;
         const int lane = 3;
-        RevisionGraphRevision laneNode = SetupLaneRow(row, lane, laneCount: lane + 1);
+        var laneNode = SetupLaneRow(row, lane, lane + 1);
 
         // innermost "return"
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((laneNode, false, null));
@@ -123,7 +127,7 @@ public class LaneNodeLocatorTests
         const int row = 100;
         const int lane = 3;
         RevisionGraphRevision childNode = new(ObjectId.WorkTreeId, 0);
-        RevisionGraphRevision laneNode = SetupLaneRow(row, lane, laneCount: lane + 1, child: childNode);
+        var laneNode = SetupLaneRow(row, lane, lane + 1, child: childNode);
 
         // innermost "return"
         _laneNodeLocator.FindPrevNode(row, lane).Should().Be((laneNode, false, childNode));
@@ -137,7 +141,7 @@ public class LaneNodeLocatorTests
         RevisionGraphRevision parentNode = new(ObjectId.IndexId, 0);
         RevisionGraphRevision childNode = new(ObjectId.WorkTreeId, 0);
         RevisionGraphSegment segment = new(parentNode, childNode);
-        RevisionGraphRevision laneNode = SetupLaneRow(row, lane, laneCount: lane + 1, firstSegment: segment);
+        var laneNode = SetupLaneRow(row, lane, lane + 1, firstSegment: segment);
 
 #if !DEBUG
         // innermost "return" in RELEASE build
@@ -147,13 +151,13 @@ public class LaneNodeLocatorTests
         {
             // Exception before innermost "return" in DEBUG build
             _laneNodeLocator.FindPrevNode(row, lane).Should().Be((parentNode, false, null));
-            throw new Xunit.Sdk.XunitException("The debug build should throw an exception!");
+            throw new XunitException("The debug build should throw an exception!");
         }
         catch (Exception x)
         {
             x.Message.Should().Be(string.Format("All segments for a lane should have the same parent.\n"
                                                 + "Not fulfilled for rowIndex {0} lane {1} with {2} segments.",
-                                                row, lane, 2));
+                row, lane, 2));
         }
 #endif
     }

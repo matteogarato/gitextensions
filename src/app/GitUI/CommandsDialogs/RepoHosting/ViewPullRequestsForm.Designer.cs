@@ -33,7 +33,7 @@ partial class ViewPullRequestsForm
         tabControl1 = new TabControl();
         tabPage1 = new TabPage();
         splitContainer3 = new SplitContainer();
-        _fileStatusList = new GitUI.FileStatusList();
+        _fileStatusList = new UserControls.FileStatusList();
         _diffViewer = new GitUI.Editor.FileViewer();
         tabPage2 = new TabPage();
         tableLayoutPanel1 = new TableLayoutPanel();
@@ -421,7 +421,7 @@ partial class ViewPullRequestsForm
     private TabControl tabControl1;
     private TabPage tabPage1;
     private SplitContainer splitContainer3;
-    private FileStatusList _fileStatusList;
+    private UserControls.FileStatusList _fileStatusList;
     private Editor.FileViewer _diffViewer;
     private TabPage tabPage2;
     private TableLayoutPanel tableLayoutPanel1;

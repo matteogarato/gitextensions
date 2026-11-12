@@ -1,9 +1,8 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Columns;
 using GitUI.UserControls.RevisionGrid.Graph;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
 namespace GitUITests.UserControls.RevisionGrid.Graph;
@@ -21,26 +20,26 @@ public class HoverHighlightCalculatorTests
         const string otherTipId = "dddddddddddddddddddddddddddddddddddddddd";
 
         RevisionGraph revisionGraph = new();
-        IGitRef main = CreateBranchRef(localName: "main", isHead: true);
+        var main = CreateBranchRef("main", true);
         revisionGraph.Add(CreateRevision(tipId, [parentId], main));
-        revisionGraph.Add(CreateRevision(otherTipId, [rootId], CreateBranchRef(localName: "feature", isHead: true)));
+        revisionGraph.Add(CreateRevision(otherTipId, [rootId], CreateBranchRef("feature", true)));
         revisionGraph.Add(CreateRevision(parentId, [rootId]));
         revisionGraph.Add(CreateRevision(rootId, []));
 
         const int rowCount = 4;
         revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
-        RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
-        VisibleRowRange range = new(fromIndex: 0, count: rowCount);
-        testAccessor.RenderGraphToCache(range, toRowIndex: rowCount - 1, _rowHeight);
+        var testAccessor = CreateProvider(revisionGraph);
+        VisibleRowRange range = new(0, rowCount);
+        testAccessor.RenderGraphToCache(range, rowCount - 1, _rowHeight);
 
-        testAccessor.HoverHighlight.SetHoverHighlight(main, rowIndex: GetRowForId(revisionGraph, rowCount, tipId));
+        testAccessor.HoverHighlight.SetHoverHighlight(main, GetRowForId(revisionGraph, rowCount, tipId));
 
         testAccessor.HoverHighlight.HighlightedIds.Should().BeEquivalentTo(
         [
             ObjectId.Parse(tipId),
             ObjectId.Parse(parentId),
-            ObjectId.Parse(rootId),
+            ObjectId.Parse(rootId)
         ]);
     }
 
@@ -52,7 +51,7 @@ public class HoverHighlightCalculatorTests
         const string rootId = "cccccccccccccccccccccccccccccccccccccccc";
 
         RevisionGraph revisionGraph = new();
-        IGitRef main = CreateBranchRef(localName: "main", isHead: true);
+        var main = CreateBranchRef("main", true);
         revisionGraph.Add(CreateRevision(tipId, [parentId], main));
         revisionGraph.Add(CreateRevision(parentId, [rootId]));
         revisionGraph.Add(CreateRevision(rootId, []));
@@ -60,19 +59,19 @@ public class HoverHighlightCalculatorTests
         const int rowCount = 3;
         revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
-        RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
+        var testAccessor = CreateProvider(revisionGraph);
 
         // Visible range covers only tip and parent; root is scrolled out of view.
-        VisibleRowRange range = new(fromIndex: 0, count: 2);
-        testAccessor.RenderGraphToCache(range, toRowIndex: 1, _rowHeight);
+        VisibleRowRange range = new(0, 2);
+        testAccessor.RenderGraphToCache(range, 1, _rowHeight);
 
-        testAccessor.HoverHighlight.SetHoverHighlight(main, rowIndex: GetRowForId(revisionGraph, rowCount, tipId));
+        testAccessor.HoverHighlight.SetHoverHighlight(main, GetRowForId(revisionGraph, rowCount, tipId));
 
         testAccessor.HoverHighlight.HighlightedIds.Should().BeEquivalentTo(
         [
             ObjectId.Parse(tipId),
             ObjectId.Parse(parentId),
-            ObjectId.Parse(rootId),
+            ObjectId.Parse(rootId)
         ]);
     }
 
@@ -83,24 +82,24 @@ public class HoverHighlightCalculatorTests
         const string parentId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
         RevisionGraph revisionGraph = new();
-        IGitRef main = CreateBranchRef(localName: "main", isHead: true);
+        var main = CreateBranchRef("main", true);
         revisionGraph.Add(CreateRevision(tipId, [parentId], main));
         revisionGraph.Add(CreateRevision(parentId, []));
 
         const int rowCount = 2;
         revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
-        RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
-        VisibleRowRange range = new(fromIndex: 0, count: rowCount);
-        testAccessor.RenderGraphToCache(range, toRowIndex: rowCount - 1, _rowHeight);
+        var testAccessor = CreateProvider(revisionGraph);
+        VisibleRowRange range = new(0, rowCount);
+        testAccessor.RenderGraphToCache(range, rowCount - 1, _rowHeight);
 
-        testAccessor.HoverHighlight.SetHoverHighlight(main, rowIndex: GetRowForId(revisionGraph, rowCount, tipId));
+        testAccessor.HoverHighlight.SetHoverHighlight(main, GetRowForId(revisionGraph, rowCount, tipId));
         testAccessor.HoverHighlight.HighlightedIds.Should().NotBeNull();
 
-        testAccessor.RenderGraphToCache(range, toRowIndex: rowCount - 1, _rowHeight);
+        testAccessor.RenderGraphToCache(range, rowCount - 1, _rowHeight);
         testAccessor.HoverHighlight.IsDirty.Should().BeFalse();
 
-        testAccessor.HoverHighlight.SetHoverHighlight(gitRef: null);
+        testAccessor.HoverHighlight.SetHoverHighlight(null);
         testAccessor.HoverHighlight.HighlightedIds.Should().BeNull();
         testAccessor.HoverHighlight.IsDirty.Should().BeTrue();
     }
@@ -112,23 +111,23 @@ public class HoverHighlightCalculatorTests
         const string parentId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
         RevisionGraph revisionGraph = new();
-        IGitRef main = CreateBranchRef(localName: "main", isHead: true);
+        var main = CreateBranchRef("main", true);
         revisionGraph.Add(CreateRevision(tipId, [parentId], main));
         revisionGraph.Add(CreateRevision(parentId, []));
 
         const int rowCount = 2;
         revisionGraph.CacheTo(rowCount - 1, rowCount - 1, TestContext.Current.CancellationToken);
 
-        RevisionGraphColumnProvider.TestAccessor testAccessor = CreateProvider(revisionGraph);
-        VisibleRowRange range = new(fromIndex: 0, count: rowCount);
-        testAccessor.RenderGraphToCache(range, toRowIndex: rowCount - 1, _rowHeight);
+        var testAccessor = CreateProvider(revisionGraph);
+        VisibleRowRange range = new(0, rowCount);
+        testAccessor.RenderGraphToCache(range, rowCount - 1, _rowHeight);
 
-        int tipRow = GetRowForId(revisionGraph, rowCount, tipId);
+        var tipRow = GetRowForId(revisionGraph, rowCount, tipId);
 
         testAccessor.HoverHighlight.SetHoverHighlight(main, tipRow);
         testAccessor.HoverHighlight.IsDirty.Should().BeTrue();
 
-        testAccessor.RenderGraphToCache(range, toRowIndex: rowCount - 1, _rowHeight);
+        testAccessor.RenderGraphToCache(range, rowCount - 1, _rowHeight);
         testAccessor.HoverHighlight.IsDirty.Should().BeFalse();
 
         Assert.Throws<OperationCanceledException>(() => testAccessor.HoverHighlight.SetHoverHighlight(main, tipRow));
@@ -137,8 +136,8 @@ public class HoverHighlightCalculatorTests
 
     private static int GetRowForId(RevisionGraph revisionGraph, int rowCount, string id)
     {
-        ObjectId objectId = ObjectId.Parse(id);
-        for (int row = 0; row < rowCount; row++)
+        var objectId = ObjectId.Parse(id);
+        for (var row = 0; row < rowCount; row++)
         {
             if (revisionGraph.GetNodeForRow(row)?.Objectid == objectId)
             {
@@ -151,7 +150,7 @@ public class HoverHighlightCalculatorTests
 
     private static IGitRef CreateBranchRef(string localName, bool isHead, bool isRemote = false)
     {
-        IGitRef gitRef = Substitute.For<IGitRef>();
+        var gitRef = Substitute.For<IGitRef>();
         gitRef.IsHead.Returns(isHead);
         gitRef.IsRemote.Returns(isRemote);
         gitRef.LocalName.Returns(localName);
@@ -160,7 +159,7 @@ public class HoverHighlightCalculatorTests
 
     private static RevisionGraphColumnProvider.TestAccessor CreateProvider(RevisionGraph revisionGraph)
     {
-        IGitRevisionSummaryBuilder gitRevisionSummaryBuilder = Substitute.For<IGitRevisionSummaryBuilder>();
+        var gitRevisionSummaryBuilder = Substitute.For<IGitRevisionSummaryBuilder>();
         RevisionGraphColumnProvider revisionGraphColumnProvider = new(revisionGraph, gitRevisionSummaryBuilder);
         return revisionGraphColumnProvider.GetTestAccessor();
     }
@@ -168,15 +167,11 @@ public class HoverHighlightCalculatorTests
     private static GitRevision CreateRevision(string id, IReadOnlyList<string> parentIds, params IGitRef[] refs)
     {
         List<ObjectId> parsedParentIds = [];
-        foreach (string parentId in parentIds)
+        foreach (var parentId in parentIds)
         {
             parsedParentIds.Add(ObjectId.Parse(parentId));
         }
 
-        return new GitRevision(ObjectId.Parse(id))
-        {
-            ParentIds = parsedParentIds,
-            Refs = refs,
-        };
+        return new GitRevision(ObjectId.Parse(id)) { ParentIds = parsedParentIds, Refs = refs };
     }
 }

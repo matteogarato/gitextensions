@@ -1,4 +1,8 @@
-﻿namespace GitUI.UserControls.RevisionGrid;
+﻿using System.ComponentModel;
+using GitExtUtils.GitUI;
+using GitUI.Properties;
+
+namespace GitUI.UserControls.RevisionGrid;
 
 public sealed class ErrorControl : UserControl
 {
@@ -16,30 +20,30 @@ public sealed class ErrorControl : UserControl
 #pragma warning disable
     private void InitializeComponent()
     {
-        this._image = new System.Windows.Forms.PictureBox();
-        ((System.ComponentModel.ISupportInitialize)(this._image)).BeginInit();
-        this.SuspendLayout();
+        _image = new PictureBox();
+        ((ISupportInitialize)_image).BeginInit();
+        SuspendLayout();
         //
         // _image
         //
-        this._image.Dock = System.Windows.Forms.DockStyle.Fill;
-        this._image.Image = global::GitUI.Properties.Images.StatusBadgeError;
-        this._image.Location = new System.Drawing.Point(0, 0);
-        this._image.Name = "_image";
-        this._image.Size = new System.Drawing.Size(2080, 1447);
-        this._image.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-        this._image.TabIndex = 3;
-        this._image.TabStop = false;
+        _image.Dock = DockStyle.Fill;
+        _image.Image = Images.StatusBadgeError;
+        _image.Location = new Point(0, 0);
+        _image.Name = "_image";
+        _image.Size = new Size(2080, 1447);
+        _image.SizeMode = PictureBoxSizeMode.CenterImage;
+        _image.TabIndex = 3;
+        _image.TabStop = false;
         //
         // ErrorControl
         //
-        this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.Controls.Add(this._image);
-        this.Name = "ErrorControl";
-        this.Size = new System.Drawing.Size(2080, 1447);
-        ((System.ComponentModel.ISupportInitialize)(this._image)).EndInit();
-        this.ResumeLayout(false);
+        AutoScaleDimensions = new SizeF(6F, 13F);
+        AutoScaleMode = AutoScaleMode.Font;
+        Controls.Add(_image);
+        Name = "ErrorControl";
+        Size = new Size(2080, 1447);
+        ((ISupportInitialize)_image).EndInit();
+        ResumeLayout(false);
     }
 #pragma warning enable
 }

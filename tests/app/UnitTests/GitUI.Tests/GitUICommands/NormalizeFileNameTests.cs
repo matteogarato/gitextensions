@@ -1,9 +1,8 @@
-﻿using GitCommands;
-using GitCommands.Git;
-using GitExtensions.Extensibility.Git;
+﻿using GitCommands.Git;
 using GitUI;
 
-namespace GitUITests.GitUICommandsTests;
+namespace GitUITests.GitUICommands;
+
 public sealed class NormalizeFileNameTests
 {
     [Theory]
@@ -21,7 +20,7 @@ public sealed class NormalizeFileNameTests
     public void NormalizeFileNameTest(string fileName, string expected)
     {
         GitModule module = new(new GitExecutorProvider(new GitDirectoryResolver()), @"c:\working\dir");
-        GitUICommands commands = new(GitUICommands.EmptyServiceProvider, module);
+        GitUiCommands commands = new(GitUiCommands.EmptyServiceProvider, module);
 
         commands.GetTestAccessor().NormalizeFileName(fileName).Should().Be(expected);
     }

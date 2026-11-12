@@ -3,11 +3,11 @@
 public static class BinarySearch
 {
     /// <summary>
-    /// Find first integer between min and (min + count - 1) where "predicate" returns true.
+    ///     Find first integer between min and (min + count - 1) where "predicate" returns true.
     /// </summary>
     /// <remarks>
-    /// Assumes "predicate" is a non-decreasing function, i.e.
-    /// if predicate(i) == true then predicate(i + n) == true for any positive n.
+    ///     Assumes "predicate" is a non-decreasing function, i.e.
+    ///     if predicate(i) == true then predicate(i + n) == true for any positive n.
     /// </remarks>
     public static int Find(int min, int count, Func<int, bool> predicate)
     {
@@ -26,9 +26,9 @@ public static class BinarySearch
             return -1;
         }
 
-        int halfCount = count / 2;
-        int middle = min + halfCount;
-        int searchRightHalfResult = Find(middle, count - halfCount, predicate);
+        var halfCount = count / 2;
+        var middle = min + halfCount;
+        var searchRightHalfResult = Find(middle, count - halfCount, predicate);
 
         if (searchRightHalfResult > middle)
         {
@@ -42,8 +42,8 @@ public static class BinarySearch
 
         // searchRightHalfResult == middle
 
-        int newLeft = min + 1;
-        int searchLeftResult = Find(newLeft, middle - newLeft, predicate);
+        var newLeft = min + 1;
+        var searchLeftResult = Find(newLeft, middle - newLeft, predicate);
 
         if (searchLeftResult == -1)
         {

@@ -1,12 +1,12 @@
 ﻿namespace GitExtensions.Shims.WinForms;
 
 /// <summary>
-///  Stand-in for <c>System.Windows.Forms.DialogResult</c>; values match WinForms.
+///     Stand-in for <c>System.Windows.Forms.DialogResult</c>; values match WinForms.
 /// </summary>
 public enum DialogResult
 {
     None = 0,
-    OK = 1,
+    Ok = 1,
     Cancel = 2,
     Abort = 3,
     Retry = 4,
@@ -14,5 +14,5 @@ public enum DialogResult
     Yes = 6,
     No = 7,
     TryAgain = 10,
-    Continue = 11,
+    Continue = 11
 }

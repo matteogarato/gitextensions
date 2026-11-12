@@ -6,14 +6,15 @@ namespace GitUI.NBugReports;
 internal static class ExceptionExtensions
 {
     /// <summary>
-    /// Get the exception data.
+    ///     Get the exception data.
     /// </summary>
     /// <param name="exception">An Exception to describe.</param>
     internal static StringBuilder GetExceptionInfo(this Exception exception)
     {
         StringBuilder text = new();
 
-        if (exception is UserExternalOperationException userExternalOperationException && !string.IsNullOrWhiteSpace(userExternalOperationException.Context))
+        if (exception is UserExternalOperationException userExternalOperationException &&
+            !string.IsNullOrWhiteSpace(userExternalOperationException.Context))
         {
             // Context contains an error message as UserExternalOperationException is currently used. So append just "<context>"
             text.AppendLine(userExternalOperationException.Context);
@@ -22,7 +23,7 @@ internal static class ExceptionExtensions
         if (exception is ExternalOperationException externalOperationException)
         {
             // Exit code: <n>
-            if (externalOperationException.ExitCode is int exitCode)
+            if (externalOperationException.ExitCode is { } exitCode)
             {
                 AppendIfNotEmpty(ExecutionResult.FormatExitCode(exitCode), TranslatedStrings.ExitCode);
             }

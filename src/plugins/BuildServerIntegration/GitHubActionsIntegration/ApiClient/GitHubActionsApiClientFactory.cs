@@ -7,7 +7,8 @@ public interface IGitHubActionsApiClientFactory
 
 internal sealed class GitHubActionsApiClientFactory : IGitHubActionsApiClientFactory
 {
-    public IGitHubActionsApiClient CreateApiClient(string apiUrl, string owner, string repository, string? apiToken)
+    IGitHubActionsApiClient IGitHubActionsApiClientFactory.CreateApiClient(string apiUrl, string owner,
+        string repository, string? apiToken)
     {
         return new GitHubActionsApiClient(apiUrl, owner, repository, apiToken);
     }

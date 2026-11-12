@@ -7,24 +7,29 @@ using GitExtUtils;
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Builds and applies selected-line patches for supported working-tree changes.
+///     Builds and applies selected-line patches for supported working-tree changes.
 /// </summary>
 public static class PartialStageWorkflow
 {
     /// <summary>
-    ///  Determines whether the selected working-tree item supports partial staging.
+    ///     Determines whether the selected working-tree item supports partial staging.
     /// </summary>
     public static bool CanStage(GitItemStatus? item)
-        => IsPlainTrackedTextChange(item, StagedStatus.WorkTree);
+    {
+        return IsPlainTrackedTextChange(item, StagedStatus.WorkTree);
+    }
 
     /// <summary>
-    ///  Determines whether the selected staged item supports partial unstaging.
+    ///     Determines whether the selected staged item supports partial unstaging.
     /// </summary>
     public static bool CanUnstage(GitItemStatus? item)
-        => IsPlainTrackedTextChange(item, StagedStatus.Index);
+    {
+        return IsPlainTrackedTextChange(item, StagedStatus.Index);
+    }
 
     private static bool IsPlainTrackedTextChange(GitItemStatus? item, StagedStatus staged)
-        => item is { Staged: var itemStaged } && itemStaged == staged && item is
+    {
+        return item is { Staged: var itemStaged } && itemStaged == staged && item is
         {
             IsTracked: true,
             IsChanged: true,
@@ -35,13 +40,16 @@ public static class PartialStageWorkflow
             IsSubmodule: false,
             IsStatusOnly: false
         };
+    }
 
     /// <summary>
-    ///  Creates a patch for selected changed lines of an unstaged (to stage) or staged (to unstage) item, or <see langword="null"/> when the selection contains no changes.
+    ///     Creates a patch for selected changed lines of an unstaged (to stage) or staged (to unstage) item, or
+    ///     <see langword="null" /> when the selection contains no changes.
     /// </summary>
-    public static byte[]? CreatePatch(IGitModule module, GitItemStatus item, string diff, int selectionPosition, int selectionLength)
+    public static byte[]? CreatePatch(IGitModule module, GitItemStatus item, string diff, int selectionPosition,
+        int selectionLength)
     {
-        bool unstage = CanUnstage(item);
+        var unstage = CanUnstage(item);
         if (!unstage && !CanStage(item))
         {
             return null;
@@ -51,17 +59,19 @@ public static class PartialStageWorkflow
             diff,
             selectionPosition,
             selectionLength,
-            isIndex: unstage,
+            unstage,
             module.FilesEncoding,
-            reset: false,
-            isNewFile: false,
-            isRenamed: false);
+            false,
+            false,
+            false);
     }
 
     /// <summary>
-    ///  Creates a patch that discards selected changed lines of an item from the working tree, or from the index and working tree when the item is staged.
+    ///     Creates a patch that discards selected changed lines of an item from the working tree, or from the index and
+    ///     working tree when the item is staged.
     /// </summary>
-    public static byte[]? CreateDiscardPatch(IGitModule module, GitItemStatus item, string diff, int selectionPosition, int selectionLength)
+    public static byte[]? CreateDiscardPatch(IGitModule module, GitItemStatus item, string diff, int selectionPosition,
+        int selectionLength)
     {
         if (CanUnstage(item))
         {
@@ -69,10 +79,10 @@ public static class PartialStageWorkflow
                 diff,
                 selectionPosition,
                 selectionLength,
-                isIndex: true,
+                true,
                 module.FilesEncoding,
-                reset: true,
-                isNewFile: false,
+                true,
+                false,
                 item.IsRenamed);
         }
 
@@ -82,15 +92,11 @@ public static class PartialStageWorkflow
     }
 
     /// <summary>
-    ///  Applies a patch created by <see cref="CreateDiscardPatch"/> to the working tree (and the index for staged items).
+    ///     Applies a patch created by <see cref="CreateDiscardPatch" /> to the working tree (and the index for staged items).
     /// </summary>
     public static ExecutionResult ApplyDiscardPatch(IGitModule module, byte[] patch, bool staged)
     {
-        GitArgumentBuilder arguments = new("apply")
-        {
-            "--whitespace=nowarn",
-            { staged, "--reverse --index" }
-        };
+        GitArgumentBuilder arguments = new("apply") { "--whitespace=nowarn", { staged, "--reverse --index" } };
 
         return module.GitExecutable.Execute(
             arguments,
@@ -99,19 +105,16 @@ public static class PartialStageWorkflow
     }
 
     /// <summary>
-    ///  Applies a selected-line patch to the index and returns Git's result.
+    ///     Applies a selected-line patch to the index and returns Git's result.
     /// </summary>
     /// <param name="module">The repository.</param>
-    /// <param name="patch">The patch created by <see cref="CreatePatch"/>.</param>
+    /// <param name="patch">The patch created by <see cref="CreatePatch" />.</param>
     /// <param name="unstage">Whether the patch is applied in reverse to take the lines out of the index.</param>
     public static ExecutionResult ApplyPatch(IGitModule module, byte[] patch, bool unstage = false)
     {
         GitArgumentBuilder arguments = new("apply")
         {
-            "--cached",
-            "--index",
-            "--whitespace=nowarn",
-            { unstage, "--reverse" }
+            "--cached", "--index", "--whitespace=nowarn", { unstage, "--reverse" }
         };
 
         return module.GitExecutable.Execute(

@@ -1,18 +1,13 @@
-﻿using GitUI.UserControls.RevisionGrid;
+﻿using GitExtUtils.GitUI;
+using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.LeftPanel;
 
-internal abstract class BaseRevisionTree : Tree
+internal abstract class BaseRevisionTree(TreeNode treeNode, IGitUiCommandsSource uiCommands, ICheckRefs refsSource)
+    : Tree(treeNode, uiCommands)
 {
+    protected readonly ICheckRefs RefsSource = refsSource;
     private readonly ExclusiveTaskRunner _updateTaskRunner = ThreadHelper.CreateExclusiveTaskRunner();
-
-    protected readonly ICheckRefs _refsSource;
-
-    public BaseRevisionTree(TreeNode treeNode, IGitUICommandsSource uiCommands, ICheckRefs refsSource)
-        : base(treeNode, uiCommands)
-    {
-        _refsSource = refsSource;
-    }
 
     public override void Dispose()
     {
@@ -28,7 +23,7 @@ internal abstract class BaseRevisionTree : Tree
 
     internal virtual void UpdateVisibility()
     {
-        TreeView? treeView = TreeViewNode.TreeView;
+        var treeView = TreeViewNode.TreeView;
 
         if (treeView is null || !IsAttached)
         {
@@ -51,7 +46,7 @@ internal abstract class BaseRevisionTree : Tree
                 return;
             }
 
-            foreach (BaseRevisionNode node in Nodes.DepthEnumerator<BaseRevisionNode>())
+            foreach (var node in Nodes.DepthEnumerator<BaseRevisionNode>())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (node.ObjectId.IsZero)
@@ -59,7 +54,7 @@ internal abstract class BaseRevisionTree : Tree
                     continue;
                 }
 
-                bool isVisible = _refsSource.Contains(node.ObjectId);
+                var isVisible = RefsSource.Contains(node.ObjectId);
                 if (node.Visible != isVisible)
                 {
                     node.Visible = isVisible;

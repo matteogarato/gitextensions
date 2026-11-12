@@ -5,10 +5,11 @@ using NSubstitute;
 using Current = GitCommands.UserRepositoryHistory;
 
 namespace GitCommandsTests.UserRepositoryHistory.Legacy;
+
 public class RepositoryHistoryMigratorTests
 {
-    private IRepositoryStorage _repositoryStorage = null!;
-    private RepositoryHistoryMigrator _historyMigrator = null!;
+    private readonly RepositoryHistoryMigrator _historyMigrator = null!;
+    private readonly IRepositoryStorage _repositoryStorage = null!;
 
     public RepositoryHistoryMigratorTests()
     {
@@ -19,14 +20,15 @@ public class RepositoryHistoryMigratorTests
     [Fact]
     public void MigrateAsync_should_throw_if_currentHistory_null()
     {
-        Func<Task> f = async () => { await _historyMigrator.MigrateAsync(null!); };
+        var f = async () => { await _historyMigrator.MigrateAsync(null!); };
         f.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public async Task MigrateSettings_should_migrate_old_categorised_settings()
     {
-        string xml = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.CategorisedRepositories02.xml");
+        var xml = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.CategorisedRepositories02.xml");
         if (string.IsNullOrWhiteSpace(xml))
         {
             throw new FileFormatException("Unexpected data");
@@ -34,7 +36,8 @@ public class RepositoryHistoryMigratorTests
 
         _repositoryStorage.Load().Returns(x => new RepositoryCategoryXmlSerialiser().Deserialize(xml));
 
-        (IList<Current.Repository> currentHistory, bool migrated) = await _historyMigrator.MigrateAsync(new List<Current.Repository>());
+        (var currentHistory, var migrated) =
+            await _historyMigrator.MigrateAsync(new List<Current.Repository>());
 
         currentHistory.Should().HaveCount(8);
         currentHistory.Count(r => r.Category == "Git Extensions").Should().Be(1);

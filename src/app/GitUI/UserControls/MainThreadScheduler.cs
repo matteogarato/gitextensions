@@ -1,5 +1,6 @@
 ﻿using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitUI.UserControls;
@@ -8,32 +9,32 @@ internal sealed class MainThreadScheduler : LocalScheduler
 {
     internal static readonly MainThreadScheduler Instance = new();
 
-    public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action)
+    public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime,
+        Func<IScheduler, TState, IDisposable> action)
     {
         CancellationDisposable cancellationDisposable = new();
         SingleAssignmentDisposable disposable = new();
-        TimeSpan normalizedTime = Scheduler.Normalize(dueTime);
-        CancellationToken token = cancellationDisposable.Token;
-        ThreadHelper.JoinableTaskFactory.RunAsync(
-            async () =>
+        var normalizedTime = Scheduler.Normalize(dueTime);
+        var token = cancellationDisposable.Token;
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await WithCancellationAsCompletionAsync(Task.Delay(normalizedTime, token)).ConfigureAwaitRunInline();
+            if (token.IsCancellationRequested)
             {
-                await WithCancellationAsCompletionAsync(Task.Delay(normalizedTime, token)).ConfigureAwaitRunInline();
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
+                return;
+            }
 
-                if (ThreadHelper.JoinableTaskContext.IsOnMainThread)
-                {
-                    await Task.Yield();
-                }
-                else
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
-                }
+            if (ThreadHelper.JoinableTaskContext.IsOnMainThread)
+            {
+                await Task.Yield();
+            }
+            else
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
+            }
 
-                disposable.Disposable = action(this, state);
-            });
+            disposable.Disposable = action(this, state);
+        });
         return new CompositeDisposable(cancellationDisposable, disposable);
     }
 
@@ -47,12 +48,9 @@ internal sealed class MainThreadScheduler : LocalScheduler
                     {
                         return Task.CompletedTask;
                     }
-                    else
-                    {
 #pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
-                        return t;
+                    return t;
 #pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
-                    }
                 },
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,

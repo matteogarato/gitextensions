@@ -1,32 +1,26 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI.Properties;
-using GitUIPluginInterfaces;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
-public sealed partial class FileStatusDiffCalculator
+public sealed partial class FileStatusDiffCalculator(Func<IGitModule> getModule)
 {
     internal const string GitGrepIconName = nameof(GitGrepIconName);
-
-    private readonly Func<IGitModule> _getModule;
-
-    // Currently bound revisions etc. Cache so we can reload the view, if AppSettings.ShowDiffForAllParents is changed.
-    private FileStatusDiffCalculatorInfo _fileStatusDiffCalculatorInfo = new();
     private const string _grepSummaryPrefix = "grep: ";
 
-    public FileStatusDiffCalculator(Func<IGitModule> getModule)
-    {
-        _getModule = getModule;
-    }
+    // Currently bound revisions etc. Cache so we can reload the view, if AppSettings.ShowDiffForAllParents is changed.
+    private FileStatusDiffCalculatorInfo _fileStatusDiffCalculatorInfo;
 
     // Default helper functions, can be set
     public Func<ObjectId, string>? DescribeRevision { get; set; }
     public Func<GitRevision, GitRevision>? GetActualRevision { get; set; }
 
     public static bool IsGrepItemStatuses(FileStatusWithDescription itemStatuses)
-        => itemStatuses.Summary.StartsWith(_grepSummaryPrefix);
+    {
+        return itemStatuses.Summary.StartsWith(_grepSummaryPrefix);
+    }
 
     public void SetDiff(
         IReadOnlyList<GitRevision> revisions,
@@ -39,7 +33,8 @@ public sealed partial class FileStatusDiffCalculator
         _fileStatusDiffCalculatorInfo.HeadId = headId;
         _fileStatusDiffCalculatorInfo.AllowMultiDiff = allowMultiDiff;
         _fileStatusDiffCalculatorInfo.ShowSkipWorktreeFiles = showSkipWorktreeFiles;
-        _fileStatusDiffCalculatorInfo.UntrackedFilesMode = showUntrackedFiles ? UntrackedFilesMode.Default : UntrackedFilesMode.No;
+        _fileStatusDiffCalculatorInfo.UntrackedFilesMode =
+            showUntrackedFiles ? UntrackedFilesMode.Default : UntrackedFilesMode.No;
     }
 
     public void SetGrep(string grepArguments, bool fileTreeMode)
@@ -48,15 +43,16 @@ public sealed partial class FileStatusDiffCalculator
         _fileStatusDiffCalculatorInfo.FileTreeMode = fileTreeMode;
     }
 
-    public IReadOnlyList<FileStatusWithDescription> Calculate(IReadOnlyList<FileStatusWithDescription> prevList, bool refreshDiff, bool refreshGrep, CancellationToken cancellationToken)
+    public IReadOnlyList<FileStatusWithDescription> Calculate(IReadOnlyList<FileStatusWithDescription> prevList,
+        bool refreshDiff, bool refreshGrep, CancellationToken cancellationToken)
     {
         if (_fileStatusDiffCalculatorInfo.Revisions?.Count is not > 0
-            || _fileStatusDiffCalculatorInfo.Revisions[0] is not GitRevision selectedRev)
+            || _fileStatusDiffCalculatorInfo.Revisions[0] is not { } selectedRev)
         {
             return [];
         }
 
-        List<FileStatusWithDescription> fileStatusDescs = refreshDiff
+        var fileStatusDescs = refreshDiff
             ? CalculateDiffs(_fileStatusDiffCalculatorInfo.Revisions,
                 selectedRev,
                 _fileStatusDiffCalculatorInfo.HeadId,
@@ -66,7 +62,7 @@ public sealed partial class FileStatusDiffCalculator
                 cancellationToken)
             : [.. prevList.Where(p => !IsGrepItemStatuses(p))];
 
-        FileStatusWithDescription? grepItemStatuses = refreshGrep
+        var grepItemStatuses = refreshGrep
             ? GetGrepItemStatuses(selectedRev, cancellationToken)
             : prevList.FirstOrDefault(IsGrepItemStatuses);
 
@@ -87,42 +83,47 @@ public sealed partial class FileStatusDiffCalculator
         UntrackedFilesMode untrackedFilesMode,
         CancellationToken cancellationToken)
     {
-        IGitModule module = GetModule();
+        var module = GetModule();
         List<FileStatusWithDescription> fileStatusDescs = [];
         if (revisions.Count == 1)
         {
             // If the grid is filtered, parents may be rewritten
-            GitRevision actualRev = GetActualRevisionForRevision(selectedRev);
+            var actualRev = GetActualRevisionForRevision(selectedRev);
 
             if (actualRev.ParentIds?.Count is > 0)
             {
                 // Get the parents for the selected revision
                 // Exclude the optional third group with the diff to the orphan commit containing the untracked files of a stash
-                int multipleParents = AppSettings.ShowDiffForAllParents ? actualRev.ParentIds.Count : 1;
+                var multipleParents = AppSettings.ShowDiffForAllParents ? actualRev.ParentIds.Count : 1;
                 fileStatusDescs.AddRange(actualRev
                     .ParentIds
                     .Take(multipleParents)
-                    .Where(parentId => !(multipleParents == 3 && DescribeRevision?.Invoke(parentId).Contains(": untracked files on ") is true))
+                    .Where(parentId =>
+                        !(multipleParents == 3 &&
+                          DescribeRevision?.Invoke(parentId).Contains(": untracked files on ") is true))
                     .Select(parentId =>
-                                new FileStatusWithDescription(
-                                    firstRev: new GitRevision(parentId),
-                                    secondRev: selectedRev,
-                                    summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(parentId),
-                                    statuses: module.GetDiffFilesWithSubmodulesStatus(parentId, selectedRev.ObjectId, actualRev.ParentIds[0], !showSkipWorktreeFiles, untrackedFilesMode, cancellationToken))));
+                        new FileStatusWithDescription(
+                            new GitRevision(parentId),
+                            selectedRev,
+                            TranslatedStrings.DiffWithParent + GetDescriptionForRevision(parentId),
+                            module.GetDiffFilesWithSubmodulesStatus(parentId, selectedRev.ObjectId,
+                                actualRev.ParentIds[0], !showSkipWorktreeFiles, untrackedFilesMode,
+                                cancellationToken))));
             }
             else
             {
                 fileStatusDescs.Add(new FileStatusWithDescription(
-                    firstRev: null,
-                    secondRev: selectedRev,
-                    summary: GetDescriptionForRevision(selectedRev.ObjectId),
-                    statuses: selectedRev.TreeId.IsZero
+                    null,
+                    selectedRev,
+                    GetDescriptionForRevision(selectedRev.ObjectId),
+                    selectedRev.TreeId.IsZero
 
                         // likely index commit without HEAD
-                        ? module.GetDiffFilesWithSubmodulesStatus(firstId: default, selectedRev.ObjectId, parentToSecond: default, cancellationToken: cancellationToken)
+                        ? module.GetDiffFilesWithSubmodulesStatus(default, selectedRev.ObjectId, default,
+                            cancellationToken: cancellationToken)
 
                         // No parent for the initial commit, show files and explicitly set IsNew
-                        : module.GetTreeFiles(selectedRev.TreeId, full: true, cancellationToken)
+                        : module.GetTreeFiles(selectedRev.TreeId, true, cancellationToken)
                             .Select(i =>
                             {
                                 i.IsNew = true;
@@ -131,15 +132,16 @@ public sealed partial class FileStatusDiffCalculator
             }
 
             // Show combined (merge conflicts) when a single merge commit is selected
-            bool isMergeCommit = (selectedRev.ParentIds?.Count ?? 0) > 1;
+            var isMergeCommit = (selectedRev.ParentIds?.Count ?? 0) > 1;
             if (isMergeCommit && AppSettings.ShowDiffForAllParents)
             {
-                IReadOnlyList<GitItemStatus> conflicts = module.GetCombinedDiffFileList(selectedRev.ObjectId);
+                var conflicts = module.GetCombinedDiffFileList(selectedRev.ObjectId);
                 if (conflicts.Count != 0)
                 {
                     // Create an artificial commit
                     fileStatusDescs.Add(new FileStatusWithDescription(
-                        firstRev: new GitRevision(ObjectId.CombinedDiffId), secondRev: selectedRev, summary: TranslatedStrings.CombinedDiff, statuses: conflicts, iconName: nameof(Images.DiffC)));
+                        new GitRevision(ObjectId.CombinedDiffId), selectedRev, TranslatedStrings.CombinedDiff,
+                        conflicts, iconName: nameof(Images.DiffC)));
                 }
             }
 
@@ -152,15 +154,16 @@ public sealed partial class FileStatusDiffCalculator
 
         // With 4 selected, assume that ranges are selected: baseA..headA baseB..headB
         // the first item is therefore the second selected
-        GitRevision firstRev = AppSettings.ShowDiffForAllParents && revisions.Count == maxMultiCompare
+        var firstRev = AppSettings.ShowDiffForAllParents && revisions.Count == maxMultiCompare
             ? revisions[2]
             : revisions[^1];
 
         fileStatusDescs.Add(new FileStatusWithDescription(
-            firstRev: firstRev,
-            secondRev: selectedRev,
-            summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(firstRev.ObjectId),
-            statuses: module.GetDiffFilesWithSubmodulesStatus(firstRev.ObjectId, selectedRev.ObjectId, selectedRev.FirstParentId, cancellationToken: cancellationToken)));
+            firstRev,
+            selectedRev,
+            TranslatedStrings.DiffWithParent + GetDescriptionForRevision(firstRev.ObjectId),
+            module.GetDiffFilesWithSubmodulesStatus(firstRev.ObjectId, selectedRev.ObjectId, selectedRev.FirstParentId,
+                cancellationToken: cancellationToken)));
 
         if (!AppSettings.ShowDiffForAllParents || revisions.Count > maxMultiCompare || !allowMultiDiff)
         {
@@ -168,8 +171,8 @@ public sealed partial class FileStatusDiffCalculator
         }
 
         // Get merge base commit, use HEAD for artificial
-        ObjectId firstRevHead = GetRevisionOrHead(firstRev, headId);
-        ObjectId selectedRevHead = GetRevisionOrHead(selectedRev, headId);
+        var firstRevHead = GetRevisionOrHead(firstRev, headId);
+        var selectedRevHead = GetRevisionOrHead(selectedRev, headId);
         ObjectId baseRevId = default;
         if (revisions.Count != 3)
         {
@@ -179,7 +182,7 @@ public sealed partial class FileStatusDiffCalculator
         {
             // Check whether the middle commit is base to the first/second
             // Allow commits earlier to the actual base commit
-            ObjectId middleId = revisions[1].ObjectId;
+            var middleId = revisions[1].ObjectId;
             if (!middleId.IsArtificial
                 && GetMergeBase(firstRevHead, middleId) == middleId
                 && GetMergeBase(selectedRevHead, middleId) == middleId)
@@ -233,27 +236,32 @@ public sealed partial class FileStatusDiffCalculator
                 revisions
                     .Where(rev => rev != firstRev && rev != selectedRev)
                     .Select(rev => new FileStatusWithDescription(
-                        firstRev: rev,
-                        secondRev: selectedRev,
-                        summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(rev.ObjectId),
-                        statuses: module.GetDiffFilesWithSubmodulesStatus(rev.ObjectId, selectedRev.ObjectId, selectedRev.FirstParentId, cancellationToken: cancellationToken))));
+                        rev,
+                        selectedRev,
+                        TranslatedStrings.DiffWithParent + GetDescriptionForRevision(rev.ObjectId),
+                        module.GetDiffFilesWithSubmodulesStatus(rev.ObjectId, selectedRev.ObjectId,
+                            selectedRev.FirstParentId, cancellationToken: cancellationToken))));
 
             return fileStatusDescs;
         }
 
-        IReadOnlyList<GitItemStatus> allAToB = fileStatusDescs[0].Statuses;
-        IReadOnlyList<GitItemStatus> allBaseToB = module.GetDiffFilesWithSubmodulesStatus(baseRevId, selectedRev.ObjectId, selectedRev.FirstParentId, cancellationToken: cancellationToken);
-        IReadOnlyList<GitItemStatus> allBaseToA = module.GetDiffFilesWithSubmodulesStatus(baseRevId, firstRev.ObjectId, firstRev.FirstParentId, cancellationToken: cancellationToken);
+        var allAToB = fileStatusDescs[0].Statuses;
+        var allBaseToB = module.GetDiffFilesWithSubmodulesStatus(baseRevId,
+            selectedRev.ObjectId, selectedRev.FirstParentId, cancellationToken: cancellationToken);
+        var allBaseToA = module.GetDiffFilesWithSubmodulesStatus(baseRevId, firstRev.ObjectId,
+            firstRev.FirstParentId, cancellationToken: cancellationToken);
 
         GitItemStatusNameEqualityComparer comparer = new();
-        GitItemStatus[] allAToBExceptExactRenameCopy = [.. allAToB.Where(i => !((i.IsRenamed || i.IsCopied) && i.RenameCopyPercentage == "100"))];
-        GitItemStatus[] sameBaseToAandB = [.. allBaseToB.Intersect(allBaseToA, comparer).Except(allAToBExceptExactRenameCopy, comparer)];
+        GitItemStatus[] allAToBExceptExactRenameCopy =
+            [.. allAToB.Where(i => !((i.IsRenamed || i.IsCopied) && i.RenameCopyPercentage == "100"))];
+        GitItemStatus[] sameBaseToAandB =
+            [.. allBaseToB.Intersect(allBaseToA, comparer).Except(allAToBExceptExactRenameCopy, comparer)];
         GitItemStatus[] onlyA = [.. allBaseToA.Except(allBaseToB, comparer)];
         GitItemStatus[] onlyB = [.. allBaseToB.Except(allBaseToA, comparer)];
 
-        foreach (IReadOnlyList<GitItemStatus> l in new[] { allAToB, allBaseToB, allBaseToA })
+        foreach (var l in new[] { allAToB, allBaseToB, allBaseToA })
         {
-            foreach (GitItemStatus f in l)
+            foreach (var f in l)
             {
                 f.DiffStatus = GetDiffStatus(f, l == allAToB);
             }
@@ -272,16 +280,16 @@ public sealed partial class FileStatusDiffCalculator
 
         GitRevision revBase = new(baseRevId);
         fileStatusDescs.Add(new FileStatusWithDescription(
-            firstRev: revBase,
-            secondRev: selectedRev,
-            summary: $"{TranslatedStrings.DiffBaseWith} B {GetDescriptionForRevision(selectedRev.ObjectId)}",
-            statuses: allBaseToB,
+            revBase,
+            selectedRev,
+            $"{TranslatedStrings.DiffBaseWith} B {GetDescriptionForRevision(selectedRev.ObjectId)}",
+            allBaseToB,
             iconName: nameof(Images.DiffB)));
         fileStatusDescs.Add(new FileStatusWithDescription(
-            firstRev: revBase,
-            secondRev: firstRev,
-            summary: $"{TranslatedStrings.DiffBaseWith} A {GetDescriptionForRevision(firstRev.ObjectId)}",
-            statuses: allBaseToA,
+            revBase,
+            firstRev,
+            $"{TranslatedStrings.DiffBaseWith} A {GetDescriptionForRevision(firstRev.ObjectId)}",
+            allBaseToA,
             iconName: nameof(Images.DiffA)));
 
         if (!module.GitVersion.SupportRangeDiffTool)
@@ -290,18 +298,20 @@ public sealed partial class FileStatusDiffCalculator
         }
 
         // Add rangeDiff as a FileStatus item (even with artificial commits)
-        GitRevision first = firstRev.ObjectId == firstRevHead ? firstRev : new GitRevision(firstRevHead);
-        GitRevision selected = selectedRev.ObjectId == selectedRevHead ? selectedRev : new GitRevision(selectedRevHead);
-        (int? baseToFirstCount, int? baseToSecondCount) = module.GetCommitRangeDiffCount(first.ObjectId, selected.ObjectId);
+        var first = firstRev.ObjectId == firstRevHead ? firstRev : new GitRevision(firstRevHead);
+        var selected = selectedRev.ObjectId == selectedRevHead ? selectedRev : new GitRevision(selectedRevHead);
+        (var baseToFirstCount, var baseToSecondCount) =
+            module.GetCommitRangeDiffCount(first.ObjectId, selected.ObjectId);
 
         // first and selected has a common merge base and count must be available
         // Only a printout, so no Validates
-        string desc = $"{TranslatedStrings.DiffRange} {baseToFirstCount ?? -1}↓ {baseToSecondCount ?? -1}↑ BASE {GetDescriptionForRevision(baseRevId)}";
-        fileStatusDescs.Insert(index: 1, new FileStatusWithDescription(
-            firstRev: firstRev,
-            secondRev: selectedRev,
-            summary: desc,
-            statuses: [new GitItemStatus(name: desc) { IsRangeDiff = true }],
+        var desc =
+            $"{TranslatedStrings.DiffRange} {baseToFirstCount ?? -1}↓ {baseToSecondCount ?? -1}↑ BASE {GetDescriptionForRevision(baseRevId)}";
+        fileStatusDescs.Insert(1, new FileStatusWithDescription(
+            firstRev,
+            selectedRev,
+            desc,
+            [new GitItemStatus(desc) { IsRangeDiff = true }],
             iconName: nameof(Images.DiffR)));
 
         return fileStatusDescs;
@@ -317,38 +327,47 @@ public sealed partial class FileStatusDiffCalculator
         }
 
         static ObjectId GetRevisionOrHead(GitRevision rev, ObjectId headId)
-            => rev.IsArtificial ? headId : rev.ObjectId;
+        {
+            return rev.IsArtificial ? headId : rev.ObjectId;
+        }
 
         GitRevision GetActualRevisionForRevision(GitRevision revision)
-            => GetActualRevision is not null ? GetActualRevision(revision) : revision;
+        {
+            return GetActualRevision is not null ? GetActualRevision(revision) : revision;
+        }
     }
 
     private FileStatusWithDescription? GetGrepItemStatuses(GitRevision selectedRev, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(_fileStatusDiffCalculatorInfo.GrepArguments) && !_fileStatusDiffCalculatorInfo.FileTreeMode)
+        if (string.IsNullOrEmpty(_fileStatusDiffCalculatorInfo.GrepArguments) &&
+            !_fileStatusDiffCalculatorInfo.FileTreeMode)
         {
             return null;
         }
 
-        IGitModule module = GetModule();
-        IReadOnlyList<GitItemStatus> statuses = string.IsNullOrEmpty(_fileStatusDiffCalculatorInfo.GrepArguments)
-            ? module.GetTreeFiles(selectedRev.ObjectId, full: true, cancellationToken)
-            : module.GetGrepFilesStatus(selectedRev.ObjectId, _fileStatusDiffCalculatorInfo.GrepArguments, applyAppSettings: true, cancellationToken);
+        var module = GetModule();
+        var statuses = string.IsNullOrEmpty(_fileStatusDiffCalculatorInfo.GrepArguments)
+            ? module.GetTreeFiles(selectedRev.ObjectId, true, cancellationToken)
+            : module.GetGrepFilesStatus(selectedRev.ObjectId, _fileStatusDiffCalculatorInfo.GrepArguments, true,
+                cancellationToken);
 
         return new FileStatusWithDescription(
-                           firstRev: null,
-                           secondRev: selectedRev,
-                           summary: $"{_grepSummaryPrefix}{_fileStatusDiffCalculatorInfo.GrepArguments} {GetDescriptionForRevision(selectedRev.ObjectId)}",
-                           statuses,
-                           iconName: GitGrepIconName);
+            null,
+            selectedRev,
+            $"{_grepSummaryPrefix}{_fileStatusDiffCalculatorInfo.GrepArguments} {GetDescriptionForRevision(selectedRev.ObjectId)}",
+            statuses,
+            iconName: GitGrepIconName);
     }
 
     private string GetDescriptionForRevision(ObjectId objectId)
-        => DescribeRevision is not null ? DescribeRevision(objectId) : objectId.ToShortString();
+    {
+        return DescribeRevision is not null ? DescribeRevision(objectId) : objectId.ToShortString();
+    }
 
     private IGitModule GetModule()
     {
-        IGitModule module = _getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
+        var module =
+            getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
 
         if (!module.IsValidGitWorkingDir())
         {

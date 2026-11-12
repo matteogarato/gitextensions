@@ -1,6 +1,7 @@
 using GitExtensions.Extensibility;
 
-namespace GitExtUtilsTests;
+namespace GitExtensions.ExtensibilityTests;
+
 public sealed class LazyStringSplitTests
 {
     [Theory]
@@ -27,12 +28,12 @@ public sealed class LazyStringSplitTests
     public void None(string input, char delimiter, string[] expected)
     {
         // This boxes
-        IEnumerable<string> actual = new LazyStringSplit(input, delimiter, StringSplitOptions.None);
+        IEnumerable<string> actual = new LazyStringSplit(input, delimiter);
 
         actual.Should().Equal(expected);
 
         // Non boxing foreach
-        List<string> list = [.. new LazyStringSplit(input, delimiter, StringSplitOptions.None)];
+        List<string> list = [.. new LazyStringSplit(input, delimiter)];
 
         list.Should().Equal(expected);
 
@@ -124,30 +125,40 @@ public sealed class LazyStringSplitTests
     [InlineData(";;a;", ';', StringSplitOptions.RemoveEmptyEntries, new[] { "a" })]
     [InlineData("a", ';', StringSplitOptions.RemoveEmptyEntries, new[] { "a" })]
     [InlineData("aa", ';', StringSplitOptions.RemoveEmptyEntries, new[] { "aa" })]
-    [InlineData("a;b;c", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a", "b", "c" })]
-    [InlineData("a_b_c\r", '_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a", "b", "c" })]
-    [InlineData("\naa;bb;cc", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "aa", "bb", "cc" })]
-    [InlineData("aaa;\rbbb ;ccc", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "aaa", "bbb", "ccc" })]
+    [InlineData("a;b;c", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a", "b", "c" })]
+    [InlineData("a_b_c\r", '_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a", "b", "c" })]
+    [InlineData("\naa;bb;cc", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "aa", "bb", "cc" })]
+    [InlineData("aaa;\rbbb ;ccc", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "aaa", "bbb", "ccc" })]
     [InlineData(";\ta", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
     [InlineData("a;\n", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
-    [InlineData(";a; b;c", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a", "b", "c" })]
-    [InlineData("a;b;\nc;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a", "b", "c" })]
-    [InlineData(";a;b;c;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a", "b", "c" })]
-    [InlineData(";;a;;b;;c;;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a", "b", "c" })]
+    [InlineData(";a; b;c", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a", "b", "c" })]
+    [InlineData("a;b;\nc;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a", "b", "c" })]
+    [InlineData(";a;b;c;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a", "b", "c" })]
+    [InlineData(";;a;;b;;c;;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a", "b", "c" })]
     [InlineData("\n", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new string[0])]
     [InlineData("\n;\r", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new string[0])]
     [InlineData("\r;\t;\n", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new string[0])]
     [InlineData("\t;\n; ;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new string[0])]
     [InlineData(";;;a", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
     [InlineData("a;;;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
-    [InlineData("\n;\na\r\n; ;\t", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
+    [InlineData("\n;\na\r\n; ;\t", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries,
+        new[] { "a" })]
     [InlineData(";\r;a\n;", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
     [InlineData(" a\t", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "a" })]
     [InlineData("\taa ", ';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, new[] { "aa" })]
-    public void LazySplitRanges_should_match_string_split(string input, char delimiter, StringSplitOptions options, string[] expected)
+    public void LazySplitRanges_should_match_string_split(string input, char delimiter, StringSplitOptions options,
+        string[] expected)
     {
         List<string> actual = [];
-        foreach ((int beginning, int length) in input.LazySplitRanges(delimiter, options))
+        foreach ((var beginning, var length) in input.LazySplitRanges(delimiter, options))
         {
             actual.Add(input.Substring(beginning, length));
         }

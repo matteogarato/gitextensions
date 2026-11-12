@@ -1,38 +1,33 @@
 ﻿using System.Diagnostics;
 using GitExtensions.Extensibility.Git;
-using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Columns;
 
-namespace GitUI;
+namespace GitUI.UserControls.RevisionGrid;
 
-internal sealed class RevisionGridToolTipProvider
+internal sealed class RevisionGridToolTipProvider(RevisionDataGridView gridView)
 {
     /// <summary>
-    ///  Lane info and commit bodies are long, so they must stay readable much longer than the default 5 seconds.
+    ///     Lane info and commit bodies are long, so they must stay readable much longer than the default 5 seconds.
     /// </summary>
     private const int _autoPopDelayMilliseconds = short.MaxValue;
 
-    private readonly ToolTip _toolTip = new() { AutoPopDelay = _autoPopDelayMilliseconds };
+    private readonly RevisionDataGridView _gridView = gridView;
     private readonly Dictionary<Point, bool> _isTruncatedByCellPos = [];
-    private readonly RevisionDataGridView _gridView;
-    private int _previousRowIndex = -1;
-    private int _previousColumnIndex = -1;
-    private IGitRef? _previousHighlight = null;
 
-    public RevisionGridToolTipProvider(RevisionDataGridView gridView)
-    {
-        _gridView = gridView;
-    }
+    private readonly ToolTip _toolTip = new() { AutoPopDelay = _autoPopDelayMilliseconds };
+    private int _previousColumnIndex = -1;
+    private IGitRef? _previousHighlight;
+    private int _previousRowIndex = -1;
 
     public bool ShowRevisionGridTooltips { get; set; }
 
     /// <summary>
-    /// Hides the tooltip.
+    ///     Hides the tooltip.
     /// </summary>
     /// <returns>Returns <cref>true</cref> if the tooltip was active.</returns>
     public bool Hide()
     {
-        bool wasActive = _toolTip.Active;
+        var wasActive = _toolTip.Active;
         _toolTip.Active = false;
         return wasActive;
     }
@@ -74,14 +69,14 @@ internal sealed class RevisionGridToolTipProvider
 
         void UpdateToolTip(IGitRef? highlightRef = null)
         {
-            GitUIPluginInterfaces.GitRevision? revision = _gridView.GetRevision(e.RowIndex);
+            var revision = _gridView.GetRevision(e.RowIndex);
 
             if (revision is null)
             {
                 return;
             }
 
-            string newText = GetToolTipText(revision, highlightRef);
+            var newText = GetToolTipText(revision, highlightRef);
             if (_toolTip.GetToolTip(_gridView) != newText)
             {
                 // Do not deactivate the tooltip to force it to be shown again: deactivating resets its
@@ -97,18 +92,18 @@ internal sealed class RevisionGridToolTipProvider
             }
         }
 
-        string GetToolTipText(GitUIPluginInterfaces.GitRevision revision, IGitRef? highlightRef)
+        string GetToolTipText(GitRevision revision, IGitRef? highlightRef)
         {
             try
             {
                 if (_gridView.Columns[e.ColumnIndex].Tag is ColumnProvider provider
-                    && provider.TryGetToolTip(e, revision, highlightRef, out string? toolTip)
+                    && provider.TryGetToolTip(e, revision, highlightRef, out var toolTip)
                     && !string.IsNullOrWhiteSpace(toolTip))
                 {
                     return toolTip;
                 }
 
-                if (_isTruncatedByCellPos.TryGetValue(new Point(e.ColumnIndex, e.RowIndex), out bool showToolTip)
+                if (_isTruncatedByCellPos.TryGetValue(new Point(e.ColumnIndex, e.RowIndex), out var showToolTip)
                     && showToolTip)
                 {
                     return _gridView.Rows[e.RowIndex].Cells[e.ColumnIndex].FormattedValue?.ToString() ?? "";
@@ -141,12 +136,26 @@ internal sealed class RevisionGridToolTipProvider
         _isTruncatedByCellPos[new Point(columnIndex, rowIndex)] = truncated;
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor(RevisionGridToolTipProvider provider)
     {
-        public ToolTip ToolTip => provider._toolTip;
-        public int PreviousRowIndex => provider._previousRowIndex;
-        public string? GetToolTipText() => provider._toolTip.GetToolTip(provider._gridView);
+        public ToolTip ToolTip
+        {
+            get => provider._toolTip;
+        }
+
+        public int PreviousRowIndex
+        {
+            get => provider._previousRowIndex;
+        }
+
+        public string? GetToolTipText()
+        {
+            return provider._toolTip.GetToolTip(provider._gridView);
+        }
     }
 }

@@ -6,15 +6,12 @@ namespace GitUI.CommandsDialogs.AboutBoxDialog;
 
 public sealed partial class FormContributors : GitExtensionsForm
 {
-    private readonly TranslationString _developers = new("Developers");
-    private readonly TranslationString _translators = new("Translators");
-    private readonly TranslationString _designers = new("Designers");
-    private readonly TranslationString _team = new("Team");
-    private readonly TranslationString _contributors = new("Contributors");
     private readonly TranslationString _caption = new("The application would not be possible without...");
-
-    [GeneratedRegex(@"\r\n?|\n", RegexOptions.ExplicitCapture)]
-    private static partial Regex NewlineRegex { get; }
+    private readonly TranslationString _contributors = new("Contributors");
+    private readonly TranslationString _designers = new("Designers");
+    private readonly TranslationString _developers = new("Developers");
+    private readonly TranslationString _team = new("Team");
+    private readonly TranslationString _translators = new("Translators");
 
     public FormContributors()
     {
@@ -26,12 +23,12 @@ public sealed partial class FormContributors : GitExtensionsForm
             SuspendLayout();
             Controls.Clear();
 
-            TabControl tabControl = GetNewTabControl();
+            var tabControl = GetNewTabControl();
 
             string[] tabCaptions = [_developers.Text, _translators.Text, _designers.Text];
-            TextBox[] textBoxes = new TextBox[tabCaptions.Length];
-            TabPage[] tabPages = new TabPage[tabCaptions.Length];
-            for (int i = 0; i < tabCaptions.Length; i++)
+            var textBoxes = new TextBox[tabCaptions.Length];
+            var tabPages = new TabPage[tabCaptions.Length];
+            for (var i = 0; i < tabCaptions.Length; i++)
             {
                 textBoxes[i] = GetNewTextBox();
                 tabPages[i] = GetNewTabPage(textBoxes[i], tabCaptions[i]);
@@ -90,12 +87,11 @@ public sealed partial class FormContributors : GitExtensionsForm
 
             TabControl GetNewTabControl()
             {
-                return new FullBleedTabControl
-                {
-                    Dock = DockStyle.Fill,
-                    SelectedIndex = 0,
-                };
+                return new FullBleedTabControl { Dock = DockStyle.Fill, SelectedIndex = 0 };
             }
         }
     }
+
+    [GeneratedRegex(@"\r\n?|\n", RegexOptions.ExplicitCapture)]
+    private static partial Regex NewlineRegex { get; }
 }

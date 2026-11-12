@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-using GitCommands;
+using GitCommands.Settings;
 
 namespace GitUI.Avatars;
 
@@ -28,7 +28,7 @@ public sealed class GravatarProvider : IAvatarProvider, IDisposable
         _fallback = fallback;
         _forceFallback = forceFallback;
 
-        string fallbackString = SerializeFallbackType(_fallback) ?? "404";
+        var fallbackString = SerializeFallbackType(_fallback) ?? "404";
         _queryString = $"r={_rating}&d={fallbackString}";
 
         if (_forceFallback)
@@ -39,25 +39,22 @@ public sealed class GravatarProvider : IAvatarProvider, IDisposable
         _queryString += "&s=";
     }
 
-    public bool PerformsIo => true;
-
-    public static bool IsFallbackSupportedByGravatar(AvatarFallbackType fallback)
+    bool IAvatarProvider.PerformsIo
     {
-        return SerializeFallbackType(fallback) is not null;
+        get => true;
     }
 
-    /// <inheritdoc/>
-    public Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    /// <inheritdoc />
+    Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
     {
-        string hash = ComputeHash(email);
+        var hash = ComputeHash(email);
 
         UriBuilder uri = new("https", "www.gravatar.com")
         {
-            Path = $"/avatar/{hash}",
-            Query = _queryString + imageSize
+            Path = $"/avatar/{hash}", Query = _queryString + imageSize
         };
 
-        Uri avatarUri = uri.Uri;
+        var avatarUri = uri.Uri;
 
         // TODO NULLABLE UriBuilder.Uri doesn't appear to be nullable
         if (avatarUri is null)
@@ -68,11 +65,21 @@ public sealed class GravatarProvider : IAvatarProvider, IDisposable
         return _downloader.DownloadImageAsync(avatarUri);
     }
 
+    void IDisposable.Dispose()
+    {
+        _md5.Dispose();
+    }
+
+    public static bool IsFallbackSupportedByGravatar(AvatarFallbackType fallback)
+    {
+        return SerializeFallbackType(fallback) is not null;
+    }
+
     private string ComputeHash(string email)
     {
         // Gravatar doesn't specify an encoding
-        byte[] emailBytes = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
-        byte[] hashBytes = _md5.ComputeHash(emailBytes);
+        var emailBytes = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+        var hashBytes = _md5.ComputeHash(emailBytes);
 
         return HexString.FromByteArray(hashBytes);
     }
@@ -86,12 +93,7 @@ public sealed class GravatarProvider : IAvatarProvider, IDisposable
             AvatarFallbackType.Wavatar => "wavatar",
             AvatarFallbackType.Retro => "retro",
             AvatarFallbackType.Robohash => "robohash",
-            _ => null,
+            _ => null
         };
-    }
-
-    public void Dispose()
-    {
-        _md5.Dispose();
     }
 }

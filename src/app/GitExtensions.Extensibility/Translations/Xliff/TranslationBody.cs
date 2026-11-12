@@ -4,13 +4,8 @@ namespace GitExtensions.Extensibility.Translations.Xliff;
 
 public class TranslationBody
 {
-    public TranslationBody()
-    {
-        TranslationItems = [];
-    }
-
     [XmlElement(ElementName = "trans-unit")]
-    public List<TranslationItem> TranslationItems { get; set; }
+    public List<TranslationItem> TranslationItems { get; set; } = [];
 
     public void AddTranslationItem(TranslationItem translationItem)
     {
@@ -29,7 +24,7 @@ public class TranslationBody
             throw new InvalidOperationException($"Cannot add {nameof(TranslationItem)} without name");
         }
 
-        TranslationItem? ti = GetTranslationItem(translationItem.Name, translationItem.Property);
+        var ti = GetTranslationItem(translationItem.Name, translationItem.Property);
         if (ti is null)
         {
             if (translationItem.Property == "ToolTipText")
@@ -53,6 +48,7 @@ public class TranslationBody
 
     public TranslationItem? GetTranslationItem(string name, string? property)
     {
-        return TranslationItems.Find(t => t.Name is not null && t.Name.TrimStart('_') == name.TrimStart('_') && t.Property == property);
+        return TranslationItems.Find(t =>
+            t.Name is not null && t.Name.TrimStart('_') == name.TrimStart('_') && t.Property == property);
     }
 }

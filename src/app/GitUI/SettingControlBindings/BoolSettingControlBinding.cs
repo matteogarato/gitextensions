@@ -3,13 +3,9 @@ using GitExtensions.Extensibility.Settings;
 
 namespace GitUI.SettingControlBindings;
 
-internal sealed class BoolSettingControlBinding : SettingControlBinding<BoolSetting, CheckBox>
+internal sealed class BoolSettingControlBinding(BoolSetting setting, CheckBox? customControl)
+    : SettingControlBinding<BoolSetting, CheckBox>(setting, customControl)
 {
-    public BoolSettingControlBinding(BoolSetting setting, CheckBox? customControl)
-        : base(setting, customControl)
-    {
-    }
-
     public override CheckBox CreateControl()
     {
         Setting.CustomControl = new CheckBox { ThreeState = true };
@@ -18,7 +14,7 @@ internal sealed class BoolSettingControlBinding : SettingControlBinding<BoolSett
 
     public override void LoadSetting(SettingsSource settings, CheckBox control)
     {
-        bool? settingVal = settings.SettingLevel == SettingLevel.Effective
+        var settingVal = settings.SettingLevel == SettingLevel.Effective
             ? Setting.ValueOrDefault(settings)
             : Setting[settings];
 
@@ -27,7 +23,7 @@ internal sealed class BoolSettingControlBinding : SettingControlBinding<BoolSett
 
     public override void SaveSetting(SettingsSource settings, CheckBox control)
     {
-        bool? controlValue = control.GetNullableChecked();
+        var controlValue = control.GetNullableChecked();
         if (settings.SettingLevel == SettingLevel.Effective)
         {
             if (Setting.ValueOrDefault(settings) == controlValue)

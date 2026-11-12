@@ -1,7 +1,6 @@
-using AwesomeAssertions;
-using GitUI;
+using GitUI.UserControls.RevisionGrid;
 
-namespace GitUI.Avalonia.Tests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class RevisionFilterOptionsTests
 {

@@ -1,14 +1,14 @@
 ﻿namespace GitExtensions.Extensibility;
 
 /// <summary>
-/// Represents errors that occur during execution of an external operation,
-/// e.g. running a git operation or launching an external process.
+///     Represents errors that occur during execution of an external operation,
+///     e.g. running a git operation or launching an external process.
 /// </summary>
 public class ExternalOperationException : Exception
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ExternalOperationException"/> class with a specified parameters
-    /// and a reference to the inner exception that is the cause of this exception.
+    ///     Initializes a new instance of the <see cref="ExternalOperationException" /> class with a specified parameters
+    ///     and a reference to the inner exception that is the cause of this exception.
     /// </summary>
     /// <param name="command">The command that led to the exception.</param>
     /// <param name="arguments">The command arguments.</param>
@@ -30,22 +30,22 @@ public class ExternalOperationException : Exception
     }
 
     /// <summary>
-    /// The command that led to the exception.
+    ///     The command that led to the exception.
     /// </summary>
     public string? Command { get; }
 
     /// <summary>
-    /// The command arguments.
+    ///     The command arguments.
     /// </summary>
     public string? Arguments { get; }
 
     /// <summary>
-    /// The working directory.
+    ///     The working directory.
     /// </summary>
     public string? WorkingDirectory { get; }
 
     /// <summary>
-    /// The exit code of an executed process.
+    ///     The exit code of an executed process.
     /// </summary>
     public int? ExitCode { get; }
 }

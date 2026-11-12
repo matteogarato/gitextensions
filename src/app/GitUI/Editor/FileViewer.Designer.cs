@@ -46,7 +46,7 @@ partial class FileViewer
         automaticContinuousScrollToolStripMenuItem = new ToolStripMenuItem();
         showNonprintableCharactersToolStripMenuItem = new ToolStripMenuItem();
         goToLineToolStripMenuItem = new ToolStripMenuItem();
-        fileviewerToolbar = new GitUI.ToolStripEx();
+        fileviewerToolbar = new ToolStripEx();
         nextChangeButton = new ToolStripButton();
         previousChangeButton = new ToolStripButton();
         toolStripSeparator3 = new ToolStripSeparator();

@@ -1,28 +1,31 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace GitUI.LeftPanel;
 
-/// <summary>A common base class for both <see cref="Node"/> and <see cref="Tree"/>.</summary>
+/// <summary>A common base class for both <see cref="Node" /> and <see cref="Tree" />.</summary>
 internal abstract class NodeBase
 {
     /// <summary>The child nodes.</summary>
     protected internal Nodes Nodes { get; protected set; } = null!;
 
-    internal bool HasChildren => Nodes.Count > 0;
+    internal bool HasChildren
+    {
+        get => Nodes.Count > 0;
+    }
 
     /// <summary>The corresponding tree node.</summary>
     protected internal virtual TreeNode TreeViewNode { get; set; } = null!;
 
     /// <summary>
-    /// Marks this node to be included in multi-selection. See <see cref="Select(bool, bool)"/>.
-    /// This is remembered here instead of relying on the status of <see cref="TreeViewNode"/>
-    /// because <see cref="Nodes.FillTreeViewNode(TreeNode)"/> recycles <see cref="TreeNode"/>s
-    /// and may change the association between <see cref="Node"/> and <see cref="TreeNode"/>.
+    ///     Marks this node to be included in multi-selection. See <see cref="Select(bool, bool)" />.
+    ///     This is remembered here instead of relying on the status of <see cref="TreeViewNode" />
+    ///     because <see cref="Nodes.FillTreeViewNode(TreeNode)" /> recycles <see cref="TreeNode" />s
+    ///     and may change the association between <see cref="Node" /> and <see cref="TreeNode" />.
     /// </summary>
     protected internal bool IsSelected { get; set; }
 
     /// <summary>
-    /// Gets whether the commit that the node represents is currently visible in the revision grid.
+    ///     Gets whether the commit that the node represents is currently visible in the revision grid.
     /// </summary>
     public bool Visible { get; set; }
 
@@ -34,7 +37,7 @@ internal abstract class NodeBase
         // recursively process descendants if required
         if (includingDescendants && HasChildren)
         {
-            foreach (Node child in Nodes)
+            foreach (var child in Nodes)
             {
                 child.Select(select, includingDescendants);
             }
@@ -42,6 +45,7 @@ internal abstract class NodeBase
     }
 
     #region style / appearance
+
     public virtual void ApplyStyle()
     {
         SetFont(GetFontStyle());
@@ -49,7 +53,9 @@ internal abstract class NodeBase
     }
 
     protected virtual FontStyle GetFontStyle()
-        => IsSelected ? FontStyle.Underline : FontStyle.Regular;
+    {
+        return IsSelected ? FontStyle.Underline : FontStyle.Regular;
+    }
 
     private void SetFont(FontStyle style)
     {
@@ -79,5 +85,6 @@ internal abstract class NodeBase
         TreeViewNode.NodeFont!.Dispose();
         TreeViewNode.NodeFont = null;
     }
+
     #endregion
 }

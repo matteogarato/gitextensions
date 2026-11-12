@@ -17,9 +17,9 @@ internal sealed class SubmoduleFolderNode(Tree tree, string name) : Node(tree)
     }
 
     /// <summary>
-    ///  Compacts chains of single-child folder nodes by merging their names with "/" separators.
-    ///  For example, a chain "extension" → "src" → "test" → "assets" becomes
-    ///  a single folder node named "extension/src/test/assets".
+    ///     Compacts chains of single-child folder nodes by merging their names with "/" separators.
+    ///     For example, a chain "extension" → "src" → "test" → "assets" becomes
+    ///     a single folder node named "extension/src/test/assets".
     /// </summary>
     public void CompactSingleChildFolders()
     {
@@ -36,10 +36,16 @@ internal sealed class SubmoduleFolderNode(Tree tree, string name) : Node(tree)
         return base.GetFontStyle() | FontStyle.Italic;
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor(SubmoduleFolderNode node)
     {
-        public string DisplayText() => node.DisplayText();
+        public string DisplayText()
+        {
+            return node.DisplayText();
+        }
     }
 }

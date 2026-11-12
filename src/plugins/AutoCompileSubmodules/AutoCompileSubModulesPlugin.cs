@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.Composition;
 using System.Text;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
@@ -13,10 +13,18 @@ namespace GitExtensions.Plugins.AutoCompileSubmodules;
 [Export(typeof(IGitPlugin))]
 public class AutoCompileSubModulesPlugin : GitPluginBase, IGitPluginForRepository
 {
+    private const string _defaultMsBuildPath = @"C:\Windows\Microsoft.NET\Framework\v3.5\msbuild.exe";
+
     private readonly TranslationString _doYouWantBuild =
         new("Do you want to build {0}?\n\n{1}");
+
     private readonly TranslationString _enterCorrectMsBuildPath =
         new("Please enter correct MSBuild path in the plugin settings dialog and try again.");
+
+    private readonly StringSetting _msBuildArguments = new("msbuild.exe arguments", "/p:Configuration=Debug");
+
+    private readonly BoolSetting _msBuildEnabled = new("Enabled", false);
+    private readonly StringSetting _msBuildPath = new("Path to msbuild.exe", FindMsBuild());
 
     public AutoCompileSubModulesPlugin() : base(true)
     {
@@ -26,15 +34,34 @@ public class AutoCompileSubModulesPlugin : GitPluginBase, IGitPluginForRepositor
         Icon = Resources.IconAutoCompileSubmodules;
     }
 
-    private readonly BoolSetting _msBuildEnabled = new("Enabled", false);
-    private readonly StringSetting _msBuildPath = new("Path to msbuild.exe", FindMsBuild());
-    private readonly StringSetting _msBuildArguments = new("msbuild.exe arguments", "/p:Configuration=Debug");
-
-    private const string DefaultMsBuildPath = @"C:\Windows\Microsoft.NET\Framework\v3.5\msbuild.exe";
-
     private static string FindMsBuild()
     {
-        return File.Exists(DefaultMsBuildPath) ? DefaultMsBuildPath : "";
+        return File.Exists(_defaultMsBuildPath) ? _defaultMsBuildPath : "";
+    }
+
+    /// <summary>
+    ///     Automatically compile all solution files found in any submodule
+    /// </summary>
+    private void GitUiCommandsPostUpdateSubmodules(object? sender, GitUiPostActionEventArgs e)
+    {
+        if (e.ActionDone && _msBuildEnabled.ValueOrDefault(Settings))
+        {
+            Execute(e);
+        }
+    }
+
+    private static string SolutionFilesToString(IReadOnlyList<FileInfo> solutionFiles)
+    {
+        StringBuilder solutionString = new();
+
+        for (var n = solutionFiles.Count - 1; n > 0; n--)
+        {
+            var solutionFile = solutionFiles[n];
+            solutionString.Append(solutionFile.Name);
+            solutionString.Append('\n');
+        }
+
+        return solutionString.ToString();
     }
 
     #region IGitPlugin Members
@@ -46,19 +73,19 @@ public class AutoCompileSubModulesPlugin : GitPluginBase, IGitPluginForRepositor
         yield return _msBuildArguments;
     }
 
-    public override void Register(IGitUICommands gitUiCommands)
+    public override void Register(IGitUiCommands gitUiCommands)
     {
         // Connect to events
         gitUiCommands.PostUpdateSubmodules += GitUiCommandsPostUpdateSubmodules;
     }
 
-    public override void Unregister(IGitUICommands gitUiCommands)
+    public override void Unregister(IGitUiCommands gitUiCommands)
     {
         // Connect to events
         gitUiCommands.PostUpdateSubmodules -= GitUiCommandsPostUpdateSubmodules;
     }
 
-    public override bool Execute(GitUIEventArgs args)
+    public override bool Execute(GitUiEventArgs args)
     {
         // Only build when plugin is enabled
         if (string.IsNullOrEmpty(args.GitModule.WorkingDir))
@@ -66,20 +93,20 @@ public class AutoCompileSubModulesPlugin : GitPluginBase, IGitPluginForRepositor
             return false;
         }
 
-        string msbuildPath = _msBuildPath.ValueOrDefault(Settings);
+        var msbuildPath = _msBuildPath.ValueOrDefault(Settings);
 
         DirectoryInfo workingDir = new(args.GitModule.WorkingDir);
-        FileInfo[] solutionFiles = workingDir.GetFiles("*.sln", SearchOption.AllDirectories);
+        var solutionFiles = workingDir.GetFiles("*.sln", SearchOption.AllDirectories);
 
-        for (int n = solutionFiles.Length - 1; n > 0; n--)
+        for (var n = solutionFiles.Length - 1; n > 0; n--)
         {
-            FileInfo solutionFile = solutionFiles[n];
+            var solutionFile = solutionFiles[n];
 
-            DialogResult result =
+            var result =
                 MessageBoxes.Show(args.OwnerForm,
                     string.Format(_doYouWantBuild.Text,
-                                  solutionFile.Name,
-                                  SolutionFilesToString(solutionFiles)),
+                        solutionFile.Name,
+                        SolutionFilesToString(solutionFiles)),
                     "Build",
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Question);
@@ -100,7 +127,8 @@ public class AutoCompileSubModulesPlugin : GitPluginBase, IGitPluginForRepositor
             }
             else
             {
-                args.GitUICommands.StartCommandLineProcessDialog(args.OwnerForm, msbuildPath, solutionFile.FullName + " " + _msBuildArguments.ValueOrDefault(Settings));
+                args.GitUiCommands.StartCommandLineProcessDialog(args.OwnerForm, msbuildPath,
+                    solutionFile.FullName + " " + _msBuildArguments.ValueOrDefault(Settings));
             }
         }
 
@@ -108,29 +136,4 @@ public class AutoCompileSubModulesPlugin : GitPluginBase, IGitPluginForRepositor
     }
 
     #endregion
-
-    /// <summary>
-    ///   Automatically compile all solution files found in any submodule
-    /// </summary>
-    private void GitUiCommandsPostUpdateSubmodules(object? sender, GitUIPostActionEventArgs e)
-    {
-        if (e.ActionDone && _msBuildEnabled.ValueOrDefault(Settings))
-        {
-            Execute(e);
-        }
-    }
-
-    private static string SolutionFilesToString(IReadOnlyList<FileInfo> solutionFiles)
-    {
-        StringBuilder solutionString = new();
-
-        for (int n = solutionFiles.Count - 1; n > 0; n--)
-        {
-            FileInfo solutionFile = solutionFiles[n];
-            solutionString.Append(solutionFile.Name);
-            solutionString.Append('\n');
-        }
-
-        return solutionString.ToString();
-    }
 }

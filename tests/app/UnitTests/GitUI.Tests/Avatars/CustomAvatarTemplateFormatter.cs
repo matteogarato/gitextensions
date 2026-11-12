@@ -1,6 +1,7 @@
 ﻿using GitUI.Avatars;
 
 namespace GitUITests.Avatars;
+
 public class CustomAvatarTemplateFormatter
 {
     [Theory]
@@ -11,8 +12,8 @@ public class CustomAvatarTemplateFormatter
     [InlineData("{val1} + {val2}", "{val1}", "{val2}", "{val1} + {val2}")]
     public void Given_test_cases_render_as_expected(string template, string val1, string val2, string expectation)
     {
-        Func<(string val1, string val2), string> formatter = TemplateFormatter.Create(template, ValueMappingProvider);
-        string result = formatter((val1, val2));
+        var formatter = TemplateFormatter.Create(template, ValueMappingProvider);
+        var result = formatter((val1, val2));
 
         result.Should().Be(expectation);
     }
@@ -20,18 +21,19 @@ public class CustomAvatarTemplateFormatter
     [Fact]
     public void Formatter_can_be_reused_with_different_inputs()
     {
-        Func<(string val1, string val2), string> formatter = TemplateFormatter.Create("Example {val1} Template {val2}", ValueMappingProvider);
+        var formatter =
+            TemplateFormatter.Create("Example {val1} Template {val2}", ValueMappingProvider);
 
-        string result1 = formatter(("x", "y"));
-        string result2 = formatter(("a", "b"));
+        var result1 = formatter(("x", "y"));
+        var result2 = formatter(("a", "b"));
 
         result1.Should().Be("Example x Template y");
         result2.Should().Be("Example a Template b");
     }
 
     /// <summary>
-    /// Provides mapping for a given name from the input.
-    /// In this case a value tuple with two strings to a string.
+    ///     Provides mapping for a given name from the input.
+    ///     In this case a value tuple with two strings to a string.
     /// </summary>
     /// <param name="name">The name of the variable for which the mapper is requested for.</param>
     /// <returns>The mapper for a requested variable.</returns>
@@ -41,7 +43,7 @@ public class CustomAvatarTemplateFormatter
         {
             "val1" => input => input.val1,
             "val2" => input => input.val2,
-            _ => input => null!,
+            _ => input => null!
         };
     }
 }

@@ -8,7 +8,9 @@ namespace GitUI.LeftPanel;
 internal abstract class BaseRevisionNode : Node
 {
     protected const char PathSeparator = '/';
-    private static readonly Color _invisibleForeColor = Application.IsDarkModeEnabled ? SystemColors.GrayText : Color.Silver;
+
+    private static readonly Color _invisibleForeColor =
+        Application.IsDarkModeEnabled ? SystemColors.GrayText : Color.Silver;
 
     protected BaseRevisionNode(Tree tree, string fullPath, bool visible)
         : base(tree)
@@ -20,7 +22,7 @@ internal abstract class BaseRevisionNode : Node
         }
 
         FullPath = fullPath;
-        int nameIndex = fullPath.LastIndexOf(PathSeparator);
+        var nameIndex = fullPath.LastIndexOf(PathSeparator);
         if (nameIndex == -1)
         {
             Name = fullPath;
@@ -36,19 +38,23 @@ internal abstract class BaseRevisionNode : Node
     }
 
     /// <summary>
-    /// Short name of the branch/branch path. <example>"issue1344"</example>.
+    ///     Short name of the branch/branch path.
+    ///     <example>"issue1344"</example>
+    ///     .
     /// </summary>
     public string Name { get; }
 
     protected string ParentPath { get; }
 
     /// <summary>
-    /// Full path of the branch. <example>"issues/issue1344"</example>.
+    ///     Full path of the branch.
+    ///     <example>"issues/issue1344"</example>
+    ///     .
     /// </summary>
     public string FullPath { get; }
 
     /// <summary>
-    /// ObjectId for nodes with a revision.
+    ///     ObjectId for nodes with a revision.
     /// </summary>
     public ObjectId ObjectId { get; init; }
 
@@ -56,26 +62,31 @@ internal abstract class BaseRevisionNode : Node
     {
         base.ApplyStyle();
 
-        TreeViewNode.ForeColor = Visible && TreeViewNode.TreeView is not null ? TreeViewNode.TreeView.ForeColor : _invisibleForeColor;
+        TreeViewNode.ForeColor = Visible && TreeViewNode.TreeView is not null
+            ? TreeViewNode.TreeView.ForeColor
+            : _invisibleForeColor;
         TreeViewNode.ImageKey = TreeViewNode.SelectedImageKey = Visible ? null : nameof(Images.EyeClosed);
     }
 
-    public override int GetHashCode() => FullPath.GetHashCode();
+    public override int GetHashCode()
+    {
+        return FullPath.GetHashCode();
+    }
 
     public override bool Equals(object? obj)
     {
         return obj is BaseRevisionNode other
-            && (ReferenceEquals(other, this) || string.Equals(FullPath, other.FullPath));
+               && (ReferenceEquals(other, this) || string.Equals(FullPath, other.FullPath));
     }
 
     public bool Rebase()
     {
-        return UICommands.StartRebaseDialog(ParentWindow(), onto: FullPath);
+        return UiCommands.StartRebaseDialog(ParentWindow(), FullPath);
     }
 
     public bool Reset()
     {
-        return UICommands.StartResetCurrentBranchDialog(ParentWindow(), branch: FullPath);
+        return UiCommands.StartResetCurrentBranchDialog(ParentWindow(), FullPath);
     }
 
     internal BaseRevisionNode? CreateRootNode(IDictionary<string, BaseRevisionNode> pathToNode,
@@ -88,7 +99,7 @@ internal abstract class BaseRevisionNode : Node
 
         BaseRevisionNode? result;
 
-        if (pathToNode.TryGetValue(ParentPath, out BaseRevisionNode? parent))
+        if (pathToNode.TryGetValue(ParentPath, out var parent))
         {
             result = null;
         }

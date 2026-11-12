@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Resources\IconGitImpact.png" />
+    <None Include="Resources\IconGitImpact.png"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +29,7 @@
 
   <ItemGroup>
     <!-- Resources -->
-    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
+    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs"/>
   </ItemGroup>
 
 </Project>

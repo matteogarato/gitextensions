@@ -1,3 +1,5 @@
+using GitUI.UserControls;
+
 namespace GitUI.CommandsDialogs;
 
 partial class FormRebase
@@ -60,12 +62,12 @@ partial class FormRebase
         lblRangeTo = new Label();
         cboTo = new ComboBox();
         llblShowOptions = new LinkLabel();
-        PatchGrid = new PatchGrid();
+        PatchGrid = new UserControls.PatchGrid();
         lblCommitsToReapply = new Label();
         btnSolveMergeconflicts = new Button();
         MergeToolPanel = new Panel();
         MainLayout = new TableLayoutPanel();
-        PanelLeftImage = new Help.HelpImageDisplayUserControl();
+        PanelLeftImage = new HelpImageDisplayUserControl();
         PanelMiddle = new TableLayoutPanel();
         rebasePanel = new FlowLayoutPanel();
         tlpnlSecondaryControls = new TableLayoutPanel();
@@ -698,7 +700,7 @@ partial class FormRebase
     private Button btnSkip;
     private Button btnSolveConflicts;
     private ComboBox cboBranches;
-    private PatchGrid PatchGrid;
+    private UserControls.PatchGrid PatchGrid;
     private Label lblCommitsToReapply;
     private Button btnSolveMergeconflicts;
     private Panel MergeToolPanel;
@@ -719,7 +721,7 @@ partial class FormRebase
     private Label Currentbranch;
     private TableLayoutPanel PanelMiddle;
     private FlowLayoutPanel rebasePanel;
-    private Help.HelpImageDisplayUserControl PanelLeftImage;
+    private HelpImageDisplayUserControl PanelLeftImage;
     private CheckBox chkStash;
     private Button btnCommit;
     private Button btnEditTodo;

@@ -5,37 +5,36 @@ using GitExtensions.Extensibility.Git;
 namespace GitCommands.Git;
 
 /// <summary>
-/// Provides a parser for output of <see cref="Commands.GetAllChangedFiles"/> command.
+///     Provides a parser for output of <see cref="Commands.GetAllChangedFiles" /> command.
 /// </summary>
-public class GetAllChangedFilesOutputParser
+public class GetAllChangedFilesOutputParser(Func<IGitModule> getModule)
 {
-    private readonly Func<IGitModule> _getModule;
-
-    public GetAllChangedFilesOutputParser(Func<IGitModule> getModule)
-    {
-        _getModule = getModule;
-    }
+    private readonly Func<IGitModule> _getModule = getModule;
 
     /// <summary>
-    /// Parse the output from git-status --porcelain=2 -z
-    /// Note that the caller should check for fatal errors in the Git output.
+    ///     Parse the output from git-status --porcelain=2 -z
+    ///     Note that the caller should check for fatal errors in the Git output.
     /// </summary>
-    /// <param name="getAllChangedFilesCommandOutput">An output of <see cref="Commands.GetAllChangedFiles"/> command.</param>
+    /// <param name="getAllChangedFilesCommandOutput">An output of <see cref="Commands.GetAllChangedFiles" /> command.</param>
     /// <returns>list with the parsed GitItemStatus.</returns>
-    /// <seealso href="https://git-scm.com/docs/git-status"/>
+    /// <seealso href="https://git-scm.com/docs/git-status" />
     public IReadOnlyList<GitItemStatus> Parse(string getAllChangedFilesCommandOutput)
     {
         return GetAllChangedFilesFromString_v2(getAllChangedFilesCommandOutput);
     }
 
     /// <summary>
-    /// Parse git-diff --raw
-    /// format is similar to "git-status --porcelain=1 -z" and "git diff --name-status", no longer supported
+    ///     Parse git-diff --raw
+    ///     format is similar to "git-status --porcelain=1 -z" and "git diff --name-status", no longer supported
     /// </summary>
-    /// <param name="getAllChangedFilesCommandOutput">An output of <see cref="Commands.GetAllChangedFiles"/> command.</param>
-    /// <param name="staged">The staged status <see cref="GitItemStatus"/>, only relevant for git-diff (parsed for git-status).</param>
+    /// <param name="getAllChangedFilesCommandOutput">An output of <see cref="Commands.GetAllChangedFiles" /> command.</param>
+    /// <param name="staged">
+    ///     The staged status <see cref="GitItemStatus" />, only relevant for git-diff (parsed for
+    ///     git-status).
+    /// </param>
     /// <returns>list with the git items.</returns>
-    internal List<GitItemStatus> GetDiffChangedFilesFromString(string getAllChangedFilesCommandOutput, StagedStatus staged)
+    internal List<GitItemStatus> GetDiffChangedFilesFromString(string getAllChangedFilesCommandOutput,
+        StagedStatus staged)
     {
         List<GitItemStatus> diffFiles = [];
 
@@ -45,8 +44,8 @@ public class GetAllChangedFilesOutputParser
         }
 
         // Split all files on '\0' (WE NEED ALL COMMANDS TO BE RUN WITH -z! THIS IS ALSO IMPORTANT FOR ENCODING ISSUES!)
-        string[] files = getAllChangedFilesCommandOutput.Split(Delimiters.Null, StringSplitOptions.RemoveEmptyEntries);
-        for (int n = 0; n < files.Length; ++n)
+        var files = getAllChangedFilesCommandOutput.Split(Delimiters.Null, StringSplitOptions.RemoveEmptyEntries);
+        for (var n = 0; n < files.Length; ++n)
         {
             if (string.IsNullOrEmpty(files[n]))
             {
@@ -60,9 +59,9 @@ public class GetAllChangedFilesOutputParser
                 continue;
             }
 
-            ReadOnlySpan<char> status = files[n].AsSpan();
+            var status = files[n].AsSpan();
             ++n;
-            ReadOnlySpan<char> fileName = files[n].AsSpan();
+            var fileName = files[n].AsSpan();
 
             if (status[0] != ':' || status.Length < 15)
             {
@@ -70,8 +69,8 @@ public class GetAllChangedFilesOutputParser
                 continue;
             }
 
-            int statusIndex = status.LastIndexOfAnyExceptInRange('0', '9');
-            char x = status[statusIndex];
+            var statusIndex = status.LastIndexOfAnyExceptInRange('0', '9');
+            var x = status[statusIndex];
 
             if (staged == StagedStatus.WorkTree && x == GitItemStatusConverter.UnmergedStatus)
             {
@@ -79,7 +78,7 @@ public class GetAllChangedFilesOutputParser
                 continue;
             }
 
-            GitItemStatus gitItemStatusX = GitItemStatusConverter.FromStatusCharacter(staged, fileName.ToString(), x);
+            var gitItemStatusX = GitItemStatusConverter.FromStatusCharacter(staged, fileName.ToString(), x);
             if (x is GitItemStatusConverter.RenamedStatus or GitItemStatusConverter.CopiedStatus)
             {
                 gitItemStatusX.RenameCopyPercentage = status[(statusIndex + 1)..].ToString();
@@ -94,7 +93,7 @@ public class GetAllChangedFilesOutputParser
                     // Renamed file in an extra entry
                     // No check if the entry seem to be a file (if it starts with '.' it is likely next status)
                     ++n;
-                    gitItemStatusX.Name = files[n].ToString();
+                    gitItemStatusX.Name = files[n];
                 }
             }
 
@@ -113,7 +112,7 @@ public class GetAllChangedFilesOutputParser
     }
 
     /// <summary>
-    /// Parse the output from git-status --porcelain=2.
+    ///     Parse the output from git-status --porcelain=2.
     /// </summary>
     /// <param name="getAllChangedFilesCommandOutput">output from the git command.</param>
     /// <returns>list with the parsed GitItemStatus.</returns>
@@ -127,10 +126,10 @@ public class GetAllChangedFilesOutputParser
         }
 
         // Split all files on '\0'
-        string[] files = getAllChangedFilesCommandOutput.Split(Delimiters.Null, StringSplitOptions.RemoveEmptyEntries);
-        for (int n = 0; n < files.Length; ++n)
+        var files = getAllChangedFilesCommandOutput.Split(Delimiters.Null, StringSplitOptions.RemoveEmptyEntries);
+        for (var n = 0; n < files.Length; ++n)
         {
-            ReadOnlySpan<char> line = files[n].AsSpan();
+            var line = files[n].AsSpan();
             if (line.Length <= 2 || line[1] != ' ' || line[0] == '#')
             {
                 // Illegal info, like error output,
@@ -138,22 +137,24 @@ public class GetAllChangedFilesOutputParser
                 continue;
             }
 
-            char entryType = line[0];
+            var entryType = line[0];
 
-            if (entryType == GitItemStatusConverter.UntrackedStatus || entryType == GitItemStatusConverter.IgnoredStatus)
+            if (entryType == GitItemStatusConverter.UntrackedStatus ||
+                entryType == GitItemStatusConverter.IgnoredStatus)
             {
                 // Untracked and ignored with just the path following, supply dummy data for most info.
-                string otherFileName = line[2..].ToString();
-                const string NotSumoduleEntry = "N...";
-                UpdateItemStatus(entryType, false, NotSumoduleEntry, otherFileName, null, null);
+                var otherFileName = line[2..].ToString();
+                const string notSumoduleEntry = "N...";
+                UpdateItemStatus(entryType, false, notSumoduleEntry, otherFileName, null, null);
                 continue;
             }
 
-            const char OrdinaryEntry = '1';
-            const char RenamedEntry = '2';
-            const char UnmergedEntry = 'u';
+            const char ordinaryEntry = '1';
+            const char renamedEntry = '2';
+            const char unmergedEntry = 'u';
 
-            if ((entryType != OrdinaryEntry && entryType != RenamedEntry && entryType != UnmergedEntry) || line.Length <= 3)
+            if ((entryType != ordinaryEntry && entryType != renamedEntry && entryType != unmergedEntry) ||
+                line.Length <= 3)
             {
                 // Illegal entry type
                 continue;
@@ -167,30 +168,30 @@ public class GetAllChangedFilesOutputParser
             // worktree (merge conflicts)
             // u XY subm <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
 
-            char x = line[2];
-            char y = line[3];
+            var x = line[2];
+            var y = line[3];
             string fileName;
             string? oldFileName = null;
             string? renamePercent = null;
-            string subm = line[5..9].ToString();
+            var subm = line[5..9].ToString();
 
-            if (entryType == OrdinaryEntry)
+            if (entryType == ordinaryEntry)
             {
                 DebugHelpers.Assert(line.Length > 113, $"Cannot parse line: {line}");
                 fileName = line[113..].ToString();
             }
-            else if (entryType == RenamedEntry)
+            else if (entryType == renamedEntry)
             {
                 DebugHelpers.Assert(n + 1 < files.Length, "Cannot parse renamed: {line}");
 
                 // Find renamed files...
-                int pos = line[114..].IndexOfAnyExceptInRange('0', '9');
+                var pos = line[114..].IndexOfAnyExceptInRange('0', '9');
                 DebugHelpers.Assert(pos >= 0, "Cannot find space separating rename: {line}");
                 renamePercent = line[114..(114 + pos)].ToString();
                 fileName = line[(114 + pos + 1)..].ToString();
                 oldFileName = files[++n];
             }
-            else if (entryType == UnmergedEntry)
+            else if (entryType == unmergedEntry)
             {
                 DebugHelpers.Assert(line.Length > 161, $"Cannot parse line: {line}");
                 fileName = line[161..].ToString();
@@ -202,7 +203,8 @@ public class GetAllChangedFilesOutputParser
             }
 
             // Skip unmerged where both are modified: Only worktree interesting.
-            if (entryType != UnmergedEntry || x != GitItemStatusConverter.UnmergedStatus || y != GitItemStatusConverter.UnmergedStatus)
+            if (entryType != unmergedEntry || x != GitItemStatusConverter.UnmergedStatus ||
+                y != GitItemStatusConverter.UnmergedStatus)
             {
                 UpdateItemStatus(x, true, subm, fileName, oldFileName, renamePercent);
             }
@@ -212,15 +214,16 @@ public class GetAllChangedFilesOutputParser
 
         return diffFiles;
 
-        void UpdateItemStatus(char x, bool isIndex, string subm, string fileName, string? oldFileName, string? renamePercent)
+        void UpdateItemStatus(char x, bool isIndex, string subm, string fileName, string? oldFileName,
+            string? renamePercent)
         {
-            if (x == GitItemStatusConverter.UnmodifiedStatus_v2)
+            if (x == GitItemStatusConverter.UnmodifiedStatusV2)
             {
                 return;
             }
 
-            StagedStatus staged = isIndex ? StagedStatus.Index : StagedStatus.WorkTree;
-            GitItemStatus gitItemStatus = GitItemStatusConverter.FromStatusCharacter(staged, fileName, x);
+            var staged = isIndex ? StagedStatus.Index : StagedStatus.WorkTree;
+            var gitItemStatus = GitItemStatusConverter.FromStatusCharacter(staged, fileName, x);
             if (oldFileName is not null)
             {
                 gitItemStatus.OldName = oldFileName;
@@ -231,8 +234,8 @@ public class GetAllChangedFilesOutputParser
                 gitItemStatus.RenameCopyPercentage = renamePercent;
             }
 
-            const char SubmoduleState = 'S';
-            if (subm[0] == SubmoduleState)
+            const char submoduleState = 'S';
+            if (subm[0] == submoduleState)
             {
                 gitItemStatus.IsSubmodule = true;
 
@@ -241,7 +244,8 @@ public class GetAllChangedFilesOutputParser
                     // Slight modification on how the following flags are used
                     // Changed commit
                     gitItemStatus.IsChanged = subm[1] == GitItemStatusConverter.CopiedStatus;
-                    gitItemStatus.IsDirty = subm[2] == GitItemStatusConverter.ModifiedStatus || subm[3] == GitItemStatusConverter.UnmergedStatus;
+                    gitItemStatus.IsDirty = subm[2] == GitItemStatusConverter.ModifiedStatus ||
+                                            subm[3] == GitItemStatusConverter.UnmergedStatus;
                 }
             }
 

@@ -11,7 +11,7 @@ internal sealed class FormRemotesController
             return;
         }
 
-        Repository? oldRemote = remotes.FirstOrDefault(r => r.Path == oldRemoteUrl);
+        var oldRemote = remotes.FirstOrDefault(r => r.Path == oldRemoteUrl);
         if (oldRemote is not null)
         {
             remotes.Remove(oldRemote);

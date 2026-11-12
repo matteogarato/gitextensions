@@ -1,5 +1,5 @@
 ﻿
-namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
+namespace GitUI.CommandsDialogs.SettingsDialog.Plugins;
 
 partial class PluginRootIntroductionPage
 {

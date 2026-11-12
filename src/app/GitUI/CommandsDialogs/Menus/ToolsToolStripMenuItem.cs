@@ -1,18 +1,15 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtUtils;
 using GitUI.CommandsDialogs.BrowseDialog;
 using GitUI.Infrastructure;
 using GitUI.Shells;
-using Microsoft;
-using ResourceManager;
 using ResourceManager.Hotkey;
 
 namespace GitUI.CommandsDialogs.Menus;
 
 internal partial class ToolsToolStripMenuItem : ToolStripMenuItemEx
 {
-    public event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
-
     public ToolsToolStripMenuItem()
     {
         InitializeComponent();
@@ -24,11 +21,13 @@ internal partial class ToolsToolStripMenuItem : ToolStripMenuItemEx
         }
     }
 
+    public event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        gitBashToolStripMenuItem.Tag = UICommands.GetRequiredService<IShellProvider>().GetShell(BashShell.ShellName);
+        gitBashToolStripMenuItem.Tag = UiCommands.GetRequiredService<IShellProvider>().GetShell(BashShell.ShellName);
     }
 
     public override void RefreshShortcutKeys(IEnumerable<HotkeyCommand>? hotkeys)
@@ -36,7 +35,8 @@ internal partial class ToolsToolStripMenuItem : ToolStripMenuItemEx
         gitBashToolStripMenuItem.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(FormBrowse.Command.GitBash);
         gitGUIToolStripMenuItem.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(FormBrowse.Command.GitGui);
         kGitToolStripMenuItem.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(FormBrowse.Command.GitGitK);
-        settingsToolStripMenuItem.ShortcutKeyDisplayString = hotkeys.GetShortcutDisplay(FormBrowse.Command.OpenSettings);
+        settingsToolStripMenuItem.ShortcutKeyDisplayString =
+            hotkeys.GetShortcutDisplay(FormBrowse.Command.OpenSettings);
 
         base.RefreshShortcutKeys(hotkeys);
     }
@@ -55,32 +55,32 @@ internal partial class ToolsToolStripMenuItem : ToolStripMenuItemEx
 
     private void GitGuiToolStripMenuItemClick(object sender, EventArgs e)
     {
-        UICommands.Module.RunGui();
+        UiCommands.Module.RunGui();
     }
 
     private void KGitToolStripMenuItemClick(object sender, EventArgs e)
     {
-        UICommands.Module.RunGitK();
+        UiCommands.Module.RunGitK();
     }
 
     private void StartAuthenticationAgentToolStripMenuItemClick(object sender, EventArgs e)
     {
-        PuttyHelpers.StartPageant(UICommands.Module.WorkingDir);
+        PuttyHelpers.StartPageant(UiCommands.Module.WorkingDir);
     }
 
     private void GenerateOrImportKeyToolStripMenuItemClick(object sender, EventArgs e)
     {
-        PuttyHelpers.StartPuttygen(UICommands.Module.WorkingDir);
+        PuttyHelpers.StartPuttygen(UiCommands.Module.WorkingDir);
     }
 
     private void OnShowSettingsClick(object sender, EventArgs e)
     {
-        string translation = AppSettings.Translation;
-        CommitInfoPosition commitInfoPosition = AppSettings.CommitInfoPosition;
+        var translation = AppSettings.Translation;
+        var commitInfoPosition = AppSettings.CommitInfoPosition;
 
-        UICommands.StartSettingsDialog(OwnerForm);
+        UiCommands.StartSettingsDialog(OwnerForm);
 
-        SettingsChanged?.Invoke(sender, new(translation, commitInfoPosition));
+        SettingsChanged?.Invoke(sender, new SettingsChangedEventArgs(translation, commitInfoPosition));
     }
 
     private void gitBashToolStripMenuItem_Click(object sender, EventArgs e)
@@ -94,7 +94,7 @@ internal partial class ToolsToolStripMenuItem : ToolStripMenuItemEx
         {
             Validates.NotNull(shell.ExecutablePath);
 
-            Executable executable = new(shell.ExecutablePath, UICommands.Module.WorkingDir);
+            Executable executable = new(shell.ExecutablePath, UiCommands.Module.WorkingDir);
             executable.Start(createWindow: true, throwOnErrorExit: false); // throwOnErrorExit would redirect the output
         }
         catch (Exception exception)

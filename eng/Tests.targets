@@ -19,18 +19,18 @@
 
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
     <!-- VS TestExplorer uses this to identify a test project -->
-    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}"/>
 
-    <Compile Include="$(RepoRoot)eng\TestAssemblyInfo.cs" Link="Properties\TestAssemblyInfo.cs" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+    <Compile Include="$(RepoRoot)eng\TestAssemblyInfo.cs" Link="Properties\TestAssemblyInfo.cs"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="coverlet.collector" PrivateAssets="all"/>
 
-    <PackageReference Include="AwesomeAssertions" PrivateAssets="all" Publish="true" />
-    <PackageReference Include="NSubstitute" PrivateAssets="all" Publish="true" />
-    <PackageReference Include="xunit.v3" PrivateAssets="all" Publish="true" />
-    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" Publish="true" />
-    <PackageReference Include="Xunit.StaFact" PrivateAssets="all" Publish="true" />
-    <PackageReference Include="Verify.XunitV3" PrivateAssets="all" Publish="true" />
+    <PackageReference Include="AwesomeAssertions" PrivateAssets="all" Publish="true"/>
+    <PackageReference Include="NSubstitute" PrivateAssets="all" Publish="true"/>
+    <PackageReference Include="xunit.v3" PrivateAssets="all" Publish="true"/>
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" Publish="true"/>
+    <PackageReference Include="Xunit.StaFact" PrivateAssets="all" Publish="true"/>
+    <PackageReference Include="Verify.XunitV3" PrivateAssets="all" Publish="true"/>
   </ItemGroup>
 
 </Project>

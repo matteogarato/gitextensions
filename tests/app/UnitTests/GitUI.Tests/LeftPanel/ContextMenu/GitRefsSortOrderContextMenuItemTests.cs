@@ -1,16 +1,16 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitCommands.Utils;
 using GitUI.LeftPanel.ContextMenu;
 using GitUIPluginInterfaces;
 using NSubstitute;
 
-namespace GitUITests.UserControls;
+namespace GitUITests.LeftPanel.ContextMenu;
 
 [Culture("en-US")]
 public class GitRefsSortOrderContextMenuItemTests : IDisposable
 {
-    private Action _onSortOrderChanged = null!;
-    private GitRefsSortOrderContextMenuItem _itemUnderTest = null!;
+    private readonly GitRefsSortOrderContextMenuItem _itemUnderTest = null!;
+    private readonly Action _onSortOrderChanged = null!;
 
     public GitRefsSortOrderContextMenuItemTests()
     {
@@ -18,7 +18,18 @@ public class GitRefsSortOrderContextMenuItemTests : IDisposable
         _itemUnderTest = new GitRefsSortOrderContextMenuItem(_onSortOrderChanged);
     }
 
-    public void Dispose()
+    public static IEnumerable<object[]> SortOrderOptions
+    {
+        get
+        {
+            foreach (var order in EnumHelper.GetValues<GitRefsSortOrder>())
+            {
+                yield return new object[] { order };
+            }
+        }
+    }
+
+    void IDisposable.Dispose()
     {
         _itemUnderTest.Dispose();
     }
@@ -30,22 +41,11 @@ public class GitRefsSortOrderContextMenuItemTests : IDisposable
         _itemUnderTest.DropDownItems.Count.Should().Be(EnumHelper.GetValues<GitRefsSortOrder>().Length);
     }
 
-    public static IEnumerable<object[]> SortOrderOptions
-    {
-        get
-        {
-            foreach (GitRefsSortOrder order in EnumHelper.GetValues<GitRefsSortOrder>())
-            {
-                yield return new object[] { order };
-            }
-        }
-    }
-
     [Theory]
     [MemberData(nameof(SortOrderOptions))]
     public void Only_the_current_sort_option_is_selected(GitRefsSortOrder order)
     {
-        GitRefsSortOrder original = AppSettings.RefsSortOrder;
+        var original = AppSettings.RefsSortOrder;
         try
         {
             AppSettings.RefsSortOrder = order;
@@ -64,13 +64,13 @@ public class GitRefsSortOrderContextMenuItemTests : IDisposable
     [Fact]
     public void Clicking_an_item_sets_sort_in_service()
     {
-        GitRefsSortOrder original = AppSettings.RefsSortOrder;
+        var original = AppSettings.RefsSortOrder;
         try
         {
             // Reset to the default
             AppSettings.RefsSortOrder = GitRefsSortOrder.Descending;
 
-            foreach (ToolStripMenuItem item in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>())
+            foreach (var item in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>())
             {
                 item.PerformClick();
                 _onSortOrderChanged.Received(1).Invoke();
@@ -85,10 +85,12 @@ public class GitRefsSortOrderContextMenuItemTests : IDisposable
 
     private void AssertOnlyCheckedItemIs(GitRefsSortOrder sortType)
     {
-        ToolStripMenuItem matchingSubItem = _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>().Single(i => i!.Tag!.Equals(sortType));
+        var matchingSubItem =
+            _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>().Single(i => i!.Tag!.Equals(sortType));
         matchingSubItem.Checked.Should().BeTrue();
 
-        foreach (ToolStripMenuItem otherItem in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>().Except(new[] { matchingSubItem }))
+        foreach (var otherItem in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>()
+                     .Except(new[] { matchingSubItem }))
         {
             otherItem.Checked.Should().BeFalse();
         }

@@ -5,14 +5,50 @@ namespace GitUI.CommandsDialogs;
 
 public sealed class DataGridViewCheckBoxHeaderCell : DataGridViewColumnHeaderCell
 {
-    private bool _wasAttached;
-    private bool _selfChanging;
-
     /// <summary>
-    /// Relative check box location (from cellbounds).
+    ///     Relative check box location (from cellbounds).
     /// </summary>
     private Rectangle _checkBoxArea;
+
     private CheckState _checkedState = CheckState.Indeterminate;
+    private bool _selfChanging;
+    private bool _wasAttached;
+
+    private IEnumerable<DataGridViewCheckBoxCell> Cells
+    {
+        get =>
+            DataGridView!.Rows
+                .Cast<DataGridViewRow>()
+                .Select(row => row.Cells[OwningColumn!.Index])
+                .Cast<DataGridViewCheckBoxCell>();
+    }
+
+    private CheckState CheckedState
+    {
+        get => _checkedState;
+        set
+        {
+            if (value == _checkedState)
+            {
+                return;
+            }
+
+            _checkedState = value;
+            DataGridView!.InvalidateCell(this);
+        }
+    }
+
+    private CheckBoxState CheckBoxState
+    {
+        get =>
+            CheckedState switch
+            {
+                CheckState.Unchecked => CheckBoxState.UncheckedNormal,
+                CheckState.Checked => CheckBoxState.CheckedNormal,
+                CheckState.Indeterminate => CheckBoxState.MixedNormal,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+    }
 
     public void AttachTo(DataGridViewCheckBoxColumn owningColumn)
     {
@@ -60,63 +96,31 @@ public sealed class DataGridViewCheckBoxHeaderCell : DataGridViewColumnHeaderCel
 
     private void UpdateCheckedState()
     {
-        List<bool?> cellValues = [.. Cells
-            .Select(cell => cell.Value)
-            .Cast<bool?>()
-            .Distinct()];
+        List<bool?> cellValues =
+        [
+            .. Cells
+                .Select(cell => cell.Value)
+                .Cast<bool?>()
+                .Distinct()
+        ];
         CheckedState = cellValues.Count == 1
             ? cellValues.Single() == true ? CheckState.Checked : CheckState.Unchecked
             : CheckState.Indeterminate;
     }
 
-    private IEnumerable<DataGridViewCheckBoxCell> Cells
+    protected override void Paint(Graphics graphics, Rectangle clipBounds, Rectangle cellBounds, int rowIndex,
+        DataGridViewElementStates dataGridViewElementState,
+        object? value, object? formattedValue, string? errorText, DataGridViewCellStyle cellStyle,
+        DataGridViewAdvancedBorderStyle advancedBorderStyle, DataGridViewPaintParts paintParts)
     {
-        get
-        {
-            return DataGridView!.Rows
-                .Cast<DataGridViewRow>()
-                .Select(row => row.Cells[OwningColumn!.Index])
-                .Cast<DataGridViewCheckBoxCell>();
-        }
-    }
+        base.Paint(graphics, clipBounds, cellBounds, rowIndex, dataGridViewElementState, value, formattedValue,
+            errorText, cellStyle, advancedBorderStyle, paintParts);
 
-    private CheckState CheckedState
-    {
-        get { return _checkedState; }
-        set
-        {
-            if (value == _checkedState)
-            {
-                return;
-            }
-
-            _checkedState = value;
-            DataGridView!.InvalidateCell(this);
-        }
-    }
-
-    private CheckBoxState CheckBoxState
-    {
-        get
-        {
-            return CheckedState switch
-            {
-                CheckState.Unchecked => CheckBoxState.UncheckedNormal,
-                CheckState.Checked => CheckBoxState.CheckedNormal,
-                CheckState.Indeterminate => CheckBoxState.MixedNormal,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-        }
-    }
-
-    protected override void Paint(Graphics graphics, Rectangle clipBounds, Rectangle cellBounds, int rowIndex, DataGridViewElementStates dataGridViewElementState,
-        object? value, object? formattedValue, string? errorText, DataGridViewCellStyle cellStyle, DataGridViewAdvancedBorderStyle advancedBorderStyle, DataGridViewPaintParts paintParts)
-    {
-        base.Paint(graphics, clipBounds, cellBounds, rowIndex, dataGridViewElementState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
-
-        Size glyphSize = CheckBoxRenderer.GetGlyphSize(graphics, CheckBoxState.UncheckedNormal);
-        Point relativeLocation = new((cellBounds.Width / 2) - (glyphSize.Width / 2), (cellBounds.Height / 2) - (glyphSize.Height / 2));
-        Point absoluteLocation = new(cellBounds.Location.X + relativeLocation.X, cellBounds.Location.Y + relativeLocation.Y);
+        var glyphSize = CheckBoxRenderer.GetGlyphSize(graphics, CheckBoxState.UncheckedNormal);
+        Point relativeLocation = new((cellBounds.Width / 2) - (glyphSize.Width / 2),
+            (cellBounds.Height / 2) - (glyphSize.Height / 2));
+        Point absoluteLocation = new(cellBounds.Location.X + relativeLocation.X,
+            cellBounds.Location.Y + relativeLocation.Y);
 
         _checkBoxArea = new Rectangle(relativeLocation, glyphSize);
         CheckBoxRenderer.DrawCheckBox(graphics, absoluteLocation, CheckBoxState);
@@ -126,10 +130,10 @@ public sealed class DataGridViewCheckBoxHeaderCell : DataGridViewColumnHeaderCel
     {
         if (_checkBoxArea.Contains(e.X, e.Y))
         {
-            bool newStateIsChecked = CheckedState != CheckState.Checked;
+            var newStateIsChecked = CheckedState != CheckState.Checked;
             CheckedState = newStateIsChecked ? CheckState.Checked : CheckState.Unchecked;
             _selfChanging = true;
-            foreach (DataGridViewCheckBoxCell cell in Cells)
+            foreach (var cell in Cells)
             {
                 if (cell == DataGridView!.CurrentCell)
                 {

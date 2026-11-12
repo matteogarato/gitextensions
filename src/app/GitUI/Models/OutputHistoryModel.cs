@@ -1,35 +1,37 @@
 using System.Diagnostics;
 using System.Text;
 using GitUI.Editor.Diff;
-using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
 
 namespace GitUI.Models;
 
-internal sealed class OutputHistoryModel : IOutputHistoryProvider, IOutputHistoryRecorder
+internal sealed class OutputHistoryModel(in int historyDepth) : IOutputHistoryProvider, IOutputHistoryRecorder
 {
     private const string _endMark = "###";
     private const string _noExecutable = "---";
+    private readonly List<StringBuilder> _outputHistory = new(historyDepth);
 
     private readonly Lock _outputHistoryLock = new();
-    private readonly List<StringBuilder> _outputHistory;
 
-    public event EventHandler? HistoryChanged;
-
-    public OutputHistoryModel(in int historyDepth)
+    event EventHandler? IOutputHistoryProvider.HistoryChanged
     {
-        _outputHistory = new List<StringBuilder>(capacity: historyDepth);
+        add => HistoryChanged += value;
+        remove => HistoryChanged -= value;
     }
 
-    public bool Enabled => _outputHistory.Capacity > 0;
+    bool IOutputHistoryProvider.Enabled
+    {
+        get => _outputHistory.Capacity > 0;
+    }
 
-    public string History
+    string IOutputHistoryProvider.History
     {
         get
         {
             StringBuilder sb = new();
             lock (_outputHistoryLock)
             {
-                foreach (StringBuilder entry in _outputHistory)
+                foreach (var entry in _outputHistory)
                 {
                     sb.Append(entry);
                 }
@@ -41,7 +43,7 @@ internal sealed class OutputHistoryModel : IOutputHistoryProvider, IOutputHistor
         }
     }
 
-    public void ClearHistory()
+    void IOutputHistoryProvider.ClearHistory()
     {
         lock (_outputHistoryLock)
         {
@@ -51,18 +53,18 @@ internal sealed class OutputHistoryModel : IOutputHistoryProvider, IOutputHistor
         HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void RecordHistory(in string message)
+    void IOutputHistoryRecorder.RecordHistory(in string message)
     {
-        string time = DateTime.Now.ToShortTimeString();
-        Add(new StringBuilder(time, capacity: time.Length + 1 + message.Length).Append(' ').AppendLine(message));
+        var time = DateTime.Now.ToShortTimeString();
+        Add(new StringBuilder(time, time.Length + 1 + message.Length).Append(' ').AppendLine(message));
     }
 
-    public void RecordHistory(in Exception exception)
+    void IOutputHistoryRecorder.RecordHistory(in Exception exception)
     {
         RecordHistory(exception.ToStringDemystified());
     }
 
-    public void RecordHistory(in RunProcessInfo runProcess)
+    void IOutputHistoryRecorder.RecordHistory(in RunProcessInfo runProcess)
     {
         Add(Format(runProcess));
 
@@ -87,6 +89,8 @@ internal sealed class OutputHistoryModel : IOutputHistoryProvider, IOutputHistor
             return sb.AppendLine().AppendLine();
         }
     }
+
+    private event EventHandler? HistoryChanged;
 
     private void Add(in StringBuilder entry)
     {

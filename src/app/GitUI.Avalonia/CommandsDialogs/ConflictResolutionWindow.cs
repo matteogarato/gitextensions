@@ -1,27 +1,32 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using GitCommands;
 using GitExtensions.Extensibility.Git;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Lists unresolved files and opens the repository's configured mergetool.
+///     Lists unresolved files and opens the repository's configured mergetool.
 /// </summary>
 public sealed class ConflictResolutionWindow : Window
 {
-    private readonly IGitModule _module;
     private readonly ListBox _conflicts = new() { Height = 280 };
-    private readonly TextBlock _status = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
-    private readonly Button _openMergeTool = new() { Content = GitUI.TranslatedStrings.OpenMergeTool };
-    private readonly Button _stageSelected = new() { Content = GitUI.TranslatedStrings.StageConflictResolution };
-    private readonly Button _useOurs = new() { Content = GitUI.TranslatedStrings.UseOursResolution };
-    private readonly Button _useTheirs = new() { Content = GitUI.TranslatedStrings.UseTheirsResolution };
-    private readonly Button _continue = new() { Content = GitUI.TranslatedStrings.ContinueAfterResolution, IsVisible = false };
+
+    private readonly Button _continue =
+        new() { Content = TranslatedStrings.ContinueAfterResolution, IsVisible = false };
+
+    private readonly IGitModule _module;
     private readonly bool _offerContinue;
+    private readonly Button _openMergeTool = new() { Content = TranslatedStrings.OpenMergeTool };
+    private readonly Button _stageSelected = new() { Content = TranslatedStrings.StageConflictResolution };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly Button _useOurs = new() { Content = TranslatedStrings.UseOursResolution };
+    private readonly Button _useTheirs = new() { Content = TranslatedStrings.UseTheirsResolution };
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="ConflictResolutionWindow"/> class.
+    ///     Initializes a new instance of the <see cref="ConflictResolutionWindow" /> class.
     /// </summary>
     /// <param name="module">The repository whose unresolved conflicts are shown.</param>
     /// <param name="offerContinue">Whether to offer finishing the interrupted operation once all conflicts are resolved.</param>
@@ -29,7 +34,7 @@ public sealed class ConflictResolutionWindow : Window
     {
         _module = module;
         _offerContinue = offerContinue;
-        Title = GitUI.TranslatedStrings.ResolveMergeConflicts;
+        Title = TranslatedStrings.ResolveMergeConflicts;
         Width = 640;
         Height = 420;
         MinWidth = 480;
@@ -47,14 +52,14 @@ public sealed class ConflictResolutionWindow : Window
             Close();
         };
 
-        Button refresh = new() { Content = GitUI.TranslatedStrings.RefreshConflicts };
+        Button refresh = new() { Content = TranslatedStrings.RefreshConflicts };
         refresh.Click += (_, _) => ThreadHelper.FileAndForget(RefreshConflictsAsync);
-        Button close = new() { Content = GitUI.TranslatedStrings.Close, IsCancel = true };
+        Button close = new() { Content = TranslatedStrings.Close, IsCancel = true };
         close.Click += (_, _) => Close();
 
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 8,
             Children =
             {
@@ -63,11 +68,20 @@ public sealed class ConflictResolutionWindow : Window
                 new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                    HorizontalAlignment = HorizontalAlignment.Right,
                     Spacing = 8,
-                    Children = { _openMergeTool, _useOurs, _useTheirs, _stageSelected, refresh, _continue, close },
-                },
-            },
+                    Children =
+                    {
+                        _openMergeTool,
+                        _useOurs,
+                        _useTheirs,
+                        _stageSelected,
+                        refresh,
+                        _continue,
+                        close
+                    }
+                }
+            }
         };
 
         UpdateActionState();
@@ -75,11 +89,14 @@ public sealed class ConflictResolutionWindow : Window
     }
 
     /// <summary>
-    ///  Gets a value indicating whether the user chose to finish the interrupted operation.
+    ///     Gets a value indicating whether the user chose to finish the interrupted operation.
     /// </summary>
     public bool ContinueRequested { get; private set; }
 
-    private string? SelectedFilename => _conflicts.SelectedItem as string;
+    private string? SelectedFilename
+    {
+        get => _conflicts.SelectedItem as string;
+    }
 
     private async Task RefreshConflictsAsync()
     {
@@ -89,8 +106,8 @@ public sealed class ConflictResolutionWindow : Window
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             _conflicts.ItemsSource = conflicts.Select(conflict => conflict.Filename).ToArray();
             _status.Text = conflicts.Count == 0
-                ? GitUI.TranslatedStrings.NoResultsFound
-                : GitUI.TranslatedStrings.UnresolvedConflicts;
+                ? TranslatedStrings.NoResultsFound
+                : TranslatedStrings.UnresolvedConflicts;
             UpdateActionState();
         }
         catch (Exception exception)
@@ -102,7 +119,7 @@ public sealed class ConflictResolutionWindow : Window
 
     private async Task OpenMergeToolAsync()
     {
-        string? filename = SelectedFilename;
+        var filename = SelectedFilename;
         if (filename is null)
         {
             return;
@@ -122,7 +139,7 @@ public sealed class ConflictResolutionWindow : Window
 
     private async Task StageSelectedAsync()
     {
-        string? filename = SelectedFilename;
+        var filename = SelectedFilename;
         if (filename is null)
         {
             return;
@@ -142,7 +159,7 @@ public sealed class ConflictResolutionWindow : Window
 
     private async Task ResolveWithSideAsync(ConflictSide side)
     {
-        string? filename = SelectedFilename;
+        var filename = SelectedFilename;
         if (filename is null)
         {
             return;
@@ -150,7 +167,7 @@ public sealed class ConflictResolutionWindow : Window
 
         try
         {
-            string? error = await Task.Run(() => ConflictWorkflow.ResolveWithSide(_module, filename, side));
+            var error = await Task.Run(() => ConflictWorkflow.ResolveWithSide(_module, filename, side));
             await RefreshConflictsAsync();
             if (error is not null)
             {
@@ -167,13 +184,13 @@ public sealed class ConflictResolutionWindow : Window
 
     private void UpdateActionState()
     {
-        bool fileSelected = SelectedFilename is not null;
+        var fileSelected = SelectedFilename is not null;
         _openMergeTool.IsEnabled = fileSelected;
         _stageSelected.IsEnabled = fileSelected;
         _useOurs.IsEnabled = fileSelected;
         _useTheirs.IsEnabled = fileSelected;
         _continue.IsVisible = _offerContinue
-            && _conflicts.ItemCount == 0
-            && ConflictWorkflow.BuildContinue(_module) is not null;
+                              && _conflicts.ItemCount == 0
+                              && ConflictWorkflow.BuildContinue(_module) is not null;
     }
 }

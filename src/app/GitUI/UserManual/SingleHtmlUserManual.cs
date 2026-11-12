@@ -1,8 +1,8 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace GitUI.UserManual;
 
-public class SingleHtmlUserManual : IProvideUserManual
+public class SingleHtmlUserManual(string anchorName) : IProvideUserManual
 {
     private static string? _location;
 
@@ -12,7 +12,7 @@ public class SingleHtmlUserManual : IProvideUserManual
         {
             if (_location is null)
             {
-                string path = Path.Join(AppSettings.GetInstallDir()!, "help");
+                var path = Path.Join(AppSettings.GetInstallDir()!, "help");
                 Uri uri = new(path);
                 _location = uri.AbsolutePath;
             }
@@ -21,16 +21,9 @@ public class SingleHtmlUserManual : IProvideUserManual
         }
     }
 
-    private readonly string _anchorName;
-
-    public SingleHtmlUserManual(string anchorName)
-    {
-        _anchorName = anchorName;
-    }
-
-    public string GetUrl()
+    string IProvideUserManual.GetUrl()
     {
         return string.Format("{0}/index.html{1}{2}",
-                             Location, string.IsNullOrEmpty(_anchorName) ? "" : "#", _anchorName);
+            Location, string.IsNullOrEmpty(anchorName) ? "" : "#", anchorName);
     }
 }

@@ -3,7 +3,7 @@
 namespace GitCommands.Git;
 
 /// <summary>
-/// Compares the file names.
+///     Compares the file names.
 /// </summary>
 public class GitItemStatusNameEqualityComparer : EqualityComparer<GitItemStatus?>
 {
@@ -20,9 +20,10 @@ public class GitItemStatusNameEqualityComparer : EqualityComparer<GitItemStatus?
         }
 
         return x.Name == y.Name
-            || (!string.IsNullOrWhiteSpace(x.OldName) && x.OldName == y.Name)
-            || (!string.IsNullOrWhiteSpace(y.OldName) && x.Name == y.OldName)
-            || (!string.IsNullOrWhiteSpace(x.OldName) && !string.IsNullOrWhiteSpace(y.OldName) && x.OldName == y.OldName);
+               || (!string.IsNullOrWhiteSpace(x.OldName) && x.OldName == y.Name)
+               || (!string.IsNullOrWhiteSpace(y.OldName) && x.Name == y.OldName)
+               || (!string.IsNullOrWhiteSpace(x.OldName) && !string.IsNullOrWhiteSpace(y.OldName) &&
+                   x.OldName == y.OldName);
     }
 
     public override int GetHashCode(GitItemStatus? obj)

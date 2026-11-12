@@ -6,21 +6,30 @@ using GitExtensions.Extensibility.Settings;
 namespace GitCommands.Settings;
 
 /// <summary>
-///  Provides read access to git config settings for encodings.
+///     Provides read access to git config settings for encodings.
 /// </summary>
 public sealed class GitEncodingSettingsGetter(ISettingsValueGetter settingsValueGetter)
 {
     public ISettingsValueGetter SettingsValueGetter { get; } = settingsValueGetter;
 
-    public Encoding? FilesEncoding => GetEncoding(SettingKeyString.FilesEncoding);
+    public Encoding? FilesEncoding
+    {
+        get => GetEncoding(SettingKeyString.FilesEncoding);
+    }
 
-    public Encoding? CommitEncoding => GetEncoding("i18n.commitencoding");
+    public Encoding? CommitEncoding
+    {
+        get => GetEncoding("i18n.commitencoding");
+    }
 
-    public Encoding? LogOutputEncoding => GetEncoding("i18n.logoutputencoding");
+    public Encoding? LogOutputEncoding
+    {
+        get => GetEncoding("i18n.logoutputencoding");
+    }
 
     private Encoding? GetEncoding(string settingName)
     {
-        string? encodingName = SettingsValueGetter.GetValue(settingName);
+        var encodingName = SettingsValueGetter.GetValue(settingName);
 
         if (string.IsNullOrEmpty(encodingName))
         {
@@ -34,7 +43,7 @@ public sealed class GitEncodingSettingsGetter(ISettingsValueGetter settingsValue
         // Convert it to lowercase, to ensure matching.
         encodingName = encodingName.ToLowerInvariant();
 
-        if (AppSettings.AvailableEncodings.TryGetValue(encodingName, out Encoding? result))
+        if (AppSettings.AvailableEncodings.TryGetValue(encodingName, out var result))
         {
             return result;
         }
@@ -45,7 +54,8 @@ public sealed class GitEncodingSettingsGetter(ISettingsValueGetter settingsValue
         }
         catch (ArgumentException)
         {
-            Trace.WriteLine($"Unsupported encoding \"{encodingName}\"\nPlease check the setting \"{settingName}\" in the git config file.");
+            Trace.WriteLine(
+                $"Unsupported encoding \"{encodingName}\"\nPlease check the setting \"{settingName}\" in the git config file.");
             return null;
         }
     }

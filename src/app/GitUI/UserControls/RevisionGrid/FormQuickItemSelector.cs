@@ -2,8 +2,8 @@
 
 internal partial class FormQuickItemSelector : GitExtensionsForm
 {
-    private const short MaxVisibleItemsWithoutScroll = 8;
-    private const short MaxRefLength = 100;
+    private const short _maxVisibleItemsWithoutScroll = 8;
+    private const short _maxRefLength = 100;
 
     public FormQuickItemSelector()
     {
@@ -14,9 +14,12 @@ internal partial class FormQuickItemSelector : GitExtensionsForm
     }
 
     /// <summary>
-    /// Gets the item selected by the user.
+    ///     Gets the item selected by the user.
     /// </summary>
-    public object? SelectedItem => (lbxRefs.SelectedItem as ItemData)?.Item;
+    public object? SelectedItem
+    {
+        get => (lbxRefs.SelectedItem as ItemData)?.Item;
+    }
 
     protected void Init(IReadOnlyList<ItemData> items, string buttonText, int selectedIndex = 0)
     {
@@ -31,19 +34,19 @@ internal partial class FormQuickItemSelector : GitExtensionsForm
         }
 
         // constrain the listbox min width, otherwise the button may not have enough space
-        float longestItemWidth = 150f;
+        var longestItemWidth = 150f;
         try
         {
             lbxRefs.BeginUpdate();
 
-            using Graphics graphics = lbxRefs.CreateGraphics();
-            foreach (ItemData item in items)
+            using var graphics = lbxRefs.CreateGraphics();
+            foreach (var item in items)
             {
                 lbxRefs.Items.Add(item);
 
                 // assume that the branch names or tags are never longer than MaxRefLength symbols long
                 // if they are (sanity!) - don't resize past beyond certain limit
-                string label = item.Label.Length > MaxRefLength ? item.Label[..MaxRefLength] : item.Label;
+                var label = item.Label.Length > _maxRefLength ? item.Label[.._maxRefLength] : item.Label;
                 longestItemWidth = Math.Max(longestItemWidth, graphics.MeasureString(label, lbxRefs.Font).Width);
             }
         }
@@ -61,7 +64,8 @@ internal partial class FormQuickItemSelector : GitExtensionsForm
             // To fix this, trick the listbox and set its height to show MaxVisibleItemsWithoutScroll+0.5
             // this internally forces it to re-calculates its bounds and then to calculate its preferred height.
 
-            lbxRefs.Height = Math.Min(lbxRefs.PreferredHeight, (int)((MaxVisibleItemsWithoutScroll + 0.5) * lbxRefs.ItemHeight));
+            lbxRefs.Height = Math.Min(lbxRefs.PreferredHeight,
+                (int)((_maxVisibleItemsWithoutScroll + 0.5) * lbxRefs.ItemHeight));
             lbxRefs.Width = (int)longestItemWidth;
             lbxRefs.EndUpdate();
 
@@ -74,7 +78,7 @@ internal partial class FormQuickItemSelector : GitExtensionsForm
 
             // resize the form to look nice
             Size = new Size(lbxRefs.Width + Padding.Left + Padding.Right,
-                            lbxRefs.Height + Padding.Top + flowLayoutPanel1.Height);
+                lbxRefs.Height + Padding.Top + flowLayoutPanel1.Height);
         }
     }
 
@@ -95,15 +99,9 @@ internal partial class FormQuickItemSelector : GitExtensionsForm
         AcceptButton!.PerformClick();
     }
 
-    internal sealed class ItemData
+    internal sealed class ItemData(string label, object item)
     {
-        public string Label { get; }
-        public object Item { get; }
-
-        public ItemData(string label, object item)
-        {
-            Label = label;
-            Item = item;
-        }
+        public string Label { get; } = label;
+        public object Item { get; } = item;
     }
 }

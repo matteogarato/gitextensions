@@ -1,8 +1,8 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtUtils.GitUI;
 using ResourceManager;
 
-namespace GitUI.Help;
+namespace GitUI.UserControls;
 
 public partial class HelpImageDisplayUserControl : GitExtensionsControl
 {
@@ -10,9 +10,12 @@ public partial class HelpImageDisplayUserControl : GitExtensionsControl
     private Image? _image2;
     private bool _isExpanded;
 
+    private bool _isHover;
+
     ////public const string fastForwardHoverText = "Hover to see scenario when fast forward is possible.";
 
     private bool _isLoaded;
+    private bool _showImage2OnHover;
 
     public HelpImageDisplayUserControl()
     {
@@ -20,22 +23,9 @@ public partial class HelpImageDisplayUserControl : GitExtensionsControl
         InitializeComplete();
     }
 
-    /// <summary>
-    /// NOTE: will also be called if designer code calls "this.helpImageDisplayUserControl1.ShowImage2OnHover = true;".
-    /// </summary>
-    private void HelpImageDisplayUserControl_Load(object sender, EventArgs e)
-    {
-        IsExpanded = LoadIsExpandedValueFromSettings(IsExpanded);
-        UpdateIsExpandedState();
-        UpdateImageDisplay();
-        UpdateControlSize();
-
-        _isLoaded = true;
-    }
-
     public bool IsExpanded
     {
-        get { return _isExpanded; }
+        get => _isExpanded;
         set
         {
             _isExpanded = value;
@@ -60,6 +50,73 @@ public partial class HelpImageDisplayUserControl : GitExtensionsControl
     }
 
     public string? UniqueIsExpandedSettingsId { get; set; }
+
+    public Image? Image1
+    {
+        get => _image1;
+        set
+        {
+            _image1 = value is null ? value : DpiUtil.Scale(value);
+            UpdateImageDisplay();
+            if (IsExpanded)
+            {
+                UpdateControlSize();
+            }
+        }
+    }
+
+    public Image? Image2
+    {
+        get => _image2;
+        set
+        {
+            _image2 = value is null ? value : DpiUtil.Scale(value);
+            UpdateImageDisplay();
+            if (IsExpanded)
+            {
+                UpdateControlSize();
+            }
+        }
+    }
+
+    /// <summary>
+    ///     see also IsOnHoverShowImage2NoticeText.
+    /// </summary>
+    public bool IsOnHoverShowImage2
+    {
+        get => _showImage2OnHover;
+        set
+        {
+            _showImage2OnHover = value;
+            if (_isLoaded)
+            {
+                UpdateIsExpandedState();
+                ////labelHoverText.Visible = value; // NOTE: would trigger OnLoad
+            }
+        }
+    }
+
+    /// <summary>
+    ///     only shown when IsOnHoverShowImage2 is true.
+    /// </summary>
+    public string IsOnHoverShowImage2NoticeText
+    {
+        get => labelHoverText.Text;
+        set => labelHoverText.Text = value;
+    }
+
+    /// <summary>
+    ///     NOTE: will also be called if designer code calls "this.helpImageDisplayUserControl1.ShowImage2OnHover = true;".
+    /// </summary>
+    private void HelpImageDisplayUserControl_Load(object sender, EventArgs e)
+    {
+        IsExpanded = LoadIsExpandedValueFromSettings(IsExpanded);
+        UpdateIsExpandedState();
+        UpdateImageDisplay();
+        UpdateControlSize();
+
+        _isLoaded = true;
+    }
 
     private void UpdateIsExpandedState()
     {
@@ -86,63 +143,6 @@ public partial class HelpImageDisplayUserControl : GitExtensionsControl
 
         UpdateControlSize();
     }
-
-    public Image? Image1
-    {
-        get { return _image1; }
-        set
-        {
-            _image1 = value is null ? value : DpiUtil.Scale(value);
-            UpdateImageDisplay();
-            if (IsExpanded)
-            {
-                UpdateControlSize();
-            }
-        }
-    }
-
-    public Image? Image2
-    {
-        get { return _image2; }
-        set
-        {
-            _image2 = value is null ? value : DpiUtil.Scale(value);
-            UpdateImageDisplay();
-            if (IsExpanded)
-            {
-                UpdateControlSize();
-            }
-        }
-    }
-
-    /// <summary>
-    /// see also IsOnHoverShowImage2NoticeText.
-    /// </summary>
-    public bool IsOnHoverShowImage2
-    {
-        get { return _showImage2OnHover; }
-        set
-        {
-            _showImage2OnHover = value;
-            if (_isLoaded)
-            {
-                UpdateIsExpandedState();
-                ////labelHoverText.Visible = value; // NOTE: would trigger OnLoad
-            }
-        }
-    }
-
-    /// <summary>
-    /// only shown when IsOnHoverShowImage2 is true.
-    /// </summary>
-    public string IsOnHoverShowImage2NoticeText
-    {
-        get => labelHoverText.Text;
-        set => labelHoverText.Text = value;
-    }
-
-    private bool _isHover;
-    private bool _showImage2OnHover;
 
     private bool IsHovering()
     {
@@ -175,8 +175,8 @@ public partial class HelpImageDisplayUserControl : GitExtensionsControl
             }
             else if (_image1 is not null && _image2 is not null)
             {
-                int w = Math.Max(_image1.Size.Width, _image2.Width);
-                int h = Math.Max(_image1.Size.Height, _image2.Height);
+                var w = Math.Max(_image1.Size.Width, _image2.Width);
+                var h = Math.Max(_image1.Size.Height, _image2.Height);
                 size = new Size(w, h);
             }
             else
@@ -195,7 +195,7 @@ public partial class HelpImageDisplayUserControl : GitExtensionsControl
         }
 
         // apply size to control
-        Form? form = TopLevelControl as Form;
+        var form = TopLevelControl as Form;
         Size s = new();
         Size ms = new();
         if (form is not null)

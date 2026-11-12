@@ -1,4 +1,4 @@
-﻿namespace GitUI;
+﻿namespace GitUI.UserControls;
 
 partial class PatchGrid
 {
@@ -73,7 +73,7 @@ partial class PatchGrid
         // 
         // patchFileBindingSource
         // 
-        patchFileBindingSource.DataSource = typeof(GitUI.PatchFile);
+        patchFileBindingSource.DataSource = typeof(PatchFile);
         // 
         // FileName
         // 

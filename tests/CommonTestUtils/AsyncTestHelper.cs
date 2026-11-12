@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
-using GitUI;
+using GitExtUtils.GitUI;
 
 namespace CommonTestUtils;
 
@@ -11,10 +11,7 @@ public static class AsyncTestHelper
 {
     public static TimeSpan UnexpectedTimeout
     {
-        get
-        {
-            return Debugger.IsAttached ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(1);
-        }
+        get => Debugger.IsAttached ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(1);
     }
 
     public static async Task JoinPendingOperationsAsync(TimeSpan timeout)

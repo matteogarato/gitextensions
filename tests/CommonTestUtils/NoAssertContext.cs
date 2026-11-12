@@ -5,75 +5,56 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace System;
+namespace CommonTestUtils;
 
 /// <summary>
-///  Use (within a using) to eat asserts.
+///     Use (within a using) to eat asserts.
 /// </summary>
 public sealed class NoAssertContext : IDisposable
 {
-    // For any given thread we don't need to lock to decide how to route messages, as any messages for that
-    // given thread will not happen while we're in the constructor or dispose method on that thread. That
-    // means we can safely check to see if we've hooked our thread without locking (outside of using a
-    // concurrent collection to make sure the collection is in a known state).
-    //
-    // We do, however need to lock around hooking/unhooking our custom listener to make sure that we
-    // are rerouting correctly if multiple threads are creating/disposing this class concurrently.
-
-#pragma warning disable SA1308 // Variable names should not be prefixed
-    private static readonly Lock s_lock = new();
-    private static bool s_hooked;
-
-    private static readonly ConcurrentDictionary<int, int> s_suppressedThreads = new();
-
-    // "Default" is the listener that terminates the process when debug assertions fail.
-    private static readonly TraceListener s_defaultListener = Trace.Listeners["Default"]!;
-    private static readonly NoAssertListener s_noAssertListener = new();
-#pragma warning restore SA1308 // Variable names should not be prefixed
-
     public NoAssertContext()
     {
-        s_suppressedThreads.AddOrUpdate(Environment.CurrentManagedThreadId, 1, (key, oldValue) => oldValue + 1);
+        _sSuppressedThreads.AddOrUpdate(Environment.CurrentManagedThreadId, 1, (key, oldValue) => oldValue + 1);
 
         // Lock to make sure we are hooked properly if two threads come into the constructor/dispose at the same time.
-        lock (s_lock)
+        lock (_sLock)
         {
-            if (!s_hooked)
+            if (!_sHooked)
             {
                 // Hook our custom listener first so we don't lose assertions from other threads when
                 // we disconnect the default listener.
-                Trace.Listeners.Add(s_noAssertListener);
-                Trace.Listeners.Remove(s_defaultListener);
-                s_hooked = true;
+                Trace.Listeners.Add(_sNoAssertListener);
+                Trace.Listeners.Remove(_sDefaultListener);
+                _sHooked = true;
             }
         }
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         GC.SuppressFinalize(this);
 
-        int currentThread = Environment.CurrentManagedThreadId;
-        if (s_suppressedThreads.TryRemove(currentThread, out int count))
+        var currentThread = Environment.CurrentManagedThreadId;
+        if (_sSuppressedThreads.TryRemove(currentThread, out var count))
         {
             if (count > 1)
             {
                 // We're in a nested assert context on a given thread, re-add with a decremented count.
                 // This doesn't need to be atomic as we're currently on the thread that would care about
                 // being rerouted.
-                s_suppressedThreads.TryAdd(currentThread, --count);
+                _sSuppressedThreads.TryAdd(currentThread, --count);
             }
         }
 
-        lock (s_lock)
+        lock (_sLock)
         {
-            if (s_hooked && s_suppressedThreads.IsEmpty)
+            if (_sHooked && _sSuppressedThreads.IsEmpty)
             {
                 // We're the first to hit the need to unhook. Add the default listener back first to
                 // ensure we don't lose any asserts from other threads.
-                Trace.Listeners.Add(s_defaultListener);
-                Trace.Listeners.Remove(s_noAssertListener);
-                s_hooked = false;
+                Trace.Listeners.Add(_sDefaultListener);
+                Trace.Listeners.Remove(_sNoAssertListener);
+                _sHooked = false;
             }
         }
     }
@@ -84,26 +65,21 @@ public sealed class NoAssertContext : IDisposable
         throw new InvalidOperationException($"Did not dispose {nameof(NoAssertContext)}");
     }
 
-    private class NoAssertListener : TraceListener
+    private class NoAssertListener() : TraceListener(typeof(NoAssertListener).FullName)
     {
-        public NoAssertListener()
-            : base(typeof(NoAssertListener).FullName)
-        {
-        }
-
         public override void Fail(string? message)
         {
-            if (!s_suppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
+            if (!_sSuppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
             {
-                s_defaultListener.Fail(message);
+                _sDefaultListener.Fail(message);
             }
         }
 
         public override void Fail(string? message, string? detailMessage)
         {
-            if (!s_suppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
+            if (!_sSuppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
             {
-                s_defaultListener.Fail(message, detailMessage);
+                _sDefaultListener.Fail(message, detailMessage);
             }
         }
 
@@ -111,18 +87,36 @@ public sealed class NoAssertContext : IDisposable
 
         public override void Write(string? message)
         {
-            if (!s_suppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
+            if (!_sSuppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
             {
-                s_defaultListener.Write(message);
+                _sDefaultListener.Write(message);
             }
         }
 
         public override void WriteLine(string? message)
         {
-            if (!s_suppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
+            if (!_sSuppressedThreads.TryGetValue(Environment.CurrentManagedThreadId, out _))
             {
-                s_defaultListener.WriteLine(message);
+                _sDefaultListener.WriteLine(message);
             }
         }
     }
+    // For any given thread we don't need to lock to decide how to route messages, as any messages for that
+    // given thread will not happen while we're in the constructor or dispose method on that thread. That
+    // means we can safely check to see if we've hooked our thread without locking (outside of using a
+    // concurrent collection to make sure the collection is in a known state).
+    //
+    // We do, however need to lock around hooking/unhooking our custom listener to make sure that we
+    // are rerouting correctly if multiple threads are creating/disposing this class concurrently.
+
+#pragma warning disable SA1308 // Variable names should not be prefixed
+    private static readonly Lock _sLock = new();
+    private static bool _sHooked;
+
+    private static readonly ConcurrentDictionary<int, int> _sSuppressedThreads = new();
+
+    // "Default" is the listener that terminates the process when debug assertions fail.
+    private static readonly TraceListener _sDefaultListener = Trace.Listeners["Default"]!;
+    private static readonly NoAssertListener _sNoAssertListener = new();
+#pragma warning restore SA1308 // Variable names should not be prefixed
 }

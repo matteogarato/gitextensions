@@ -1,4 +1,5 @@
-﻿using GitCommands;
+﻿using System.Reflection;
+using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
@@ -13,35 +14,19 @@ public sealed class ArgumentBuilderExtensionsTests
     {
         Test(
             "foo true",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, "true" }
-            });
+            new ArgumentBuilder { "foo", { true, "true" } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, "true" }
-            });
+            new ArgumentBuilder { "foo", { false, "true" } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, "" }
-            });
+            new ArgumentBuilder { "foo", { true, "" } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, (string?)null }
-            });
+            new ArgumentBuilder { "foo", { true, (string?)null } });
 
         static void Test(string expected, ArgumentBuilder command)
         {
@@ -54,51 +39,27 @@ public sealed class ArgumentBuilderExtensionsTests
     {
         Test(
             "foo true",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, "true", "false" }
-            });
+            new ArgumentBuilder { "foo", { true, "true", "false" } });
 
         Test(
             "foo false",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, "true", "false" }
-            });
+            new ArgumentBuilder { "foo", { false, "true", "false" } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, "", "" }
-            });
+            new ArgumentBuilder { "foo", { true, "", "" } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, "", "" }
-            });
+            new ArgumentBuilder { "foo", { false, "", "" } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, null, null }
-            });
+            new ArgumentBuilder { "foo", { true, null, null } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, null, null }
-            });
+            new ArgumentBuilder { "foo", { false, null, null } });
 
         static void Test(string expected, ArgumentBuilder command)
         {
@@ -141,51 +102,27 @@ public sealed class ArgumentBuilderExtensionsTests
     {
         Test(
             "foo a b c",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, new[] { "a", "b", "c" } }
-            });
+            new ArgumentBuilder { "foo", { true, new[] { "a", "b", "c" } } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, new[] { "a", "b", "c" } }
-            });
+            new ArgumentBuilder { "foo", { false, new[] { "a", "b", "c" } } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, Enumerable.Empty<string>() }
-            });
+            new ArgumentBuilder { "foo", { true, Enumerable.Empty<string>() } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, Enumerable.Empty<string>() }
-            });
+            new ArgumentBuilder { "foo", { false, Enumerable.Empty<string>() } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { true, (IEnumerable<string>?)null }
-            });
+            new ArgumentBuilder { "foo", { true, (IEnumerable<string>?)null } });
 
         Test(
             "foo",
-            new ArgumentBuilder
-            {
-                "foo",
-                { false, (IEnumerable<string>?)null }
-            });
+            new ArgumentBuilder { "foo", { false, (IEnumerable<string>?)null } });
 
         static void Test(string expected, ArgumentBuilder command)
         {
@@ -203,7 +140,7 @@ public sealed class ArgumentBuilderExtensionsTests
 
         void Test<T>()
         {
-            System.Reflection.MethodInfo? method = typeof(ArgumentBuilderExtensions).GetMethod(
+            var method = typeof(ArgumentBuilderExtensions).GetMethod(
                 nameof(ArgumentBuilderExtensions.Add),
                 [
                     typeof(ArgumentBuilder),
@@ -224,18 +161,9 @@ public sealed class ArgumentBuilderExtensionsTests
     [Fact]
     public void Handle_artificial_objectid()
     {
-        ((Action)(() => new ArgumentBuilder
-        {
-            ObjectId.WorkTreeId
-        })).Should().Throw<ArgumentException>();
-        ((Action)(() => new ArgumentBuilder
-        {
-            ObjectId.IndexId
-        })).Should().Throw<ArgumentException>();
-        ((Action)(() => new ArgumentBuilder
-        {
-            ObjectId.CombinedDiffId
-        })).Should().Throw<ArgumentException>();
+        ((Action)(() => new ArgumentBuilder { ObjectId.WorkTreeId })).Should().Throw<ArgumentException>();
+        ((Action)(() => new ArgumentBuilder { ObjectId.IndexId })).Should().Throw<ArgumentException>();
+        ((Action)(() => new ArgumentBuilder { ObjectId.CombinedDiffId })).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -306,20 +234,29 @@ public sealed class ArgumentBuilderExtensionsTests
     // 14: 'checkout name1'
     // 20: 'checkout name1 name2'
     [Theory]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 15, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 16, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 20, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 })]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 21, new string[] { "checkout name1 name2", "checkout name3" }, new int[] { 2, 1 })]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 15,
+        new[] { "checkout name1", "checkout name2", "checkout name3" }, new[] { 1, 1, 1 })]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 16,
+        new[] { "checkout name1", "checkout name2", "checkout name3" }, new[] { 1, 1, 1 })]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 20,
+        new[] { "checkout name1", "checkout name2", "checkout name3" }, new[] { 1, 1, 1 })]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 21, new[] { "checkout name1 name2", "checkout name3" },
+        new[] { 2, 1 })]
 
     // With base length
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 25, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 26, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 30, new string[] { "checkout name1", "checkout name2", "checkout name3" }, new int[] { 1, 1, 1 }, 10)]
-    [InlineData("checkout", new string[] { "name1", "name2", "name3" }, 31, new string[] { "checkout name1 name2", "checkout name3" }, new int[] { 2, 1 }, 10)]
-    public void BuildBatchArguments_builder_work_as_expected(string command, string[] arguments, int maxLength, string[] expected, int[] expectedCounts,
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 25,
+        new[] { "checkout name1", "checkout name2", "checkout name3" }, new[] { 1, 1, 1 }, 10)]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 26,
+        new[] { "checkout name1", "checkout name2", "checkout name3" }, new[] { 1, 1, 1 }, 10)]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 30,
+        new[] { "checkout name1", "checkout name2", "checkout name3" }, new[] { 1, 1, 1 }, 10)]
+    [InlineData("checkout", new[] { "name1", "name2", "name3" }, 31, new[] { "checkout name1 name2", "checkout name3" },
+        new[] { 2, 1 }, 10)]
+    public void BuildBatchArguments_builder_work_as_expected(string command, string[] arguments, int maxLength,
+        string[] expected, int[] expectedCounts,
         int baseLength = 0)
     {
-        List<BatchArgumentItem> batch = new GitArgumentBuilder(command)
+        var batch = new GitArgumentBuilder(command)
             .BuildBatchArguments(arguments, baseLength, maxLength);
 
         string[] args = [.. batch.Select(item => item.Argument.ToString())];
@@ -332,21 +269,23 @@ public sealed class ArgumentBuilderExtensionsTests
     // 8: 'checkout'
     // 14: 'checkout name1'
     [Theory]
-    [InlineData("checkout", new string[] { "a", "b", "c" }, 7)]
-    [InlineData("checkout", new string[] { "a", "b", "c" }, 8)]
-    [InlineData("checkout", new string[] { "a", "b", "c" }, 9)]
-    [InlineData("checkout", new string[] { "a", "b", "name1" }, 14)]
-    [InlineData("checkout", new string[] { "name1", "b", "a" }, 14)]
+    [InlineData("checkout", new[] { "a", "b", "c" }, 7)]
+    [InlineData("checkout", new[] { "a", "b", "c" }, 8)]
+    [InlineData("checkout", new[] { "a", "b", "c" }, 9)]
+    [InlineData("checkout", new[] { "a", "b", "name1" }, 14)]
+    [InlineData("checkout", new[] { "name1", "b", "a" }, 14)]
 
     // With base length
-    [InlineData("checkout", new string[] { "a", "b", "c" }, 17, 10)]
-    [InlineData("checkout", new string[] { "a", "b", "c" }, 18, 10)]
-    [InlineData("checkout", new string[] { "a", "b", "c" }, 19, 10)]
-    [InlineData("checkout", new string[] { "a", "b", "name1" }, 24, 10)]
-    [InlineData("checkout", new string[] { "name1", "b", "a" }, 24, 10)]
-    public void BuildBatchArguments_builder_throw_invalid_argument_exception(string command, string[] arguments, int maxLength,
+    [InlineData("checkout", new[] { "a", "b", "c" }, 17, 10)]
+    [InlineData("checkout", new[] { "a", "b", "c" }, 18, 10)]
+    [InlineData("checkout", new[] { "a", "b", "c" }, 19, 10)]
+    [InlineData("checkout", new[] { "a", "b", "name1" }, 24, 10)]
+    [InlineData("checkout", new[] { "name1", "b", "a" }, 24, 10)]
+    public void BuildBatchArguments_builder_throw_invalid_argument_exception(string command, string[] arguments,
+        int maxLength,
         int baseLength = 0)
     {
-        ((Action)(() => new GitArgumentBuilder(command).BuildBatchArguments(arguments, baseLength, maxLength))).Should().Throw<ArgumentException>();
+        ((Action)(() => new GitArgumentBuilder(command).BuildBatchArguments(arguments, baseLength, maxLength))).Should()
+            .Throw<ArgumentException>();
     }
 }

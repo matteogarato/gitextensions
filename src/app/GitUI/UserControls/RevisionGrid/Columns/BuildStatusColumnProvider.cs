@@ -1,26 +1,25 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using GitCommands;
 using GitCommands.Settings;
 using GitExtensions.Extensibility.BuildServerIntegration;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
 internal sealed class BuildStatusColumnProvider : ColumnProvider
 {
-    private const int IconColumnWidth = 16;
-    private const int TextColumnWidth = 150;
+    private const int _iconColumnWidth = 16;
+    private const int _textColumnWidth = 150;
 
     private readonly RevisionGridControl _grid;
     private readonly RevisionDataGridView _gridView;
-    private readonly Func<IGitModule> _module;
 
     // Increase contrast to selected rows (adapted to theme at use)
     private readonly Color _lightBlue = Color.FromArgb(130, 180, 240);
-    private Font? _fontWithUnicodeCache = null;
+    private readonly Func<IGitModule> _module;
+    private Font? _fontWithUnicodeCache;
 
     public BuildStatusColumnProvider(RevisionGridControl grid, RevisionDataGridView gridView, Func<IGitModule> module)
         : base("Build Status")
@@ -34,16 +33,17 @@ internal sealed class BuildStatusColumnProvider : ColumnProvider
             HeaderText = "Build Status",
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.NotSortable,
-            Width = DpiUtil.Scale(TextColumnWidth)
+            Width = DpiUtil.Scale(_textColumnWidth)
         };
     }
 
     public override void ApplySettings()
     {
-        bool showIcon = AppSettings.ShowBuildStatusIconColumn;
-        bool showText = AppSettings.ShowBuildStatusTextColumn;
+        var showIcon = AppSettings.ShowBuildStatusIconColumn;
+        var showText = AppSettings.ShowBuildStatusTextColumn;
 
-        bool columnVisible = BuildServerSettings.IntegrationEnabled.ValueOrDefault(_module().GetEffectiveSettings()) && (showIcon || showText);
+        var columnVisible = BuildServerSettings.IntegrationEnabled.ValueOrDefault(_module().GetEffectiveSettings()) &&
+                            (showIcon || showText);
 
         Column.Visible = columnVisible;
 
@@ -59,7 +59,7 @@ internal sealed class BuildStatusColumnProvider : ColumnProvider
             Column.Resizable = showText ? DataGridViewTriState.True : DataGridViewTriState.False;
             Column.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
 
-            int iconColumnWidth = DpiUtil.Scale(IconColumnWidth);
+            var iconColumnWidth = DpiUtil.Scale(_iconColumnWidth);
 
             if (showIcon && !showText)
             {
@@ -67,33 +67,34 @@ internal sealed class BuildStatusColumnProvider : ColumnProvider
             }
             else if (showText && Column.Width == iconColumnWidth)
             {
-                Column.Width = DpiUtil.Scale(TextColumnWidth);
+                Column.Width = DpiUtil.Scale(_textColumnWidth);
             }
         }
     }
 
-    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
+    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight,
+        in CellStyle style)
     {
         if (revision.BuildStatus is null)
         {
             return;
         }
 
-        string text = (AppSettings.ShowBuildStatusIconColumn ? revision.BuildStatus.StatusSymbol : string.Empty)
-            + (AppSettings.ShowBuildStatusTextColumn ? (string)e.FormattedValue! : string.Empty);
+        var text = (AppSettings.ShowBuildStatusIconColumn ? revision.BuildStatus.StatusSymbol : string.Empty)
+                   + (AppSettings.ShowBuildStatusTextColumn ? (string)e.FormattedValue! : string.Empty);
 
         if (_fontWithUnicodeCache?.Size != style.NormalFont.Size)
         {
             _fontWithUnicodeCache = new Font(FontFamily.GenericMonospace, style.NormalFont.Size);
         }
 
-        _grid.DrawColumnText(e, text, _fontWithUnicodeCache, GetColor(style.ForeColor), bounds: e.CellBounds);
+        _grid.DrawColumnText(e, text, _fontWithUnicodeCache, GetColor(style.ForeColor), e.CellBounds);
 
         return;
 
         Color GetColor(Color foreColor)
         {
-            bool isSelected = _gridView.Rows[e.RowIndex].Selected;
+            var isSelected = _gridView.Rows[e.RowIndex].Selected;
 
             Color customColor;
             switch (revision.BuildStatus.Status)
@@ -124,7 +125,7 @@ internal sealed class BuildStatusColumnProvider : ColumnProvider
 
         Color GetResolvedBackColor()
         {
-            Color backColor = e?.CellStyle?.BackColor ?? Theme.Default.GetColor(AppColor.PanelBackground);
+            var backColor = e?.CellStyle?.BackColor ?? Theme.Default.GetColor(AppColor.PanelBackground);
             if (backColor == Color.Empty && e is not null)
             {
                 return _gridView.Rows[e.RowIndex].Cells[e.ColumnIndex].InheritedStyle.BackColor;
@@ -142,7 +143,8 @@ internal sealed class BuildStatusColumnProvider : ColumnProvider
         e.FormattingApplied = true;
     }
 
-    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
+    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision,
+        [NotNullWhen(true)] out string? toolTip)
     {
         if (revision.BuildStatus is not null)
         {

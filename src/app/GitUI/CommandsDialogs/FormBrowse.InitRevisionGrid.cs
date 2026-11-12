@@ -1,6 +1,7 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.Properties;
 
 namespace GitUI.CommandsDialogs;
@@ -11,26 +12,28 @@ partial class FormBrowse
 
     private void InitRevisionGrid(ObjectId selectedId, ObjectId firstId, bool isFileHistoryMode)
     {
-        RevisionGrid.ArtificialChanged += (_, _) => RefreshGitStatusMonitor();
+        RevisionGridControl.ArtificialChanged += (_, _) => RefreshGitStatusMonitor();
 
-        RevisionGrid.IndexWatcher.Changed += (_, args) =>
+        RevisionGridControl.IndexWatcher.Changed += (_, args) =>
         {
-            bool indexChanged = args.IsIndexChanged;
+            var indexChanged = args.IsIndexChanged;
             this.InvokeAndForget(() =>
-                RefreshButton.Image = indexChanged && AppSettings.ShowGitStatusInBrowseToolbar && Module.IsValidGitWorkingDir()
+                RefreshButton.Image = indexChanged && AppSettings.ShowGitStatusInBrowseToolbar &&
+                                      Module.IsValidGitWorkingDir()
                     ? Images.ReloadRevisionsDirty
                     : Images.ReloadRevisions);
         };
 
-        RevisionGrid.MenuCommands.MenuChanged += (sender, e) => _formBrowseMenus.OnMenuCommandsPropertyChanged();
+        RevisionGridControl.MenuCommands.MenuChanged += (sender, e) => _formBrowseMenus.OnMenuCommandsPropertyChanged();
 
-        RevisionGrid.FilterChanged += (sender, e) =>
+        RevisionGridControl.FilterChanged += (sender, e) =>
         {
-            Text = _appTitleGenerator.Generate(Module.WorkingDir, Module.IsValidGitWorkingDir(), RevisionGrid.CurrentBranch.Value, TranslatedStrings.NoBranch, e.PathFilter);
+            Text = _appTitleGenerator.Generate(Module.WorkingDir, Module.IsValidGitWorkingDir(),
+                RevisionGridControl.CurrentBranch.Value, TranslatedStrings.NoBranch, e.PathFilter);
 
             // PathFilter is a free text field and may contain wildcards, quoting is optional.
             // This is will adjust the string at least for paths added from context menus.
-            string? path = e.PathFilter;
+            var path = e.PathFilter;
             if (path?.Length is > 1 && path[0] == '"' && path[^1] == '"')
             {
                 path = path[1..^1];
@@ -38,14 +41,14 @@ partial class FormBrowse
 
             if (!string.IsNullOrWhiteSpace(path))
             {
-                RelativePath relativePath = RelativePath.From(path);
+                var relativePath = RelativePath.From(path);
                 revisionDiff.FallbackFollowedFile = relativePath;
                 fileTree.FallbackFollowedFile = relativePath;
             }
         };
 
-        bool firstTimeInFileHistoryMode = isFileHistoryMode;
-        RevisionGrid.RevisionsLoading += (sender, e) =>
+        var firstTimeInFileHistoryMode = isFileHistoryMode;
+        RevisionGridControl.RevisionsLoading += (sender, e) =>
         {
             // Open diff in "filehistory" mode
             if (firstTimeInFileHistoryMode)
@@ -64,9 +67,9 @@ partial class FormBrowse
             RefreshLeftPanel(e.GetRefs, e.GetStashRevs, e.ForceRefresh);
         };
 
-        RevisionGrid.RevisionsLoaded += (sender, e) =>
+        RevisionGridControl.RevisionsLoaded += (sender, e) =>
         {
-            UICommands.GetRequiredService<IRepositoryHistoryUIService>().TriggerBranchNameCacheUpdate();
+            UiCommands.GetRequiredService<IRepositoryHistoryUiService>().TriggerBranchNameCacheUpdate();
 
             if (sender is null || MainSplitContainer.Panel1Collapsed)
             {
@@ -78,13 +81,13 @@ partial class FormBrowse
             repoObjectsTree.RefreshRevisionsLoaded();
         };
 
-        RevisionGrid.SelectionChanged += (sender, e) =>
+        RevisionGridControl.SelectionChanged += (sender, e) =>
         {
             _selectedRevisionUpdatedTargets = UpdateTargets.None;
             RefreshSelection();
         };
 
-        RevisionGrid.ToggledBetweenArtificialAndHeadCommits += (s, e) =>
+        RevisionGridControl.ToggledBetweenArtificialAndHeadCommits += (s, e) =>
         {
             if (!revisionDiff.Visible)
             {
@@ -94,14 +97,14 @@ partial class FormBrowse
             if (revisionDiff.Visible)
             {
                 // force focus of file list
-                revisionDiff.SwitchFocus(alreadyContainedFocus: false);
+                revisionDiff.SwitchFocus(false);
             }
         };
 
-        RevisionGrid.SelectedId = selectedId;
-        RevisionGrid.FirstId = firstId;
+        RevisionGridControl.SelectedId = selectedId;
+        RevisionGridControl.FirstId = firstId;
 
-        RevisionGrid.SelectInLeftPanel = SelectInLeftPanel;
+        RevisionGridControl.SelectInLeftPanel = SelectInLeftPanel;
 
         return;
 

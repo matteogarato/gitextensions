@@ -1,14 +1,15 @@
 ﻿using CommonTestUtils;
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitCommandsTests.Git;
+
 public sealed class GitModuleWorktreeTests : IDisposable
 {
-    private GitModule _gitModule = null!;
-    private MockExecutable _executable = null!;
+    private readonly MockExecutable _executable = null!;
+    private readonly GitModule _gitModule = null!;
 
     public GitModuleWorktreeTests()
     {
@@ -19,7 +20,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
         _gitModule = GetGitModuleWithExecutable(_executable);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _executable.Verify();
     }
@@ -27,7 +28,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     [Fact]
     public void GetWorktrees_should_parse_single_worktree_with_branch()
     {
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/repos/main",
             "HEAD abc1234abc1234abc1234abc1234abc1234abc12",
             "branch refs/heads/master",
@@ -35,7 +36,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Should().HaveCount(1);
             worktrees[0].Path.Should().Be("C:\\repos\\main");
@@ -49,7 +50,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     [Fact]
     public void GetWorktrees_should_parse_detached_head()
     {
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/repos/detached",
             "HEAD def5678def5678def5678def5678def5678def56",
             "detached",
@@ -57,7 +58,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Should().HaveCount(1);
             worktrees[0].HeadType.Should().Be(GitWorktreeHeadType.Detached);
@@ -69,14 +70,14 @@ public sealed class GitModuleWorktreeTests : IDisposable
     [Fact]
     public void GetWorktrees_should_parse_bare_repo()
     {
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/repos/bare",
             "bare",
             "", "");
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Should().HaveCount(1);
             worktrees[0].HeadType.Should().Be(GitWorktreeHeadType.Bare);
@@ -88,7 +89,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     [Fact]
     public void GetWorktrees_should_parse_multiple_worktrees()
     {
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/repos/main",
             "HEAD aaaa1234aaaa1234aaaa1234aaaa1234aaaa1234",
             "branch refs/heads/master",
@@ -100,7 +101,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Should().HaveCount(2);
 
@@ -117,7 +118,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     {
         // git always reports the main worktree first, and refuses to remove it. Deleting its
         // directory would take the repository with it, so it has to be told apart from the rest.
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/repos/main",
             "HEAD aaaa1234aaaa1234aaaa1234aaaa1234aaaa1234",
             "branch refs/heads/master",
@@ -133,7 +134,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Select(worktree => worktree.IsMain).Should().Equal(true, false, false);
         }
@@ -142,7 +143,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     [Fact]
     public void GetWorktrees_should_handle_path_with_spaces()
     {
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/my repos/work tree",
             "HEAD abc1234abc1234abc1234abc1234abc1234abc12",
             "branch refs/heads/main",
@@ -150,7 +151,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Should().HaveCount(1);
             worktrees[0].Path.Should().Be("C:\\my repos\\work tree");
@@ -161,7 +162,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     [Fact]
     public void GetWorktrees_should_strip_refs_heads_prefix_from_branch()
     {
-        string output = string.Join('\0',
+        var output = string.Join('\0',
             "worktree C:/repos/main",
             "HEAD abc1234abc1234abc1234abc1234abc1234abc12",
             "branch refs/heads/feature/nested/branch",
@@ -169,7 +170,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
 
         using (_executable.StageOutput("worktree list --porcelain -z", output))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees[0].Branch.Should().Be("feature/nested/branch");
         }
@@ -180,7 +181,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     {
         using (_executable.StageOutput("worktree list --porcelain -z", ""))
         {
-            IReadOnlyList<GitWorktree> worktrees = _gitModule.GetWorktrees();
+            var worktrees = _gitModule.GetWorktrees();
 
             worktrees.Should().BeEmpty();
         }
@@ -190,7 +191,7 @@ public sealed class GitModuleWorktreeTests : IDisposable
     {
         GitModule module = new(new GitExecutorProvider(new GitDirectoryResolver()), "");
 
-        GitExecutor.TestAccessor executorAccessor = module.GetTestAccessor().Executor;
+        var executorAccessor = module.GetTestAccessor().Executor;
         executorAccessor.GitExecutable = executable;
         executorAccessor.GitWindowsExecutable = executable;
         executorAccessor.GitCommandRunner = new GitCommandRunner(executable, () => GitModule.SystemEncoding);

@@ -1,6 +1,6 @@
 using GitExtensions.Extensibility.BuildServerIntegration;
 
-namespace AzureDevOpsIntegration;
+namespace GitExtensions.Plugins.AzureDevOpsIntegration;
 
 public class BuildsCache
 {

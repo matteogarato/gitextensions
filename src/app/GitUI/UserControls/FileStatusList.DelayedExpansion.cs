@@ -1,6 +1,4 @@
-using GitUI.UserControls;
-
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusList
 {
@@ -11,7 +9,7 @@ partial class FileStatusList
             return;
         }
 
-        RestoreChildrenOfFolderNodes(node.Items(), afterAction: () =>
+        RestoreChildrenOfFolderNodes(node.Items(), () =>
         {
             node.ExpandAll();
             node.EnsureVerticallyVisible();
@@ -24,7 +22,7 @@ partial class FileStatusList
 
     private void FileStatusListView_BeforeExpand(object? sender, TreeViewCancelEventArgs e)
     {
-        if (e.Node is TreeNode node)
+        if (e.Node is { } node)
         {
             RestoreChildrenOfFolderNodes([node], delayExpansion: true);
         }
@@ -32,15 +30,15 @@ partial class FileStatusList
 
     private static void ReplaceChildrenOfFolderNodesWithPlaceholder(IEnumerable<TreeNode> nodes)
     {
-        foreach (TreeNode node in nodes)
+        foreach (var node in nodes)
         {
             if (node.Nodes.Count == 0)
             {
                 continue;
             }
 
-            TreeNode[] children = new TreeNode[node.Nodes.Count];
-            node.Nodes.CopyTo(children, index: 0);
+            var children = new TreeNode[node.Nodes.Count];
+            node.Nodes.CopyTo(children, 0);
             TreeNode placeholder = new() { Tag = children };
 
             node.Nodes.Clear();
@@ -49,14 +47,15 @@ partial class FileStatusList
     }
 
     /// <summary>
-    ///  Replaces possible placeholders with the actual children.
+    ///     Replaces possible placeholders with the actual children.
     /// </summary>
     /// <param name="nodes">The nodes which are prepared for expansion.</param>
     /// <param name="afterAction">An optional action which is performed before exiting Begin/EndUpdate.</param>
     /// <param name="delayExpansion">If <c>true</c>, the subchildren are replaced with placeholders.</param>
-    private void RestoreChildrenOfFolderNodes(IEnumerable<TreeNode> nodes, Action? afterAction = null, bool delayExpansion = false)
+    private void RestoreChildrenOfFolderNodes(IEnumerable<TreeNode> nodes, Action? afterAction = null,
+        bool delayExpansion = false)
     {
-        List<(TreeNode Parent, TreeNode[] Children)> nodesWithPlaceholder = GetNodesWithPlaceHolder(nodes);
+        var nodesWithPlaceholder = GetNodesWithPlaceHolder(nodes);
         if (nodesWithPlaceholder.Count == 0 && afterAction is null)
         {
             return;
@@ -67,8 +66,8 @@ partial class FileStatusList
             FileStatusListView.BeforeExpand -= FileStatusListView_BeforeExpand;
             FileStatusListView.BeginUpdate();
 
-            IEnumerable<TreeNode> children = RestoreAndGetAllChildren(nodesWithPlaceholder, delayExpansion);
-            LoadFileIcons(children, cancellationToken: default);
+            var children = RestoreAndGetAllChildren(nodesWithPlaceholder, delayExpansion);
+            LoadFileIcons(children, default);
 
             afterAction?.Invoke();
         }
@@ -83,7 +82,7 @@ partial class FileStatusList
         static List<(TreeNode Parent, TreeNode[] Children)> GetNodesWithPlaceHolder(IEnumerable<TreeNode> nodes)
         {
             List<(TreeNode Parent, TreeNode[] Children)> nodesWithPlaceholder = [];
-            foreach (TreeNode node in nodes)
+            foreach (var node in nodes)
             {
                 if (node.Nodes.Count == 1 && node.Nodes[0].Tag is TreeNode[] children)
                 {
@@ -94,15 +93,16 @@ partial class FileStatusList
             return nodesWithPlaceholder;
         }
 
-        static IEnumerable<TreeNode> RestoreAndGetAllChildren(List<(TreeNode Parent, TreeNode[] Children)> nodesWithPlaceholder, bool delayExpansion)
+        static IEnumerable<TreeNode> RestoreAndGetAllChildren(
+            List<(TreeNode Parent, TreeNode[] Children)> nodesWithPlaceholder, bool delayExpansion)
         {
-            foreach ((TreeNode parent, TreeNode[] children) in nodesWithPlaceholder)
+            foreach ((var parent, var children) in nodesWithPlaceholder)
             {
                 RestoreChildren(parent, children, delayExpansion);
 
-                foreach (TreeNode child in children)
+                foreach (var child in children)
                 {
-                    foreach (TreeNode subchild in child.Items())
+                    foreach (var subchild in child.Items())
                     {
                         yield return subchild;
                     }

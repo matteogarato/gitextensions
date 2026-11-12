@@ -1,4 +1,5 @@
 ﻿using GitUI.Editor;
+using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.CommandsDialogs;
 
@@ -18,9 +19,9 @@ partial class FormLog
     private void InitializeComponent()
     {
         splitContainer1 = new SplitContainer();
-        RevisionGrid = new GitUI.RevisionGridControl();
+        RevisionGrid = new RevisionGridControl();
         splitContainer3 = new SplitContainer();
-        DiffFiles = new GitUI.FileStatusList();
+        DiffFiles = new UserControls.FileStatusList();
         diffViewer = new GitUI.Editor.FileViewer();
 
         ((System.ComponentModel.ISupportInitialize)(splitContainer1)).BeginInit();
@@ -131,7 +132,7 @@ partial class FormLog
 
     private SplitContainer splitContainer1;
     private SplitContainer splitContainer3;
-    private FileStatusList DiffFiles;
+    private UserControls.FileStatusList DiffFiles;
     private RevisionGridControl RevisionGrid;
     private FileViewer diffViewer;
 }

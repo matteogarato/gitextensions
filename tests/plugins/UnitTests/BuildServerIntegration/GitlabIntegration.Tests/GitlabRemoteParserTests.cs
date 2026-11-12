@@ -1,7 +1,7 @@
 ﻿using GitExtensions.Plugins.GitlabIntegration.Settings;
-using Xunit;
 
 namespace GitlabIntegrationTests;
+
 public class GitlabRemoteParserTests
 {
     [Theory]
@@ -12,7 +12,9 @@ public class GitlabRemoteParserTests
     [InlineData("git@gitlab.com/owner/repo.git/")]
     public void TryExtractGitlabDataFromGitlabComRemoteUrl(string url)
     {
-        new GitlabRemoteParser().TryExtractGitlabDataFromRemoteUrl(url, out string? host, out string? owner, out string? repository).Should().BeTrue();
+        new GitlabRemoteParser()
+            .TryExtractGitlabDataFromRemoteUrl(url, out var host, out var owner, out var repository)
+            .Should().BeTrue();
         host.Should().Be("gitlab.com");
         owner.Should().Be("owner");
         repository.Should().Be("repo");
@@ -26,7 +28,9 @@ public class GitlabRemoteParserTests
     [InlineData("https://repo.192.168.1.11:5896/owner/repo/", "repo.192.168.1.11:5896")]
     public void TryExtractGitlabDataFromSelfHostedRemoteUrl(string url, string expectedHost)
     {
-        new GitlabRemoteParser().TryExtractGitlabDataFromRemoteUrl(url, out string? host, out string? owner, out string? repository).Should().BeTrue();
+        new GitlabRemoteParser()
+            .TryExtractGitlabDataFromRemoteUrl(url, out var host, out var owner, out var repository)
+            .Should().BeTrue();
         host.Should().Be(expectedHost);
         owner.Should().Be("owner");
         repository.Should().Be("repo");
@@ -36,8 +40,9 @@ public class GitlabRemoteParserTests
     public void Should_fail_in_parsing_invalid_url()
     {
         GitlabRemoteParser gitlabRemoteParser = new();
-        string url = "https://owner@dev.bad.com/owner/project/_git/repo";
-        gitlabRemoteParser.TryExtractGitlabDataFromRemoteUrl(url, out string? _, out string? owner, out string? repository).Should().BeFalse();
+        var url = "https://owner@dev.bad.com/owner/project/_git/repo";
+        gitlabRemoteParser.TryExtractGitlabDataFromRemoteUrl(url, out _, out var owner, out var repository)
+            .Should().BeFalse();
         owner.Should().BeNull();
         repository.Should().BeNull();
 
@@ -48,9 +53,11 @@ public class GitlabRemoteParserTests
     public void Should_Correct_in_parsing_repositoryNamespace()
     {
         GitlabRemoteParser gitlabRemoteParser = new();
-        string url = "https://dev.bad.com/groupname/groupname/repo.git";
-        gitlabRemoteParser.TryExtractGitlabDataFromRemoteUrl(url, out string? host, out string? owner, out string? repository).Should().BeTrue();
-        string? repositoryNamespace = owner;
+        var url = "https://dev.bad.com/groupname/groupname/repo.git";
+        gitlabRemoteParser
+            .TryExtractGitlabDataFromRemoteUrl(url, out var host, out var owner, out var repository)
+            .Should().BeTrue();
+        var repositoryNamespace = owner;
         host.Should().BeEquivalentTo("dev.bad.com");
         repositoryNamespace.Should().BeEquivalentTo("groupname/groupname");
         repository.Should().BeEquivalentTo("repo");

@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitUI.LeftPanel.Interfaces;
 using ResourceManager;
@@ -17,15 +17,15 @@ internal sealed class TagMenuItems<TNode> : MenuItemsGenerator<TNode>
 public class TagMenuItemsStrings : Translate
 {
     internal readonly TranslationString Checkout = new("Chec&kout tag revision...");
-    internal readonly TranslationString Rebase = new("&Rebase current branch on this tag revision...");
-    internal readonly TranslationString Delete = new("&Delete tag...");
 
     internal readonly TranslationString CheckoutTooltip = new("Checkout this tag revision");
     internal readonly TranslationString CreateTooltip = new("Create a local branch from this tag");
+    internal readonly TranslationString Delete = new("&Delete tag...");
+    internal readonly TranslationString DeleteTooltip = new("Delete this tag");
     internal readonly TranslationString MergeTooltip = new("Merge this tag into current branch");
+    internal readonly TranslationString Rebase = new("&Rebase current branch on this tag revision...");
     internal readonly TranslationString RebaseTooltip = new("Rebase current branch on this tag");
     internal readonly TranslationString ResetTooltip = new("Reset current branch to here");
-    internal readonly TranslationString DeleteTooltip = new("Delete this tag");
 
     public TagMenuItemsStrings()
     {

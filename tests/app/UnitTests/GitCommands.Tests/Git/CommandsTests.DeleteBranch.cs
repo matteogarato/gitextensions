@@ -1,37 +1,11 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
-namespace GitCommandsTests_Git;
+namespace GitCommandsTests.Git;
 
 partial class CommandsTests
 {
-    [Fact]
-    public void ctor_should_throw_if_branches_is_null()
-    {
-        ((Action)(() => Commands.DeleteBranch(branches: null!, force: false))).Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void ctor_should_throw_if_branches_is_empty()
-    {
-        ((Action)(() => Commands.DeleteBranch([], force: false))).Should().Throw<ArgumentException>();
-    }
-
-    [Fact]
-    public void ctor_should_have_expected_values()
-    {
-        const string remoteName = "origin";
-        const string completeName = $"refs/remotes/{remoteName}/branch_name";
-        GitRef remoteBranchRef = SetupRawRemoteRef(localBranchName: "local_branch_name", remoteName, completeName);
-
-        IGitCommand cmd = Commands.DeleteBranch(new IGitRef[] { remoteBranchRef }, force: false);
-
-        cmd.AccessesRemote.Should().BeFalse();
-        cmd.ChangesRepoState.Should().BeTrue();
-    }
-
     public static IEnumerable<object?[]> DeleteBranchTestData
     {
         get
@@ -40,7 +14,7 @@ partial class CommandsTests
 
             // Test local branches only
             List<IGitRef> localRefs = [];
-            IGitModule localGitModule = Substitute.For<IGitModule>();
+            var localGitModule = Substitute.For<IGitModule>();
             localGitModule.GetEffectiveSetting($"branch.{name}.merge").Returns(string.Empty);
             localGitModule.GetEffectiveSetting($"branch.{name}.remote").Returns(string.Empty);
             GitRef localBranchRef = new(localGitModule, ObjectId.Random(), $"refs/heads/{name}");
@@ -48,37 +22,78 @@ partial class CommandsTests
             localRefs.Add(localBranchRef);
 
             yield return new object?[] { localRefs, /* force */ false, /* expected */ $"branch --delete \"{name}\"" };
-            yield return new object?[] { localRefs, /* force */ true, /* expected */ $"branch --delete --force \"{name}\"" };
+            yield return new object?[]
+            {
+                localRefs, /* force */ true, /* expected */ $"branch --delete --force \"{name}\""
+            };
 
             // Test local and remote branches
             const string remoteName = "origin";
-            string completeName = $"refs/remotes/{remoteName}/{name}";
-            GitRef remoteBranchRef = SetupRawRemoteRef(localBranchName: name, remoteName, completeName);
+            var completeName = $"refs/remotes/{remoteName}/{name}";
+            var remoteBranchRef = SetupRawRemoteRef(name, remoteName, completeName);
 
             List<IGitRef> mixedRefs = [localBranchRef, remoteBranchRef];
 
-            yield return new object?[] { mixedRefs, /* force */ false, /* expected */ $"branch --delete --all \"{name}\" \"origin/{name}\"" };
-            yield return new object?[] { mixedRefs, /* force */ true, /* expected */ $"branch --delete --force --all \"{name}\" \"origin/{name}\"" };
+            yield return new object?[]
+            {
+                mixedRefs, /* force */ false, /* expected */ $"branch --delete --all \"{name}\" \"origin/{name}\""
+            };
+            yield return new object?[]
+            {
+                mixedRefs, /* force */ true, /* expected */
+                $"branch --delete --force --all \"{name}\" \"origin/{name}\""
+            };
 
             // Test remote branches only
             List<IGitRef> remoteRefs = [remoteBranchRef];
 
-            yield return new object?[] { remoteRefs, /* force */ false, /* expected */ $"branch --delete --remotes \"origin/{name}\"" };
-            yield return new object?[] { remoteRefs, /* force */ true, /* expected */ $"branch --delete --force --remotes \"origin/{name}\"" };
+            yield return new object?[]
+            {
+                remoteRefs, /* force */ false, /* expected */ $"branch --delete --remotes \"origin/{name}\""
+            };
+            yield return new object?[]
+            {
+                remoteRefs, /* force */ true, /* expected */ $"branch --delete --force --remotes \"origin/{name}\""
+            };
         }
+    }
+
+    [Fact]
+    public void ctor_should_throw_if_branches_is_null()
+    {
+        ((Action)(() => GitCommands.Git.Commands.DeleteBranch(null!, false))).Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ctor_should_throw_if_branches_is_empty()
+    {
+        ((Action)(() => GitCommands.Git.Commands.DeleteBranch([], false))).Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void ctor_should_have_expected_values()
+    {
+        const string remoteName = "origin";
+        const string completeName = $"refs/remotes/{remoteName}/branch_name";
+        var remoteBranchRef = SetupRawRemoteRef("local_branch_name", remoteName, completeName);
+
+        var cmd = GitCommands.Git.Commands.DeleteBranch(new IGitRef[] { remoteBranchRef }, false);
+
+        cmd.AccessesRemote.Should().BeFalse();
+        cmd.ChangesRepoState.Should().BeTrue();
     }
 
     [Theory]
     [MemberData(nameof(DeleteBranchTestData))]
     public void Arguments_are_Expected(IReadOnlyCollection<IGitRef> branches, bool force, string expected)
     {
-        IGitCommand cmd = Commands.DeleteBranch(branches, force);
+        var cmd = GitCommands.Git.Commands.DeleteBranch(branches, force);
         cmd.Arguments.Should().Be(expected);
     }
 
     private static GitRef SetupRawRemoteRef(string localBranchName, string remoteName, string completeName)
     {
-        IGitModule localGitModule = Substitute.For<IGitModule>();
+        var localGitModule = Substitute.For<IGitModule>();
         localGitModule.GetEffectiveSetting($"branch.{localBranchName}.merge").Returns(completeName);
         localGitModule.GetEffectiveSetting($"branch.{localBranchName}.remote").Returns(remoteName);
         GitRef remoteBranchRef = new(localGitModule, ObjectId.Random(), completeName, remoteName);

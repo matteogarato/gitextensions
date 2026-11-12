@@ -1,7 +1,7 @@
 ﻿namespace GitUI.UserControls;
 
 /// <summary>
-///  A PictureBox which handles exceptions from OnPaint.
+///     A PictureBox which handles exceptions from OnPaint.
 /// </summary>
 internal sealed class PictureBoxEx : PictureBox
 {

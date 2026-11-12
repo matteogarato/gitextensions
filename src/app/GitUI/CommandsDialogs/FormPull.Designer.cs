@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommandsDialogs;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommandsDialogs;
 
 partial class FormPull
 {
@@ -39,7 +41,7 @@ partial class FormPull
         Unshallow = new CheckBox();
         Pull = new Button();
         MainLayout = new TableLayoutPanel();
-        PanelLeftImage = new GitUI.Help.HelpImageDisplayUserControl();
+        PanelLeftImage = new HelpImageDisplayUserControl();
         PanelRight = new Panel();
         PanelRightInner = new TableLayoutPanel();
         GroupPullFrom = new GroupBox();
@@ -598,7 +600,7 @@ partial class FormPull
     private Panel PanelRight;
     private TableLayoutPanel PanelRightInner;
     private FlowLayoutPanel PanelMergeOptions;
-    private Help.HelpImageDisplayUserControl PanelLeftImage;
+    private HelpImageDisplayUserControl PanelLeftImage;
     private FlowLayoutPanel PanelTagOptions;
     private RadioButton ReachableTags;
     private RadioButton NoTags;

@@ -1,7 +1,10 @@
 using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.ConsoleEmulation;
 using GitUI.ConsoleEmulation.PlainText;
 
@@ -14,13 +17,11 @@ public delegate bool HandleOnExit(ref bool isError, FormProcess form);
 
 public partial class FormProcess : FormStatus
 {
-    public string Remote { get; set; }
-    public string? ProcessInput { get; }
-    public readonly string WorkingDirectory;
-    public HandleOnExit? HandleOnExitCallback { get; set; }
     public readonly Dictionary<string, string> ProcessEnvVariables = [];
+    public readonly string WorkingDirectory;
 
-    private FormProcess(IGitUICommands commands, IConsoleEmulatorsRegistry consoleEmulatorsRegistry, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings, string? process)
+    private FormProcess(IGitUiCommands commands, IConsoleEmulatorsRegistry consoleEmulatorsRegistry,
+        ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings, string? process)
         : base(commands, consoleEmulatorsRegistry, useDialogSettings)
     {
         ProcessCallback = ProcessStart;
@@ -31,7 +32,7 @@ public partial class FormProcess : FormStatus
 
         if (process is null)
         {
-            string wslDistro = AppSettings.WslGitEnabled ? PathUtil.GetWslDistro(workingDirectory) : "";
+            var wslDistro = AppSettings.WslGitEnabled ? PathUtil.GetWslDistro(workingDirectory) : "";
             if (!string.IsNullOrEmpty(wslDistro))
             {
                 process = AppSettings.WslCommand;
@@ -42,14 +43,15 @@ public partial class FormProcess : FormStatus
                 // (e.g. zsh), which glob-expands patterns like "--exclude=refs/sessions/**" before git ever sees them. zsh's default
                 // "nomatch" behaviour then aborts the whole command with a non-zero exit and no output when the pattern matches nothing,
                 // which silently empties revision/diff output for any repo whose distro defaults to zsh (or any shell) with that setting.
-                arguments = $"-d {wslDistro} --cd {WorkingDirectory.RemoveTrailingPathSeparator().Quote()} --exec {AppSettings.WslGitCommand} {arguments}";
+                arguments =
+                    $"-d {wslDistro} --cd {WorkingDirectory.RemoveTrailingPathSeparator().Quote()} --exec {AppSettings.WslGitCommand} {arguments}";
             }
         }
 
         ProcessString = process ?? AppSettings.GitCommand;
         ProcessArguments = arguments;
 
-        string displayPath = PathUtil.GetDisplayPath(WorkingDirectory);
+        var displayPath = PathUtil.GetDisplayPath(WorkingDirectory);
         if (!string.IsNullOrWhiteSpace(displayPath))
         {
             Text += $" ({displayPath})";
@@ -59,20 +61,31 @@ public partial class FormProcess : FormStatus
         ConsoleCommandRunner.CommandOutputReceived += DataReceivedCore;
     }
 
-    public FormProcess(IGitUICommands commands, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings, string? process = null)
-        : this(commands, consoleEmulatorsRegistry: commands.GetRequiredService<IConsoleEmulatorsRegistry>(), arguments, workingDirectory, input, useDialogSettings, process)
+    public FormProcess(IGitUiCommands commands, ArgumentString arguments, string workingDirectory, string? input,
+        bool useDialogSettings, string? process = null)
+        : this(commands, commands.GetRequiredService<IConsoleEmulatorsRegistry>(), arguments, workingDirectory, input,
+            useDialogSettings, process)
     {
     }
+
+    public string Remote { get; set; }
+    public string? ProcessInput { get; }
+    public HandleOnExit? HandleOnExitCallback { get; set; }
 
     // Note that "DialogResult FormProcess.ShowDialog(owner)" may exit when the process (command) finishes,
     // so that result is other than OK or Cancel.
 
-    public static bool ShowDialog(IWin32Window? owner, IGitUICommands commands, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings, string? process = null)
-        => ShowDialog(owner, commands, arguments, workingDirectory, input, useDialogSettings, out string _, process);
-
-    public static bool ShowDialog(IWin32Window? owner, IGitUICommands commands, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings, out string output, string? process = null)
+    public static bool ShowDialog(IWin32Window? owner, IGitUiCommands commands, ArgumentString arguments,
+        string workingDirectory, string? input, bool useDialogSettings, string? process = null)
     {
-        DebugHelpers.Assert(owner is not null, "Progress window must be owned by another window! This is a bug, please correct and send a pull request with a fix.");
+        return ShowDialog(owner, commands, arguments, workingDirectory, input, useDialogSettings, out _, process);
+    }
+
+    public static bool ShowDialog(IWin32Window? owner, IGitUiCommands commands, ArgumentString arguments,
+        string workingDirectory, string? input, bool useDialogSettings, out string output, string? process = null)
+    {
+        DebugHelpers.Assert(owner is not null,
+            "Progress window must be owned by another window! This is a bug, please correct and send a pull request with a fix.");
 
         using FormProcess formProcess = new(commands, arguments, workingDirectory, input, useDialogSettings, process);
         formProcess.ShowDialog(owner);
@@ -81,9 +94,11 @@ public partial class FormProcess : FormStatus
         return !formProcess.ErrorOccurred();
     }
 
-    public static string ReadDialog(IWin32Window? owner, IGitUICommands commands, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings)
+    public static string ReadDialog(IWin32Window? owner, IGitUiCommands commands, ArgumentString arguments,
+        string workingDirectory, string? input, bool useDialogSettings)
     {
-        DebugHelpers.Assert(owner is not null, "Progress window must be owned by another window! This is a bug, please correct and send a pull request with a fix.");
+        DebugHelpers.Assert(owner is not null,
+            "Progress window must be owned by another window! This is a bug, please correct and send a pull request with a fix.");
 
         using FormProcess formProcess = new(commands, arguments, workingDirectory, input, useDialogSettings);
         formProcess.ShowDialog(owner);
@@ -121,7 +136,9 @@ public partial class FormProcess : FormStatus
 
             if (!string.IsNullOrEmpty(ProcessInput))
             {
-                throw new NotSupportedException("No non-NULL usages of ProcessInput are currently expected.");  // Not implemented with all terminal variations, so let's postpone until there's at least one non-null case
+                throw
+                    new NotSupportedException(
+                        "No non-NULL usages of ProcessInput are currently expected."); // Not implemented with all terminal variations, so let's postpone until there's at least one non-null case
 /*
                 Thread.Sleep(500);
                 Process.StandardInput.Write(ProcessInput);
@@ -147,7 +164,7 @@ public partial class FormProcess : FormStatus
         {
             ConsoleCommandRunner.KillCommandProcess();
 
-            GitModule module = new(UICommands.GetRequiredService<IGitExecutorProvider>(), WorkingDirectory);
+            GitModule module = new(UiCommands.GetRequiredService<IGitExecutorProvider>(), WorkingDirectory);
             module.UnlockIndex(includeSubmodules: true);
         }
         catch
@@ -200,7 +217,7 @@ public partial class FormProcess : FormStatus
         else
         {
             const string ansiSuffix = "\u001B[K";
-            string line = e.Text.Replace(ansiSuffix, "");
+            var line = e.Text.Replace(ansiSuffix, "");
 
             // To the internal log (which can be then retrieved as full text from this form)
             OutputLog.Append(line);
@@ -228,5 +245,7 @@ public partial class FormProcess : FormStatus
     }
 
     public static bool IsOperationAborted(string dialogResult)
-        => dialogResult.Trim(Delimiters.LineFeedAndCarriageReturn) == "Aborted";
+    {
+        return dialogResult.Trim(Delimiters.LineFeedAndCarriageReturn) == "Aborted";
+    }
 }

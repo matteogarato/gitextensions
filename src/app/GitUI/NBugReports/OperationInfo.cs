@@ -3,20 +3,22 @@
 internal struct OperationInfo
 {
     /// <summary>
-    ///  Indicates whether the operation that caused the exception was an external operation.
+    ///     Indicates whether the operation that caused the exception was an external operation.
     /// </summary>
     public bool IsExternalOperation { get; init; }
 
     /// <summary>
-    ///  Indicates whether the operation that caused the exception was a user configured external operation.
+    ///     Indicates whether the operation that caused the exception was a user configured external operation.
     /// </summary>
     public bool IsUserExternalOperation { get; init; }
 
     /// <summary>
-    ///  Indicates whether the operation that caused the exception is terminating the application.
+    ///     Indicates whether the operation that caused the exception is terminating the application.
     /// </summary>
     public bool IsTerminating { get; init; }
 
     public readonly TaskDialogIcon Icon
-        => IsExternalOperation || IsUserExternalOperation ? TaskDialogIcon.Warning : TaskDialogIcon.Error;
+    {
+        get => IsExternalOperation || IsUserExternalOperation ? TaskDialogIcon.Warning : TaskDialogIcon.Error;
+    }
 }

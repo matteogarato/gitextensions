@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using ResourceManager;
 
@@ -6,7 +6,8 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class BlameViewerSettingsPage : SettingsPageWithHeader
 {
-    private readonly TranslationString _blameWarningTooltip = new("Could prevent blame to calculate the accurate line number when blaming previous revisions.");
+    private readonly TranslationString _blameWarningTooltip =
+        new("Could prevent blame to calculate the accurate line number when blaming previous revisions.");
 
     public BlameViewerSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)

@@ -1,85 +1,58 @@
 ﻿using System.Globalization;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitExtensions.Plugins.GitImpact;
 
 public sealed class ImpactLoader : IDisposable
 {
-    public readonly struct Commit
-    {
-        public DateOnly Week { get; }
-        public string Author { get; }
-        public DataPoint Data { get; }
-
-        public Commit(DateOnly week, string author, DataPoint data)
-        {
-            Week = week;
-            Author = author;
-            Data = data;
-        }
-    }
-
-    public readonly struct DataPoint
-    {
-        public int Commits { get; }
-        public int AddedLines { get; }
-        public int DeletedLines { get; }
-
-        public int ChangedLines => AddedLines + DeletedLines;
-
-        public DataPoint(int commits, int added, int deleted)
-        {
-            Commits = commits;
-            AddedLines = added;
-            DeletedLines = deleted;
-        }
-
-        public static DataPoint operator +(DataPoint left, DataPoint right)
-        {
-            return new DataPoint(
-                left.Commits + right.Commits,
-                left.AddedLines + right.AddedLines,
-                left.DeletedLines + right.DeletedLines);
-        }
-    }
-
-    /// <summary>
-    /// property to enable mailmap respectfulness
-    /// </summary>
-    public bool RespectMailmap { get; set; }
-
-    public event EventHandler? Exited;
-    public event Action<IList<Commit>>? CommitLoaded;
-
     private readonly CancellationTokenSequence _cancellationTokenSequence = new();
     private readonly CancellationTokenSource _closingPluginCancellationToken = new();
-    private readonly IGitModule _module;
-    private readonly JoinableTask _mainModuleLoadingTask;
-    private readonly Dictionary<string, List<Commit>> _modulesCommits = new(1);
     private readonly int _firstDayOfWeek = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+    private readonly JoinableTask _mainModuleLoadingTask;
+    private readonly IGitModule _module;
+    private readonly Dictionary<string, List<Commit>> _modulesCommits = new(1);
+
+    private bool _showSubmodules;
 
     public ImpactLoader(IGitModule module)
     {
         _module = module;
-        _mainModuleLoadingTask = ThreadHelper.JoinableTaskFactory.RunAsync(
-            async () =>
-            {
-                await TaskScheduler.Default.SwitchTo(alwaysYield: true);
-                LoadModuleInfoData(_module, _closingPluginCancellationToken.Token);
-            });
+        _mainModuleLoadingTask = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await TaskScheduler.Default.SwitchTo(true);
+            LoadModuleInfoData(_module, _closingPluginCancellationToken.Token);
+        });
     }
 
-    public void Dispose()
+    /// <summary>
+    ///     property to enable mailmap respectfulness
+    /// </summary>
+    public bool RespectMailmap { get; set; }
+
+    public bool ShowSubmodules
+    {
+        get => _showSubmodules;
+        set
+        {
+            Stop();
+            _showSubmodules = value;
+        }
+    }
+
+    void IDisposable.Dispose()
     {
         _closingPluginCancellationToken.Cancel();
         Stop();
         _cancellationTokenSequence.Dispose();
         _closingPluginCancellationToken.Dispose();
     }
+
+    public event EventHandler? Exited;
+    public event Action<IList<Commit>>? CommitLoaded;
 
     public void Stop()
     {
@@ -88,9 +61,9 @@ public sealed class ImpactLoader : IDisposable
 
     public void Execute()
     {
-        CancellationToken token = _cancellationTokenSequence.Next();
+        var token = _cancellationTokenSequence.Next();
 
-        IReadOnlyList<JoinableTask> tasks = GetTasks(token);
+        var tasks = GetTasks(token);
 
         ThreadHelper.FileAndForget(async () =>
         {
@@ -109,25 +82,16 @@ public sealed class ImpactLoader : IDisposable
         });
     }
 
-    private bool _showSubmodules;
-    public bool ShowSubmodules
-    {
-        get => _showSubmodules;
-        set
-        {
-            Stop();
-            _showSubmodules = value;
-        }
-    }
-
     private IReadOnlyList<JoinableTask> GetTasks(CancellationToken token)
     {
-        List<JoinableTask> tasks = [ThreadHelper.JoinableTaskFactory.RunAsync(
-            async () =>
+        List<JoinableTask> tasks =
+        [
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await _mainModuleLoadingTask.JoinAsync(token);
                 LoadModuleInfo(_module, token);
-            })];
+            })
+        ];
 
         if (ShowSubmodules)
         {
@@ -136,12 +100,11 @@ public sealed class ImpactLoader : IDisposable
                 select _module.GetSubmodule(submoduleName)
                 into submodule
                 where submodule.IsValidGitWorkingDir()
-                select ThreadHelper.JoinableTaskFactory.RunAsync(
-                    async () =>
-                    {
-                        await TaskScheduler.Default.SwitchTo(alwaysYield: true);
-                        LoadModuleInfo(submodule, token);
-                    }));
+                select ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    await TaskScheduler.Default.SwitchTo(true);
+                    LoadModuleInfo(submodule, token);
+                }));
         }
 
         return tasks;
@@ -149,7 +112,7 @@ public sealed class ImpactLoader : IDisposable
 
     private void LoadModuleInfo(IGitModule module, CancellationToken token)
     {
-        if (_modulesCommits.TryGetValue(module.WorkingDir, out List<Commit>? commitsBatch))
+        if (_modulesCommits.TryGetValue(module.WorkingDir, out var commitsBatch))
         {
             CommitLoaded?.Invoke(commitsBatch);
             return;
@@ -164,22 +127,25 @@ public sealed class ImpactLoader : IDisposable
 
     private List<Commit> LoadModuleInfoData(IGitModule module, CancellationToken token)
     {
-        string authorName = RespectMailmap ? "%aN" : "%an";
-        string command = $"log --pretty=tformat:\"--- %ad --- {authorName}\" --numstat --date=short --find-copies --all --no-merges";
-        ExecutionResult result = module.GitExecutable.Execute(command, cancellationToken: token);
+        var authorName = RespectMailmap ? "%aN" : "%an";
+        var command =
+            $"log --pretty=tformat:\"--- %ad --- {authorName}\" --numstat --date=short --find-copies --all --no-merges";
+        var result = module.GitExecutable.Execute(command, cancellationToken: token);
         List<string> lines = [.. result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries)];
 
-        const int linePerCommitEstimationInGitLogOutput = 6; // chosen by fair dice roll, guaranted to be random ;) ( https://xkcd.com/221/ )
-        int estimatedCommitCount = lines.Count / linePerCommitEstimationInGitLogOutput;
+        const int
+            linePerCommitEstimationInGitLogOutput =
+                6; // chosen by fair dice roll, guaranted to be random ;) ( https://xkcd.com/221/ )
+        var estimatedCommitCount = lines.Count / linePerCommitEstimationInGitLogOutput;
         List<Commit> commitsBatch = new(estimatedCommitCount);
 
-        using List<string>.Enumerator lineEnumerator = lines.GetEnumerator();
+        using var lineEnumerator = lines.GetEnumerator();
 
         // Analyze commit listing
         while (!token.IsCancellationRequested && lineEnumerator.MoveNext())
         {
             // Read line
-            string line = lineEnumerator.Current;
+            var line = lineEnumerator.Current;
 
             // Reached the end ?
             if (line is null)
@@ -197,7 +163,7 @@ public sealed class ImpactLoader : IDisposable
             line = line[4..];
 
             // Split date and author
-            string[] header = line.Split([" --- "], 2, StringSplitOptions.RemoveEmptyEntries);
+            var header = line.Split([" --- "], 2, StringSplitOptions.RemoveEmptyEntries);
 
             if (header.Length != 2)
             {
@@ -205,21 +171,22 @@ public sealed class ImpactLoader : IDisposable
             }
 
             // Save author in variable
-            string author = header[1];
+            var author = header[1];
 
             // Parse commit date
-            DateOnly date = DateOnly.Parse(header[0]);
+            var date = DateOnly.Parse(header[0]);
 
             // Calculate first day of the commit week
-            DateOnly week = date.AddDays(_firstDayOfWeek - (int)date.DayOfWeek);
+            var week = date.AddDays(_firstDayOfWeek - (int)date.DayOfWeek);
 
             // Reset commit data
-            int commits = 1;
-            int added = 0;
-            int deleted = 0;
+            var commits = 1;
+            var added = 0;
+            var deleted = 0;
 
             // Parse commit lines
-            while (lineEnumerator.MoveNext() && (line = lineEnumerator.Current) is not null && !line.StartsWith("--- ") && !token.IsCancellationRequested)
+            while (lineEnumerator.MoveNext() && (line = lineEnumerator.Current) is not null &&
+                   !line.StartsWith("--- ") && !token.IsCancellationRequested)
             {
                 // Skip empty line
                 if (string.IsNullOrEmpty(line))
@@ -227,7 +194,7 @@ public sealed class ImpactLoader : IDisposable
                     continue;
                 }
 
-                string[] fileLine = line.Split(Delimiters.Tab);
+                var fileLine = line.Split(Delimiters.Tab);
                 if (fileLine.Length >= 2)
                 {
                     if (fileLine[0] != "-")
@@ -257,14 +224,14 @@ public sealed class ImpactLoader : IDisposable
         ref SortedDictionary<DateOnly, Dictionary<string, DataPoint>> impact,
         IEnumerable<string> authors)
     {
-        foreach (string author in authors)
+        foreach (var author in authors)
         {
             // Determine first and last commit week of each author
-            DateOnly start = DateOnly.MinValue;
-            DateOnly end = DateOnly.MinValue;
-            bool startFound = false;
+            var start = DateOnly.MinValue;
+            var end = DateOnly.MinValue;
+            var startFound = false;
 
-            foreach ((DateOnly weekDate, Dictionary<string, DataPoint> weekDataByAuthor) in impact)
+            foreach ((var weekDate, var weekDataByAuthor) in impact)
             {
                 if (weekDataByAuthor.ContainsKey(author))
                 {
@@ -284,7 +251,7 @@ public sealed class ImpactLoader : IDisposable
             }
 
             // Add 0 commits weeks in between
-            foreach ((DateOnly weekDate, Dictionary<string, DataPoint> weekDataByAuthor) in impact)
+            foreach ((var weekDate, var weekDataByAuthor) in impact)
             {
                 if (!weekDataByAuthor.ContainsKey(author) &&
                     weekDate > start && weekDate < end)
@@ -292,6 +259,33 @@ public sealed class ImpactLoader : IDisposable
                     weekDataByAuthor.Add(author, new DataPoint(0, 0, 0));
                 }
             }
+        }
+    }
+
+    public readonly struct Commit(DateOnly week, string author, DataPoint data)
+    {
+        public DateOnly Week { get; } = week;
+        public string Author { get; } = author;
+        public DataPoint Data { get; } = data;
+    }
+
+    public readonly struct DataPoint(int commits, int added, int deleted)
+    {
+        public int Commits { get; } = commits;
+        public int AddedLines { get; } = added;
+        public int DeletedLines { get; } = deleted;
+
+        public int ChangedLines
+        {
+            get => AddedLines + DeletedLines;
+        }
+
+        public static DataPoint operator +(DataPoint left, DataPoint right)
+        {
+            return new DataPoint(
+                left.Commits + right.Commits,
+                left.AddedLines + right.AddedLines,
+                left.DeletedLines + right.DeletedLines);
         }
     }
 }

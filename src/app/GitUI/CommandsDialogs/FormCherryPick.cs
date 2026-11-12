@@ -1,31 +1,31 @@
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
 using GitUI.HelperDialogs;
-using GitUIPluginInterfaces;
 using ResourceManager;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormCherryPick : GitExtensionsDialog
 {
+    private const int _parentsListItemHeight = 18;
+
     #region Translation
+
     private readonly TranslationString _noneParentSelectedText =
         new("None parent is selected!");
+
     #endregion
 
     private bool _isMerge;
     private int _lblParentsControlHeight;
     private int _lvParentsListControlHeight;
 
-    private const int _parentsListItemHeight = 18;
-
-    public GitRevision? Revision { get; set; }
-
-    public FormCherryPick(IGitUICommands commands, GitRevision? revision)
-        : base(commands, enablePositionRestore: false)
+    public FormCherryPick(IGitUiCommands commands, GitRevision? revision)
+        : base(commands, false)
     {
         Revision = revision;
 
@@ -38,6 +38,8 @@ public partial class FormCherryPick : GitExtensionsDialog
 
         InitializeComplete();
     }
+
+    public GitRevision? Revision { get; set; }
 
     private void Form_Load(object sender, EventArgs e)
     {
@@ -101,36 +103,36 @@ public partial class FormCherryPick : GitExtensionsDialog
 
             if (_isMerge)
             {
-                MinimumSize = new Size(MinimumSize.Width, PreferredMinimumHeight + _lblParentsControlHeight + _lvParentsListControlHeight);
+                MinimumSize = new Size(MinimumSize.Width,
+                    PreferredMinimumHeight + _lblParentsControlHeight + _lvParentsListControlHeight);
                 Size = MinimumSize;
                 lblParents.Visible = true;
                 lvParentsList.Visible = true;
             }
             else
             {
-                MinimumSize = new Size(MinimumSize.Width, PreferredMinimumHeight - _lblParentsControlHeight - _lvParentsListControlHeight);
+                MinimumSize = new Size(MinimumSize.Width,
+                    PreferredMinimumHeight - _lblParentsControlHeight - _lvParentsListControlHeight);
                 Size = MinimumSize;
             }
 
             if (_isMerge && Revision is not null)
             {
-                IReadOnlyList<GitRevision> parents = Module.GetParentRevisions(Revision.ObjectId);
+                var parents = Module.GetParentRevisions(Revision.ObjectId);
 
-                for (int i = 0; i < parents.Count; i++)
+                for (var i = 0; i < parents.Count; i++)
                 {
                     lvParentsList.Items.Add(new ListViewItem((i + 1).ToString())
                     {
                         SubItems =
                         {
-                            parents[i].Subject,
-                            parents[i].Author,
-                            parents[i].CommitDate.ToShortDateString()
+                            parents[i].Subject, parents[i].Author, parents[i].CommitDate.ToShortDateString()
                         }
                     });
                 }
 
                 lvParentsList.TopItem!.Selected = true;
-                Size size = MinimumSize;
+                var size = MinimumSize;
                 size.Height += DpiUtil.Scale(_parentsListItemHeight * parents.Count);
                 Size = size;
                 MinimumSize = size;
@@ -138,7 +140,7 @@ public partial class FormCherryPick : GitExtensionsDialog
         }
         finally
         {
-            ResumeLayout(performLayout: true);
+            ResumeLayout(true);
         }
     }
 
@@ -150,13 +152,14 @@ public partial class FormCherryPick : GitExtensionsDialog
     private void btnPick_Click(object sender, EventArgs e)
     {
         ArgumentBuilder args = [];
-        bool canExecute = true;
+        var canExecute = true;
 
         if (_isMerge)
         {
             if (lvParentsList.SelectedItems.Count == 0)
             {
-                MessageBoxes.Show(this, _noneParentSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _noneParentSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 canExecute = false;
             }
             else
@@ -172,13 +175,13 @@ public partial class FormCherryPick : GitExtensionsDialog
 
         if (canExecute && Revision is not null)
         {
-            ArgumentString command = Commands.CherryPick(Revision.ObjectId, cbxAutoCommit.Checked, args.ToString());
+            var command = Commands.CherryPick(Revision.ObjectId, cbxAutoCommit.Checked, args.ToString());
 
             // Don't verify whether the command is successful.
             // If it fails, likely there is a conflict that needs to be resolved.
-            FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
 
-            MergeConflictHandler.HandleMergeConflicts(UICommands, this, cbxAutoCommit.Checked);
+            MergeConflictHandler.HandleMergeConflicts(UiCommands, this, cbxAutoCommit.Checked);
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -192,7 +195,7 @@ public partial class FormCherryPick : GitExtensionsDialog
 
     private void btnChooseRevision_Click(object sender, EventArgs e)
     {
-        using (FormChooseCommit chooseForm = new(UICommands, Revision?.Guid))
+        using (FormChooseCommit chooseForm = new(UiCommands, Revision?.Guid))
         {
             if (chooseForm.ShowDialog(this) == DialogResult.OK && chooseForm.SelectedRevision is not null)
             {
@@ -205,6 +208,7 @@ public partial class FormCherryPick : GitExtensionsDialog
 
     private void lvParentsList_Resize(object sender, EventArgs e)
     {
-        lvParentsList.Columns[1].Width = lvParentsList.ClientSize.Width - lvParentsList.Columns[0].Width - lvParentsList.Columns[2].Width - lvParentsList.Columns[3].Width;
+        lvParentsList.Columns[1].Width = lvParentsList.ClientSize.Width - lvParentsList.Columns[0].Width -
+                                         lvParentsList.Columns[2].Width - lvParentsList.Columns[3].Width;
     }
 }

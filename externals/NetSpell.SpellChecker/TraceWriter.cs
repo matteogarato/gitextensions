@@ -1,12 +1,15 @@
 using System.Diagnostics;
 using System.Reflection;
 
+namespace SpellChecker;
+
 /// <summary>
-/// Summary description for TraceWriter.
+///     Summary description for TraceWriter.
 /// </summary>
 internal static class TraceWriter
 {
-    public static TraceSwitch Switch { get; } = new(Assembly.GetAssembly(typeof(TraceWriter)).GetName().Name, "Trace Helper Switch");
+    public static TraceSwitch Switch { get; } =
+        new(Assembly.GetAssembly(typeof(TraceWriter)).GetName().Name, "Trace Helper Switch");
 
     public static void TraceError(string format, params object[] args)
     {
@@ -74,9 +77,9 @@ internal static class TraceWriter
 
     private static string GetCallingMethod(StackTrace stack)
     {
-        StackFrame frame = stack.GetFrame(0);
-        string className = frame.GetMethod().DeclaringType.ToString();
-        string functionName = frame.GetMethod().Name;
+        var frame = stack.GetFrame(0);
+        var className = frame.GetMethod().DeclaringType.ToString();
+        var functionName = frame.GetMethod().Name;
         return string.Format("{0}.{1}", className, functionName);
     }
 }

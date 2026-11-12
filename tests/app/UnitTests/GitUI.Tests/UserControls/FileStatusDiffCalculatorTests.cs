@@ -1,20 +1,19 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUI;
-using GitUIPluginInterfaces;
+using GitUI.UserControls;
 using NSubstitute;
 
 namespace GitUITests.UserControls;
 
 public class FileStatusDiffCalculatorTests
 {
-    private IGitModule _module;
-    private FileStatusDiffCalculator _calculator;
+    private readonly FileStatusDiffCalculator _calculator;
+    private readonly IGitModule _module;
 
     public FileStatusDiffCalculatorTests()
     {
         _module = Substitute.For<IGitModule>();
         _calculator = new FileStatusDiffCalculator(() => _module);
-        _calculator.SetDiff([new GitRevision(ObjectId.Random())], ObjectId.Random(), allowMultiDiff: false);
+        _calculator.SetDiff([new GitRevision(ObjectId.Random())], ObjectId.Random(), false);
     }
 
     [Fact]
@@ -24,10 +23,11 @@ public class FileStatusDiffCalculatorTests
         // was closed or switched while the calculation was queued
         _module.IsValidGitWorkingDir().Returns(false);
 
-        ((Action)(() => _calculator.Calculate(prevList: [], refreshDiff: true, refreshGrep: false, TestContext.Current.CancellationToken)))
+        ((Action)(() => _calculator.Calculate([], true, false, TestContext.Current.CancellationToken)))
             .Should().Throw<OperationCanceledException>();
 
-        _module.DidNotReceiveWithAnyArgs().GetDiffFilesWithSubmodulesStatus(default, default, default, default, default, Arg.Any<CancellationToken>());
+        _module.DidNotReceiveWithAnyArgs().GetDiffFilesWithSubmodulesStatus(default, default, default, default, default,
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class FileStatusDiffCalculatorTests
     {
         _module.IsValidGitWorkingDir().Returns(true);
 
-        ((Action)(() => _calculator.Calculate(prevList: [], refreshDiff: true, refreshGrep: false, TestContext.Current.CancellationToken)))
+        ((Action)(() => _calculator.Calculate([], true, false, TestContext.Current.CancellationToken)))
             .Should().NotThrow<OperationCanceledException>();
     }
 }

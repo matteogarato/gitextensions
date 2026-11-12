@@ -2,8 +2,9 @@
 using GitExtUtils.GitUI.Theming;
 using GitUI.Editor.Diff;
 using GitUI.Theming;
-using ICSharpCode.TextEditor;
 using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
+using ICSharpCode.TextEditor.Gui;
 
 namespace GitUITests.Editor.Diff;
 
@@ -19,29 +20,36 @@ public class DiffHighlightServiceTests
         const string removedLineText = $"-{identicalPartBefore}{differentRemoved}{identicalPartAfter}";
         const string addedLineText = $"+{identicalPartBefore}{differentAdded}{identicalPartAfter}";
         const string text = $"{removedLineText}\n{addedLineText}";
-        ISegment removedLine = new Segment() { Offset = text.IndexOf(removedLineText), Length = removedLineText.Length };
-        ISegment addedLine = new Segment() { Offset = text.IndexOf(addedLineText), Length = addedLineText.Length };
+        ISegment removedLine = new Segment { Offset = text.IndexOf(removedLineText), Length = removedLineText.Length };
+        ISegment addedLine = new Segment { Offset = text.IndexOf(addedLineText), Length = addedLineText.Length };
         const int beginOffset = 1;
 
         List<TextMarker> markers = [];
-        DiffHighlightService.AddDifferenceMarkers(markers, GetText, removedLine, addedLine, beginOffset, dimBackground: true);
+        DiffHighlightService.AddDifferenceMarkers(markers, GetText, removedLine, addedLine, beginOffset, true);
         IReadOnlyList<TextMarker> sortedMarkers = markers.ToImmutableSortedSet(new MarkerComparer());
 
         TextMarker[] expectedMarkers =
         [
-            CreateDimmedMarker(removedLine, offset: 0, length: identicalPartBefore.Length),
-            CreateDimmedMarker(removedLine, offset: identicalPartBefore.Length + differentRemoved.Length, length: identicalPartAfter.Length),
-            CreateDimmedMarker(addedLine, offset: 0, length: identicalPartBefore.Length),
-            CreateDimmedMarker(addedLine, offset: identicalPartBefore.Length + differentAdded.Length, length: identicalPartAfter.Length),
+            CreateDimmedMarker(removedLine, 0, identicalPartBefore.Length),
+            CreateDimmedMarker(removedLine, identicalPartBefore.Length + differentRemoved.Length,
+                identicalPartAfter.Length),
+            CreateDimmedMarker(addedLine, 0, identicalPartBefore.Length),
+            CreateDimmedMarker(addedLine, identicalPartBefore.Length + differentAdded.Length, identicalPartAfter.Length)
         ];
         sortedMarkers.Should().BeEquivalentTo(expectedMarkers);
 
         return;
 
         TextMarker CreateDimmedMarker(ISegment line, int offset, int length)
-            => DiffHighlightServiceTests.CreateDimmedMarker(line.Offset + beginOffset + offset, length, isAdded: line == addedLine);
+        {
+            return DiffHighlightServiceTests.CreateDimmedMarker(line.Offset + beginOffset + offset, length,
+                line == addedLine);
+        }
 
-        string GetText(ISegment line) => (line == removedLine ? removedLineText : addedLineText)[beginOffset..];
+        string GetText(ISegment line)
+        {
+            return (line == removedLine ? removedLineText : addedLineText)[beginOffset..];
+        }
     }
 
     [StaFact]
@@ -56,34 +64,43 @@ public class DiffHighlightServiceTests
         const string removedLineText = $"-{deletion}{identicalPartBefore}{differentRemoved}{identicalPartAfter}";
         const string addedLineText = $"+{identicalPartBefore}{differentAdded}{identicalPartAfter}{insertion}";
         const string text = $"{removedLineText}\n{addedLineText}";
-        ISegment removedLine = new Segment() { Offset = text.IndexOf(removedLineText), Length = removedLineText.Length };
-        ISegment addedLine = new Segment() { Offset = text.IndexOf(addedLineText), Length = addedLineText.Length };
+        ISegment removedLine = new Segment { Offset = text.IndexOf(removedLineText), Length = removedLineText.Length };
+        ISegment addedLine = new Segment { Offset = text.IndexOf(addedLineText), Length = addedLineText.Length };
         const int beginOffset = 1;
 
         List<TextMarker> markers = [];
-        DiffHighlightService.AddDifferenceMarkers(markers, GetText, removedLine, addedLine, beginOffset, dimBackground: true);
+        DiffHighlightService.AddDifferenceMarkers(markers, GetText, removedLine, addedLine, beginOffset, true);
         IReadOnlyList<TextMarker> sortedMarkers = markers.ToImmutableSortedSet(new MarkerComparer());
 
         TextMarker[] expectedMarkers =
         [
-            CreateDimmedMarker(removedLine, offset: deletion.Length, length: identicalPartBefore.Length),
-            CreateDimmedMarker(removedLine, offset: deletion.Length + identicalPartBefore.Length + differentRemoved.Length, length: identicalPartAfter.Length),
-            CreateAnchorMarker(removedLine, offset: removedLine.Length - 1),
-            CreateAnchorMarker(addedLine, offset: 0),
-            CreateDimmedMarker(addedLine, offset: 0, length: identicalPartBefore.Length),
-            CreateDimmedMarker(addedLine, offset: identicalPartBefore.Length + differentAdded.Length, length: identicalPartAfter.Length),
+            CreateDimmedMarker(removedLine, deletion.Length, identicalPartBefore.Length),
+            CreateDimmedMarker(removedLine, deletion.Length + identicalPartBefore.Length + differentRemoved.Length,
+                identicalPartAfter.Length),
+            CreateAnchorMarker(removedLine, removedLine.Length - 1),
+            CreateAnchorMarker(addedLine, 0),
+            CreateDimmedMarker(addedLine, 0, identicalPartBefore.Length),
+            CreateDimmedMarker(addedLine, identicalPartBefore.Length + differentAdded.Length, identicalPartAfter.Length)
         ];
         sortedMarkers.Should().BeEquivalentTo(expectedMarkers);
 
         return;
 
         TextMarker CreateAnchorMarker(ISegment line, int offset)
-            => DiffHighlightServiceTests.CreateAnchorMarker(line.Offset + beginOffset + offset, isAdded: line == addedLine);
+        {
+            return DiffHighlightServiceTests.CreateAnchorMarker(line.Offset + beginOffset + offset, line == addedLine);
+        }
 
         TextMarker CreateDimmedMarker(ISegment line, int offset, int length)
-            => DiffHighlightServiceTests.CreateDimmedMarker(line.Offset + beginOffset + offset, length, isAdded: line == addedLine);
+        {
+            return DiffHighlightServiceTests.CreateDimmedMarker(line.Offset + beginOffset + offset, length,
+                line == addedLine);
+        }
 
-        string GetText(ISegment line) => (line == removedLine ? removedLineText : addedLineText)[beginOffset..];
+        string GetText(ISegment line)
+        {
+            return (line == removedLine ? removedLineText : addedLineText)[beginOffset..];
+        }
     }
 
     [StaFact]
@@ -91,28 +108,30 @@ public class DiffHighlightServiceTests
     {
         using TextEditorControl textEditor = new();
         DiffViewerLineNumberControl diffViewerLineNumber = new(textEditor.ActiveTextAreaControl.TextArea);
-        string testDataDir = Path.Combine(AppContext.BaseDirectory, "Editor", "Diff");
-        string text = File.ReadAllText(Path.Combine(testDataDir, "gaps.diff"));
+        var testDataDir = Path.Combine(AppContext.BaseDirectory, "Editor", "Diff");
+        var text = File.ReadAllText(Path.Combine(testDataDir, "gaps.diff"));
 
         // ensure that the test doesn't fail if the local Git configuration has core.autocrlf enabled
         text = text.Replace("\r\n", "\n");
 
-        _ = new PatchHighlightService(ref text, useGitColoring: true, diffViewerLineNumber);
-        DiffLinesInfo result = diffViewerLineNumber.GetTestAccessor().Result;
+        _ = new PatchHighlightService(ref text, true, diffViewerLineNumber);
+        var result = diffViewerLineNumber.GetTestAccessor().Result;
         DiffLineInfo[] diffLines = [.. result.DiffLines.Values.OrderBy(l => l.LineNumInDiff)];
 
-        int index = 0;
+        var index = 0;
         List<(IReadOnlyList<ISegment> removed, IReadOnlyList<ISegment> added)> sections = [];
         while (index < diffLines.Length)
         {
             // git-diff presents the removed lines directly followed by the added in a "block"
-            IReadOnlyList<ISegment> linesRemoved = DiffHighlightService.TestAccessor.GetBlockOfLines(diffLines, DiffLineType.Minus, ref index, found: false);
+            IReadOnlyList<ISegment> linesRemoved =
+                DiffHighlightService.TestAccessor.GetBlockOfLines(diffLines, DiffLineType.Minus, ref index, false);
             if (linesRemoved.Count == 0)
             {
                 continue;
             }
 
-            IReadOnlyList<ISegment> linesAdded = DiffHighlightService.TestAccessor.GetBlockOfLines(diffLines, DiffLineType.Plus, ref index, found: true);
+            IReadOnlyList<ISegment> linesAdded =
+                DiffHighlightService.TestAccessor.GetBlockOfLines(diffLines, DiffLineType.Plus, ref index, true);
             if (linesAdded.Count == 0)
             {
                 continue;
@@ -126,24 +145,27 @@ public class DiffHighlightServiceTests
 
     private static TextMarker CreateAnchorMarker(int offset, bool isAdded)
     {
-        Color color = (isAdded ? AppColor.AnsiTerminalRedForeBold : AppColor.AnsiTerminalGreenForeBold).GetThemeColor();
-        return new TextMarker(offset, length: 0, TextMarkerType.InterChar, color);
+        var color = (isAdded ? AppColor.AnsiTerminalRedForeBold : AppColor.AnsiTerminalGreenForeBold).GetThemeColor();
+        return new TextMarker(offset, 0, TextMarkerType.InterChar, color);
     }
 
     private static TextMarker CreateDimmedMarker(int offset, int length, bool isAdded)
     {
-        Color color = (isAdded ? AppColor.AnsiTerminalGreenBackNormal : AppColor.AnsiTerminalRedBackNormal).GetThemeColor();
-        Color dimmedColor = color.DimColor().DimColor();
+        var color = (isAdded ? AppColor.AnsiTerminalGreenBackNormal : AppColor.AnsiTerminalRedBackNormal)
+            .GetThemeColor();
+        var dimmedColor = color.DimColor().DimColor();
         return new TextMarker(offset, length, TextMarkerType.SolidBlock, dimmedColor, dimmedColor.GetTextColor());
     }
 
     private sealed class MarkerComparer : IComparer<TextMarker>
     {
-        public int Compare(TextMarker? left, TextMarker? right)
-            => left!.Offset < right!.Offset ? -1
+        int IComparer<TextMarker>.Compare(TextMarker? left, TextMarker? right)
+        {
+            return left!.Offset < right!.Offset ? -1
                 : left.Offset > right.Offset ? 1
                 : left.TextMarkerType == TextMarkerType.InterChar ? -1
                 : right.TextMarkerType == TextMarkerType.InterChar ? 1
                 : throw new InvalidOperationException("markers should not overlap");
+        }
     }
 }

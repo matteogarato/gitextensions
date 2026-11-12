@@ -1,48 +1,42 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace System;
+namespace GitUI.Interops;
 
-internal static partial class NativeMethods
+internal static class NativeMethods
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct RECT
+    public struct Rect(int left, int top, int right, int bottom)
     {
-        public int left;
-        public int top;
-        public int right;
-        public int bottom;
+        public int left = left;
+        public int top = top;
+        public int right = right;
+        public int bottom = bottom;
 
-        public RECT(int left, int top, int right, int bottom)
+        public Rect(Rectangle r) : this(r.Left, r.Top, r.Right, r.Bottom)
         {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
         }
 
-        public RECT(Rectangle r)
+        public static implicit operator Rectangle(Rect r)
         {
-            left = r.Left;
-            top = r.Top;
-            right = r.Right;
-            bottom = r.Bottom;
+            return Rectangle.FromLTRB(r.left, r.top, r.right, r.bottom);
         }
 
-        public static implicit operator Rectangle(RECT r)
-            => Rectangle.FromLTRB(r.left, r.top, r.right, r.bottom);
-
-        public static implicit operator RECT(Rectangle r)
-            => new(r);
+        public static implicit operator Rect(Rectangle r)
+        {
+            return new Rect(r);
+        }
 
         public readonly Size Size
-            => new(right - left, bottom - top);
+        {
+            get => new(right - left, bottom - top);
+        }
     }
 
     /// <summary>
-    /// Theming interop requires RECT to be class.
+    ///     Theming interop requires RECT to be class.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public class RECTCLS
+    public class Rectcls
     {
 #pragma warning disable 649
         public int Left;
@@ -51,7 +45,9 @@ internal static partial class NativeMethods
         public int Bottom;
 #pragma warning restore 649
 
-        public static implicit operator Rectangle(RECTCLS r)
-            => Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
+        public static implicit operator Rectangle(Rectcls r)
+        {
+            return Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
+        }
     }
 }

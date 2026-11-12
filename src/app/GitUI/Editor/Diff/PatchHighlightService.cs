@@ -1,10 +1,10 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 
 namespace GitUI.Editor.Diff;
 
 /// <summary>
-/// Highlight for "patches", normal diff files.
+///     Highlight for "patches", normal diff files.
 /// </summary>
 public class PatchHighlightService : DiffHighlightService
 {
@@ -14,14 +14,20 @@ public class PatchHighlightService : DiffHighlightService
     public PatchHighlightService(ref string text, bool useGitColoring, DiffViewerLineNumberControl lineNumbersControl)
         : base(ref text, useGitColoring)
     {
-        bool isGitWordDiff = _useGitColoring && AppSettings.DiffDisplayAppearance.Value == GitCommands.Settings.DiffDisplayAppearance.GitWordDiff;
-        _diffLinesInfo = DiffLineNumAnalyzer.Analyze(text, _textMarkers, isCombinedDiff: false, isGitWordDiff);
-        lineNumbersControl.DisplayLineNum(_diffLinesInfo, showLeftColumn: true);
+        var isGitWordDiff =
+            UseGitColoring && AppSettings.DiffDisplayAppearance.Value == DiffDisplayAppearance.GitWordDiff;
+        DiffLinesInfo = DiffLineNumAnalyzer.Analyze(text, TextMarkers, false, isGitWordDiff);
+        lineNumbersControl.DisplayLineNum(DiffLinesInfo, true);
         SetHighlighting(text);
     }
 
     public static IGitCommandConfiguration GetGitCommandConfiguration(IGitModule module, bool useGitColoring)
-        => GetGitCommandConfiguration(module, useGitColoring, "diff");
+    {
+        return GetGitCommandConfiguration(module, useGitColoring, "diff");
+    }
 
-    public override string[] GetFullDiffPrefixes() => _diffFullPrefixes;
+    public override string[] GetFullDiffPrefixes()
+    {
+        return _diffFullPrefixes;
+    }
 }

@@ -11,23 +11,21 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.BuildServerIntegration;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
-using GitUI;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 
-namespace JenkinsIntegration;
+namespace GitExtensions.Plugins.JenkinsIntegration;
 
 [MetadataAttribute]
 [AttributeUsage(AttributeTargets.Class)]
-public sealed class JenkinsIntegrationMetadata : BuildServerAdapterMetadataAttribute
+public sealed class JenkinsIntegrationMetadata(string buildServerType)
+    : BuildServerAdapterMetadataAttribute(buildServerType)
 {
-    public JenkinsIntegrationMetadata(string buildServerType)
-        : base(buildServerType)
+    public override string? CanBeLoaded
     {
+        get => null;
     }
-
-    public override string? CanBeLoaded => null;
 }
 
 [Export(typeof(IBuildServerAdapter))]
@@ -36,17 +34,22 @@ public sealed class JenkinsIntegrationMetadata : BuildServerAdapterMetadataAttri
 internal sealed class JenkinsAdapter : IBuildServerAdapter
 {
     public const string PluginName = "Jenkins";
-    private static readonly IBuildDurationFormatter _buildDurationFormatter = new BuildDurationFormatter();
-    private IBuildServerWatcher? _buildServerWatcher;
 
-    private HttpClient? _httpClient;
+    private const string _jenkinsTreeBuildInfo =
+        "number,result,timestamp,url,actions[lastBuiltRevision[SHA1,branch[name]],totalCount,failCount,skipCount],building,duration";
+
+    private static readonly IBuildDurationFormatter _buildDurationFormatter = new BuildDurationFormatter();
+    private static readonly char[] _separator = ['|'];
 
     // last known build per project
     private readonly Dictionary<string, long> _lastProjectBuildTime = [];
-    private Regex? _ignoreBuilds;
-    private static readonly char[] separator = ['|'];
+    private IBuildServerWatcher? _buildServerWatcher;
 
-    public void Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
+    private HttpClient? _httpClient;
+    private Regex? _ignoreBuilds;
+
+    void IBuildServerAdapter.Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config,
+        Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
     {
         if (_buildServerWatcher is not null)
         {
@@ -55,41 +58,40 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
         _buildServerWatcher = buildServerWatcher;
 
-        string? projectName = config.GetString("ProjectName", null);
-        string? hostName = config.GetString("BuildServerUrl", null);
+        var projectName = config.GetString("ProjectName", null);
+        var hostName = config.GetString("BuildServerUrl", null);
 
         if (!string.IsNullOrEmpty(hostName) && !string.IsNullOrEmpty(projectName))
         {
-            Uri baseAddress = hostName.Contains("://")
+            var baseAddress = hostName.Contains("://")
                 ? new Uri(hostName, UriKind.Absolute)
                 : new Uri($"{Uri.UriSchemeHttp}://{hostName}:8080", UriKind.Absolute);
 
             _httpClient = new HttpClient(new HttpClientHandler { UseDefaultCredentials = true })
             {
-                Timeout = TimeSpan.FromMinutes(2),
-                BaseAddress = baseAddress
+                Timeout = TimeSpan.FromMinutes(2), BaseAddress = baseAddress
             };
 
-            IBuildServerCredentials? buildServerCredentials = buildServerWatcher.GetBuildServerCredentials(this, true);
+            var buildServerCredentials = buildServerWatcher.GetBuildServerCredentials(this, true);
 
             UpdateHttpClientOptions(buildServerCredentials);
 
-            string[] projectUrls = _buildServerWatcher.ReplaceVariables(projectName)
-                .Split(separator, StringSplitOptions.RemoveEmptyEntries);
-            foreach (string projectUrl in projectUrls.Select(s => baseAddress + "job/" + s.Trim() + "/"))
+            var projectUrls = _buildServerWatcher.ReplaceVariables(projectName)
+                .Split(_separator, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var projectUrl in projectUrls.Select(s => baseAddress + "job/" + s.Trim() + "/"))
             {
                 _lastProjectBuildTime[projectUrl] = -1;
             }
         }
 
-        string ignoreBuilds = config.GetString("IgnoreBuildBranch", string.Empty);
+        var ignoreBuilds = config.GetString("IgnoreBuildBranch", string.Empty);
         _ignoreBuilds = !string.IsNullOrWhiteSpace(ignoreBuilds) ? new Regex(ignoreBuilds) : null;
     }
 
     /// <summary>
-    /// Gets a unique key which identifies this build server.
+    ///     Gets a unique key which identifies this build server.
     /// </summary>
-    public string UniqueKey
+    string IBuildServerAdapter.UniqueKey
     {
         get
         {
@@ -98,14 +100,27 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
         }
     }
 
-    private sealed class ResponseInfo
+    IObservable<BuildInfo> IBuildServerAdapter.GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
     {
-        public string? Url { get; set; }
-        public long Timestamp { get; set; }
-        public IEnumerable<JsonNode>? JobDescription { get; set; }
+        // GetBuilds() will return the same builds as for GetRunningBuilds().
+        // Multiple calls will fetch same info multiple times and make debugging very confusing
+        // Similar as for AppVeyor
+        // 'sinceDate' is not supported in Jenkins API
+        return Observable.Empty<BuildInfo>();
     }
 
-    private async Task<ResponseInfo> GetBuildInfoTaskAsync(string projectUrl, bool fullInfo, CancellationToken cancellationToken)
+    IObservable<BuildInfo> IBuildServerAdapter.GetRunningBuilds(IScheduler scheduler)
+    {
+        return GetBuilds(scheduler);
+    }
+
+    void IDisposable.Dispose()
+    {
+        _httpClient?.Dispose();
+    }
+
+    private async Task<ResponseInfo> GetBuildInfoTaskAsync(string projectUrl, bool fullInfo,
+        CancellationToken cancellationToken)
     {
         string? t;
         long timestamp = 0;
@@ -124,7 +139,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
         if (!string.IsNullOrWhiteSpace(t) && !cancellationToken.IsCancellationRequested)
         {
-            JsonNode jobDescription = JsonNode.Parse(t)!;
+            var jobDescription = JsonNode.Parse(t)!;
             if (jobDescription["builds"] is not null)
             {
                 // Freestyle jobs
@@ -136,7 +151,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
                 s = jobDescription["jobs"]!.AsArray()
                     .OfType<JsonNode>()
                     .SelectMany(j => j["builds"]!.AsArray().OfType<JsonNode>());
-                foreach (JsonNode? j in jobDescription["jobs"]!.AsArray())
+                foreach (var j in jobDescription["jobs"]!.AsArray())
                 {
                     try
                     {
@@ -145,7 +160,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
                             continue;
                         }
 
-                        long ts = j!["lastBuild"]!["timestamp"]!.GetValue<long>();
+                        var ts = j!["lastBuild"]!["timestamp"]!.GetValue<long>();
                         timestamp = Math.Max(timestamp, ts);
                     }
                     catch
@@ -162,26 +177,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             }
         }
 
-        return new ResponseInfo
-        {
-            Url = projectUrl,
-            Timestamp = timestamp,
-            JobDescription = s
-        };
-    }
-
-    public IObservable<BuildInfo> GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
-    {
-        // GetBuilds() will return the same builds as for GetRunningBuilds().
-        // Multiple calls will fetch same info multiple times and make debugging very confusing
-        // Similar as for AppVeyor
-        // 'sinceDate' is not supported in Jenkins API
-        return Observable.Empty<BuildInfo>();
-    }
-
-    public IObservable<BuildInfo> GetRunningBuilds(IScheduler scheduler)
-    {
-        return GetBuilds(scheduler);
+        return new ResponseInfo { Url = projectUrl, Timestamp = timestamp, JobDescription = s };
     }
 
     private IObservable<BuildInfo> GetBuilds(IScheduler scheduler)
@@ -201,16 +197,18 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             List<JoinableTask<ResponseInfo>> allBuildInfos = [];
             List<JoinableTask<ResponseInfo>> latestBuildInfos = [];
 
-            foreach (string projectUrl in _lastProjectBuildTime.Keys)
+            foreach (var projectUrl in _lastProjectBuildTime.Keys)
             {
                 if (_lastProjectBuildTime[projectUrl] <= 0)
                 {
                     // This project must be updated, no need to to check the latest builds
-                    allBuildInfos.Add(ThreadHelper.JoinableTaskFactory.RunAsync(() => GetBuildInfoTaskAsync(projectUrl, true, cancellationToken)));
+                    allBuildInfos.Add(ThreadHelper.JoinableTaskFactory.RunAsync(() =>
+                        GetBuildInfoTaskAsync(projectUrl, true, cancellationToken)));
                 }
                 else
                 {
-                    latestBuildInfos.Add(ThreadHelper.JoinableTaskFactory.RunAsync(() => GetBuildInfoTaskAsync(projectUrl, false, cancellationToken)));
+                    latestBuildInfos.Add(ThreadHelper.JoinableTaskFactory.RunAsync(() =>
+                        GetBuildInfoTaskAsync(projectUrl, false, cancellationToken)));
                 }
             }
 
@@ -218,9 +216,9 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             // The simple request will limit the load on the Jenkins server
             // To fetch just new builds is possible too, but it will make the solution more complicated
             // Similar, the build results could be cached so they are available when switching repos
-            foreach (JoinableTask<ResponseInfo> info in latestBuildInfos.Where(info => !info.Task.IsFaulted))
+            foreach (var info in latestBuildInfos.Where(info => !info.Task.IsFaulted))
             {
-                ResponseInfo responseInfo = info.Join(cancellationToken);
+                var responseInfo = info.Join(cancellationToken);
 
                 Validates.NotNull(responseInfo.Url);
 
@@ -239,7 +237,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             }
 
             Dictionary<ObjectId, BuildStatus> builds = [];
-            foreach (JoinableTask<ResponseInfo> build in allBuildInfos)
+            foreach (var build in allBuildInfos)
             {
                 if (build.Task.IsFaulted)
                 {
@@ -249,7 +247,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
                     continue;
                 }
 
-                ResponseInfo buildResponse = build.Join(cancellationToken);
+                var buildResponse = build.Join(cancellationToken);
                 if (build.Task.IsCanceled || buildResponse.Timestamp <= 0)
                 {
                     // No valid information received for the build
@@ -261,7 +259,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
                 _lastProjectBuildTime[buildResponse.Url] = buildResponse.Timestamp;
 
-                foreach (JsonNode buildDetails in buildResponse.JobDescription)
+                foreach (var buildDetails in buildResponse.JobDescription)
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -270,7 +268,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
                     try
                     {
-                        BuildInfo? buildInfo = CreateBuildInfo(buildDetails);
+                        var buildInfo = CreateBuildInfo(buildDetails);
                         if (buildInfo is null)
                         {
                             continue;
@@ -285,8 +283,8 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
                         // Normally, there is only one commit per Jenkins build
                         // builds listed with latest first, likely most interesting
                         // Update the observer if at least one of them is better (cannot be selective)
-                        bool isBetter = false;
-                        foreach (ObjectId commit in buildInfo.CommitHashList)
+                        var isBetter = false;
+                        foreach (var commit in buildInfo.CommitHashList)
                         {
                             if (!StatusIsBetter(buildInfo.Status, commit, builds))
                             {
@@ -331,7 +329,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
         static bool StatusIsBetter(BuildStatus newStatus, ObjectId commit, Dictionary<ObjectId, BuildStatus> builds)
         {
             // No existing status
-            if (!builds.TryGetValue(commit, out BuildStatus existingStatus))
+            if (!builds.TryGetValue(commit, out var existingStatus))
             {
                 return true;
             }
@@ -356,24 +354,22 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
         static bool IsBuildCompleted(BuildStatus status)
         {
             return status == BuildStatus.Success
-                || status == BuildStatus.Failure
-                || status == BuildStatus.Unstable;
+                   || status == BuildStatus.Failure
+                   || status == BuildStatus.Unstable;
         }
     }
 
-    private const string _jenkinsTreeBuildInfo = "number,result,timestamp,url,actions[lastBuiltRevision[SHA1,branch[name]],totalCount,failCount,skipCount],building,duration";
-
     internal BuildInfo? CreateBuildInfo(JsonNode buildDescription)
     {
-        string? idValue = GetNodeString(buildDescription["number"]);
-        string? statusValue = GetNodeString(buildDescription["result"]);
-        long startDateTicks = buildDescription["timestamp"]!.GetValue<long>();
-        string? webUrl = GetNodeString(buildDescription["url"]);
+        var idValue = GetNodeString(buildDescription["number"]);
+        var statusValue = GetNodeString(buildDescription["result"]);
+        var startDateTicks = buildDescription["timestamp"]!.GetValue<long>();
+        var webUrl = GetNodeString(buildDescription["url"]);
 
-        JsonArray? action = buildDescription["actions"]?.AsArray();
+        var action = buildDescription["actions"]?.AsArray();
         List<ObjectId> commitHashList = [];
-        string testResults = string.Empty;
-        foreach (JsonNode? element in action ?? [])
+        var testResults = string.Empty;
+        foreach (var element in action ?? [])
         {
             if (element is null)
             {
@@ -383,18 +379,18 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             if (element["lastBuiltRevision"] is not null)
             {
                 commitHashList.Add(ObjectId.Parse(GetNodeString(element["lastBuiltRevision"]!["SHA1"])!));
-                JsonArray? branches = element["lastBuiltRevision"]!["branch"]?.AsArray();
+                var branches = element["lastBuiltRevision"]!["branch"]?.AsArray();
                 if (_ignoreBuilds is not null && branches is not null)
                 {
                     // Ignore build events for specified branches
-                    foreach (JsonNode? branch in branches)
+                    foreach (var branch in branches)
                     {
                         if (branch is null)
                         {
                             continue;
                         }
 
-                        string? name = GetNodeString(branch["name"]);
+                        var name = GetNodeString(branch["name"]);
                         if (name is null)
                         {
                             continue;
@@ -413,16 +409,16 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
                 continue;
             }
 
-            int testCount = element["totalCount"]!.GetValue<int>();
+            var testCount = element["totalCount"]!.GetValue<int>();
             if (testCount != 0)
             {
-                int failedTestCount = element["failCount"]!.GetValue<int>();
-                int skippedTestCount = element["skipCount"]!.GetValue<int>();
+                var failedTestCount = element["failCount"]!.GetValue<int>();
+                var skippedTestCount = element["skipCount"]!.GetValue<int>();
                 testResults = $"{testCount} tests ({failedTestCount} failed, {skippedTestCount} skipped)";
             }
         }
 
-        bool isRunning = buildDescription["building"]!.GetValue<bool>();
+        var isRunning = buildDescription["building"]!.GetValue<bool>();
         long? buildDuration;
         if (isRunning)
         {
@@ -433,8 +429,8 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             buildDuration = buildDescription["duration"]!.GetValue<long>();
         }
 
-        BuildStatus status = isRunning ? BuildStatus.InProgress : ParseBuildStatus(statusValue ?? string.Empty);
-        string statusText = status.ToString("G");
+        var status = isRunning ? BuildStatus.InProgress : ParseBuildStatus(statusValue ?? string.Empty);
+        var statusText = status.ToString("G");
         BuildInfo buildInfo = new()
         {
             Id = idValue,
@@ -444,7 +440,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
             CommitHashList = commitHashList.ToArray(),
             Url = webUrl
         };
-        string durationText = _buildDurationFormatter.Format(buildInfo.Duration);
+        var durationText = _buildDurationFormatter.Format(buildInfo.Duration);
         buildInfo.Description = $"#{idValue} {durationText} {testResults} {statusText}";
         return buildInfo;
     }
@@ -456,7 +452,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
     private static AuthenticationHeaderValue CreateBasicHeader(string username, string password)
     {
-        byte[] byteArray = Encoding.UTF8.GetBytes($"{username}:{password}");
+        var byteArray = Encoding.UTF8.GetBytes($"{username}:{password}");
         return new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
     }
 
@@ -483,7 +479,7 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
         {
             "SUCCESS" => BuildStatus.Success,
             "FAILURE" => BuildStatus.Failure,
-            "UNSTABLE"=> BuildStatus.Unstable,
+            "UNSTABLE" => BuildStatus.Unstable,
             "ABORTED" => BuildStatus.Stopped,
 
             // Jenkins status "NOT_BUILT"
@@ -497,17 +493,19 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
         Validates.NotNull(_httpClient);
 
-        HttpResponseMessage response = await _httpClient.GetAsync(restServicePath, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        var response = await _httpClient
+            .GetAsync(restServicePath, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
 
         return await GetStreamFromHttpResponseAsync(response);
 
         async Task<Stream?> GetStreamFromHttpResponseAsync(HttpResponseMessage resp)
         {
-            bool unauthorized = resp.StatusCode == HttpStatusCode.Unauthorized;
+            var unauthorized = resp.StatusCode == HttpStatusCode.Unauthorized;
 
             if (resp.IsSuccessStatusCode)
             {
-                HttpContent httpContent = resp.Content;
+                var httpContent = resp.Content;
 
                 if (httpContent.Headers.ContentType?.MediaType == "text/html")
                 {
@@ -536,7 +534,9 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
 
             Validates.NotNull(_buildServerWatcher);
 
-            IBuildServerCredentials buildServerCredentials = _buildServerWatcher.GetBuildServerCredentials(this, false) ?? throw new OperationCanceledException(resp.ReasonPhrase);
+            var buildServerCredentials =
+                _buildServerWatcher.GetBuildServerCredentials(this, false) ??
+                throw new OperationCanceledException(resp.ReasonPhrase);
             UpdateHttpClientOptions(buildServerCredentials);
 
             return await GetStreamAsync(restServicePath, cancellationToken);
@@ -547,7 +547,8 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
     {
         Validates.NotNull(_httpClient);
 
-        if (buildServerCredentials is null || buildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.Guest)
+        if (buildServerCredentials is null ||
+            buildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.Guest)
         {
             _httpClient.DefaultRequestHeaders.Authorization = null;
         }
@@ -555,31 +556,32 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
         {
             Validates.NotNull(buildServerCredentials.Username);
             Validates.NotNull(buildServerCredentials.Password);
-            _httpClient.DefaultRequestHeaders.Authorization = CreateBasicHeader(buildServerCredentials.Username, buildServerCredentials.Password);
+            _httpClient.DefaultRequestHeaders.Authorization =
+                CreateBasicHeader(buildServerCredentials.Username, buildServerCredentials.Password);
         }
     }
 
     private async Task<string> GetResponseAsync(string relativePath, CancellationToken cancellationToken)
     {
-        using Stream? responseStream = await GetStreamAsync(relativePath, cancellationToken).ConfigureAwait(false);
+        using var responseStream = await GetStreamAsync(relativePath, cancellationToken).ConfigureAwait(false);
         using StreamReader reader = new(responseStream ?? Stream.Null);
         return await reader.ReadToEndAsync(cancellationToken);
     }
 
     private static string FormatToGetJson(string restServicePath, bool buildsInfo = false)
     {
-        string buildTree = "lastBuild[timestamp]";
-        int depth = 1;
-        int postIndex = restServicePath.IndexOf('?');
+        var buildTree = "lastBuild[timestamp]";
+        var depth = 1;
+        var postIndex = restServicePath.IndexOf('?');
         if (postIndex >= 0)
         {
-            int endLen = restServicePath.Length - postIndex;
+            var endLen = restServicePath.Length - postIndex;
             if (restServicePath.EndsWith('/'))
             {
                 endLen--;
             }
 
-            string post = restServicePath.Substring(postIndex, endLen);
+            var post = restServicePath.Substring(postIndex, endLen);
             if (post == "?m")
             {
                 // Multi pipeline project
@@ -618,8 +620,10 @@ internal sealed class JenkinsAdapter : IBuildServerAdapter
         return restServicePath;
     }
 
-    public void Dispose()
+    private sealed class ResponseInfo
     {
-        _httpClient?.Dispose();
+        public string? Url { get; set; }
+        public long Timestamp { get; set; }
+        public IEnumerable<JsonNode>? JobDescription { get; set; }
     }
 }

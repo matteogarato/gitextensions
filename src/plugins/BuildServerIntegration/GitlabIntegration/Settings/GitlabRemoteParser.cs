@@ -6,28 +6,32 @@ namespace GitExtensions.Plugins.GitlabIntegration.Settings;
 
 public partial class GitlabRemoteParser : RemoteParser
 {
-    [GeneratedRegex(@"git(?:@|://)(?<host>[^/]+)[:/](?<owner>[^/]+)/(?<repo>[\w_\.\-]+)\.git", RegexOptions.ExplicitCapture)]
-    private static partial Regex GitlabSshUrlRegex { get; }
-
-    [GeneratedRegex(@"https?://(?<host>[^/@]+)/(?<owner>.+)/(?<repo>[\w_\.\-]+)(?:\.git)?", RegexOptions.ExplicitCapture)]
-    private static partial Regex GitlabHttpsUrlRegex { get; }
-
     private static readonly Regex[] _gitLabRegexes = [GitlabHttpsUrlRegex, GitlabSshUrlRegex];
 
+    [GeneratedRegex(@"git(?:@|://)(?<host>[^/]+)[:/](?<owner>[^/]+)/(?<repo>[\w_\.\-]+)\.git",
+        RegexOptions.ExplicitCapture)]
+    private static partial Regex GitlabSshUrlRegex { get; }
+
+    [GeneratedRegex(@"https?://(?<host>[^/@]+)/(?<owner>.+)/(?<repo>[\w_\.\-]+)(?:\.git)?",
+        RegexOptions.ExplicitCapture)]
+    private static partial Regex GitlabHttpsUrlRegex { get; }
+
     public bool IsValidRemoteUrl(string remoteUrl)
-        => TryExtractGitlabDataFromRemoteUrl(remoteUrl, out _, out _, out _);
+    {
+        return TryExtractGitlabDataFromRemoteUrl(remoteUrl, out _, out _, out _);
+    }
 
     public bool TryExtractGitlabDataFromRemoteUrl(
         string remoteUrl,
-        [NotNullWhen(returnValue: true)] out string? host,
-        [NotNullWhen(returnValue: true)] out string? owner,
-        [NotNullWhen(returnValue: true)] out string? repository)
+        [NotNullWhen(true)] out string? host,
+        [NotNullWhen(true)] out string? owner,
+        [NotNullWhen(true)] out string? repository)
     {
         host = null;
         owner = null;
         repository = null;
 
-        Match? m = MatchRegExes(remoteUrl, _gitLabRegexes);
+        var m = MatchRegExes(remoteUrl, _gitLabRegexes);
 
         if (m is null || !m.Success)
         {

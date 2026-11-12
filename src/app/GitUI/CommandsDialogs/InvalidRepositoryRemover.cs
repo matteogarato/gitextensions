@@ -1,28 +1,30 @@
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.UserRepositoryHistory;
+using GitExtUtils.GitUI;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Represents an interface for removing invalid repositories.
+///     Represents an interface for removing invalid repositories.
 /// </summary>
 public interface IInvalidRepositoryRemover
 {
     /// <summary>
-    ///  Shows a dialog to remove the provided invalid repository, or all invalid repositories.
+    ///     Shows a dialog to remove the provided invalid repository, or all invalid repositories.
     /// </summary>
     /// <param name="repositoryPath">An invalid repository.</param>
-    /// <returns><see langword="true"/> if any repositories were removed; otherwise <see langword="false"/>.</returns>
-    /// <remarks>The method does not verify that the provided <paramref name="repositoryPath"/> is invalid.</remarks>
+    /// <returns><see langword="true" /> if any repositories were removed; otherwise <see langword="false" />.</returns>
+    /// <remarks>The method does not verify that the provided <paramref name="repositoryPath" /> is invalid.</remarks>
     bool ShowDeleteInvalidRepositoryDialog(string repositoryPath);
 }
 
 internal sealed class InvalidRepositoryRemover : IInvalidRepositoryRemover
 {
-    public bool ShowDeleteInvalidRepositoryDialog(string repositoryPath)
+    bool IInvalidRepositoryRemover.ShowDeleteInvalidRepositoryDialog(string repositoryPath)
     {
-        int invalidPathCount = ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync)
-                                                               .Count(repo => !GitModule.IsValidGitWorkingDir(repo.Path));
+        var invalidPathCount = ThreadHelper.JoinableTaskFactory
+            .Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync)
+            .Count(repo => !GitModule.IsValidGitWorkingDir(repo.Path));
 
         TaskDialogPage page = new()
         {
@@ -33,26 +35,31 @@ internal sealed class InvalidRepositoryRemover : IInvalidRepositoryRemover
             AllowCancel = true,
             SizeToContent = true
         };
-        TaskDialogCommandLinkButton btnRemoveSelectedInvalidRepository = new(TranslatedStrings.RemoveSelectedInvalidRepository);
+        TaskDialogCommandLinkButton btnRemoveSelectedInvalidRepository =
+            new(TranslatedStrings.RemoveSelectedInvalidRepository);
         page.Buttons.Add(btnRemoveSelectedInvalidRepository);
 
-        TaskDialogCommandLinkButton btnRemoveAllInvalidRepositories = new(string.Format(TranslatedStrings.RemoveAllInvalidRepositories, invalidPathCount));
+        TaskDialogCommandLinkButton btnRemoveAllInvalidRepositories =
+            new(string.Format(TranslatedStrings.RemoveAllInvalidRepositories, invalidPathCount));
         if (invalidPathCount > 1)
         {
             page.Buttons.Add(btnRemoveAllInvalidRepositories);
         }
 
-        TaskDialogButton result = TaskDialog.ShowDialog(page);
+        var result = TaskDialog.ShowDialog(page);
 
         if (result == btnRemoveSelectedInvalidRepository)
         {
-            ThreadHelper.JoinableTaskFactory.Run(() => RepositoryHistoryManager.Locals.RemoveRecentAsync(repositoryPath));
+            ThreadHelper.JoinableTaskFactory.Run(() =>
+                RepositoryHistoryManager.Locals.RemoveRecentAsync(repositoryPath));
             return true;
         }
 
         if (result == btnRemoveAllInvalidRepositories)
         {
-            ThreadHelper.JoinableTaskFactory.Run(() => RepositoryHistoryManager.Locals.RemoveInvalidRepositoriesAsync(repoPath => GitModule.IsValidGitWorkingDir(repoPath)));
+            ThreadHelper.JoinableTaskFactory.Run(() =>
+                RepositoryHistoryManager.Locals.RemoveInvalidRepositoriesAsync(repoPath =>
+                    GitModule.IsValidGitWorkingDir(repoPath)));
             return true;
         }
 

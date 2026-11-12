@@ -1,14 +1,10 @@
 ﻿using System.Text.RegularExpressions;
 using GitExtensions.Extensibility.Git;
-using Microsoft;
 
 namespace GitUI.UserControls.RevisionGrid.Graph;
 
 internal partial class BranchFinder
 {
-    [GeneratedRegex(@"^merged? (pull request (?<pr>.*) from )?(.*branch |tag )?'?(?<with>[^ ']*[^ '.])'?( of [^ ]*[^ .])?( into (?<into>.*[^.]))?\.?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture)]
-    private static partial Regex MergeRegex { get; }
-
     internal BranchFinder(RevisionGraphRevision node)
     {
         RevisionGraphRevision? parent = null;
@@ -20,6 +16,11 @@ internal partial class BranchFinder
         }
     }
 
+    [GeneratedRegex(
+        @"^merged? (pull request (?<pr>.*) from )?(.*branch |tag )?'?(?<with>[^ ']*[^ '.])'?( of [^ ]*[^ .])?( into (?<into>.*[^.]))?\.?$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture)]
+    private static partial Regex MergeRegex { get; }
+
     internal string? CommittedTo { get; private set; }
     internal string? MergedWith { get; private set; }
 
@@ -27,7 +28,7 @@ internal partial class BranchFinder
     {
         Validates.NotNull(node.GitRevision);
 
-        foreach (IGitRef gitReference in node.GitRevision.Refs)
+        foreach (var gitReference in node.GitRevision.Refs)
         {
             if (gitReference.IsHead || gitReference.IsRemote || gitReference.IsStash)
             {
@@ -40,26 +41,25 @@ internal partial class BranchFinder
     }
 
     /// <summary>
-    /// Checks whether the commit message is a merge message
-    /// and then if its a merge message, sets CommittedTo and MergedWith.
-    ///
-    /// MergedWith is set if it is the current node, i.e. on the first call.
-    /// MergedWith is set to string.Empty if it is no merge.
-    /// First/second branch does not matter because it is the message of the current node.
+    ///     Checks whether the commit message is a merge message
+    ///     and then if its a merge message, sets CommittedTo and MergedWith.
+    ///     MergedWith is set if it is the current node, i.e. on the first call.
+    ///     MergedWith is set to string.Empty if it is no merge.
+    ///     First/second branch does not matter because it is the message of the current node.
     /// </summary>
     /// <param name="node">the node of the revision to evaluate.</param>
     /// <param name="parent">
-    /// the node's parent in the branch which is currently descended
-    /// (used for the decision whether the node belongs to the first or second branch of the merge).
+    ///     the node's parent in the branch which is currently descended
+    ///     (used for the decision whether the node belongs to the first or second branch of the merge).
     /// </param>
     private bool CheckForMerge(RevisionGraphRevision node, RevisionGraphRevision? parent)
     {
         Validates.NotNull(node.GitRevision);
 
-        bool isTheFirstBranch = parent is null || node.Parents.FirstOrDefault() == parent;
+        var isTheFirstBranch = parent is null || node.Parents.FirstOrDefault() == parent;
         string? mergedInto;
         string? mergedWith;
-        (mergedInto, mergedWith) = ParseMergeMessage(node.GitRevision.Subject, appendPullRequest: isTheFirstBranch);
+        (mergedInto, mergedWith) = ParseMergeMessage(node.GitRevision.Subject, isTheFirstBranch);
 
         if (mergedInto is not null)
         {
@@ -75,12 +75,12 @@ internal partial class BranchFinder
     {
         string? into = null;
         string? with = null;
-        Match match = MergeRegex.Match(commitSubject);
+        var match = MergeRegex.Match(commitSubject);
         if (match.Success)
         {
-            Group matchPullRequest = match.Groups["pr"];
-            Group matchWith = match.Groups["with"];
-            Group matchInto = match.Groups["into"];
+            var matchPullRequest = match.Groups["pr"];
+            var matchWith = match.Groups["with"];
+            var matchInto = match.Groups["into"];
             into = matchInto.Success ? matchInto.Value : "master";
             with = matchWith.Success ? matchWith.Value : "?";
             if (appendPullRequest && matchPullRequest.Success)

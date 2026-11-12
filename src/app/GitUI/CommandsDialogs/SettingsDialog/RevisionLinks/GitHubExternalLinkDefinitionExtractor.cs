@@ -6,9 +6,17 @@ namespace GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 
 public sealed class GitHubExternalLinkDefinitionExtractor : ExternalLinkDefinitionExtractor
 {
-    public override string ServiceName => "GitHub";
-    public override Image Icon => Images.GitHub;
     private readonly GitHubRemoteParser _remoteParser = new();
+
+    public override string ServiceName
+    {
+        get => "GitHub";
+    }
+
+    public override Image Icon
+    {
+        get => Images.GitHub;
+    }
 
     public override bool IsValidRemoteUrl(string remoteUrl)
     {
@@ -29,7 +37,7 @@ public sealed class GitHubExternalLinkDefinitionExtractor : ExternalLinkDefiniti
         organizationName ??= "ORGANIZATION_NAME";
         repoName ??= "REPO_NAME";
 
-        string gitHubUrl = $"https://github.com/{organizationName}/{repoName}";
+        var gitHubUrl = $"https://github.com/{organizationName}/{repoName}";
         ExternalLinkDefinition definition = new()
         {
             Name = string.Format(CodeLink.Text, ServiceName),
@@ -38,8 +46,15 @@ public sealed class GitHubExternalLinkDefinitionExtractor : ExternalLinkDefiniti
             SearchPattern = ".*",
             LinkFormats =
             {
-                new ExternalLinkFormat { Caption = string.Format(ViewCommitLink.Text, ServiceName), Format = gitHubUrl + "/commit/%COMMIT_HASH%" },
-                new ExternalLinkFormat { Caption = string.Format(ViewProjectLink.Text, ServiceName), Format = gitHubUrl }
+                new ExternalLinkFormat
+                {
+                    Caption = string.Format(ViewCommitLink.Text, ServiceName),
+                    Format = gitHubUrl + "/commit/%COMMIT_HASH%"
+                },
+                new ExternalLinkFormat
+                {
+                    Caption = string.Format(ViewProjectLink.Text, ServiceName), Format = gitHubUrl
+                }
             }
         };
         externalLinkDefinitions.Add(definition);
@@ -48,7 +63,10 @@ public sealed class GitHubExternalLinkDefinitionExtractor : ExternalLinkDefiniti
         {
             Name = string.Format(IssuesLink.Text, ServiceName),
             Enabled = true,
-            SearchInParts = { ExternalLinkDefinition.RevisionPart.Message, ExternalLinkDefinition.RevisionPart.LocalBranches },
+            SearchInParts =
+            {
+                ExternalLinkDefinition.RevisionPart.Message, ExternalLinkDefinition.RevisionPart.LocalBranches
+            },
             SearchPattern = @"(?i)(?<!pull request |pr[ _]?)(#|(((feat(ure)?)|fix)[/_-]))\d+",
             NestedSearchPattern = @"\d+",
             LinkFormats = { new ExternalLinkFormat { Caption = "#{0}", Format = gitHubUrl + "/issues/{0}" } }
@@ -58,7 +76,12 @@ public sealed class GitHubExternalLinkDefinitionExtractor : ExternalLinkDefiniti
         {
             Name = string.Format(PullRequestsLink.Text, ServiceName),
             Enabled = true,
-            SearchInParts = { ExternalLinkDefinition.RevisionPart.Message, ExternalLinkDefinition.RevisionPart.LocalBranches, ExternalLinkDefinition.RevisionPart.RemoteBranches },
+            SearchInParts =
+            {
+                ExternalLinkDefinition.RevisionPart.Message,
+                ExternalLinkDefinition.RevisionPart.LocalBranches,
+                ExternalLinkDefinition.RevisionPart.RemoteBranches
+            },
             SearchPattern = @"(?i)(pull request |pr[ _]?)#?\d+",
             NestedSearchPattern = @"\d+",
             LinkFormats = { new ExternalLinkFormat { Caption = "PR #{0}", Format = gitHubUrl + "/pull/{0}" } }

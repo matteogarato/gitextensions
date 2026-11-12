@@ -13,17 +13,17 @@ public readonly struct CodeFile
 
     public static CodeFile Parse(FileInfo file)
     {
-        int lineCount = 0;
-        int blankLineCount = 0;
-        int designerLineCount = 0;
-        int commentLineCount = 0;
-        bool isTestFile = false;
+        var lineCount = 0;
+        var blankLineCount = 0;
+        var designerLineCount = 0;
+        var commentLineCount = 0;
+        var isTestFile = false;
 
-        string extension = file.Extension;
-        bool inCodeGeneratedRegion = false;
-        bool inCommentBlock = false;
+        var extension = file.Extension;
+        var inCodeGeneratedRegion = false;
+        var inCommentBlock = false;
 
-        foreach (string line in ReadLines())
+        foreach (var line in ReadLines())
         {
             ProcessLine(line);
         }
@@ -33,10 +33,10 @@ public readonly struct CodeFile
         IEnumerable<string> ReadLines()
         {
             // NOTE not using File.ReadLines here as it doesn't appear to detect a BOM
-            using StreamReader reader = new(file.FullName, detectEncodingFromByteOrderMarks: true);
+            using StreamReader reader = new(file.FullName, true);
             while (true)
             {
-                string? line = reader.ReadLine();
+                var line = reader.ReadLine();
 
                 if (line is null)
                 {
@@ -85,7 +85,8 @@ public readonly struct CodeFile
             {
                 commentLineCount++;
             }
-            else if (extension.Equals(".cshtml", StringComparison.OrdinalIgnoreCase) && (line.Contains("@*") && line.Contains("*@")))
+            else if (extension.Equals(".cshtml", StringComparison.OrdinalIgnoreCase) && line.Contains("@*") &&
+                     line.Contains("*@"))
             {
                 commentLineCount++;
             }
@@ -96,7 +97,7 @@ public readonly struct CodeFile
             else if ((extension.Equals(".asm", StringComparison.OrdinalIgnoreCase) ||
                       extension.Equals(".s", StringComparison.OrdinalIgnoreCase) ||
                       extension.Equals(".inc", StringComparison.OrdinalIgnoreCase)) &&
-                      line.StartsWith(';'))
+                     line.StartsWith(';'))
             {
                 commentLineCount++;
             }
@@ -110,9 +111,10 @@ public readonly struct CodeFile
 
             bool IsDesignerFile()
             {
-                bool isWebReferenceFile = file.FullName.Contains("Web References") && file.Name == "Reference.cs";
+                var isWebReferenceFile = file.FullName.Contains("Web References") && file.Name == "Reference.cs";
 
-                return isWebReferenceFile || file.Name.Contains(".Designer.", StringComparison.CurrentCultureIgnoreCase);
+                return isWebReferenceFile ||
+                       file.Name.Contains(".Designer.", StringComparison.CurrentCultureIgnoreCase);
             }
 
             void SetCodeBlockFlags()
@@ -137,7 +139,8 @@ public readonly struct CodeFile
                     inCommentBlock = true;
                 }
 
-                if (extension.Equals(".pas", StringComparison.OrdinalIgnoreCase) || extension.Equals(".inc", StringComparison.OrdinalIgnoreCase))
+                if (extension.Equals(".pas", StringComparison.OrdinalIgnoreCase) ||
+                    extension.Equals(".inc", StringComparison.OrdinalIgnoreCase))
                 {
                     if (line.StartsWith("(*") && !line.StartsWith("(*$"))
                     {
@@ -274,7 +277,8 @@ public readonly struct CodeFile
         }
     }
 
-    private CodeFile(int totalLineCount, int blankLineCount, int designerLineCount, int commentLineCount, bool isTestFile)
+    private CodeFile(int totalLineCount, int blankLineCount, int designerLineCount, int commentLineCount,
+        bool isTestFile)
     {
         TotalLineCount = totalLineCount;
         BlankLineCount = blankLineCount;

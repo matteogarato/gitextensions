@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Settings;
 using GitExtUtils.GitUI;
@@ -9,13 +9,10 @@ namespace GitUI.CommandsDialogs.SettingsDialog;
 
 public sealed partial class SettingsTreeViewUserControl : UserControl
 {
-    private bool _isSelectionChangeTriggeredByGoto;
-    private List<TreeNode> _nodesFoundByTextBox = [];
+    private readonly List<TreeNode> _nodesFoundByTextBox = [];
     private readonly Dictionary<SettingsPageReference, TreeNode> _pages2NodeMap = [];
     private readonly List<ISettingsPage> _settingsPages = [];
-
-    public event EventHandler<SettingsPageSelectedEventArgs>? SettingsPageSelected;
-    public IEnumerable<ISettingsPage> SettingsPages => _settingsPages;
+    private bool _isSelectionChangeTriggeredByGoto;
 
     public SettingsTreeViewUserControl()
     {
@@ -27,8 +24,7 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
 
         treeView1.ImageList = new ImageList
         {
-            ColorDepth = ColorDepth.Depth32Bit,
-            ImageSize = DpiUtil.Scale(new Size(16, 16))
+            ColorDepth = ColorDepth.Depth32Bit, ImageSize = DpiUtil.Scale(new Size(16, 16))
         };
 
         // Scale ImageSize and images scale automatically
@@ -36,12 +32,20 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
         this.AdjustForDpiScaling();
     }
 
+    public IEnumerable<ISettingsPage> SettingsPages
+    {
+        get => _settingsPages;
+    }
+
+    public event EventHandler<SettingsPageSelectedEventArgs>? SettingsPageSelected;
+
     /// <summary>Add page to settings tree.</summary>
     /// <param name="page">The settings page to add.</param>
     /// <param name="parentPageReference">An already added settings page to be a parent in the tree.</param>
     /// <param name="icon">An icon to display in tree node.</param>
     /// <param name="asRoot">only one page can be set as the root page (for the GitExt and Plugin root node).</param>
-    public void AddSettingsPage(ISettingsPage page, SettingsPageReference? parentPageReference, Image? icon, bool asRoot = false)
+    public void AddSettingsPage(ISettingsPage page, SettingsPageReference? parentPageReference, Image? icon,
+        bool asRoot = false)
     {
         TreeNode node;
         if (parentPageReference is null)
@@ -58,7 +62,7 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
             }
             else
             {
-                if (!_pages2NodeMap.TryGetValue(parentPageReference, out TreeNode? parentNode))
+                if (!_pages2NodeMap.TryGetValue(parentPageReference, out var parentNode))
                 {
                     throw new ArgumentException("You have to add parent page first: " + parentPageReference);
                 }
@@ -74,7 +78,7 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
 
     private TreeNode AddPage(TreeNodeCollection treeNodeCollection, ISettingsPage page, Image? icon)
     {
-        TreeNode node = treeNodeCollection.Add(page.GetTitle());
+        var node = treeNodeCollection.Add(page.GetTitle());
         if (icon is null)
         {
             return node;
@@ -97,11 +101,11 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
     {
         if (SettingsPageSelected is not null)
         {
-            ISettingsPage page = (ISettingsPage)node.Tag!;
+            var page = (ISettingsPage)node.Tag!;
 
             if (page.GuiControl is null)
             {
-                TreeNode? firstSubNode = node.FirstNode;
+                var firstSubNode = node.FirstNode;
                 if (firstSubNode is not null)
                 {
                     treeView1.SelectedNode = firstSubNode;
@@ -109,7 +113,8 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
                 }
             }
 
-            SettingsPageSelected?.Invoke(this, new SettingsPageSelectedEventArgs(page, _isSelectionChangeTriggeredByGoto));
+            SettingsPageSelected?.Invoke(this,
+                new SettingsPageSelectedEventArgs(page, _isSelectionChangeTriggeredByGoto));
         }
     }
 
@@ -123,11 +128,11 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
             return;
         }
 
-        string searchFor = textBoxFind.Text.ToLowerInvariant();
-        LazyStringSplit andKeywords = searchFor.LazySplit(' ');
-        foreach (TreeNode node in treeView1.AllNodes())
+        var searchFor = textBoxFind.Text.ToLowerInvariant();
+        var andKeywords = searchFor.LazySplit(' ');
+        foreach (var node in treeView1.AllNodes())
         {
-            ISettingsPage settingsPage = (ISettingsPage)node.Tag!;
+            var settingsPage = (ISettingsPage)node.Tag!;
 
             // search for title
             if (settingsPage.GetTitle().Contains(searchFor, StringComparison.InvariantCultureIgnoreCase))
@@ -137,7 +142,9 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
             }
 
             // search for keywords (space combines as 'and')
-            if (andKeywords.All(keyword => settingsPage.GetSearchKeywords().Any(k => k.Contains(keyword, StringComparison.InvariantCultureIgnoreCase))))
+            if (andKeywords.All(keyword =>
+                    settingsPage.GetSearchKeywords()
+                        .Any(k => k.Contains(keyword, StringComparison.InvariantCultureIgnoreCase))))
             {
                 // only part of a keyword must match to have a match
                 if (!_nodesFoundByTextBox.Contains(node))
@@ -149,7 +156,7 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
 
         ResetAllNodeHighlighting();
 
-        foreach (TreeNode node in _nodesFoundByTextBox)
+        foreach (var node in _nodesFoundByTextBox)
         {
             HighlightNode(node, true);
             node.EnsureVerticallyVisible();
@@ -162,7 +169,7 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
         }
     }
 
-    /// <summary>Highlights a <see cref="TreeNode"/> or returns it to the default colors.</summary>
+    /// <summary>Highlights a <see cref="TreeNode" /> or returns it to the default colors.</summary>
     private static void HighlightNode(TreeNode treeNode, bool highlight)
     {
         treeNode.ForeColor = highlight ? SystemColors.HighlightText : SystemColors.ControlText;
@@ -179,7 +186,7 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
 
         static void ResetHighlighting(TreeNodeCollection nodes)
         {
-            foreach (TreeNode node in nodes.Cast<TreeNode>())
+            foreach (var node in nodes.Cast<TreeNode>())
             {
                 HighlightNode(node, false);
                 ResetHighlighting(node.Nodes);
@@ -217,10 +224,10 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
             e.Handled = true;
 
             // each enter key press selects next highlighted node (cycle)
-            int indexOfSelectedNode = _nodesFoundByTextBox.IndexOf(treeView1.SelectedNode!);
+            var indexOfSelectedNode = _nodesFoundByTextBox.IndexOf(treeView1.SelectedNode!);
             if (indexOfSelectedNode == -1 || indexOfSelectedNode + 1 == _nodesFoundByTextBox.Count)
             {
-                TreeNode? firstFoundNode = _nodesFoundByTextBox.FirstOrDefault();
+                var firstFoundNode = _nodesFoundByTextBox.FirstOrDefault();
                 if (firstFoundNode is not null)
                 {
                     treeView1.SelectedNode = firstFoundNode;
@@ -234,14 +241,8 @@ public sealed partial class SettingsTreeViewUserControl : UserControl
     }
 }
 
-public class SettingsPageSelectedEventArgs : EventArgs
+public class SettingsPageSelectedEventArgs(ISettingsPage settingsPage, bool isTriggeredByGoto) : EventArgs
 {
-    public ISettingsPage SettingsPage { get; }
-    public bool IsTriggeredByGoto { get; }
-
-    public SettingsPageSelectedEventArgs(ISettingsPage settingsPage, bool isTriggeredByGoto)
-    {
-        SettingsPage = settingsPage;
-        IsTriggeredByGoto = isTriggeredByGoto;
-    }
+    public ISettingsPage SettingsPage { get; } = settingsPage;
+    public bool IsTriggeredByGoto { get; } = isTriggeredByGoto;
 }

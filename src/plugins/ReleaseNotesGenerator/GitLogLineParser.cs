@@ -13,14 +13,14 @@ public sealed partial class GitLogLineParser : IGitLogLineParser
     [GeneratedRegex(@"^(?<before>[a-zA-Z0-9]{1,})@(?<after>.*)", RegexOptions.ExplicitCapture)]
     private static partial Regex LogLineRegex { get; }
 
-    public LogLine? Parse(string line)
+    LogLine? IGitLogLineParser.Parse(string line)
     {
         if (string.IsNullOrWhiteSpace(line))
         {
             return null;
         }
 
-        Match m = LogLineRegex.Match(line);
+        var m = LogLineRegex.Match(line);
         if (!m.Success)
         {
             return null;
@@ -30,7 +30,7 @@ public sealed partial class GitLogLineParser : IGitLogLineParser
         return logLine;
     }
 
-    public IEnumerable<LogLine> Parse(IEnumerable<string>? lines)
+    IEnumerable<LogLine> IGitLogLineParser.Parse(IEnumerable<string>? lines)
     {
         List<LogLine> resultList = [];
         if (lines is null)
@@ -39,9 +39,9 @@ public sealed partial class GitLogLineParser : IGitLogLineParser
         }
 
         LogLine? logLineCurrent = null;
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
-            LogLine? logLine1 = Parse(line);
+            var logLine1 = Parse(line);
             if (logLine1 is not null)
             {
                 if (logLineCurrent is not null)

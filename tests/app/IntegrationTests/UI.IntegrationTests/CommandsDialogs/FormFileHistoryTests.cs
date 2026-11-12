@@ -1,23 +1,28 @@
 ﻿using CommonTestUtils;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormFileHistoryTests : System.IDisposable
+public class FormFileHistoryTests : IDisposable
 {
-    private ReferenceRepository _referenceRepository = null!;
+    private readonly GitUiCommands _commands = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
 
-    private GitUICommands _commands = null!;
     public FormFileHistoryTests()
     {
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
 
         AppSettings.UseBrowseForFileHistory.Value = false;
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -32,9 +37,12 @@ public class FormFileHistoryTests : System.IDisposable
     [InlineData("Dir with spaces", "file with spaces.txt")]
     public void File_history_should_behave_as_expected(string fileRelativePath, string fileName)
     {
-        string revision1 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Create '{fileName}' in directory '{fileRelativePath}'");
-        string revision2 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Update '{fileName}' in directory '{fileRelativePath}'");
-        string revision3 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Update '{fileName}' in directory '{fileRelativePath}' again");
+        var revision1 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName,
+            $"Create '{fileName}' in directory '{fileRelativePath}'");
+        var revision2 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName,
+            $"Update '{fileName}' in directory '{fileRelativePath}'");
+        var revision3 = _referenceRepository.CreateCommitRelative(fileRelativePath, fileName,
+            $"Update '{fileName}' in directory '{fileRelativePath}' again");
 
         RunFormTest(
             form =>
@@ -51,9 +59,12 @@ public class FormFileHistoryTests : System.IDisposable
     {
         const string text = "This text will appear in a file that shall be renamed";
 
-        string initialRevision = _referenceRepository.CreateCommitRelative(string.Empty, "a.txt", "Create 'a.txt'", text);
-        string renameRevision = _referenceRepository.RenameRepoFile(string.Empty, "a.txt", "b.txt", commitMessage: "Rename to 'b.txt'");
-        string anotherRenameRevision = _referenceRepository.RenameRepoFile(string.Empty, "b.txt", "c.txt", commitMessage: "Rename to 'c.txt'");
+        var initialRevision =
+            _referenceRepository.CreateCommitRelative(string.Empty, "a.txt", "Create 'a.txt'", text);
+        var renameRevision =
+            _referenceRepository.RenameRepoFile(string.Empty, "a.txt", "b.txt", commitMessage: "Rename to 'b.txt'");
+        var anotherRenameRevision =
+            _referenceRepository.RenameRepoFile(string.Empty, "b.txt", "c.txt", commitMessage: "Rename to 'c.txt'");
 
         AppSettings.FollowRenamesInFileHistory = true;
 
@@ -75,15 +86,16 @@ public class FormFileHistoryTests : System.IDisposable
         {
             textLoaded = false;
             form.GetTestAccessor().RevisionGrid.SetSelectedRevision(ObjectId.Parse(revision)).Should().BeTrue();
-            UITest.ProcessUntil("Loading file text", () => textLoaded);
-            form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal.GetTestAccessor().TextEditor.Text.Should().Be(text);
+            UiTest.ProcessUntil("Loading file text", () => textLoaded);
+            form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal.GetTestAccessor().TextEditor.Text
+                .Should().Be(text);
         }
     }
 
-    private static void RunFormTest(Action<FormFileHistory> testDriver, string fileName, GitUICommands commands)
+    private static void RunFormTest(Action<FormFileHistory> testDriver, string fileName, GitUiCommands commands)
     {
-        UITest.RunForm(
-            showForm: () => commands.GetTestAccessor().ShowFileHistoryDialog(fileName),
+        UiTest.RunForm(
+            () => commands.GetTestAccessor().ShowFileHistoryDialog(fileName),
             (FormFileHistory form) =>
             {
                 testDriver(form);
@@ -94,11 +106,7 @@ public class FormFileHistoryTests : System.IDisposable
 
     private static void WaitForRevisionsToBeLoaded(FormFileHistory form)
     {
-        UITest.ProcessUntil("Loading Revisions", () => form.GetTestAccessor().RevisionGrid.GetTestAccessor().IsDataLoadComplete);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
+        UiTest.ProcessUntil("Loading Revisions",
+            () => form.GetTestAccessor().RevisionGrid.GetTestAccessor().IsDataLoadComplete);
     }
 }

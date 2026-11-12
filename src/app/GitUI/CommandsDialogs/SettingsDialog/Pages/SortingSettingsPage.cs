@@ -1,4 +1,5 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.Utils;
 using GitExtUtils.GitUI;
 using GitUIPluginInterfaces;
@@ -8,13 +9,18 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class SortingSettingsPage : SettingsPageWithHeader
 {
-    private readonly TranslationString _revisionSortWarningTooltip = new("Sorting revisions may delay rendering of the revision graph.");
-    private readonly TranslationString _prioBranchNamesTooltip = new("Regex to prioritize branch names in the left panel and commit info.\n" +
+    private readonly TranslationString _prioBranchNamesTooltip = new(
+        "Regex to prioritize branch names in the left panel and commit info.\n" +
         "The branches matching the pattern will be shown before the others.\n" +
         "Separate the priorities with ';'.");
-    private readonly TranslationString _prioRemoteNamesTooltip = new("Regex to prioritize remote names in the left panel and commit info.\n" +
+
+    private readonly TranslationString _prioRemoteNamesTooltip = new(
+        "Regex to prioritize remote names in the left panel and commit info.\n" +
         "The remotes matching the pattern will be shown before the others.\n" +
         "Separate the priorities with ';'.");
+
+    private readonly TranslationString _revisionSortWarningTooltip =
+        new("Sorting revisions may delay rendering of the revision graph.");
 
     public SortingSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)
@@ -80,21 +86,25 @@ public partial class SortingSettingsPage : SettingsPageWithHeader
     }
 
     private void RevisionSortOrderHelp_Click(object sender, EventArgs e)
-        => OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "sorting-sort-author-date"));
-    private void PrioBranchNamesHelp_Click(object sender, EventArgs e)
-        => OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "sorting-sort-prioritized-branches"));
-    private void PrioRemoteNamesHelp_Click(object sender, EventArgs e)
-        => OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "sorting-sort-prioritized-remotes"));
-
-    private sealed class ComboBoxItem<T>
     {
-        public string Text { get; }
-        public T Value { get; }
+        OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "sorting-sort-author-date"));
+    }
 
-        public ComboBoxItem(string text, T value)
-        {
-            Text = text;
-            Value = value;
-        }
+    private void PrioBranchNamesHelp_Click(object sender, EventArgs e)
+    {
+        OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings",
+            "sorting-sort-prioritized-branches"));
+    }
+
+    private void PrioRemoteNamesHelp_Click(object sender, EventArgs e)
+    {
+        OsShellUtil.OpenUrlInDefaultBrowser(
+            UserManual.UserManual.UrlFor("settings", "sorting-sort-prioritized-remotes"));
+    }
+
+    private sealed class ComboBoxItem<T>(string text, T value)
+    {
+        public string Text { get; } = text;
+        public T Value { get; } = value;
     }
 }

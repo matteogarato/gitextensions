@@ -1,18 +1,18 @@
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using Microsoft.Win32;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
-public class CheckSettingsLogic
+public class CheckSettingsLogic(CommonLogic commonLogic)
 {
-    public readonly CommonLogic CommonLogic;
-    private IGitModule? Module => CommonLogic.Module;
+    public readonly CommonLogic CommonLogic = commonLogic;
 
-    public CheckSettingsLogic(CommonLogic commonLogic)
+    private IGitModule? Module
     {
-        CommonLogic = commonLogic;
+        get => CommonLogic.Module;
     }
 
     public bool AutoSolveAllSettings()
@@ -22,7 +22,7 @@ public class CheckSettingsLogic
             return SolveGitCommand();
         }
 
-        bool valid = SolveGitCommand();
+        var valid = SolveGitCommand();
         valid = SolveLinuxToolsDir() && valid;
         valid = SolveGitExtensionsDir() && valid;
         valid = SolveEditor(CommonLogic) && valid;
@@ -35,11 +35,12 @@ public class CheckSettingsLogic
 
     public static bool SolveEditor(CommonLogic commonLogic)
     {
-        string? editor = commonLogic.GetGlobalEditor();
+        var editor = commonLogic.GetGlobalEditor();
 
         if (string.IsNullOrEmpty(editor))
         {
-            Environment.SetEnvironmentVariable(CommonLogic.AmbientGitEditorEnvVariableName, AppSettings.FileEditorCommand);
+            Environment.SetEnvironmentVariable(CommonLogic.AmbientGitEditorEnvVariableName,
+                AppSettings.FileEditorCommand);
         }
 
         return true;
@@ -53,15 +54,15 @@ public class CheckSettingsLogic
             return true;
         }
 
-        string gitpath = AppSettings.GitCommandValue;
+        var gitpath = AppSettings.GitCommandValue;
         if (!string.IsNullOrWhiteSpace(possibleNewPath))
         {
             gitpath = possibleNewPath.Trim();
         }
 
-        foreach (string toolsPath in new[] { @"usr\bin\", @"bin\" })
+        foreach (var toolsPath in new[] { @"usr\bin\", @"bin\" })
         {
-            string linuxToolsPath = gitpath.Replace(@"\cmd\git.exe", @"\" + toolsPath)
+            var linuxToolsPath = gitpath.Replace(@"\cmd\git.exe", @"\" + toolsPath)
                 .Replace(@"\cmd\git.cmd", @"\" + toolsPath)
                 .Replace(@"\bin\git.exe", @"\" + toolsPath);
 
@@ -82,7 +83,7 @@ public class CheckSettingsLogic
                 return true;
             }
 
-            foreach (string path in GetGitLocations())
+            foreach (var path in GetGitLocations())
             {
                 linuxToolsPath = path + toolsPath;
                 if (ContainsSh(gitpath))
@@ -95,12 +96,15 @@ public class CheckSettingsLogic
 
         return false;
 
-        static bool ContainsSh(string path) => Directory.Exists(path) && (File.Exists(path + "sh.exe") || File.Exists(path + "sh"));
+        static bool ContainsSh(string path)
+        {
+            return Directory.Exists(path) && (File.Exists(path + "sh.exe") || File.Exists(path + "sh"));
+        }
     }
 
     private static IEnumerable<string> GetGitLocations()
     {
-        string? envVariable = Environment.GetEnvironmentVariable("GITEXT_GIT");
+        var envVariable = Environment.GetEnvironmentVariable("GITEXT_GIT");
         if (!string.IsNullOrEmpty(envVariable))
         {
             yield return envVariable;
@@ -108,8 +112,8 @@ public class CheckSettingsLogic
 
         yield return
             CommonLogic.GetRegistryValue(Registry.LocalMachine,
-                             "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1", "InstallLocation");
-        string? programFiles = Environment.GetEnvironmentVariable("ProgramFiles");
+                "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1", "InstallLocation");
+        var programFiles = Environment.GetEnvironmentVariable("ProgramFiles");
         string? programFilesX86 = null;
         if (IntPtr.Size == 8
             || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")))
@@ -147,7 +151,7 @@ public class CheckSettingsLogic
 
     public static bool SolveGitExtensionsDir()
     {
-        string? fileName = AppSettings.GetGitExtensionsDirectory();
+        var fileName = AppSettings.GetGitExtensionsDirectory();
 
         if (Directory.Exists(fileName))
         {
@@ -162,7 +166,7 @@ public class CheckSettingsLogic
     {
         if (OperatingSystem.IsWindows())
         {
-            foreach (string command in GetWindowsCommandLocations())
+            foreach (var command in GetWindowsCommandLocations())
             {
                 if (TestGitCommand(command))
                 {
@@ -186,7 +190,7 @@ public class CheckSettingsLogic
                     return true;
                 }
 
-                string output = new Executable(command).GetOutput(arguments: "--version");
+                var output = new Executable(command).GetOutput("--version");
                 if (!string.IsNullOrEmpty(output))
                 {
                     if (command is not null)
@@ -216,7 +220,7 @@ public class CheckSettingsLogic
                 yield return AppSettings.GitCommandValue;
             }
 
-            foreach (string path in GetGitLocations())
+            foreach (var path in GetGitLocations())
             {
                 if (Directory.Exists(path + @"bin\"))
                 {
@@ -224,7 +228,7 @@ public class CheckSettingsLogic
                 }
             }
 
-            foreach (string path in GetGitLocations())
+            foreach (var path in GetGitLocations())
             {
                 if (Directory.Exists(path + @"cmd\"))
                 {
@@ -245,6 +249,6 @@ public class CheckSettingsLogic
 
     public bool CanFindGitCmd()
     {
-        return !string.IsNullOrEmpty(Module?.GitExecutable.GetOutput(arguments: "--version"));
+        return !string.IsNullOrEmpty(Module?.GitExecutable.GetOutput("--version"));
     }
 }

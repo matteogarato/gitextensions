@@ -2,6 +2,7 @@
 using GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 
 namespace GitUITests.CommandsDialogs.Settings;
+
 public class AzureDevOpsExternalLinkDefinitionExtractorTests
 {
     [Theory]
@@ -11,12 +12,13 @@ public class AzureDevOpsExternalLinkDefinitionExtractorTests
     [InlineData("owner@vs-ssh.visualstudio.com:v3/owner/project/repo")]
     public void Should_get_link_definitions_When_successfuly_parsing_remote_url(string url)
     {
-        IList<ExternalLinkDefinition> externalLinkDefinitions = new AzureDevopsExternalLinkDefinitionExtractor().GetDefinitions(url);
+        var externalLinkDefinitions =
+            new AzureDevopsExternalLinkDefinitionExtractor().GetDefinitions(url);
         externalLinkDefinitions.Should().HaveCount(2);
-        foreach (ExternalLinkDefinition externalLinkDefinition in externalLinkDefinitions)
+        foreach (var externalLinkDefinition in externalLinkDefinitions)
         {
             externalLinkDefinition.LinkFormats.Should().HaveCountGreaterThanOrEqualTo(1);
-            foreach (ExternalLinkFormat externalLinkFormat in externalLinkDefinition.LinkFormats)
+            foreach (var externalLinkFormat in externalLinkDefinition.LinkFormats)
             {
                 externalLinkFormat.Format.Should().Contain("owner").And.Contain("repo");
             }
@@ -26,12 +28,13 @@ public class AzureDevOpsExternalLinkDefinitionExtractorTests
     [Fact]
     public void Should_get_link_definitions_When_no_remote_url_provided()
     {
-        IList<ExternalLinkDefinition> externalLinkDefinitions = new AzureDevopsExternalLinkDefinitionExtractor().GetDefinitions(null!);
+        var externalLinkDefinitions =
+            new AzureDevopsExternalLinkDefinitionExtractor().GetDefinitions(null!);
         externalLinkDefinitions.Should().HaveCount(2);
-        foreach (ExternalLinkDefinition externalLinkDefinition in externalLinkDefinitions)
+        foreach (var externalLinkDefinition in externalLinkDefinitions)
         {
             externalLinkDefinition.LinkFormats.Should().HaveCountGreaterThanOrEqualTo(1);
-            foreach (ExternalLinkFormat externalLinkFormat in externalLinkDefinition.LinkFormats)
+            foreach (var externalLinkFormat in externalLinkDefinition.LinkFormats)
             {
                 externalLinkFormat.Format.Should().Contain("ACCOUNT_NAME").And.Contain("REPO_NAME");
             }

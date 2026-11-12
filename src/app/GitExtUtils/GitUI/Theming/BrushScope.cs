@@ -4,12 +4,6 @@ public class BrushScope : IDisposable
 {
     private readonly bool _isSystemBrush;
 
-    public static BrushScope ForSystemBrush(Brush brush) =>
-        new(brush, isSystemBrush: true);
-
-    public static BrushScope ForRegularBrush(Brush brush) =>
-        new(brush, isSystemBrush: false);
-
     private BrushScope(Brush brush, bool isSystemBrush)
     {
         Brush = brush;
@@ -18,7 +12,7 @@ public class BrushScope : IDisposable
 
     public Brush Brush { get; }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         if (!_isSystemBrush)
         {
@@ -26,5 +20,15 @@ public class BrushScope : IDisposable
         }
 
         GC.SuppressFinalize(this);
+    }
+
+    public static BrushScope ForSystemBrush(Brush brush)
+    {
+        return new BrushScope(brush, true);
+    }
+
+    public static BrushScope ForRegularBrush(Brush brush)
+    {
+        return new BrushScope(brush, false);
     }
 }

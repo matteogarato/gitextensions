@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommandsDialogs;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommandsDialogs;
 
 partial class FormDeleteRemoteBranch
 {

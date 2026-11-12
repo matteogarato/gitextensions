@@ -6,25 +6,53 @@ using GitUI.Properties;
 namespace GitUI.LeftPanel;
 
 [DebuggerDisplay("(Local) FullPath = {FullPath}, Hash = {ObjectId}, Visible: {Visible}")]
-internal sealed class LocalBranchNode : BaseBranchLeafNode, IGitRefActions, ICanRename, ICanDelete
+internal sealed class LocalBranchNode(Tree tree, in ObjectId objectId, string fullPath, bool isCurrent, bool visible)
+    : BaseBranchLeafNode(tree, objectId, fullPath, visible, nameof(Images.BranchLocal),
+        nameof(Images.BranchLocalMerged)), IGitRefActions, ICanRename, ICanDelete
 {
-    public LocalBranchNode(Tree tree, in ObjectId objectId, string fullPath, bool isCurrent, bool visible)
-        : base(tree, objectId, fullPath, visible, nameof(Images.BranchLocal), nameof(Images.BranchLocalMerged))
+    /// <summary>Indicates whether this is the currently checked-out branch.</summary>
+    public bool IsCurrent { get; } = isCurrent;
+
+    bool ICanDelete.Delete()
     {
-        IsCurrent = isCurrent;
+        return UiCommands.StartDeleteBranchDialog(ParentWindow(), FullPath);
     }
 
-    /// <summary>Indicates whether this is the currently checked-out branch.</summary>
-    public bool IsCurrent { get; }
+    bool ICanRename.Rename()
+    {
+        return UiCommands.StartRenameDialog(ParentWindow(), FullPath);
+    }
+
+    bool IGitRefActions.Checkout()
+    {
+        return MessageBoxes.ConfirmBranchCheckout(ParentWindow(), FullPath) &&
+               UiCommands.StartCheckoutBranch(ParentWindow(), FullPath, false);
+    }
+
+    bool IGitRefActions.CreateBranch()
+    {
+        return UiCommands.StartCreateBranchDialog(ParentWindow(), FullPath);
+    }
+
+    bool IGitRefActions.Merge()
+    {
+        return UiCommands.StartMergeBranchDialog(ParentWindow(), FullPath);
+    }
 
     protected override FontStyle GetFontStyle()
-        => base.GetFontStyle() | (IsCurrent ? FontStyle.Bold : FontStyle.Regular);
+    {
+        return base.GetFontStyle() | (IsCurrent ? FontStyle.Bold : FontStyle.Regular);
+    }
 
     public override bool Equals(object? obj)
-        => base.Equals(obj) && obj is LocalBranchNode;
+    {
+        return base.Equals(obj) && obj is LocalBranchNode;
+    }
 
     public override int GetHashCode()
-        => base.GetHashCode();
+    {
+        return base.GetHashCode();
+    }
 
     internal override void OnDoubleClick()
     {
@@ -50,30 +78,5 @@ internal sealed class LocalBranchNode : BaseBranchLeafNode, IGitRefActions, ICan
     internal override void OnDelete()
     {
         Delete();
-    }
-
-    public bool Checkout()
-    {
-        return MessageBoxes.ConfirmBranchCheckout(ParentWindow(), FullPath) && UICommands.StartCheckoutBranch(ParentWindow(), branch: FullPath, remote: false);
-    }
-
-    public bool CreateBranch()
-    {
-        return UICommands.StartCreateBranchDialog(ParentWindow(), branch: FullPath);
-    }
-
-    public bool Merge()
-    {
-        return UICommands.StartMergeBranchDialog(ParentWindow(), branch: FullPath);
-    }
-
-    public bool Delete()
-    {
-        return UICommands.StartDeleteBranchDialog(ParentWindow(), branch: FullPath);
-    }
-
-    public bool Rename()
-    {
-        return UICommands.StartRenameDialog(ParentWindow(), branch: FullPath);
     }
 }

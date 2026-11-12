@@ -1,4 +1,6 @@
 ﻿
+using GitUI.UserControls;
+
 namespace GitUI.CommandsDialogs;
 
 partial class FormBlame
@@ -7,7 +9,7 @@ partial class FormBlame
 
     private void InitializeComponent()
     {
-        blameControl1 = new GitUI.Blame.BlameControl();
+        blameControl1 = new BlameControl();
         SuspendLayout();
         // 
         // blameControl1
@@ -34,5 +36,5 @@ partial class FormBlame
 
     #endregion
 
-    private Blame.BlameControl blameControl1;
+    private BlameControl blameControl1;
 }

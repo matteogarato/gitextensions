@@ -1,6 +1,7 @@
 ﻿using GitUI.Infrastructure;
 
 namespace GitUITests.Infrastructure;
+
 public sealed class PlinkTests
 {
     [Fact]

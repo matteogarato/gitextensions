@@ -1,33 +1,39 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Settings;
 using GitExtUtils.GitUI.Theming;
-using GitUI;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 using ResourceManager;
 
-namespace AzureDevOpsIntegration.Settings;
+namespace GitExtensions.Plugins.AzureDevOpsIntegration.Settings;
 
 [Export(typeof(IBuildServerSettingsUserControl))]
 [BuildServerSettingsUserControlMetadata(AzureDevOpsAdapter.PluginName)]
 [PartCreationPolicy(CreationPolicy.NonShared)]
 public partial class SettingsUserControl : GitExtensionsControl, IBuildServerSettingsUserControl
 {
-    private readonly TranslationString _failToExtractDataFromClipboardMessage = new("The clipboard doesn't contain a valid build url." + Environment.NewLine + Environment.NewLine +
-            "Please copy the url of the build into the clipboard before retrying." + Environment.NewLine +
-            "(Should contain at least the \"buildId\" parameter)");
-    private readonly TranslationString _failToLoadBuildDefinitionInfoMessage = new("Error while trying to retrieve build definition information from url." + Environment.NewLine + Environment.NewLine +
-            "Please ensure that the url is valid and that the API token has access to build and project information.");
-    private readonly TranslationString _infoNoApiTokenMessage = new("Unable to retrieve build definition information without API token. Field will be left blank.");
     private readonly TranslationString _failToExtractDataFromClipboardCaption = new("Could not extract data");
 
+    private readonly TranslationString _failToExtractDataFromClipboardMessage = new(
+        "The clipboard doesn't contain a valid build url." + Environment.NewLine + Environment.NewLine +
+        "Please copy the url of the build into the clipboard before retrying." + Environment.NewLine +
+        "(Should contain at least the \"buildId\" parameter)");
+
+    private readonly TranslationString _failToLoadBuildDefinitionInfoMessage = new(
+        "Error while trying to retrieve build definition information from url." + Environment.NewLine +
+        Environment.NewLine +
+        "Please ensure that the url is valid and that the API token has access to build and project information.");
+
+    private readonly TranslationString _infoNoApiTokenMessage =
+        new("Unable to retrieve build definition information without API token. Field will be left blank.");
+
+    private IntegrationSettings _currentSettings = new();
+
     private string? _defaultProjectName;
-    private IEnumerable<string?>? _remotes;
 
     private bool _isUpdating;
-    private IntegrationSettings _currentSettings = new();
+    private IEnumerable<string?>? _remotes;
 
     public SettingsUserControl()
     {
@@ -39,12 +45,43 @@ public partial class SettingsUserControl : GitExtensionsControl, IBuildServerSet
         UpdateView();
     }
 
-    private string? TokenManagementUrl => ProjectUrlHelper.TryGetTokenManagementUrlFromProject(_currentSettings.ProjectUrl).tokenManagementUrl;
+    private string? TokenManagementUrl
+    {
+        get => ProjectUrlHelper.TryGetTokenManagementUrlFromProject(_currentSettings.ProjectUrl).tokenManagementUrl;
+    }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
         _defaultProjectName = defaultProjectName;
         _remotes = remotes;
+    }
+
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
+    {
+        var settings = IntegrationSettings.ReadFrom(buildServerConfig);
+
+        if (string.IsNullOrWhiteSpace(settings.ProjectUrl))
+        {
+            Validates.NotNull(_remotes);
+
+            (var vstsOrTfsProjectFound, var autoDetectedProjectUrl) =
+                ProjectUrlHelper.TryDetectProjectFromRemoteUrls(_remotes);
+            if (vstsOrTfsProjectFound)
+            {
+                settings.ProjectUrl = autoDetectedProjectUrl!;
+            }
+        }
+
+        _currentSettings = settings;
+        UpdateView();
+    }
+
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
+    {
+        if (_currentSettings.IsValid())
+        {
+            _currentSettings.WriteTo(buildServerConfig);
+        }
     }
 
     private void UpdateView()
@@ -91,33 +128,6 @@ public partial class SettingsUserControl : GitExtensionsControl, IBuildServerSet
         }
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
-    {
-        IntegrationSettings settings = IntegrationSettings.ReadFrom(buildServerConfig);
-
-        if (string.IsNullOrWhiteSpace(settings.ProjectUrl))
-        {
-            Validates.NotNull(_remotes);
-
-            (bool vstsOrTfsProjectFound, string? autoDetectedProjectUrl) = ProjectUrlHelper.TryDetectProjectFromRemoteUrls(_remotes);
-            if (vstsOrTfsProjectFound)
-            {
-                settings.ProjectUrl = autoDetectedProjectUrl!;
-            }
-        }
-
-        _currentSettings = settings;
-        UpdateView();
-    }
-
-    public void SaveSettings(SettingsSource buildServerConfig)
-    {
-        if (_currentSettings.IsValid())
-        {
-            _currentSettings.WriteTo(buildServerConfig);
-        }
-    }
-
     private void TextBox_TextChanged(object sender, EventArgs e)
     {
         UpdateModel();
@@ -133,8 +143,8 @@ public partial class SettingsUserControl : GitExtensionsControl, IBuildServerSet
     {
         this.InvokeAndForget(async () =>
         {
-            string buildUrl = Clipboard.ContainsText() ? Clipboard.GetText() : "";
-            (bool success, string? projectUrl, int buildId) = ProjectUrlHelper.TryParseBuildUrl(buildUrl);
+            var buildUrl = Clipboard.ContainsText() ? Clipboard.GetText() : "";
+            (var success, var projectUrl, var buildId) = ProjectUrlHelper.TryParseBuildUrl(buildUrl);
             if (success)
             {
                 Validates.NotNull(projectUrl);
@@ -149,14 +159,16 @@ public partial class SettingsUserControl : GitExtensionsControl, IBuildServerSet
                     }
                     catch (Exception)
                     {
-                        MessageBoxes.ShowError(owner: null, _failToLoadBuildDefinitionInfoMessage.Text, _failToExtractDataFromClipboardCaption.Text);
+                        MessageBoxes.ShowError(null, _failToLoadBuildDefinitionInfoMessage.Text,
+                            _failToExtractDataFromClipboardCaption.Text);
                         return;
                     }
                 }
                 else
                 {
                     buildDefinitionName = "";
-                    MessageBoxes.Show(owner: null, _infoNoApiTokenMessage.Text, _failToExtractDataFromClipboardCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBoxes.Show(null, _infoNoApiTokenMessage.Text, _failToExtractDataFromClipboardCaption.Text,
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
                 _currentSettings.ProjectUrl = projectUrl;
@@ -165,7 +177,8 @@ public partial class SettingsUserControl : GitExtensionsControl, IBuildServerSet
             }
             else
             {
-                MessageBoxes.ShowError(owner: null, _failToExtractDataFromClipboardMessage.Text, _failToExtractDataFromClipboardCaption.Text);
+                MessageBoxes.ShowError(null, _failToExtractDataFromClipboardMessage.Text,
+                    _failToExtractDataFromClipboardCaption.Text);
             }
         });
     }

@@ -20,9 +20,10 @@ public class AutoCompleteWordTests
     [InlineData("Identifier", "I", true)]
     [InlineData("Identifier", "id", true)]
     [InlineData("Identifier", "Id", true)]
-    public void Matches_should_match_prefix_and_camel_humps_case_insensitive(string word, string typedWord, bool expected)
+    public void Matches_should_match_prefix_and_camel_humps_case_insensitive(string word, string typedWord,
+        bool expected)
     {
-        var autoCompleteWord = new AutoCompleteWord(word);
+        AutoCompleteWord autoCompleteWord = new(word);
         autoCompleteWord.Matches(typedWord).Should().Be(expected);
     }
 }

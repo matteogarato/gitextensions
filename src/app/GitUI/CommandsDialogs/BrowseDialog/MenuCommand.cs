@@ -1,18 +1,71 @@
 using System.Runtime.InteropServices;
+using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.CommandsDialogs.BrowseDialog;
 
 /// <summary>
-/// Represents a menu command with Text, ShortcutKey or ShortcutDisplayString, Action,
-/// Icon and optionally CheckBoxes.
-/// From a MenuCommand a (theoretically) unlimited number of actual ToolStripItems can
-/// be created that all behave the same.
-/// A MenuCommand can also be a separator
-///
-/// Purpose: have methods from specific context menus also available in main menu.
+///     Represents a menu command with Text, ShortcutKey or ShortcutDisplayString, Action,
+///     Icon and optionally CheckBoxes.
+///     From a MenuCommand a (theoretically) unlimited number of actual ToolStripItems can
+///     be created that all behave the same.
+///     A MenuCommand can also be a separator
+///     Purpose: have methods from specific context menus also available in main menu.
 /// </summary>
 internal sealed class MenuCommand
 {
+    private readonly List<ToolStripMenuItem> _registeredMenuItems = [];
+
+    /// <summary>
+    ///     execute on menu click.
+    /// </summary>
+    public Action? ExecuteAction;
+
+    /// <summary>
+    ///     called if the menu item want to know if the Checked property
+    ///     should be true or false. If null then false.
+    /// </summary>
+    public Func<bool>? IsCheckedFunc;
+
+    /// <summary>
+    ///     called if the menu item want to know if the Enabled property
+    ///     should be true or false. If null then true.
+    /// </summary>
+    public Func<bool>? IsEnabledFunc;
+
+    /// <summary>
+    ///     if true all other properties have no meaning.
+    /// </summary>
+    public bool IsSeparator { get; set; }
+
+    /// <summary>
+    ///     if true just text property have a meaning.
+    /// </summary>
+    public bool IsGroupHeader { get; set; }
+
+    /// <summary>
+    ///     used for ToolStripItem and translation identification.
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
+    ///     text of the menu item.
+    /// </summary>
+    public string? Text { get; set; }
+
+    /// <summary>
+    ///     tooltip text of the menu item.
+    /// </summary>
+    public string? ToolTipText { get; set; }
+
+    /// <summary>
+    ///     image of the menu item.
+    /// </summary>
+    public Image? Image { get; set; }
+
+    public Keys ShortcutKeys { get; set; }
+
+    public string? ShortcutKeyDisplayString { get; set; }
+
     public static MenuCommand CreateSeparator()
     {
         return new MenuCommand { IsSeparator = true };
@@ -22,9 +75,7 @@ internal sealed class MenuCommand
     {
         return new MenuCommand
         {
-            IsGroupHeader = true,
-            Name = text.Replace(' ', '_') + "ToolStripMenuItem",
-            Text = text,
+            IsGroupHeader = true, Name = text.Replace(' ', '_') + "ToolStripMenuItem", Text = text
         };
     }
 
@@ -39,11 +90,9 @@ internal sealed class MenuCommand
         {
             ToolStripMenuItem headerToolStripMenuItem = new()
             {
-                Name = menuCommand.Name,
-                Text = menuCommand.Text,
-                Enabled = false,
+                Name = menuCommand.Name, Text = menuCommand.Text, Enabled = false
             };
-            UserControls.RevisionGrid.MenuUtil.SetAsCaptionMenuItem(headerToolStripMenuItem);
+            MenuUtil.SetAsCaptionMenuItem(headerToolStripMenuItem);
 
             return headerToolStripMenuItem;
         }
@@ -55,7 +104,7 @@ internal sealed class MenuCommand
             Image = menuCommand.Image,
             ShortcutKeys = menuCommand.ShortcutKeys,
             ShortcutKeyDisplayString = menuCommand.ShortcutKeyDisplayString,
-            ToolTipText = menuCommand.ToolTipText,
+            ToolTipText = menuCommand.ToolTipText
         };
 
         toolStripMenuItem.Click += (obj, sender) =>
@@ -66,69 +115,17 @@ internal sealed class MenuCommand
             }
             else
             {
-                MessageBoxes.Show("No ExecuteAction assigned to this MenuCommand. Please submit a bug report.", TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show("No ExecuteAction assigned to this MenuCommand. Please submit a bug report.",
+                    TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         };
 
         return toolStripMenuItem;
     }
 
-    private readonly List<ToolStripMenuItem> _registeredMenuItems = [];
-
     /// <summary>
-    /// if true all other properties have no meaning.
-    /// </summary>
-    public bool IsSeparator { get; set; }
-
-    /// <summary>
-    /// if true just text property have a meaning.
-    /// </summary>
-    public bool IsGroupHeader { get; set; }
-
-    /// <summary>
-    /// used for ToolStripItem and translation identification.
-    /// </summary>
-    public string? Name { get; set; }
-
-    /// <summary>
-    /// text of the menu item.
-    /// </summary>
-    public string? Text { get; set; }
-
-    /// <summary>
-    /// tooltip text of the menu item.
-    /// </summary>
-    public string? ToolTipText { get; set; }
-
-    /// <summary>
-    /// image of the menu item.
-    /// </summary>
-    public Image? Image { get; set; }
-
-    public Keys ShortcutKeys { get; set; }
-
-    public string? ShortcutKeyDisplayString { get; set; }
-
-    /// <summary>
-    /// execute on menu click.
-    /// </summary>
-    public Action? ExecuteAction;
-
-    /// <summary>
-    /// called if the menu item want to know if the Checked property
-    /// should be true or false. If null then false.
-    /// </summary>
-    public Func<bool>? IsCheckedFunc;
-
-    /// <summary>
-    /// called if the menu item want to know if the Enabled property
-    /// should be true or false. If null then true.
-    /// </summary>
-    public Func<bool>? IsEnabledFunc;
-
-    /// <summary>
-    /// To make the MenuCommand interact with all its associated menu items
-    /// this method is used to register the all menu items that where generated by this MenuCommand.
+    ///     To make the MenuCommand interact with all its associated menu items
+    ///     this method is used to register the all menu items that where generated by this MenuCommand.
     /// </summary>
     public void RegisterMenuItem(ToolStripMenuItem menuItem)
     {
@@ -137,7 +134,7 @@ internal sealed class MenuCommand
 
     public void UnregisterMenuItems(IEnumerable<ToolStripMenuItem> items)
     {
-        foreach (ToolStripMenuItem item in items)
+        foreach (var item in items)
         {
             _registeredMenuItems.Remove(item);
         }
@@ -147,9 +144,9 @@ internal sealed class MenuCommand
     {
         if (IsCheckedFunc is not null)
         {
-            bool isChecked = IsCheckedFunc();
+            var isChecked = IsCheckedFunc();
 
-            foreach (ToolStripMenuItem item in CollectionsMarshal.AsSpan(_registeredMenuItems))
+            foreach (var item in CollectionsMarshal.AsSpan(_registeredMenuItems))
             {
                 item.Checked = isChecked;
             }
@@ -157,9 +154,9 @@ internal sealed class MenuCommand
 
         if (IsEnabledFunc is not null)
         {
-            bool isEnabled = IsEnabledFunc();
+            var isEnabled = IsEnabledFunc();
 
-            foreach (ToolStripMenuItem item in CollectionsMarshal.AsSpan(_registeredMenuItems))
+            foreach (var item in CollectionsMarshal.AsSpan(_registeredMenuItems))
             {
                 item.Enabled = isEnabled;
             }
@@ -168,7 +165,7 @@ internal sealed class MenuCommand
 
     public void UpdateMenuItemsShortcutKeyDisplayString()
     {
-        foreach (ToolStripMenuItem item in CollectionsMarshal.AsSpan(_registeredMenuItems))
+        foreach (var item in CollectionsMarshal.AsSpan(_registeredMenuItems))
         {
             item.ShortcutKeyDisplayString = ShortcutKeyDisplayString;
         }

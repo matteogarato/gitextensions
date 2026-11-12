@@ -7,14 +7,14 @@ public interface IThemeFileReader
 
 public class ThemeFileReader : IThemeFileReader
 {
-    private const int MaxFileSize = 1024 * 1024;
+    private const int _maxFileSize = 1024 * 1024;
 
-    public string ReadThemeFile(string themeFileName)
+    string IThemeFileReader.ReadThemeFile(string themeFileName)
     {
         FileInfo fileInfo = new(themeFileName);
-        if (fileInfo.Exists && fileInfo.Length > MaxFileSize)
+        if (fileInfo.Exists && fileInfo.Length > _maxFileSize)
         {
-            throw new ThemeException($"Theme file size exceeds {MaxFileSize:#,##0} bytes", themeFileName);
+            throw new ThemeException($"Theme file size exceeds {_maxFileSize:#,##0} bytes", themeFileName);
         }
 
         try

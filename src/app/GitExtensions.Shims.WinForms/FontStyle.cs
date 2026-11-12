@@ -1,7 +1,7 @@
 ﻿namespace GitExtensions.Shims.WinForms;
 
 /// <summary>
-///  Stand-in for <c>System.Drawing.FontStyle</c>; values match GDI+.
+///     Stand-in for <c>System.Drawing.FontStyle</c>; values match GDI+.
 /// </summary>
 [Flags]
 public enum FontStyle
@@ -10,5 +10,5 @@ public enum FontStyle
     Bold = 1,
     Italic = 2,
     Underline = 4,
-    Strikeout = 8,
+    Strikeout = 8
 }

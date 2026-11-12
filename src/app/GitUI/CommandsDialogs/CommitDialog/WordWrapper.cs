@@ -5,7 +5,7 @@ public static class WordWrapper
     private static IEnumerable<string> InternalWrapSingleLine(string line, int lineLimit)
     {
         WrapperState wrapper = new(lineLimit);
-        foreach (string word in line.Split())
+        foreach (var word in line.Split())
         {
             if (!wrapper.CanAddWord(word))
             {
@@ -23,23 +23,23 @@ public static class WordWrapper
 
     public static string WrapSingleLine(string text, int lineLimit)
     {
-        IEnumerable<string> lines = InternalWrapSingleLine(text, lineLimit);
+        var lines = InternalWrapSingleLine(text, lineLimit);
         return string.Join(Environment.NewLine, lines);
     }
 
     private sealed class WrapperState
     {
+        private readonly int _lineLimit;
         private readonly List<string> _wordList = [];
         private int _wordsLength;
-        private readonly int _lineLimit;
-
-        public bool HasWords { get; set; }
 
         public WrapperState(int lineLimit)
         {
             _lineLimit = lineLimit;
             Reset();
         }
+
+        public bool HasWords { get; set; }
 
         private void Reset()
         {
@@ -50,13 +50,13 @@ public static class WordWrapper
 
         public bool CanAddWord(string word)
         {
-            int newLength = _wordsLength + _wordList.Count + word.Length;
-            return (newLength < _lineLimit) || _wordList.Count == 0;
+            var newLength = _wordsLength + _wordList.Count + word.Length;
+            return newLength < _lineLimit || _wordList.Count == 0;
         }
 
         public string GetLineAndReset()
         {
-            string line = string.Join(" ", _wordList);
+            var line = string.Join(" ", _wordList);
             Reset();
             return line;
         }

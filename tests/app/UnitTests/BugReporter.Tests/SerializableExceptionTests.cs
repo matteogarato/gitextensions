@@ -4,32 +4,42 @@ using System.Text.RegularExpressions;
 using BugReporter.Serialization;
 
 namespace BugReporterTests;
+
 public sealed partial class SerializableExceptionTests : IDisposable
 {
     private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
-    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
+    private readonly CultureInfo _previousUiCulture = CultureInfo.CurrentUICulture;
 
     public SerializableExceptionTests()
     {
-        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        var testCulture = CultureInfo.GetCultureInfo("en-US");
         CultureInfo.CurrentCulture = testCulture;
         CultureInfo.CurrentUICulture = testCulture;
-    }
-
-    public void Dispose()
-    {
-        CultureInfo.CurrentCulture = _previousCulture;
-        CultureInfo.CurrentUICulture = _previousUICulture;
     }
 
     [GeneratedRegex(@"^(?<keep>.*)(?<codeLocationToBeRemoved>\sin\s.*)$", RegexOptions.ExplicitCapture)]
     private static partial Regex PathRegex { get; }
 
+    public static IEnumerable<object[]> TestCases
+    {
+        get
+        {
+            yield return new object[] { nameof(Code.SimpleException) };
+            yield return new object[] { nameof(Code.NestedException) };
+        }
+    }
+
+    void IDisposable.Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUiCulture;
+    }
+
     [Theory]
     [MemberData(nameof(TestCases))]
     public async Task ToString_should_return_expected_details(string testName)
     {
-        string message = string.Empty;
+        var message = string.Empty;
         try
         {
             ThrowException(testName);
@@ -39,7 +49,7 @@ public sealed partial class SerializableExceptionTests : IDisposable
             message = new SerializableException(ex).ToString();
         }
 
-        await Verifier.Verify(Sanitize(message))
+        await Verify(Sanitize(message))
             .UseParameters(testName);
     }
 
@@ -47,7 +57,7 @@ public sealed partial class SerializableExceptionTests : IDisposable
     [MemberData(nameof(TestCases))]
     public async Task ToString_should_be_same_from_round_trip(string testName)
     {
-        string xml = string.Empty;
+        var xml = string.Empty;
         try
         {
             ThrowException(testName);
@@ -57,19 +67,10 @@ public sealed partial class SerializableExceptionTests : IDisposable
             xml = new SerializableException(ex).ToXmlString();
         }
 
-        SerializableException exception = SerializableException.FromXmlString(xml);
+        var exception = SerializableException.FromXmlString(xml);
 
-        await Verifier.Verify(Sanitize(exception.ToString()))
+        await Verify(Sanitize(exception.ToString()))
             .UseParameters(testName);
-    }
-
-    public static IEnumerable<object[]> TestCases
-    {
-        get
-        {
-            yield return new object[] { nameof(Code.SimpleException) };
-            yield return new object[] { nameof(Code.NestedException) };
-        }
     }
 
     private static void ThrowException(string testName)
@@ -91,7 +92,7 @@ public sealed partial class SerializableExceptionTests : IDisposable
     {
         // message contains physical file paths, which are machine specific
         StringBuilder m = new();
-        foreach (string line in exceptionMessage.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries))
+        foreach (var line in exceptionMessage.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries))
         {
             m.AppendLine(PathRegex.Replace(line, "${keep}"));
         }

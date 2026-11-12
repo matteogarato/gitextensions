@@ -1,17 +1,36 @@
 using GitExtensions.Extensibility.Settings;
-using Microsoft;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
-public partial class GitConfigBaseSettingsPage : SettingsPageWithHeader, IGitConfigSettingsPage
+public partial class GitConfigBaseSettingsPage(IServiceProvider serviceProvider)
+    : SettingsPageWithHeader(serviceProvider), IGitConfigSettingsPage
 {
-    public GitConfigBaseSettingsPage(IServiceProvider serviceProvider)
-        : base(serviceProvider)
+    protected GitConfigSettingsSet GitConfigSettingsSet
     {
+        get => CommonLogic.GitConfigSettingsSet;
     }
 
-    protected GitConfigSettingsSet GitConfigSettingsSet => CommonLogic.GitConfigSettingsSet;
     protected SettingsSource? CurrentSettings { get; private set; }
+
+    void ILocalSettingsPage.SetEffectiveSettings()
+    {
+        SetCurrentSettings(GitConfigSettingsSet.EffectiveSettings);
+    }
+
+    void ILocalSettingsPage.SetLocalSettings()
+    {
+        SetCurrentSettings(GitConfigSettingsSet.LocalSettings);
+    }
+
+    public override void SetGlobalSettings()
+    {
+        SetCurrentSettings(GitConfigSettingsSet.GlobalSettings);
+    }
+
+    void IGitConfigSettingsPage.SetSystemSettings()
+    {
+        SetCurrentSettings(GitConfigSettingsSet.SystemSettings);
+    }
 
     protected override void Init(ISettingsPageHost pageHost)
     {
@@ -30,26 +49,6 @@ public partial class GitConfigBaseSettingsPage : SettingsPageWithHeader, IGitCon
     {
         base.PageToSettings();
         GitConfigSettingsSet.Save();
-    }
-
-    public void SetEffectiveSettings()
-    {
-        SetCurrentSettings(GitConfigSettingsSet.EffectiveSettings);
-    }
-
-    public void SetLocalSettings()
-    {
-        SetCurrentSettings(GitConfigSettingsSet.LocalSettings);
-    }
-
-    public override void SetGlobalSettings()
-    {
-        SetCurrentSettings(GitConfigSettingsSet.GlobalSettings);
-    }
-
-    public void SetSystemSettings()
-    {
-        SetCurrentSettings(GitConfigSettingsSet.SystemSettings);
     }
 
     private void SetCurrentSettings(SettingsSource settings)

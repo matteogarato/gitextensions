@@ -1,14 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
+using GitExtUtils.GitUI;
 
 namespace GitUI.Infrastructure;
 
 public static class PuttyHelpers
 {
     /// <summary>
-    ///  Starts PuTTY agent for the specified working directory.
+    ///     Starts PuTTY agent for the specified working directory.
     /// </summary>
     /// <param name="workingDirectory">The working directory.</param>
     /// <exception cref="UserExternalOperationException">PuTTY executable cannot be found.</exception>
@@ -18,13 +20,14 @@ public static class PuttyHelpers
         // Exceptions must be thrown from the UI thread, otherwise we'll crash the app.
         ThreadHelper.ThrowIfNotOnUIThread();
 
-        ThrowIfFileNotFound(AppSettings.Pageant, $"'{AppSettings.Pageant}'\r\n\r\n{TranslatedStrings.ErrorSshPuTTYInstalled}");
+        ThrowIfFileNotFound(AppSettings.Pageant,
+            $"'{AppSettings.Pageant}'\r\n\r\n{TranslatedStrings.ErrorSshPuTtyInstalled}");
 
         new Executable(AppSettings.Pageant, workingDirectory).Start();
     }
 
     /// <summary>
-    ///  Starts PuTTY key generator for the specified working directory.
+    ///     Starts PuTTY key generator for the specified working directory.
     /// </summary>
     /// <param name="workingDirectory">The working directory.</param>
     /// <exception cref="UserExternalOperationException">PuTTY executable cannot be found.</exception>
@@ -34,22 +37,23 @@ public static class PuttyHelpers
         // Exceptions must be thrown from the UI thread, otherwise we'll crash the app.
         ThreadHelper.ThrowIfNotOnUIThread();
 
-        ThrowIfFileNotFound(AppSettings.Puttygen, $"'{AppSettings.Puttygen}'\r\n\r\n{TranslatedStrings.ErrorSshPuTTYInstalled}");
+        ThrowIfFileNotFound(AppSettings.Puttygen,
+            $"'{AppSettings.Puttygen}'\r\n\r\n{TranslatedStrings.ErrorSshPuTtyInstalled}");
 
         new Executable(AppSettings.Puttygen, workingDirectory).Start();
     }
 
     /// <summary>
-    ///  Starts PuTTY agent with the specified SSH key.
+    ///     Starts PuTTY agent with the specified SSH key.
     /// </summary>
     /// <param name="sshKeyFileLoader">The delegate that provides the key to load.</param>
-    /// <returns><see langword="true"/> if PuTTY agent was started successfully; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if PuTTY agent was started successfully; otherwise, <see langword="false" />.</returns>
     /// <exception cref="UserExternalOperationException">
-    ///  <para>PuTTY isn't configured is preferred SSH client.</para>
-    ///  <para>- or -</para>
-    ///  <para>PuTTY executable cannot be found.</para>
-    ///  <para>- or -</para>
-    ///  <para>The SSH key cannot be found.</para>
+    ///     <para>PuTTY isn't configured is preferred SSH client.</para>
+    ///     <para>- or -</para>
+    ///     <para>PuTTY executable cannot be found.</para>
+    ///     <para>- or -</para>
+    ///     <para>The SSH key cannot be found.</para>
     /// </exception>
     /// <exception cref="COMException">The method was not called on the UI thread.</exception>
     public static bool StartPageantIfConfigured(Func<string?> sshKeyFileLoader)
@@ -59,11 +63,13 @@ public static class PuttyHelpers
 
         if (!GitSshHelpers.IsPlink)
         {
-            throw new UserExternalOperationException(TranslatedStrings.ErrorSshPuTTYWhereConfigure,
-                new ExternalOperationException(innerException: new Exception(TranslatedStrings.ErrorSshPuTTYNotConfigured)));
+            throw new UserExternalOperationException(TranslatedStrings.ErrorSshPuTtyWhereConfigure,
+                new ExternalOperationException(
+                    innerException: new Exception(TranslatedStrings.ErrorSshPuTtyNotConfigured)));
         }
 
-        ThrowIfFileNotFound(AppSettings.Pageant, $"'{AppSettings.Pageant}'\r\n\r\n{TranslatedStrings.ErrorSshPuTTYInstalled}");
+        ThrowIfFileNotFound(AppSettings.Pageant,
+            $"'{AppSettings.Pageant}'\r\n\r\n{TranslatedStrings.ErrorSshPuTtyInstalled}");
 
         Executable pageantExecutable = new(AppSettings.Pageant);
 
@@ -72,11 +78,11 @@ public static class PuttyHelpers
         if (!IsPageantRunning())
         {
             // NOTE we leave the process to dangle here
-            IProcess process = pageantExecutable.Start();
+            var process = pageantExecutable.Start();
             process.WaitForInputIdle();
         }
 
-        string? sshKeyFile = sshKeyFileLoader();
+        var sshKeyFile = sshKeyFileLoader();
         if (string.IsNullOrWhiteSpace(sshKeyFile))
         {
             return false;
@@ -88,10 +94,10 @@ public static class PuttyHelpers
 
         static bool IsPageantRunning()
         {
-            string pageantProcName = Path.GetFileNameWithoutExtension(AppSettings.Pageant);
-            Process[] processes = Process.GetProcessesByName(pageantProcName);
-            bool running = processes.Length != 0;
-            foreach (Process p in processes)
+            var pageantProcName = Path.GetFileNameWithoutExtension(AppSettings.Pageant);
+            var processes = Process.GetProcessesByName(pageantProcName);
+            var running = processes.Length != 0;
+            foreach (var p in processes)
             {
                 p.Dispose();
             }
@@ -105,7 +111,8 @@ public static class PuttyHelpers
         if (!File.Exists(filePath))
         {
             throw new UserExternalOperationException(errorMessage,
-                new ExternalOperationException(innerException: new FileNotFoundException(heading ?? TranslatedStrings.ErrorFileNotFound)));
+                new ExternalOperationException(
+                    innerException: new FileNotFoundException(heading ?? TranslatedStrings.ErrorFileNotFound)));
         }
     }
 }

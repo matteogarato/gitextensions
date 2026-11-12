@@ -2,16 +2,17 @@
 using NSubstitute;
 
 namespace GitUITests.Avatars;
+
 public class CacheControlAvatarProviderTests
 {
     [Fact]
     public async Task ClearCache_is_passed_to_all_children()
     {
-        IAvatarCacheCleaner cacheCleaner1 = Substitute.For<IAvatarCacheCleaner>();
-        IAvatarCacheCleaner cacheCleaner2 = Substitute.For<IAvatarCacheCleaner>();
-        IAvatarCacheCleaner cacheCleaner3 = Substitute.For<IAvatarCacheCleaner>();
+        var cacheCleaner1 = Substitute.For<IAvatarCacheCleaner>();
+        var cacheCleaner2 = Substitute.For<IAvatarCacheCleaner>();
+        var cacheCleaner3 = Substitute.For<IAvatarCacheCleaner>();
 
-        EventHandler cacheClearedEventHandler = Substitute.For<EventHandler>();
+        var cacheClearedEventHandler = Substitute.For<EventHandler>();
 
         MultiCacheCleaner cacheCleaner = new(cacheCleaner1, cacheCleaner2, cacheCleaner3);
         cacheCleaner.CacheCleared += cacheClearedEventHandler;

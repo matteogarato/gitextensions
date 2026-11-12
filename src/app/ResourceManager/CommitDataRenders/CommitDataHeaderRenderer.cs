@@ -2,18 +2,16 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
-using Microsoft;
 
 namespace ResourceManager.CommitDataRenders;
 
 /// <summary>
-/// Provides the ability to render commit information.
+///     Provides the ability to render commit information.
 /// </summary>
 public interface ICommitDataHeaderRenderer
 {
     /// <summary>
-    /// Gets the plain text for the clipboard - without tabs, relative date, children and parents.
+    ///     Gets the plain text for the clipboard - without tabs, relative date, children and parents.
     /// </summary>
     string GetPlainText(string header);
 
@@ -22,107 +20,113 @@ public interface ICommitDataHeaderRenderer
     IEnumerable<int> GetTabStops();
 
     /// <summary>
-    /// Generate header.
+    ///     Generate header.
     /// </summary>
     string Render(CommitData commitData, bool showRevisionsAsLinks);
 
     /// <summary>
-    /// Generate header.
+    ///     Generate header.
     /// </summary>
     string RenderPlain(CommitData commitData);
 }
 
 /// <summary>
-/// Renders commit information in a tabular format with data columns aligned with spaces.
+///     Renders commit information in a tabular format with data columns aligned with spaces.
 /// </summary>
-public sealed partial class CommitDataHeaderRenderer : ICommitDataHeaderRenderer
+public sealed partial class CommitDataHeaderRenderer(
+    IHeaderLabelFormatter labelFormatter,
+    IDateFormatter dateFormatter,
+    IHeaderRenderStyleProvider headerRendererStyleProvider,
+    ILinkFactory? linkFactory)
+    : ICommitDataHeaderRenderer
 {
-    private readonly IHeaderLabelFormatter _labelFormatter;
-    private readonly IDateFormatter _dateFormatter;
-    private readonly IHeaderRenderStyleProvider _headerRendererStyleProvider;
-    private readonly ILinkFactory? _linkFactory;
-
     [GeneratedRegex(@"[ \t]+", RegexOptions.ExplicitCapture)]
     private static partial Regex SpacesRegex { get; }
+
     [GeneratedRegex(@"(?<reltime>\n[^:]+: ).* ago \((?<unit>[^)]+)\)", RegexOptions.ExplicitCapture)]
     private static partial Regex RemoveAgoRegex { get; }
 
-    public CommitDataHeaderRenderer(IHeaderLabelFormatter labelFormatter, IDateFormatter dateFormatter, IHeaderRenderStyleProvider headerRendererStyleProvider, ILinkFactory? linkFactory)
+    string ICommitDataHeaderRenderer.GetPlainText(string header)
     {
-        _labelFormatter = labelFormatter;
-        _dateFormatter = dateFormatter;
-        _headerRendererStyleProvider = headerRendererStyleProvider;
-        _linkFactory = linkFactory;
-    }
-
-    public string GetPlainText(string header)
-    {
-        string children = $"({TranslatedStrings.GetChildren(1)})|({TranslatedStrings.GetChildren(2)})|({TranslatedStrings.GetChildren(10)})";
-        string parents = $"({TranslatedStrings.GetParents(1)})|({TranslatedStrings.GetParents(2)})|({TranslatedStrings.GetParents(10)})";
+        var children =
+            $"({TranslatedStrings.GetChildren(1)})|({TranslatedStrings.GetChildren(2)})|({TranslatedStrings.GetChildren(10)})";
+        var parents =
+            $"({TranslatedStrings.GetParents(1)})|({TranslatedStrings.GetParents(2)})|({TranslatedStrings.GetParents(10)})";
         header = SpacesRegex.Replace(header, " ");
         header = RemoveAgoRegex.Replace(header, "$1$2");
         header = Regex.Replace(header, @$"\n({children}|{parents})[^\n]*", "");
         return header;
     }
 
-    public Font GetFont(Graphics g)
+    Font ICommitDataHeaderRenderer.GetFont(Graphics g)
     {
-        return _headerRendererStyleProvider.GetFont(g);
+        return headerRendererStyleProvider.GetFont(g);
     }
 
-    public IEnumerable<int> GetTabStops()
+    IEnumerable<int> ICommitDataHeaderRenderer.GetTabStops()
     {
-        return _headerRendererStyleProvider.GetTabStops();
+        return headerRendererStyleProvider.GetTabStops();
     }
 
     /// <summary>
-    /// Generate header.
+    ///     Generate header.
     /// </summary>
-    public string Render(CommitData commitData, bool showRevisionsAsLinks)
+    string ICommitDataHeaderRenderer.Render(CommitData commitData, bool showRevisionsAsLinks)
     {
         ArgumentNullException.ThrowIfNull(commitData);
 
-        bool isArtificial = commitData.ObjectId.IsArtificial;
-        bool authorIsCommitter = string.Equals(commitData.Author, commitData.Committer, StringComparison.CurrentCulture);
-        bool datesEqual = commitData.AuthorDate.EqualsExact(commitData.CommitDate);
-        int padding = _headerRendererStyleProvider.GetMaxWidth();
-        string authorEmail = GetEmail(commitData.Author);
+        var isArtificial = commitData.ObjectId.IsArtificial;
+        var authorIsCommitter =
+            string.Equals(commitData.Author, commitData.Committer, StringComparison.CurrentCulture);
+        var datesEqual = commitData.AuthorDate.EqualsExact(commitData.CommitDate);
+        var padding = headerRendererStyleProvider.GetMaxWidth();
+        var authorEmail = GetEmail(commitData.Author);
 
-        Validates.NotNull(_linkFactory);
+        Validates.NotNull(linkFactory);
 
         StringBuilder header = new();
-        header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.Author, padding) + _linkFactory.CreateLink(commitData.Author, "mailto:" + authorEmail));
+        header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.Author, padding) +
+                          linkFactory.CreateLink(commitData.Author, "mailto:" + authorEmail));
 
         if (!isArtificial)
         {
-            header.AppendLine(_labelFormatter.FormatLabel(datesEqual ? TranslatedStrings.Date : TranslatedStrings.AuthorDate, padding) + WebUtility.HtmlEncode(_dateFormatter.FormatDateAsRelativeLocal(commitData.AuthorDate)));
+            header.AppendLine(
+                labelFormatter.FormatLabel(datesEqual ? TranslatedStrings.Date : TranslatedStrings.AuthorDate,
+                    padding) + WebUtility.HtmlEncode(dateFormatter.FormatDateAsRelativeLocal(commitData.AuthorDate)));
         }
 
         if (!authorIsCommitter)
         {
-            string committerEmail = GetEmail(commitData.Committer);
-            header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.Committer, padding) + _linkFactory.CreateLink(commitData.Committer, "mailto:" + committerEmail));
+            var committerEmail = GetEmail(commitData.Committer);
+            header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.Committer, padding) +
+                              linkFactory.CreateLink(commitData.Committer, "mailto:" + committerEmail));
         }
 
         if (!isArtificial)
         {
             if (!datesEqual)
             {
-                header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.CommitDate, padding) + WebUtility.HtmlEncode(_dateFormatter.FormatDateAsRelativeLocal(commitData.CommitDate)));
+                header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.CommitDate, padding) +
+                                  WebUtility.HtmlEncode(
+                                      dateFormatter.FormatDateAsRelativeLocal(commitData.CommitDate)));
             }
 
-            header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.CommitHash, padding) + WebUtility.HtmlEncode(commitData.ObjectId.ToString()));
+            header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.CommitHash, padding) +
+                              WebUtility.HtmlEncode(commitData.ObjectId.ToString()));
         }
 
         if (commitData.ChildIds is not null && commitData.ChildIds.Count != 0)
         {
-            header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.GetChildren(commitData.ChildIds.Count), padding) + RenderObjectIds(commitData.ChildIds, showRevisionsAsLinks));
+            header.AppendLine(
+                labelFormatter.FormatLabel(TranslatedStrings.GetChildren(commitData.ChildIds.Count), padding) +
+                RenderObjectIds(commitData.ChildIds, showRevisionsAsLinks));
         }
 
-        IReadOnlyList<ObjectId>? parentIds = commitData.ParentIds;
+        var parentIds = commitData.ParentIds;
         if (parentIds?.Count > 0)
         {
-            header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.GetParents(parentIds.Count), padding) + RenderObjectIds(parentIds, showRevisionsAsLinks));
+            header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.GetParents(parentIds.Count), padding) +
+                              RenderObjectIds(parentIds, showRevisionsAsLinks));
         }
 
         // remove the trailing newline character
@@ -132,30 +136,34 @@ public sealed partial class CommitDataHeaderRenderer : ICommitDataHeaderRenderer
     }
 
     /// <summary>
-    /// Generate header.
+    ///     Generate header.
     /// </summary>
-    public string RenderPlain(CommitData commitData)
+    string ICommitDataHeaderRenderer.RenderPlain(CommitData commitData)
     {
         ArgumentNullException.ThrowIfNull(commitData);
 
-        bool authorIsCommitter = string.Equals(commitData.Author, commitData.Committer, StringComparison.CurrentCulture);
-        bool datesEqual = commitData.AuthorDate.EqualsExact(commitData.CommitDate);
-        int padding = _headerRendererStyleProvider.GetMaxWidth();
+        var authorIsCommitter =
+            string.Equals(commitData.Author, commitData.Committer, StringComparison.CurrentCulture);
+        var datesEqual = commitData.AuthorDate.EqualsExact(commitData.CommitDate);
+        var padding = headerRendererStyleProvider.GetMaxWidth();
 
         StringBuilder header = new();
-        header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.Author, padding) + commitData.Author);
-        header.AppendLine(_labelFormatter.FormatLabel(datesEqual ? TranslatedStrings.Date : TranslatedStrings.AuthorDate, padding) + _dateFormatter.FormatDateAsRelativeLocal(commitData.AuthorDate));
+        header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.Author, padding) + commitData.Author);
+        header.AppendLine(
+            labelFormatter.FormatLabel(datesEqual ? TranslatedStrings.Date : TranslatedStrings.AuthorDate, padding) +
+            dateFormatter.FormatDateAsRelativeLocal(commitData.AuthorDate));
         if (!authorIsCommitter)
         {
-            header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.Committer, padding) + commitData.Committer);
+            header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.Committer, padding) + commitData.Committer);
         }
 
         if (!datesEqual)
         {
-            header.AppendLine(_labelFormatter.FormatLabel(TranslatedStrings.CommitDate, padding) + _dateFormatter.FormatDateAsRelativeLocal(commitData.CommitDate));
+            header.AppendLine(labelFormatter.FormatLabel(TranslatedStrings.CommitDate, padding) +
+                              dateFormatter.FormatDateAsRelativeLocal(commitData.CommitDate));
         }
 
-        header.Append(_labelFormatter.FormatLabel(TranslatedStrings.CommitHash, padding) + commitData.ObjectId);
+        header.Append(labelFormatter.FormatLabel(TranslatedStrings.CommitHash, padding) + commitData.ObjectId);
 
         return header.ToString();
     }
@@ -167,7 +175,7 @@ public sealed partial class CommitDataHeaderRenderer : ICommitDataHeaderRenderer
             return "";
         }
 
-        int ind = author.IndexOf('<');
+        var ind = author.IndexOf('<');
         if (ind == -1)
         {
             return "";
@@ -179,9 +187,9 @@ public sealed partial class CommitDataHeaderRenderer : ICommitDataHeaderRenderer
 
     private string RenderObjectIds(IEnumerable<ObjectId> objectIds, bool showRevisionsAsLinks)
     {
-        Validates.NotNull(_linkFactory);
+        Validates.NotNull(linkFactory);
         return showRevisionsAsLinks
-            ? objectIds.Select(id => _linkFactory.CreateCommitLink(id)).Join(" ")
+            ? objectIds.Select(id => linkFactory.CreateCommitLink(id)).Join(" ")
             : objectIds.Select(id => id.ToShortString()).Join(" ");
     }
 }

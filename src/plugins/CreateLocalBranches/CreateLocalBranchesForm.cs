@@ -1,15 +1,16 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using ResourceManager;
 
 namespace GitExtensions.Plugins.CreateLocalBranches;
 
-public partial class CreateLocalBranchesForm : ResourceManager.GitExtensionsFormBase
+public partial class CreateLocalBranchesForm : GitExtensionsFormBase
 {
-    private readonly GitUIEventArgs _gitUiCommands;
+    private readonly GitUiEventArgs _gitUiCommands;
 
-    public CreateLocalBranchesForm(GitUIEventArgs gitUiCommands)
+    public CreateLocalBranchesForm(GitUiEventArgs gitUiCommands)
     {
         InitializeComponent();
         InitializeComplete();
@@ -20,7 +21,7 @@ public partial class CreateLocalBranchesForm : ResourceManager.GitExtensionsForm
     private void button1_Click(object sender, EventArgs e)
     {
         GitArgumentBuilder args = new("branch") { "-a" };
-        string[] references = _gitUiCommands.GitModule.GitExecutable.GetOutput(args)
+        var references = _gitUiCommands.GitModule.GitExecutable.GetOutput(args)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         if (references.Length == 0)
@@ -30,19 +31,17 @@ public partial class CreateLocalBranchesForm : ResourceManager.GitExtensionsForm
             return;
         }
 
-        foreach (string reference in references)
+        foreach (var reference in references)
         {
             try
             {
-                string branchName = reference.Trim(Delimiters.GitOutput);
+                var branchName = reference.Trim(Delimiters.GitOutput);
 
                 if (branchName.StartsWith("remotes/" + _NO_TRANSLATE_Remote.Text + "/"))
                 {
                     args = new GitArgumentBuilder("branch")
                     {
-                        "--track",
-                        branchName.Replace($"remotes/{_NO_TRANSLATE_Remote.Text}/", ""),
-                        branchName
+                        "--track", branchName.Replace($"remotes/{_NO_TRANSLATE_Remote.Text}/", ""), branchName
                     };
                     _gitUiCommands.GitModule.GitExecutable.GetOutput(args);
                 }
@@ -52,7 +51,8 @@ public partial class CreateLocalBranchesForm : ResourceManager.GitExtensionsForm
             }
         }
 
-        MessageBoxes.Show(this, string.Format("{0} local tracking branches have been created/updated.", references.Length),
+        MessageBoxes.Show(this,
+            string.Format("{0} local tracking branches have been created/updated.", references.Length),
             "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
         Close();
     }

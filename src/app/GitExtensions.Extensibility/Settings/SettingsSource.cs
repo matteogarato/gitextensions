@@ -13,13 +13,19 @@ public abstract class SettingsSource : IConfigValueStore
     public abstract void SetValue(string name, string? value);
 
     [return: NotNullIfNotNull(nameof(defaultValue))]
-    public string? GetString(string name, string? defaultValue) => GetValue(name) ?? defaultValue;
+    public string? GetString(string name, string? defaultValue)
+    {
+        return GetValue(name) ?? defaultValue;
+    }
 
-    public void SetString(string name, string? value) => SetValue(name, value);
+    public void SetString(string name, string? value)
+    {
+        SetValue(name, value);
+    }
 
     public bool? GetBool(string name)
     {
-        string? stringValue = GetValue(name);
+        var stringValue = GetValue(name);
 
         if (string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase))
         {
@@ -34,20 +40,23 @@ public abstract class SettingsSource : IConfigValueStore
         return null;
     }
 
-    public bool GetBool(string name, bool defaultValue) => GetBool(name) ?? defaultValue;
+    public bool GetBool(string name, bool defaultValue)
+    {
+        return GetBool(name) ?? defaultValue;
+    }
 
     public void SetBool(string name, bool? value)
     {
-        string? stringValue = value.HasValue ? value.Value ? "true" : "false" : null;
+        var stringValue = value.HasValue ? value.Value ? "true" : "false" : null;
 
         SetValue(name, stringValue);
     }
 
     public int? GetInt(string name)
     {
-        string? stringValue = GetValue(name);
+        var stringValue = GetValue(name);
 
-        if (int.TryParse(stringValue, out int result))
+        if (int.TryParse(stringValue, out var result))
         {
             return result;
         }
@@ -55,20 +64,23 @@ public abstract class SettingsSource : IConfigValueStore
         return null;
     }
 
-    public int GetInt(string name, int defaultValue) => GetInt(name) ?? defaultValue;
+    public int GetInt(string name, int defaultValue)
+    {
+        return GetInt(name) ?? defaultValue;
+    }
 
     public void SetInt(string name, int? value)
     {
-        string? stringValue = value.HasValue ? value.ToString() : null;
+        var stringValue = value.HasValue ? value.ToString() : null;
 
         SetValue(name, stringValue);
     }
 
     public float? GetFloat(string name)
     {
-        string? stringValue = GetValue(name);
+        var stringValue = GetValue(name);
 
-        if (float.TryParse(stringValue, NumberStyles.Float, CultureInfo.InvariantCulture, out float result))
+        if (float.TryParse(stringValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
         {
             return result;
         }
@@ -81,20 +93,24 @@ public abstract class SettingsSource : IConfigValueStore
         return null;
     }
 
-    public float GetFloat(string name, float defaultValue) => GetFloat(name) ?? defaultValue;
+    public float GetFloat(string name, float defaultValue)
+    {
+        return GetFloat(name) ?? defaultValue;
+    }
 
     public void SetFloat(string name, float? value)
     {
-        string? stringValue = value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : null;
+        var stringValue = value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : null;
 
         SetValue(name, stringValue);
     }
 
     public DateTime? GetDate(string name)
     {
-        string? stringValue = GetValue(name);
+        var stringValue = GetValue(name);
 
-        if (DateTime.TryParseExact(stringValue, "yyyy/M/dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime result))
+        if (DateTime.TryParseExact(stringValue, "yyyy/M/dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out var result))
         {
             return result;
         }
@@ -102,29 +118,38 @@ public abstract class SettingsSource : IConfigValueStore
         return null;
     }
 
-    public DateTime GetDate(string name, DateTime defaultValue) => GetDate(name) ?? defaultValue;
+    public DateTime GetDate(string name, DateTime defaultValue)
+    {
+        return GetDate(name) ?? defaultValue;
+    }
 
     public void SetDate(string name, DateTime? value)
     {
-        string? stringValue = value?.ToString("yyyy/M/dd", CultureInfo.InvariantCulture);
+        var stringValue = value?.ToString("yyyy/M/dd", CultureInfo.InvariantCulture);
 
         SetValue(name, stringValue);
     }
 
     [return: NotNullIfNotNull("defaultValue")]
-    public Font? GetFont(string name, Font? defaultValue) => FontParser.Parse(GetValue(name), defaultValue!);
+    public Font? GetFont(string name, Font? defaultValue)
+    {
+        return GetValue(name).Parse(defaultValue!);
+    }
 
-    public void SetFont(string name, Font? value) => SetValue(name, value?.AsString());
+    public void SetFont(string name, Font? value)
+    {
+        SetValue(name, value?.AsString());
+    }
 
     public Color GetColor(string name, Color defaultValue)
     {
-        string? stringValue = GetValue(name);
+        var stringValue = GetValue(name);
 
         if (!string.IsNullOrWhiteSpace(stringValue))
         {
             try
             {
-                Color result = ColorTranslator.FromHtml(stringValue);
+                var result = ColorTranslator.FromHtml(stringValue);
                 if (result != Color.Empty)
                 {
                     return result;
@@ -141,7 +166,7 @@ public abstract class SettingsSource : IConfigValueStore
 
     public T GetEnum<T>(string name, T defaultValue) where T : struct, Enum
     {
-        string? stringValue = GetValue(name);
+        var stringValue = GetValue(name);
 
         if (Enum.TryParse(stringValue, true, out T result))
         {
@@ -153,7 +178,7 @@ public abstract class SettingsSource : IConfigValueStore
 
     public void SetEnum<T>(string name, T value) where T : Enum
     {
-        string stringValue = value.ToString();
+        var stringValue = value.ToString();
 
         SetValue(name, stringValue);
     }

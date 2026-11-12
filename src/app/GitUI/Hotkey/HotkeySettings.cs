@@ -1,19 +1,13 @@
 ﻿using System.Xml.Serialization;
-using ResourceManager;
+using ResourceManager.Hotkey;
 
 namespace GitUI.Hotkey;
 
 /// <summary>
-/// Stores all hotkey mappings of one target.
+///     Stores all hotkey mappings of one target.
 /// </summary>
 public class HotkeySettings
 {
-    [XmlArray]
-    public HotkeyCommand[]? Commands { get; set; }
-
-    [XmlAttribute]
-    public string? Name { get; set; }
-
     public HotkeySettings()
     {
     }
@@ -23,6 +17,10 @@ public class HotkeySettings
         Name = name;
         Commands = commands;
     }
+
+    [XmlArray] public HotkeyCommand[]? Commands { get; set; }
+
+    [XmlAttribute] public string? Name { get; set; }
 
     public override bool Equals(object? obj)
     {

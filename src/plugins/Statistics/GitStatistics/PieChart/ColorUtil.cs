@@ -3,33 +3,33 @@
 namespace GitExtensions.Plugins.GitStatistics.PieChart;
 
 /// <summary>
-///   Color utility structure.
+///     Color utility structure.
 /// </summary>
 public static class ColorUtil
 {
     /// <summary>
-    ///   Small brightness change factor.
+    ///     Small brightness change factor.
     /// </summary>
     public const float BrightnessEnhancementFactor1 = 0.3F;
 
     /// <summary>
-    ///   Large brightness change factor.
+    ///     Large brightness change factor.
     /// </summary>
     public const float BrightnessEnhancementFactor2 = 0.5F;
 
     /// <summary>
-    ///   Creates color with corrected lightness.
+    ///     Creates color with corrected lightness.
     /// </summary>
-    /// <param name = "color">
-    ///   Color to correct.
+    /// <param name="color">
+    ///     Color to correct.
     /// </param>
-    /// <param name = "correctionFactor">
-    ///   Correction factor, with a value between -1 and 1. Negative values
-    ///   create darker color, positive values lighter color. Zero value
-    ///   returns the current color.
+    /// <param name="correctionFactor">
+    ///     Correction factor, with a value between -1 and 1. Negative values
+    ///     create darker color, positive values lighter color. Zero value
+    ///     returns the current color.
     /// </param>
     /// <returns>
-    ///   Corrected <c>Color</c> structure.
+    ///     Corrected <c>Color</c> structure.
     /// </returns>
     public static Color CreateColorWithCorrectedLightness(Color color, float correctionFactor)
     {

@@ -1,4 +1,5 @@
 ﻿using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Hotkey;
 using ResourceManager.Hotkey;
@@ -13,9 +14,10 @@ public class TextboxHotkey : TextBox
     {
         get
         {
-            if (this.FindAncestors().OfType<SettingsPageBase>().FirstOrDefault() is not SettingsPageBase settingsPage)
+            if (this.FindAncestors().OfType<SettingsPageBase>().FirstOrDefault() is not { } settingsPage)
             {
-                throw new InvalidOperationException($"{GetType().Name} must be sited on a {typeof(SettingsPageBase)} control");
+                throw new InvalidOperationException(
+                    $"{GetType().Name} must be sited on a {typeof(SettingsPageBase)} control");
             }
 
             return settingsPage.ServiceProvider.GetRequiredService<IHotkeySettingsManager>();
@@ -38,7 +40,9 @@ public class TextboxHotkey : TextBox
             if (_keyData != Keys.None)
             {
                 // TODO: do not change text color on already assigned keys, which occur only once
-                ForeColor = HotkeySettingsManager.IsUniqueKey(_keyData) ? Color.Red.AdaptForeColor(BackColor) : SystemColors.WindowText;
+                ForeColor = HotkeySettingsManager.IsUniqueKey(_keyData)
+                    ? Color.Red.AdaptForeColor(BackColor)
+                    : SystemColors.WindowText;
             }
 
             Text = _keyData.ToText();

@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace GitUI.Editor;
 
@@ -8,9 +8,16 @@ public sealed class ContinuousScrollEventManager
     public EventHandler? TopScrollReached;
 
     private static bool IsScrollDisabled
-        => Control.ModifierKeys != Keys.Alt && !AppSettings.AutomaticContinuousScroll;
+    {
+        get => Control.ModifierKeys != Keys.Alt && !AppSettings.AutomaticContinuousScroll;
+    }
+
     private bool IsScrollTooFast
-        => DateTime.Now - LastScrollEventFiredDate < TimeSpan.FromMilliseconds(AppSettings.AutomaticContinuousScrollDelay);
+    {
+        get => DateTime.Now - LastScrollEventFiredDate <
+               TimeSpan.FromMilliseconds(AppSettings.AutomaticContinuousScrollDelay);
+    }
+
     private DateTime LastScrollEventFiredDate { get; set; } = DateTime.MinValue;
 
     public void RaiseBottomScrollReached(object sender, EventArgs e)

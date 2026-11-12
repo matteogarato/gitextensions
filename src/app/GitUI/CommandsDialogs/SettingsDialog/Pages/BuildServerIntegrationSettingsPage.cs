@@ -3,9 +3,9 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Extensions;
 using GitExtensions.Extensibility.Settings;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 using ResourceManager;
 
@@ -15,14 +15,20 @@ public partial class BuildServerIntegrationSettingsPage : DistributedSettingsPag
 {
     private readonly TranslationString _noneItem =
         new("None");
-    private IConfigFileRemoteSettingsManager? _remotesManager;
+
     private JoinableTask<object>? _populateBuildServerTypeTask;
+    private IConfigFileRemoteSettingsManager? _remotesManager;
 
     public BuildServerIntegrationSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
         InitializeComponent();
         InitializeComplete();
+    }
+
+    public override bool IsInstantSavePage
+    {
+        get => false;
     }
 
     protected override void Init(ISettingsPageHost pageHost)
@@ -30,66 +36,71 @@ public partial class BuildServerIntegrationSettingsPage : DistributedSettingsPag
         base.Init(pageHost);
 
         _remotesManager = new ConfigFileRemoteSettingsManager(() => Module);
-        _populateBuildServerTypeTask = ThreadHelper.JoinableTaskFactory.RunAsync(
-            async () =>
-            {
-                await TaskScheduler.Default.SwitchTo(alwaysYield: true);
+        _populateBuildServerTypeTask = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await TaskScheduler.Default.SwitchTo(true);
 
-                IEnumerable<Lazy<IBuildServerAdapter, IBuildServerTypeMetadata>> exports = ManagedExtensibility.GetExports<IBuildServerAdapter, IBuildServerTypeMetadata>();
-                string[] buildServerTypes = [.. exports.Select(export =>
-                    {
-                        string? canBeLoaded = export.Metadata.CanBeLoaded;
-                        return export.Metadata.BuildServerType.Combine(" - ", canBeLoaded)!;
-                    })];
+            var exports =
+                ManagedExtensibility.GetExports<IBuildServerAdapter, IBuildServerTypeMetadata>();
+            string[] buildServerTypes =
+            [
+                .. exports.Select(export =>
+                {
+                    var canBeLoaded = export.Metadata.CanBeLoaded;
+                    return export.Metadata.BuildServerType.Combine(" - ", canBeLoaded)!;
+                })
+            ];
 
-                await this.SwitchToMainThreadAsync();
+            await this.SwitchToMainThreadAsync();
 
-                checkBoxEnableBuildServerIntegration.Enabled = true;
-                checkBoxShowBuildResultPage.Enabled = true;
-                BuildServerType.Enabled = true;
+            checkBoxEnableBuildServerIntegration.Enabled = true;
+            checkBoxShowBuildResultPage.Enabled = true;
+            BuildServerType.Enabled = true;
 
-                BuildServerType.DataSource = new[] { _noneItem.Text }.Concat(buildServerTypes).ToArray();
-                return BuildServerType.DataSource;
-            });
+            BuildServerType.DataSource = new[] { _noneItem.Text }.Concat(buildServerTypes).ToArray();
+            return BuildServerType.DataSource;
+        });
     }
-
-    public override bool IsInstantSavePage => false;
 
     protected override void SettingsToPage()
     {
         ThreadHelper.FileAndForget(async () =>
-            {
-                Validates.NotNull(_populateBuildServerTypeTask);
+        {
+            Validates.NotNull(_populateBuildServerTypeTask);
 
-                await _populateBuildServerTypeTask.JoinAsync();
+            await _populateBuildServerTypeTask.JoinAsync();
 
-                await this.SwitchToMainThreadAsync();
+            await this.SwitchToMainThreadAsync();
 
-                SettingsSource currentSettings = GetCurrentSettings();
+            var currentSettings = GetCurrentSettings();
 
-                checkBoxEnableBuildServerIntegration.SetNullableChecked(BuildServerSettings.IntegrationEnabled[currentSettings]);
-                checkBoxShowBuildResultPage.SetNullableChecked(BuildServerSettings.ShowBuildResultPage[currentSettings]);
+            checkBoxEnableBuildServerIntegration.SetNullableChecked(
+                BuildServerSettings.IntegrationEnabled[currentSettings]);
+            checkBoxShowBuildResultPage.SetNullableChecked(BuildServerSettings.ShowBuildResultPage[currentSettings]);
 
-                BuildServerType.SelectedItem = BuildServerSettings.ServerName[currentSettings] ?? _noneItem.Text;
-                ActivateBuildServerSettingsControl();
+            BuildServerType.SelectedItem = BuildServerSettings.ServerName[currentSettings] ?? _noneItem.Text;
+            ActivateBuildServerSettingsControl();
 
-                base.SettingsToPage();
-            });
+            base.SettingsToPage();
+        });
     }
 
     protected override void PageToSettings()
     {
-        SettingsSource currentSettings = GetCurrentSettings();
+        var currentSettings = GetCurrentSettings();
 
         BuildServerSettings.ServerName[currentSettings] = GetSelectedBuildServerType();
-        BuildServerSettings.IntegrationEnabled[currentSettings] = checkBoxEnableBuildServerIntegration.CheckState == CheckState.Indeterminate
-            ? null
-            : checkBoxEnableBuildServerIntegration.Checked;
-        BuildServerSettings.ShowBuildResultPage[currentSettings] = checkBoxShowBuildResultPage.CheckState == CheckState.Indeterminate
-            ? null
-            : checkBoxShowBuildResultPage.Checked;
+        BuildServerSettings.IntegrationEnabled[currentSettings] =
+            checkBoxEnableBuildServerIntegration.CheckState == CheckState.Indeterminate
+                ? null
+                : checkBoxEnableBuildServerIntegration.Checked;
+        BuildServerSettings.ShowBuildResultPage[currentSettings] =
+            checkBoxShowBuildResultPage.CheckState == CheckState.Indeterminate
+                ? null
+                : checkBoxShowBuildResultPage.Checked;
 
-        IBuildServerSettingsUserControl? control = buildServerSettingsPanel.Controls.OfType<IBuildServerSettingsUserControl>().SingleOrDefault();
+        var control = buildServerSettingsPanel.Controls
+            .OfType<IBuildServerSettingsUserControl>().SingleOrDefault();
         control?.SaveSettings(BuildServerSettings.GetSettingsSource(currentSettings));
 
         base.PageToSettings();
@@ -97,11 +108,12 @@ public partial class BuildServerIntegrationSettingsPage : DistributedSettingsPag
 
     private void ActivateBuildServerSettingsControl()
     {
-        IEnumerable<Control> controls = buildServerSettingsPanel.Controls.OfType<IBuildServerSettingsUserControl>().Cast<Control>();
-        Control? previousControl = controls.SingleOrDefault();
+        var controls = buildServerSettingsPanel.Controls.OfType<IBuildServerSettingsUserControl>()
+            .Cast<Control>();
+        var previousControl = controls.SingleOrDefault();
         previousControl?.Dispose();
 
-        IBuildServerSettingsUserControl? control = CreateBuildServerSettingsUserControl();
+        var control = CreateBuildServerSettingsUserControl();
 
         buildServerSettingsPanel.Controls.Clear();
 
@@ -123,15 +135,19 @@ public partial class BuildServerIntegrationSettingsPage : DistributedSettingsPag
             return null;
         }
 
-        string defaultProjectName = Module.WorkingDir.Split(Delimiters.PathSeparators, StringSplitOptions.RemoveEmptyEntries)[^1];
+        var defaultProjectName =
+            Module.WorkingDir.Split(Delimiters.PathSeparators, StringSplitOptions.RemoveEmptyEntries)[^1];
 
-        IEnumerable<Lazy<IBuildServerSettingsUserControl, IBuildServerTypeMetadata>> exports = ManagedExtensibility.GetExports<IBuildServerSettingsUserControl, IBuildServerTypeMetadata>();
-        Lazy<IBuildServerSettingsUserControl, IBuildServerTypeMetadata>? selectedExport = exports.SingleOrDefault(export => export.Metadata.BuildServerType == GetSelectedBuildServerType());
+        var exports =
+            ManagedExtensibility.GetExports<IBuildServerSettingsUserControl, IBuildServerTypeMetadata>();
+        var selectedExport =
+            exports.SingleOrDefault(export => export.Metadata.BuildServerType == GetSelectedBuildServerType());
         if (selectedExport is not null)
         {
-            IBuildServerSettingsUserControl buildServerSettingsUserControl = selectedExport.Value;
+            var buildServerSettingsUserControl = selectedExport.Value;
             Validates.NotNull(_remotesManager);
-            IEnumerable<string> remoteUrls = _remotesManager.LoadRemotes(false).Select(r => string.IsNullOrEmpty(r.PushUrl) ? r.Url! : r.PushUrl!);
+            var remoteUrls = _remotesManager.LoadRemotes(false)
+                .Select(r => string.IsNullOrEmpty(r.PushUrl) ? r.Url! : r.PushUrl!);
 
             buildServerSettingsUserControl.Initialize(defaultProjectName, remoteUrls);
             return buildServerSettingsUserControl;
@@ -155,20 +171,31 @@ public partial class BuildServerIntegrationSettingsPage : DistributedSettingsPag
         ActivateBuildServerSettingsControl();
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly BuildServerIntegrationSettingsPage _form;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(BuildServerIntegrationSettingsPage form)
+    internal readonly struct TestAccessor(BuildServerIntegrationSettingsPage form)
+    {
+        public Panel BuildServerSettingsPanel
         {
-            _form = form;
+            get => form.buildServerSettingsPanel;
         }
 
-        public Panel buildServerSettingsPanel => _form.buildServerSettingsPanel;
-        public ComboBox BuildServerType => _form.BuildServerType;
-        public CheckBox checkBoxEnableBuildServerIntegration => _form.checkBoxEnableBuildServerIntegration;
-        public CheckBox checkBoxShowBuildResultPage => _form.checkBoxShowBuildResultPage;
+        public ComboBox BuildServerType
+        {
+            get => form.BuildServerType;
+        }
+
+        public CheckBox CheckBoxEnableBuildServerIntegration
+        {
+            get => form.checkBoxEnableBuildServerIntegration;
+        }
+
+        public CheckBox CheckBoxShowBuildResultPage
+        {
+            get => form.checkBoxShowBuildResultPage;
+        }
     }
 }

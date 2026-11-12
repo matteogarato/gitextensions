@@ -2,14 +2,15 @@
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Git;
+
 public class GitBlameCommitTests
 {
     [Fact]
     public void TestToString()
     {
-        DateTime committerTime = DateTime.Now;
-        DateTime authorTime = DateTime.Now;
-        ObjectId commitHash = ObjectId.Random();
+        var committerTime = DateTime.Now;
+        var authorTime = DateTime.Now;
+        var commitHash = ObjectId.Random();
 
         StringBuilder str = new();
 
@@ -41,11 +42,11 @@ public class GitBlameCommitTests
     [Fact]
     public void ToString_When_Not_Null_Returns_Output()
     {
-        DateTime committerTime = DateTime.Now;
-        DateTime authorTime = DateTime.Now;
-        ObjectId commitHash = ObjectId.Random();
+        var committerTime = DateTime.Now;
+        var authorTime = DateTime.Now;
+        var commitHash = ObjectId.Random();
 
-        Func<string?, string?> summaryBuilder = (input) => $"SOME BUILDER TEXT: {input}";
+        Func<string?, string?> summaryBuilder = input => $"SOME BUILDER TEXT: {input}";
 
         StringBuilder str = new();
 
@@ -77,11 +78,11 @@ public class GitBlameCommitTests
     [Fact]
     public void ToString_When_Null_Returns_Input()
     {
-        DateTime committerTime = DateTime.Now;
-        DateTime authorTime = DateTime.Now;
-        ObjectId commitHash = ObjectId.Random();
+        var committerTime = DateTime.Now;
+        var authorTime = DateTime.Now;
+        var commitHash = ObjectId.Random();
 
-        Func<string?, string?> summaryBuilder = (input) => null;
+        Func<string?, string?> summaryBuilder = input => null;
 
         StringBuilder str = new();
 

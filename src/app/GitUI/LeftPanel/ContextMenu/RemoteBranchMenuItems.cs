@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitUI.LeftPanel.Interfaces;
 using ResourceManager;
@@ -17,9 +17,9 @@ internal sealed class RemoteBranchMenuItems<TNode> : MenuItemsGenerator<TNode>
 public class RemoteBranchMenuItemsStrings : Translate
 {
     internal readonly TranslationString Checkout = new("Chec&kout remote branch...");
-    internal readonly TranslationString Rebase = new("&Rebase current branch on this remote branch...");
     internal readonly TranslationString Delete = new("&Delete remote branch...");
     internal readonly TranslationString DeleteTooltip = new("Delete the branch from the remote");
+    internal readonly TranslationString Rebase = new("&Rebase current branch on this remote branch...");
 
     public RemoteBranchMenuItemsStrings()
     {

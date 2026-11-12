@@ -1,6 +1,6 @@
 using System;
 
-namespace NetSpell.SpellChecker;
+namespace SpellChecker;
 
 /// <summary>
 ///     Class sent to the event handler when the DoubleWord or

@@ -3,27 +3,21 @@ using System.Diagnostics;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
 using GitCommands;
+using GitCommands.Utils;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
-using GitUIPluginInterfaces;
-using Microsoft;
 using ResourceManager;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 public partial class PatchGrid : GitModuleControl
 {
-    private readonly TranslationString _unableToShowPatchDetails = new("Unable to show details of patch file.");
     private readonly ICommitDataManager _commitDataManager;
-    private IList<PatchFile> _skipped = [];
+    private readonly TranslationString _unableToShowPatchDetails = new("Unable to show details of patch file.");
     private bool _isManagingRebase;
-
-    [GeneratedRegex(@"^(?<header_key>[-A-Za-z0-9]+)(?::[ \t]*)(?<header_value>.*)$", RegexOptions.ExplicitCapture)]
-    private static partial Regex HeadersRegex { get; }
-    [GeneratedRegex(@"=\?(?<qr1>[\w-]+)\?q\?(<qr2>.*)\?=$", RegexOptions.ExplicitCapture)]
-    private static partial Regex QuotedRegex { get; }
+    private IList<PatchFile> _skipped = [];
 
     public PatchGrid()
     {
@@ -46,6 +40,12 @@ public partial class PatchGrid : GitModuleControl
 
         _commitDataManager = new CommitDataManager(() => Module);
     }
+
+    [GeneratedRegex(@"^(?<header_key>[-A-Za-z0-9]+)(?::[ \t]*)(?<header_value>.*)$", RegexOptions.ExplicitCapture)]
+    private static partial Regex HeadersRegex { get; }
+
+    [GeneratedRegex(@"=\?(?<qr1>[\w-]+)\?q\?(<qr2>.*)\?=$", RegexOptions.ExplicitCapture)]
+    private static partial Regex QuotedRegex { get; }
 
     [Category("Behavior")]
     [Description("Should it be used to display commit to rebase (otherwise patches).")]
@@ -71,8 +71,8 @@ public partial class PatchGrid : GitModuleControl
 
         if (patchFiles.Any())
         {
-            int rowsInView = Patches.DisplayedRowCount(false);
-            int currentPatchFileIndex = patchFiles.TakeWhile(pf => !pf.IsNext).Count() - 1;
+            var rowsInView = Patches.DisplayedRowCount(false);
+            var currentPatchFileIndex = patchFiles.TakeWhile(pf => !pf.IsNext).Count() - 1;
             Patches.FirstDisplayedScrollingRowIndex = Math.Max(0, currentPatchFileIndex - (rowsInView / 2));
         }
 
@@ -81,21 +81,24 @@ public partial class PatchGrid : GitModuleControl
 
     private IReadOnlyList<PatchFile> GetInteractiveRebasePatchFiles()
     {
-        string rebaseDir = Module.GetRebaseDir();
-        string currentFilePath = $"{rebaseDir}stopped-sha";
-        string doneFilePath = $"{rebaseDir}done";
-        string rebaseTodoFilePath = $"{rebaseDir}git-rebase-todo";
+        var rebaseDir = Module.GetRebaseDir();
+        var currentFilePath = $"{rebaseDir}stopped-sha";
+        var doneFilePath = $"{rebaseDir}done";
+        var rebaseTodoFilePath = $"{rebaseDir}git-rebase-todo";
 
-        string[] doneCommits = ReadCommitsDataFromRebaseFile(doneFilePath);
-        string[] todoCommits = ReadCommitsDataFromRebaseFile(rebaseTodoFilePath);
-        string commentChar = Module.GetEffectiveSetting("core.commentchar", defaultValue: "#");
+        var doneCommits = ReadCommitsDataFromRebaseFile(doneFilePath);
+        var todoCommits = ReadCommitsDataFromRebaseFile(rebaseTodoFilePath);
+        var commentChar = Module.GetEffectiveSetting("core.commentchar", "#");
 
         // Filter comment lines and keep only lines containing at least 3 columns
         // (action, commit hash and commit subject -- that could contain spaces and be cut in more --)
         // ex: pick e0d861716540aa1ac83eaa2790ba5e79988b9489 this is the commit subject
-        string[][] commitsInfos = [.. doneCommits.Concat(todoCommits).Where(l => !l.StartsWith(commentChar))
-            .Select(l => l.Split(Delimiters.Space))
-            .Where(p => p.Length >= 3)];
+        string[][] commitsInfos =
+        [
+            .. doneCommits.Concat(todoCommits).Where(l => !l.StartsWith(commentChar))
+                .Select(l => l.Split(Delimiters.Space))
+                .Where(p => p.Length >= 3)
+        ];
 
         List<PatchFile> patchFiles = [];
         if (commitsInfos.Length == 0)
@@ -103,7 +106,7 @@ public partial class PatchGrid : GitModuleControl
             return patchFiles;
         }
 
-        RevisionReader reader = new(Module, allBodies: true);
+        RevisionReader reader = new(Module, true);
         Dictionary<string, GitRevision> rebasedCommitsRevisions;
         try
         {
@@ -117,16 +120,16 @@ public partial class PatchGrid : GitModuleControl
             rebasedCommitsRevisions = [];
         }
 
-        string? currentCommitShortHash = File.Exists(currentFilePath) ? File.ReadAllText(currentFilePath).Trim() : null;
-        bool isCurrentFound = false;
-        foreach (string[] parts in commitsInfos)
+        var currentCommitShortHash = File.Exists(currentFilePath) ? File.ReadAllText(currentFilePath).Trim() : null;
+        var isCurrentFound = false;
+        foreach (var parts in commitsInfos)
         {
-            string commitHash = parts[1];
-            CommitData? data = rebasedCommitsRevisions.TryGetValue(commitHash, out GitRevision? commitRevision)
+            var commitHash = parts[1];
+            var data = rebasedCommitsRevisions.TryGetValue(commitHash, out var commitRevision)
                 ? _commitDataManager.CreateFromRevision(commitRevision, null)
                 : _commitDataManager.GetCommitData(commitHash);
 
-            bool isApplying = currentCommitShortHash is not null && commitHash.StartsWith(currentCommitShortHash);
+            var isApplying = currentCommitShortHash is not null && commitHash.StartsWith(currentCommitShortHash);
             isCurrentFound |= isApplying;
 
             ObjectId objectId;
@@ -138,7 +141,8 @@ public partial class PatchGrid : GitModuleControl
             {
                 if (!ObjectId.TryParse(parts[1], out objectId))
                 {
-                    Trace.Write($"PatchGrid: GetInteractiveRebasePatchFiles: Unable to parse commit hash '{parts[1]}' from '{todoCommits}'. Skipping this entry.");
+                    Trace.Write(
+                        $"PatchGrid: GetInteractiveRebasePatchFiles: Unable to parse commit hash '{parts[1]}' from '{todoCommits}'. Skipping this entry.");
                     continue;
                 }
             }
@@ -154,24 +158,27 @@ public partial class PatchGrid : GitModuleControl
                 Author = data?.Author,
                 Date = data?.CommitDate.LocalDateTime.ToString(),
                 IsNext = isApplying,
-                IsApplied = !isCurrentFound,
+                IsApplied = !isCurrentFound
             });
         }
 
         return patchFiles;
 
-        static string[] ReadCommitsDataFromRebaseFile(string filePath) =>
-            File.Exists(filePath)
-            ? File.ReadAllText(filePath).Trim().Split(Delimiters.LineFeedAndCarriageReturn, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            : [];
+        static string[] ReadCommitsDataFromRebaseFile(string filePath)
+        {
+            return File.Exists(filePath)
+                ? File.ReadAllText(filePath).Trim().Split(Delimiters.LineFeedAndCarriageReturn,
+                    StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                : [];
+        }
     }
 
     private IReadOnlyList<PatchFile> GetPatches()
     {
-        string rebaseTodoFilePath = $"{Module.GetRebaseDir()}git-rebase-todo";
-        IReadOnlyList<PatchFile> patches = File.Exists(rebaseTodoFilePath)
-                        ? GetInteractiveRebasePatchFiles()
-                        : GetRebasePatchFiles();
+        var rebaseTodoFilePath = $"{Module.GetRebaseDir()}git-rebase-todo";
+        var patches = File.Exists(rebaseTodoFilePath)
+            ? GetInteractiveRebasePatchFiles()
+            : GetRebasePatchFiles();
 
         if (!_skipped.Any())
         {
@@ -179,10 +186,10 @@ public partial class PatchGrid : GitModuleControl
         }
 
         // Select commits with `ObjectId` and patches with `Name`
-        IEnumerable<PatchFile> skippedPatches = patches
+        var skippedPatches = patches
             .TakeWhile(p => !p.IsNext)
             .Where(p => _skipped.Any(s => p.ObjectId == s.ObjectId && p.Name == s.Name));
-        foreach (PatchFile patchFile in skippedPatches)
+        foreach (var patchFile in skippedPatches)
         {
             patchFile.IsSkipped = true;
         }
@@ -192,7 +199,7 @@ public partial class PatchGrid : GitModuleControl
 
     private string GetNextRebasePatch()
     {
-        string file = $"{Module.GetRebaseDir()}next";
+        var file = $"{Module.GetRebaseDir()}next";
         return File.Exists(file) ? File.ReadAllText(file).Trim() : "";
     }
 
@@ -200,44 +207,39 @@ public partial class PatchGrid : GitModuleControl
     {
         List<PatchFile> patchFiles = [];
 
-        string nextFile = GetNextRebasePatch();
+        var nextFile = GetNextRebasePatch();
 
-        if (!int.TryParse(nextFile, out int next))
+        if (!int.TryParse(nextFile, out var next))
         {
-            Trace.Write($"PatchGrid: GetRebasePatchFiles: Unable to parse rebase next patch file name '{nextFile}'. Skipping this file.");
+            Trace.Write(
+                $"PatchGrid: GetRebasePatchFiles: Unable to parse rebase next patch file name '{nextFile}'. Skipping this file.");
             next = 0;
         }
 
-        string rebaseDir = Module.GetRebaseDir();
+        var rebaseDir = Module.GetRebaseDir();
 
-        string[] files = Directory.Exists(rebaseDir)
+        var files = Directory.Exists(rebaseDir)
             ? Directory.GetFiles(rebaseDir)
             : [];
 
-        foreach (string fullFileName in files)
+        foreach (var fullFileName in files)
         {
-            string file = PathUtil.GetFileName(fullFileName);
-            if (!int.TryParse(file, out int n))
+            var file = PathUtil.GetFileName(fullFileName);
+            if (!int.TryParse(file, out var n))
             {
                 continue;
             }
 
             PatchFile patchFile =
-                new()
-                {
-                    Name = file,
-                    FullName = fullFileName,
-                    IsApplied = n < next,
-                    IsNext = n == next
-                };
+                new() { Name = file, FullName = fullFileName, IsApplied = n < next, IsNext = n == next };
 
             if (File.Exists(rebaseDir + file))
             {
                 string? key = null;
-                string value = "";
-                foreach (string line in File.ReadLines(rebaseDir + file))
+                var value = "";
+                foreach (var line in File.ReadLines(rebaseDir + file))
                 {
-                    Match m = HeadersRegex.Match(line);
+                    var m = HeadersRegex.Match(line);
                     if (key is null)
                     {
                         if (!string.IsNullOrWhiteSpace(line) && !m.Success)
@@ -254,7 +256,7 @@ public partial class PatchGrid : GitModuleControl
                             case "From":
                                 if (value.IndexOf('<') > 0 && value.IndexOf('<') < value.Length)
                                 {
-                                    string author = RFC2047Decoder.Parse(value);
+                                    var author = Rfc2047Decoder.Parse(value);
                                     patchFile.Author = author[..author.IndexOf('<')].Trim();
                                 }
                                 else
@@ -292,8 +294,8 @@ public partial class PatchGrid : GitModuleControl
 
                     if (string.IsNullOrEmpty(line) ||
                         (!string.IsNullOrEmpty(patchFile.Author) &&
-                        !string.IsNullOrEmpty(patchFile.Date) &&
-                        !string.IsNullOrEmpty(patchFile.Subject)))
+                         !string.IsNullOrEmpty(patchFile.Date) &&
+                         !string.IsNullOrEmpty(patchFile.Subject)))
                     {
                         break;
                     }
@@ -307,14 +309,15 @@ public partial class PatchGrid : GitModuleControl
 
         static string AppendQuotedString(string str1, string str2)
         {
-            Match m1 = QuotedRegex.Match(str1);
-            Match m2 = QuotedRegex.Match(str2);
+            var m1 = QuotedRegex.Match(str1);
+            var m2 = QuotedRegex.Match(str2);
             if (!m1.Success || !m2.Success)
             {
                 return str1 + str2;
             }
 
-            DebugHelpers.Assert(m1.Groups["qr1"].Value == m2.Groups["qr1"].Value, @"m1.Groups[""qr1""].Value == m2.Groups[""qr2""].Value");
+            DebugHelpers.Assert(m1.Groups["qr1"].Value == m2.Groups["qr1"].Value,
+                @"m1.Groups[""qr1""].Value == m2.Groups[""qr2""].Value");
             return $"{str1.AsSpan()[..^2]}{m2.Groups["qr2"].ValueSpan}?=";
         }
     }
@@ -339,16 +342,17 @@ public partial class PatchGrid : GitModuleControl
     {
         Validates.NotNull(PatchFiles);
 
-        IReadOnlyList<PatchFile> updatedPatches = GetPatches();
+        var updatedPatches = GetPatches();
         if (updatedPatches.Count != PatchFiles.Count && !_isManagingRebase)
         {
             // Fail for popup in Debug
-            string s = $"PatchGrid: RefreshGrid: PatchFiles count {PatchFiles.Count} is different from updatedPatches count {updatedPatches.Count}. This should not happen.";
+            var s =
+                $"PatchGrid: RefreshGrid: PatchFiles count {PatchFiles.Count} is different from updatedPatches count {updatedPatches.Count}. This should not happen.";
             Trace.Write(s);
             DebugHelpers.Fail(s);
         }
 
-        for (int i = 0; i < Math.Min(updatedPatches.Count, PatchFiles.Count); i++)
+        for (var i = 0; i < Math.Min(updatedPatches.Count, PatchFiles.Count); i++)
         {
             updatedPatches[i].IsSkipped = PatchFiles[i].IsSkipped;
         }
@@ -363,13 +367,14 @@ public partial class PatchGrid : GitModuleControl
             return;
         }
 
-        int shouldSelectIndex = PatchFiles.IndexOf(p => p.IsNext);
+        var shouldSelectIndex = PatchFiles.IndexOf(p => p.IsNext);
 
         if (shouldSelectIndex >= 0)
         {
             Patches.ClearSelection();
-            DataGridViewRow dataGridViewRow = Patches.Rows[shouldSelectIndex];
-            dataGridViewRow.DefaultCellStyle.ForeColor = Color.OrangeRed.AdaptForeColor(dataGridViewRow.InheritedStyle.BackColor);
+            var dataGridViewRow = Patches.Rows[shouldSelectIndex];
+            dataGridViewRow.DefaultCellStyle.ForeColor =
+                Color.OrangeRed.AdaptForeColor(dataGridViewRow.InheritedStyle.BackColor);
             dataGridViewRow.Selected = true;
         }
     }
@@ -395,48 +400,52 @@ public partial class PatchGrid : GitModuleControl
             return;
         }
 
-        PatchFile? patchFile = (PatchFile?)Patches.SelectedRows[0].DataBoundItem;
+        var patchFile = (PatchFile?)Patches.SelectedRows[0].DataBoundItem;
 
         if (patchFile?.ObjectId is { IsZeroOrArtificial: false } patchObjectId)
         {
             // Normal commit selected
-            UICommands.StartFormCommitDiff(patchObjectId);
+            UiCommands.StartFormCommitDiff(patchObjectId);
             return;
         }
 
         if (string.IsNullOrEmpty(patchFile!.FullName))
         {
-            MessageBoxes.Show(_unableToShowPatchDetails.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(_unableToShowPatchDetails.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 
-        UICommands.StartViewPatchDialog(patchFile.FullName);
+        UiCommands.StartViewPatchDialog(patchFile.FullName);
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
     {
-        private readonly PatchGrid _control;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(PatchGrid control)
+    internal readonly struct TestAccessor(PatchGrid control)
+    {
+        public IReadOnlyList<PatchFile> GetInteractiveRebasePatchFiles()
         {
-            _control = control;
+            return control.GetInteractiveRebasePatchFiles();
         }
-
-        public IReadOnlyList<PatchFile> GetInteractiveRebasePatchFiles() => _control.GetInteractiveRebasePatchFiles();
     }
 
     private sealed class SortablePatchFilesList : SortableBindingList<PatchFile>
     {
         static SortablePatchFilesList()
         {
-            AddSortableProperty(patchFile => patchFile.Status, (x, y) => string.Compare(x.Status, y.Status, StringComparison.CurrentCulture));
-            AddSortableProperty(patchFile => patchFile.Name, (x, y) => string.Compare(x.Name, y.Name, StringComparison.CurrentCulture));
-            AddSortableProperty(patchFile => patchFile.Subject, (x, y) => string.Compare(x.Subject, y.Subject, StringComparison.CurrentCulture));
-            AddSortableProperty(patchFile => patchFile.Author, (x, y) => string.Compare(x.Author, y.Author, StringComparison.CurrentCulture));
-            AddSortableProperty(patchFile => patchFile.Date, (x, y) => string.Compare(x.Date, y.Date, StringComparison.CurrentCulture));
+            AddSortableProperty(patchFile => patchFile.Status,
+                (x, y) => string.Compare(x.Status, y.Status, StringComparison.CurrentCulture));
+            AddSortableProperty(patchFile => patchFile.Name,
+                (x, y) => string.Compare(x.Name, y.Name, StringComparison.CurrentCulture));
+            AddSortableProperty(patchFile => patchFile.Subject,
+                (x, y) => string.Compare(x.Subject, y.Subject, StringComparison.CurrentCulture));
+            AddSortableProperty(patchFile => patchFile.Author,
+                (x, y) => string.Compare(x.Author, y.Author, StringComparison.CurrentCulture));
+            AddSortableProperty(patchFile => patchFile.Date,
+                (x, y) => string.Compare(x.Date, y.Date, StringComparison.CurrentCulture));
         }
     }
 }

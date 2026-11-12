@@ -9,11 +9,12 @@ public class AdaptLightnessTests : IDisposable
     public AdaptLightnessTests()
     {
         // The lightness is only adapted for a theme which is not the default one
-        Theme darkTheme = new(new Dictionary<AppColor, Color>(), new Dictionary<KnownColor, Color>(), ThemeId.DefaultDark);
-        ColorHelper.ThemeSettings = new ThemeSettings(darkTheme, Theme.Default, ThemeVariations.None, useSystemVisualStyle: false);
+        Theme darkTheme = new(new Dictionary<AppColor, Color>(), new Dictionary<KnownColor, Color>(),
+            ThemeId.DefaultDark);
+        ColorHelper.ThemeSettings = new ThemeSettings(darkTheme, Theme.Default, ThemeVariations.None, false);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         ColorHelper.ThemeSettings = ThemeSettings.Default;
     }
@@ -23,8 +24,8 @@ public class AdaptLightnessTests : IDisposable
     {
         // Icon.ToBitmap() returns such a bitmap for a PNG compressed icon frame, which is what a
         // user script icon typically is
-        using Icon icon = CreateIconWithPngFrame(size: 40);
-        using Bitmap streamBacked = icon.ToBitmap();
+        using var icon = CreateIconWithPngFrame(40);
+        using var streamBacked = icon.ToBitmap();
 
         Bitmap? adapted = null;
 
@@ -48,7 +49,7 @@ public class AdaptLightnessTests : IDisposable
         using Bitmap original = new(4, 4, PixelFormat.Format32bppArgb);
         original.SetPixel(0, 0, Color.FromArgb(255, 30, 90, 150));
 
-        using Bitmap adapted = original.AdaptLightness();
+        using var adapted = original.AdaptLightness();
 
         original.GetPixel(0, 0).Should().Be(Color.FromArgb(255, 30, 90, 150));
         adapted.Should().NotBeSameAs(original);
@@ -59,7 +60,7 @@ public class AdaptLightnessTests : IDisposable
         byte[] png;
         using (Bitmap frame = new(size, size, PixelFormat.Format32bppArgb))
         {
-            using (Graphics graphics = Graphics.FromImage(frame))
+            using (var graphics = Graphics.FromImage(frame))
             {
                 graphics.Clear(Color.FromArgb(255, 30, 90, 150));
             }
@@ -71,7 +72,7 @@ public class AdaptLightnessTests : IDisposable
 
         MemoryStream ico = new();
         const int headerLength = 6 + 16;
-        using (BinaryWriter writer = new(ico, Encoding.UTF8, leaveOpen: true))
+        using (BinaryWriter writer = new(ico, Encoding.UTF8, true))
         {
             writer.Write((short)0); // reserved
             writer.Write((short)1); // an icon, not a cursor

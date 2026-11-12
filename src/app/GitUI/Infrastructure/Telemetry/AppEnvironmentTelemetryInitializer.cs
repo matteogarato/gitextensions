@@ -1,5 +1,5 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 
@@ -7,10 +7,10 @@ namespace GitUI.Infrastructure.Telemetry;
 
 internal sealed class AppEnvironmentTelemetryInitializer : ITelemetryInitializer
 {
-    public void Initialize(ITelemetry telemetry)
+    void ITelemetryInitializer.Initialize(ITelemetry telemetry)
     {
         string sshClient;
-        string sshPath = AppSettings.SshPath;
+        var sshPath = AppSettings.SshPath;
         if (string.IsNullOrEmpty(sshPath))
         {
             sshClient = "OpenSSH";

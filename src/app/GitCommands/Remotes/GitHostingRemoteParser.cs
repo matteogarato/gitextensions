@@ -5,32 +5,39 @@ namespace GitCommands.Remotes;
 
 public partial class GitHostingRemoteParser : RemoteParser
 {
-    [GeneratedRegex(@"^(ssh://)?git(?:@|://)(?<hosting>([^.]+\.)+[^.]+)[:/](?<owner>[^/]+)/(?<repo>[\w_\.\-]+)(?:.git)?", RegexOptions.ExplicitCapture)]
-    private static partial Regex GitHostingSshUrlRegex { get; }
-
-    [GeneratedRegex(@"^https?://(?:[^@:]*?)?(?::[^/@:]*?)?@?(?<hosting>([^./]+\.)+[^./]+)/(?<owner>[^/]+)/(?<repo>[\w_\.\-]+)(?:.git)?$", RegexOptions.ExplicitCapture)]
-    private static partial Regex GitHostingHttpsUrlRegex { get; }
-
     private static readonly Regex[] _gitHostingRegexes = [GitHostingHttpsUrlRegex, GitHostingSshUrlRegex];
 
+    [GeneratedRegex(
+        @"^(ssh://)?git(?:@|://)(?<hosting>([^.]+\.)+[^.]+)[:/](?<owner>[^/]+)/(?<repo>[\w_\.\-]+)(?:.git)?",
+        RegexOptions.ExplicitCapture)]
+    private static partial Regex GitHostingSshUrlRegex { get; }
+
+    [GeneratedRegex(
+        @"^https?://(?:[^@:]*?)?(?::[^/@:]*?)?@?(?<hosting>([^./]+\.)+[^./]+)/(?<owner>[^/]+)/(?<repo>[\w_\.\-]+)(?:.git)?$",
+        RegexOptions.ExplicitCapture)]
+    private static partial Regex GitHostingHttpsUrlRegex { get; }
+
     /// <summary>
-    /// Gets if an url is the one of a git hosted repository.
+    ///     Gets if an url is the one of a git hosted repository.
     /// </summary>
     /// <param name="remoteUrl">the url of a git repository.</param>
     /// <returns>
-    /// true, if the url has been succefully parsed.
-    /// false otherwise.
+    ///     true, if the url has been succefully parsed.
+    ///     false otherwise.
     /// </returns>
     public bool IsValidRemoteUrl(string remoteUrl)
-        => TryExtractGitHostingDataFromRemoteUrl(remoteUrl, out _, out _, out _);
+    {
+        return TryExtractGitHostingDataFromRemoteUrl(remoteUrl, out _, out _, out _);
+    }
 
-    public bool TryExtractGitHostingDataFromRemoteUrl(string remoteUrl, [NotNullWhen(returnValue: true)] out string? gitHosting, [NotNullWhen(returnValue: true)] out string? owner, [NotNullWhen(returnValue: true)] out string? repository)
+    public bool TryExtractGitHostingDataFromRemoteUrl(string remoteUrl, [NotNullWhen(true)] out string? gitHosting,
+        [NotNullWhen(true)] out string? owner, [NotNullWhen(true)] out string? repository)
     {
         owner = null;
         repository = null;
         gitHosting = null;
 
-        Match? m = MatchRegExes(remoteUrl, _gitHostingRegexes);
+        var m = MatchRegExes(remoteUrl, _gitHostingRegexes);
 
         if (m is null or { Success: false })
         {

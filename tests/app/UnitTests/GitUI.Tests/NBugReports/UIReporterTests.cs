@@ -3,17 +3,10 @@ using GitExtensions.Extensibility;
 using GitUI.NBugReports;
 
 namespace GitUITests.NBugReports;
-public sealed class UIReporterTests : IDisposable
-{
-    private const string RootError = "root error";
 
-    [Theory]
-    [MemberData(nameof(GetFileNameTestCases), MemberType = typeof(UIReporterTests))]
-    public void GetFileName_should_extract_file_name_from_exception(Exception exception, string expectedDllName)
-    {
-        string result = UIReporter.TestAccessor.GetFileName(exception);
-        result.Should().Be(expectedDllName);
-    }
+public sealed class UiReporterTests : IDisposable
+{
+    private const string _rootError = "root error";
 
     public static IEnumerable<object[]> GetFileNameTestCases
     {
@@ -22,45 +15,31 @@ public sealed class UIReporterTests : IDisposable
             // DllNotFoundException
             yield return new object[]
             {
-                new DllNotFoundException("Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found."),
+                new DllNotFoundException(
+                    "Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found."),
                 "vcruntime140_cor3.dll"
             };
 
             yield return new object[]
             {
-                new DllNotFoundException("Unable to load DLL 'user32.dll': File not found."),
-                "user32.dll"
+                new DllNotFoundException("Unable to load DLL 'user32.dll': File not found."), "user32.dll"
             };
 
             yield return new object[]
             {
-                new DllNotFoundException("Unable to load DLL 'my.custom.dll' for some reason"),
-                "my.custom.dll"
+                new DllNotFoundException("Unable to load DLL 'my.custom.dll' for some reason"), "my.custom.dll"
             };
 
             yield return new object[]
             {
-                new DllNotFoundException("No quotes in this message"),
-                "No quotes in this message"
+                new DllNotFoundException("No quotes in this message"), "No quotes in this message"
             };
 
-            yield return new object[]
-            {
-                new DllNotFoundException("'only_one_quote"),
-                "'only_one_quote"
-            };
+            yield return new object[] { new DllNotFoundException("'only_one_quote"), "'only_one_quote" };
 
-            yield return new object[]
-            {
-                new DllNotFoundException(""),
-                ""
-            };
+            yield return new object[] { new DllNotFoundException(""), "" };
 
-            yield return new object[]
-            {
-                new DllNotFoundException("Unable to load DLL ''"),
-                ""
-            };
+            yield return new object[] { new DllNotFoundException("Unable to load DLL ''"), "" };
 
             // FileNotFoundException
             yield return new object[]
@@ -71,59 +50,97 @@ public sealed class UIReporterTests : IDisposable
 
             yield return new object[]
             {
-                new FileNotFoundException("Could not load file or assembly 'System.Data.Common, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'", fileName: "System.Data.Common, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"),
+                new FileNotFoundException(
+                    "Could not load file or assembly 'System.Data.Common, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'",
+                    "System.Data.Common, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"),
                 "System.Data.Common"
             };
 
             yield return new object[]
             {
-                new FileNotFoundException("Could not load file or assembly", fileName: null),
-                ""
+                new FileNotFoundException("Could not load file or assembly", fileName: null), ""
             };
 
             yield return new object[]
             {
-                new FileNotFoundException("Could not load file or assembly MyLib", "MyLib"),
-                "MyLib"
+                new FileNotFoundException("Could not load file or assembly MyLib", "MyLib"), "MyLib"
             };
 
             yield return new object[]
             {
-                new FileNotFoundException("Could not load file or assembly 'SomeAssembly, version=1.0.0.0'", fileName: "SomeAssembly, version=1.0.0.0"),
+                new FileNotFoundException("Could not load file or assembly 'SomeAssembly, version=1.0.0.0'",
+                    "SomeAssembly, version=1.0.0.0"),
                 "SomeAssembly"
             };
 
-            yield return new object[]
-            {
-                new FileNotFoundException("Could not load file or assembly", fileName: ""),
-                ""
-            };
+            yield return new object[] { new FileNotFoundException("Could not load file or assembly", ""), "" };
 
             yield return new object[]
             {
-                new FileNotFoundException("Assembly not found", fileName: ", version=1.0.0.0"),
-                ", version=1.0.0.0"
+                new FileNotFoundException("Assembly not found", ", version=1.0.0.0"), ", version=1.0.0.0"
             };
 
             // Other exceptions
+            yield return new object[] { new Exception("No quotes in this message"), "unknown" };
+
+            yield return new object[] { new Exception("'only_one_quote"), "unknown" };
+
+            yield return new object[] { new InvalidOperationException("some error"), "unknown" };
+        }
+    }
+
+    public static IEnumerable<object[]> FrameworkAssemblyAndVcRuntimeTestCases
+    {
+        get
+        {
             yield return new object[]
             {
-                new Exception("No quotes in this message"),
-                "unknown"
+                new FileNotFoundException(
+                    "Could not load file or assembly 'System.Data.Common, Version=9.0.0.0'",
+                    "System.Data.Common, Version=9.0.0.0"),
+                "System.Data.Common"
             };
 
             yield return new object[]
             {
-                new Exception("'only_one_quote"),
-                "unknown"
+                new FileNotFoundException(
+                    "Could not load file or assembly 'Microsoft.CSharp, Version=9.0.0.0'",
+                    "Microsoft.CSharp, Version=9.0.0.0"),
+                "Microsoft.CSharp"
             };
 
             yield return new object[]
             {
-                new InvalidOperationException("some error"),
-                "unknown"
+                new DllNotFoundException(
+                    "Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found."),
+                "vcruntime140_cor3.dll"
             };
         }
+    }
+
+    public static IEnumerable<object[]> NonAssemblyLoadExceptionTestCases
+    {
+        get
+        {
+            yield return new object[] { new Exception("some error") };
+            yield return new object[] { new InvalidOperationException("something went wrong") };
+            yield return new object[] { new FileNotFoundException("File not found") };
+            yield return new object[] { new DllNotFoundException("Unable to load DLL 'user32.dll'") };
+            yield return new object[] { new Exception("outer", new Exception("inner")) };
+        }
+    }
+
+    void IDisposable.Dispose()
+    {
+        UiReporter.IgnoreFailedToLoadAnAssembly = false;
+    }
+
+    [Theory]
+    [MemberData(nameof(GetFileNameTestCases), MemberType = typeof(UiReporterTests))]
+    public void GetFileName_should_extract_file_name_from_exception(Exception exception, string expectedDllName)
+    {
+        var result = UiReporter.TestAccessor.GetFileName(exception);
+        result.Should().Be(expectedDllName);
     }
 
     [Theory]
@@ -144,7 +161,7 @@ public sealed class UIReporterTests : IDisposable
     [InlineData(null, false)]
     public void IsDotNetFrameworkAssembly_should_identify_framework_assemblies(string? assemblyName, bool expected)
     {
-        bool result = UIReporter.TestAccessor.IsDotNetFrameworkAssembly(assemblyName!);
+        var result = UiReporter.TestAccessor.IsDotNetFrameworkAssembly(assemblyName!);
         result.Should().Be(expected);
     }
 
@@ -161,7 +178,7 @@ public sealed class UIReporterTests : IDisposable
     [InlineData(null, false)]
     public void IsVCRuntimeDll_should_identify_vcruntime_dlls(string? dllName, bool expected)
     {
-        bool result = UIReporter.TestAccessor.IsVCRuntimeDll(dllName!);
+        var result = UiReporter.TestAccessor.IsVcRuntimeDll(dllName!);
         result.Should().Be(expected);
     }
 
@@ -170,7 +187,7 @@ public sealed class UIReporterTests : IDisposable
     {
         FileNotFoundException exception = new("Could not load file or assembly CustomLib", "CustomLib");
 
-        TaskDialogPage page = UIReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, isTerminating: false);
+        var page = UiReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, false);
 
         page.Icon.Should().Be(TaskDialogIcon.Warning);
         page.AllowCancel.Should().BeFalse();
@@ -181,66 +198,34 @@ public sealed class UIReporterTests : IDisposable
     }
 
     [Theory]
-    [MemberData(nameof(FrameworkAssemblyAndVCRuntimeTestCases))]
-    public void CreateFailedToLoadAnAssemblyReport_should_not_include_report_button(Exception exception, string expectedHeadingPart)
+    [MemberData(nameof(FrameworkAssemblyAndVcRuntimeTestCases))]
+    public void CreateFailedToLoadAnAssemblyReport_should_not_include_report_button(Exception exception,
+        string expectedHeadingPart)
     {
-        TaskDialogPage page = UIReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, isTerminating: false);
+        var page = UiReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, false);
 
         page.Heading.Should().Contain(expectedHeadingPart);
         page.Buttons.Should().HaveCount(1);
     }
 
-    public static IEnumerable<object[]> FrameworkAssemblyAndVCRuntimeTestCases
-    {
-        get
-        {
-            yield return new object[]
-            {
-                new FileNotFoundException(
-                    "Could not load file or assembly 'System.Data.Common, Version=9.0.0.0'",
-                    fileName: "System.Data.Common, Version=9.0.0.0"),
-                "System.Data.Common"
-            };
-
-            yield return new object[]
-            {
-                new FileNotFoundException(
-                    "Could not load file or assembly 'Microsoft.CSharp, Version=9.0.0.0'",
-                    fileName: "Microsoft.CSharp, Version=9.0.0.0"),
-                "Microsoft.CSharp"
-            };
-
-            yield return new object[]
-            {
-                new DllNotFoundException(
-                    "Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found."),
-                "vcruntime140_cor3.dll"
-            };
-        }
-    }
-
     [Fact]
     public void CreateDubiousOwnershipReport_should_create_page_with_expected_buttons()
     {
-        const string errorMessage = $"fatal: detected dubious ownership in repository at 'd:/repo'\nTo add an exception for this directory, call:\n\n\tgit config --global --add safe.directory d:/repo\n";
+        const string errorMessage =
+            "fatal: detected dubious ownership in repository at 'd:/repo'\nTo add an exception for this directory, call:\n\n\tgit config --global --add safe.directory d:/repo\n";
 
         ExternalOperationException exception = new(
-            command: "git",
+            "git",
             workingDirectory: "d:/repo",
             innerException: new Exception(errorMessage));
 
-        TaskDialogPage page = UIReporter.TestAccessor.CreateDubiousOwnershipReport(exception);
+        var page = UiReporter.TestAccessor.CreateDubiousOwnershipReport(exception);
 
         page.Icon.Should().Be(TaskDialogIcon.Error);
         page.AllowCancel.Should().BeTrue();
         page.Buttons.Should().HaveCount(4);
         page.Expander.Should().NotBeNull();
         page.Expander!.Text.Should().Be(errorMessage);
-    }
-
-    public void Dispose()
-    {
-        UIReporter.IgnoreFailedToLoadAnAssembly = false;
     }
 
     [Fact]
@@ -250,10 +235,10 @@ public sealed class UIReporterTests : IDisposable
         StringBuilder text = new("error details");
         OperationInfo operationInfo = new() { IsExternalOperation = false, IsUserExternalOperation = false };
 
-        TaskDialogPage page = UIReporter.TestAccessor.CreateErrorReport(exception, RootError, text, operationInfo);
+        var page = UiReporter.TestAccessor.CreateErrorReport(exception, _rootError, text, operationInfo);
 
         page.Icon.Should().Be(TaskDialogIcon.Error);
-        page.Heading.Should().Be(RootError);
+        page.Heading.Should().Be(_rootError);
         page.AllowCancel.Should().BeFalse();
         page.Buttons.Should().HaveCount(2);
     }
@@ -265,7 +250,7 @@ public sealed class UIReporterTests : IDisposable
         StringBuilder text = new("error details");
         OperationInfo operationInfo = new() { IsExternalOperation = true, IsUserExternalOperation = false };
 
-        TaskDialogPage page = UIReporter.TestAccessor.CreateErrorReport(exception, RootError, text, operationInfo);
+        var page = UiReporter.TestAccessor.CreateErrorReport(exception, _rootError, text, operationInfo);
 
         page.Icon.Should().Be(TaskDialogIcon.Warning);
         page.Buttons.Should().HaveCount(2);
@@ -278,7 +263,7 @@ public sealed class UIReporterTests : IDisposable
         StringBuilder text = new("error details");
         OperationInfo operationInfo = new() { IsExternalOperation = true, IsUserExternalOperation = true };
 
-        TaskDialogPage page = UIReporter.TestAccessor.CreateErrorReport(exception, RootError, text, operationInfo);
+        var page = UiReporter.TestAccessor.CreateErrorReport(exception, _rootError, text, operationInfo);
 
         page.Icon.Should().Be(TaskDialogIcon.Warning);
         page.Buttons.Should().HaveCount(2);
@@ -289,7 +274,7 @@ public sealed class UIReporterTests : IDisposable
     {
         DllNotFoundException exception = new("Unable to load DLL 'vcruntime140_cor3.dll'");
 
-        TaskDialogPage page = UIReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, isTerminating: false);
+        var page = UiReporter.TestAccessor.CreateFailedToLoadAnAssemblyReport(exception, false);
 
         page.Expander.Should().NotBeNull();
         page.Expander!.Text.Should().Be(exception.Message);
@@ -298,10 +283,10 @@ public sealed class UIReporterTests : IDisposable
     [Fact]
     public void ReportFailedToLoadAnAssembly_should_return_true_when_IgnoreFailedToLoadAnAssembly_is_set()
     {
-        UIReporter.IgnoreFailedToLoadAnAssembly = true;
-        UIReporter reporter = new();
+        UiReporter.IgnoreFailedToLoadAnAssembly = true;
+        UiReporter reporter = new();
 
-        bool result = reporter.ReportFailedToLoadAnAssembly(
+        var result = reporter.ReportFailedToLoadAnAssembly(
             new FileNotFoundException("Could not load file or assembly CustomLib", "CustomLib"),
             isTerminating: false);
 
@@ -312,22 +297,10 @@ public sealed class UIReporterTests : IDisposable
     [MemberData(nameof(NonAssemblyLoadExceptionTestCases))]
     public void ReportFailedToLoadAnAssembly_should_return_false_for_non_matching_exception(Exception exception)
     {
-        UIReporter reporter = new();
+        UiReporter reporter = new();
 
-        bool result = reporter.ReportFailedToLoadAnAssembly(exception, isTerminating: false);
+        var result = reporter.ReportFailedToLoadAnAssembly(exception, isTerminating: false);
 
         result.Should().BeFalse();
-    }
-
-    public static IEnumerable<object[]> NonAssemblyLoadExceptionTestCases
-    {
-        get
-        {
-            yield return new object[] { new Exception("some error") };
-            yield return new object[] { new InvalidOperationException("something went wrong") };
-            yield return new object[] { new FileNotFoundException("File not found") };
-            yield return new object[] { new DllNotFoundException("Unable to load DLL 'user32.dll'") };
-            yield return new object[] { new Exception("outer", new Exception("inner")) };
-        }
     }
 }

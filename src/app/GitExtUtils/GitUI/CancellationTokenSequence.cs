@@ -1,25 +1,25 @@
 using Microsoft;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 /// <summary>
-/// Supports sequences of actions where the commencement of an action cancels any
-/// prior action.
+///     Supports sequences of actions where the commencement of an action cancels any
+///     prior action.
 /// </summary>
 /// <remarks>
-/// This sequence does not guarantee that prior operations stop executing before
-/// <see cref="Next"/> returns. It only guarantees that their <see cref="CancellationToken"/>
-/// will be cancelled. Operations need to use their tokens in an appropriate manner.
-/// You may still require additional concurrency protections.
+///     This sequence does not guarantee that prior operations stop executing before
+///     <see cref="Next" /> returns. It only guarantees that their <see cref="CancellationToken" />
+///     will be cancelled. Operations need to use their tokens in an appropriate manner.
+///     You may still require additional concurrency protections.
 /// </remarks>
 /// <example>
-/// Define an instance of this type, usually as a private readonly field:
-/// <code>
+///     Define an instance of this type, usually as a private readonly field:
+///     <code>
 /// private readonly CancellableSequence _sequence = new();
 /// </code>
-/// Then use it to generate <see cref="CancellationToken"/> objects for use in asynchronous
-/// operations.
-/// <code>
+///     Then use it to generate <see cref="CancellationToken" /> objects for use in asynchronous
+///     operations.
+///     <code>
 /// var token = _sequence.Next();
 /// // Do asynchronous operation using this token.
 /// // Subsequent calls to Next will cancel this token.
@@ -28,23 +28,43 @@ namespace GitUI;
 public sealed class CancellationTokenSequence : IDisposable
 {
     /// <remarks>
-    /// If this field is <c>null</c>, the object has been disposed.
+    ///     If this field is <c>null</c>, the object has been disposed.
     /// </remarks>
     private CancellationTokenSource? _cancellationTokenSource = new();
 
     /// <summary>
-    /// Issues the <see cref="CancellationToken"/> for use by the next asynchronous operation in the sequence,
-    /// and cancels any prior token.
+    ///     Cancels the current token and disposes this object.
     /// </summary>
     /// <remarks>
-    /// <para>This method does not guarantee that prior operations stop executing before
-    /// it returns. It only guarantees that their <see cref="CancellationToken"/>
-    /// will be cancelled. Operations need to use their tokens in an appropriate manner.
-    /// You may still require additional concurrency protections.</para>
-    ///
-    /// <para>This method is thread-safe.</para>
+    ///     Only the first call to this method per instance of this class has any effect.
     /// </remarks>
-    /// <returns>A <see cref="CancellationToken"/> to be used by the commencing asynchronous operation.</returns>
+    void IDisposable.Dispose()
+    {
+        var cancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, null);
+
+        if (cancellationTokenSource is null)
+        {
+            return;
+        }
+
+        cancellationTokenSource.Cancel();
+        cancellationTokenSource.Dispose();
+    }
+
+    /// <summary>
+    ///     Issues the <see cref="CancellationToken" /> for use by the next asynchronous operation in the sequence,
+    ///     and cancels any prior token.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         This method does not guarantee that prior operations stop executing before
+    ///         it returns. It only guarantees that their <see cref="CancellationToken" />
+    ///         will be cancelled. Operations need to use their tokens in an appropriate manner.
+    ///         You may still require additional concurrency protections.
+    ///     </para>
+    ///     <para>This method is thread-safe.</para>
+    /// </remarks>
+    /// <returns>A <see cref="CancellationToken" /> to be used by the commencing asynchronous operation.</returns>
     /// <exception cref="OperationCanceledException">This object is disposed.</exception>
     public CancellationToken Next()
     {
@@ -52,24 +72,22 @@ public sealed class CancellationTokenSequence : IDisposable
 
         // Make sure to obtain the CancellationToken for the next source before exposing the source,
         // or another thread could dispose of source before we get a chance to access this property.
-        CancellationToken nextToken = next.Token;
+        var nextToken = next.Token;
 
         // The following block is identical to Interlocked.Exchange, except no replacement is
         // made if the current field value is null (latch on null).
-        CancellationTokenSource? prior = Volatile.Read(ref _cancellationTokenSource);
+        var prior = Volatile.Read(ref _cancellationTokenSource);
 
         while (prior is not null)
         {
-            CancellationTokenSource? candidate = Interlocked.CompareExchange(ref _cancellationTokenSource, next, prior);
+            var candidate = Interlocked.CompareExchange(ref _cancellationTokenSource, next, prior);
 
             if (candidate == prior)
             {
                 break;
             }
-            else
-            {
-                prior = candidate;
-            }
+
+            prior = candidate;
         }
 
         // Detect and handle the case where the sequence was already disposed
@@ -88,11 +106,11 @@ public sealed class CancellationTokenSequence : IDisposable
     }
 
     /// <summary>
-    /// Cancels any current asynchronous operation.
+    ///     Cancels any current asynchronous operation.
     /// </summary>
     /// <remarks>
-    /// It is safe to call this method multiple times, regardless of whether a
-    /// new token has been issued or not.
+    ///     It is safe to call this method multiple times, regardless of whether a
+    ///     new token has been issued or not.
     /// </remarks>
     /// <exception cref="ObjectDisposedException">This object is disposed.</exception>
     public void CancelCurrent()
@@ -108,24 +126,5 @@ public sealed class CancellationTokenSequence : IDisposable
         {
             // No action
         }
-    }
-
-    /// <summary>
-    /// Cancels the current token and disposes this object.
-    /// </summary>
-    /// <remarks>
-    /// Only the first call to this method per instance of this class has any effect.
-    /// </remarks>
-    public void Dispose()
-    {
-        CancellationTokenSource? cancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, null);
-
-        if (cancellationTokenSource is null)
-        {
-            return;
-        }
-
-        cancellationTokenSource.Cancel();
-        cancellationTokenSource.Dispose();
     }
 }

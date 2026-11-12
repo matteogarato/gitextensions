@@ -1,6 +1,7 @@
 ﻿using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Patches;
+
 public class PatchTest
 {
     [Fact]

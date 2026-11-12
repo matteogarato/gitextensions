@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitCommands.Utils;
 using GitUI.Properties;
 using GitUIPluginInterfaces;
@@ -16,14 +16,10 @@ internal sealed class GitRefsSortByContextMenuItem : ToolStripMenuItem
         Image = Images.SortBy;
         Text = TranslatedStrings.SortBy;
 
-        foreach ((string text, GitRefsSortBy value) option in EnumHelper.GetValues<GitRefsSortBy>().Select(e => (Text: e.GetDescription(), Value: e)))
+        foreach (var option in EnumHelper.GetValues<GitRefsSortBy>()
+                     .Select(e => (Text: e.GetDescription(), Value: e)))
         {
-            ToolStripMenuItem item = new()
-            {
-                Text = option.text,
-                Image = null,
-                Tag = option.value
-            };
+            ToolStripMenuItem item = new() { Text = option.text, Image = null, Tag = option.value };
 
             item.Click += Item_Click;
             DropDownItems.Add(item);
@@ -35,7 +31,7 @@ internal sealed class GitRefsSortByContextMenuItem : ToolStripMenuItem
 
     private void RequerySortingMethod()
     {
-        GitRefsSortBy currentSort = AppSettings.RefsSortBy;
+        var currentSort = AppSettings.RefsSortBy;
         foreach (ToolStripMenuItem item in DropDownItems)
         {
             item.Checked = currentSort.Equals(item.Tag);
@@ -46,24 +42,23 @@ internal sealed class GitRefsSortByContextMenuItem : ToolStripMenuItem
     {
         if (sender is ToolStripMenuItem item)
         {
-            GitRefsSortBy sortingType = (GitRefsSortBy)item.Tag!;
+            var sortingType = (GitRefsSortBy)item.Tag!;
             AppSettings.RefsSortBy = sortingType;
 
             _onSortByChanged?.Invoke();
         }
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly GitRefsSortByContextMenuItem _contextMenuItem;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(GitRefsSortByContextMenuItem menuitem)
+    internal readonly struct TestAccessor(GitRefsSortByContextMenuItem menuitem)
+    {
+        public readonly void RaiseDropDownOpening()
         {
-            _contextMenuItem = menuitem;
+            menuitem.RequerySortingMethod();
         }
-
-        public readonly void RaiseDropDownOpening() => _contextMenuItem.RequerySortingMethod();
     }
 }

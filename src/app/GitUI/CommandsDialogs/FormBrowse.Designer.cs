@@ -3,6 +3,8 @@ using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
 using GitUI.CommandsDialogs.Menus;
 using GitUI.Theming;
+using GitUI.UserControls;
+using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.CommandsDialogs;
 
@@ -24,7 +26,7 @@ partial class FormBrowse
         components = new System.ComponentModel.Container();
         ToolStripSeparator toolStripSeparator14;
         ToolStripSeparator toolStripSeparator11;
-        ToolStripMain = new GitUI.ToolStripEx();
+        ToolStripMain = new ToolStripEx();
         RefreshButton = new ToolStripButton();
         toolStripSeparator0 = new ToolStripSeparator();
         toggleLeftPanel = new ToolStripButton();
@@ -66,7 +68,7 @@ partial class FormBrowse
         RightSplitContainer = new SplitContainer();
         RevisionsSplitContainer = new SplitContainer();
         RevisionGridContainer = new Panel();
-        RevisionGrid = new GitUI.RevisionGridControl(_commitDataManager);
+        RevisionGridControl = new RevisionGridControl(_commitDataManager);
         notificationBarBisectInProgress = new GitUI.UserControls.InteractiveGitActionControl();
         notificationBarGitActionInProgress = new GitUI.UserControls.InteractiveGitActionControl();
         CommitInfoTabControl = new GitUI.CommandsDialogs.FullBleedTabControl();
@@ -148,13 +150,13 @@ partial class FormBrowse
         pluginSettingsToolStripMenuItem = new ToolStripMenuItem();
         helpToolStripMenuItem = new GitUI.CommandsDialogs.Menus.HelpToolStripMenuItem();
         toolsToolStripMenuItem = new GitUI.CommandsDialogs.Menus.ToolsToolStripMenuItem();
-        mainMenuStrip = new GitUI.MenuStripEx();
+        mainMenuStrip = new MenuStripEx();
         gitItemBindingSource = new BindingSource(components);
         gitRevisionBindingSource = new BindingSource(components);
         toolPanel = new ToolStripContainer();
         _addUpstreamRemoteToolStripMenuItem = new ToolStripMenuItem();
         ToolStripFilters = new GitUI.UserControls.FilterToolBar();
-        ToolStripScripts = new GitUI.ToolStripEx();
+        ToolStripScripts = new ToolStripEx();
         pluginsLoadingToolStripMenuItem = new ToolStripMenuItem();
         toolStripSeparator14 = new ToolStripSeparator();
         toolStripSeparator11 = new ToolStripSeparator();
@@ -629,7 +631,7 @@ partial class FormBrowse
         // 
         // RevisionGridContainer
         // 
-        RevisionGridContainer.Controls.Add(RevisionGrid);
+        RevisionGridContainer.Controls.Add(RevisionGridControl);
         RevisionGridContainer.Controls.Add(notificationBarBisectInProgress);
         RevisionGridContainer.Controls.Add(notificationBarGitActionInProgress);
         RevisionGridContainer.Dock = DockStyle.Fill;
@@ -640,12 +642,12 @@ partial class FormBrowse
         // 
         // RevisionGrid
         // 
-        RevisionGrid.Dock = DockStyle.Fill;
-        RevisionGrid.Location = new Point(0, 0);
-        RevisionGrid.Name = "RevisionGrid";
-        RevisionGrid.Size = new Size(350, 209);
-        RevisionGrid.ShowBuildServerInfo = true;
-        RevisionGrid.TabIndex = 2;
+        RevisionGridControl.Dock = DockStyle.Fill;
+        RevisionGridControl.Location = new Point(0, 0);
+        RevisionGridControl.Name = "RevisionGridControl";
+        RevisionGridControl.Size = new Size(350, 209);
+        RevisionGridControl.ShowBuildServerInfo = true;
+        RevisionGridControl.TabIndex = 2;
         // 
         // notificationBarBisectInProgress
         // 
@@ -973,7 +975,7 @@ partial class FormBrowse
         recoverLostObjectsToolStripMenuItem.Name = "recoverLostObjectsToolStripMenuItem";
         recoverLostObjectsToolStripMenuItem.Size = new Size(194, 22);
         recoverLostObjectsToolStripMenuItem.Text = "&Recover lost objects...";
-        recoverLostObjectsToolStripMenuItem.Click += recoverLostObjectsToolStripMenuItemClick;
+        recoverLostObjectsToolStripMenuItem.Click += RecoverLostObjectsToolStripMenuItemClick;
         // 
         // deleteIndexLockToolStripMenuItem
         // 
@@ -1475,7 +1477,6 @@ partial class FormBrowse
 
     private BindingSource gitRevisionBindingSource;
     private BindingSource gitItemBindingSource;
-    private GitUI.RevisionGridControl RevisionGrid;
     private CommitInfo.CommitInfo RevisionInfo;
     private GitUI.LeftPanel.RepoObjectsTree repoObjectsTree;
     private ToolTip FilterToolTip;

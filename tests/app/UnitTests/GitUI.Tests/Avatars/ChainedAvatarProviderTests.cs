@@ -2,6 +2,7 @@
 using NSubstitute;
 
 namespace GitUITests.Avatars;
+
 public class ChainedAvatarProviderTests : IDisposable
 {
     private const int _size = 16;
@@ -16,24 +17,14 @@ public class ChainedAvatarProviderTests : IDisposable
     private const string _name3 = "George Harrison";
     private const string _name4 = "Ringo Starr";
 
-    private readonly Image _img1;
-    private readonly Image _img2;
-    private readonly Image _img3;
-    private readonly Image _img4;
-    private readonly Image _img5;
-    private readonly Image _img6;
+    private readonly Image _img1 = new Bitmap(_size, _size);
+    private readonly Image _img2 = new Bitmap(_size, _size);
+    private readonly Image _img3 = new Bitmap(_size, _size);
+    private readonly Image _img4 = new Bitmap(_size, _size);
+    private readonly Image _img5 = new Bitmap(_size, _size);
+    private readonly Image _img6 = new Bitmap(_size, _size);
 
-    public ChainedAvatarProviderTests()
-    {
-        _img1 = new Bitmap(_size, _size);
-        _img2 = new Bitmap(_size, _size);
-        _img3 = new Bitmap(_size, _size);
-        _img4 = new Bitmap(_size, _size);
-        _img5 = new Bitmap(_size, _size);
-        _img6 = new Bitmap(_size, _size);
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _img1.Dispose();
         _img2.Dispose();
@@ -48,7 +39,7 @@ public class ChainedAvatarProviderTests : IDisposable
     {
         ChainedAvatarProvider provider = new();
 
-        Image? image = await provider.GetAvatarAsync(_email1, _name1, _size);
+        var image = await provider.GetAvatarAsync(_email1, _name1, _size);
         image.Should().BeNull();
     }
 
@@ -63,9 +54,9 @@ public class ChainedAvatarProviderTests : IDisposable
     [Fact]
     public async Task Return_first_non_null_result()
     {
-        IAvatarProvider provider1 = Substitute.For<IAvatarProvider>();
-        IAvatarProvider provider2 = Substitute.For<IAvatarProvider>();
-        IAvatarProvider provider3 = Substitute.For<IAvatarProvider>();
+        var provider1 = Substitute.For<IAvatarProvider>();
+        var provider2 = Substitute.For<IAvatarProvider>();
+        var provider3 = Substitute.For<IAvatarProvider>();
 
         // Register different images (for the same parameters)
         // for each provider. This allows us to detect incorrect results.
@@ -92,10 +83,10 @@ public class ChainedAvatarProviderTests : IDisposable
 
         ChainedAvatarProvider chainedProvider = new(provider1, provider2, provider3);
 
-        Image? res1 = await chainedProvider.GetAvatarAsync(_email1, _name1, _size);
-        Image? res2 = await chainedProvider.GetAvatarAsync(_email2, _name2, _size);
-        Image? res3 = await chainedProvider.GetAvatarAsync(_email3, _name3, _size);
-        Image? res4 = await chainedProvider.GetAvatarAsync(_email4, _name4, _size);
+        var res1 = await chainedProvider.GetAvatarAsync(_email1, _name1, _size);
+        var res2 = await chainedProvider.GetAvatarAsync(_email2, _name2, _size);
+        var res3 = await chainedProvider.GetAvatarAsync(_email3, _name3, _size);
+        var res4 = await chainedProvider.GetAvatarAsync(_email4, _name4, _size);
 
         res1.Should().BeSameAs(_img1);
         res2.Should().BeSameAs(_img4);

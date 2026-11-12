@@ -1,4 +1,4 @@
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
 
@@ -12,14 +12,12 @@ public partial class SettingsPageWithHeader : SettingsPageBase, IGlobalSettingsP
     public SettingsPageWithHeader(IServiceProvider serviceProvider)
         : base(serviceProvider)
     {
-        _header = new(() => new SettingsPageHeader(this, _canSaveInsideRepo));
-        if (serviceProvider is IGitUICommands uiCommands)
+        _header = new Lazy<SettingsPageHeader>(() => new SettingsPageHeader(this, _canSaveInsideRepo));
+        if (serviceProvider is IGitUiCommands uiCommands)
         {
             _canSaveInsideRepo = uiCommands.Module.IsValidGitWorkingDir();
         }
     }
-
-    public override Control GuiControl => _header.Value;
 
     public override bool ReadOnly
     {
@@ -40,6 +38,11 @@ public partial class SettingsPageWithHeader : SettingsPageBase, IGlobalSettingsP
                 }
             }
         }
+    }
+
+    public override Control GuiControl
+    {
+        get => _header.Value;
     }
 
     public virtual void SetGlobalSettings()

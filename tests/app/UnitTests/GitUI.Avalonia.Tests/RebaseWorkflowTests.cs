@@ -1,33 +1,32 @@
 using System.Diagnostics;
 using GitExtensions.Extensibility.Git;
-using GitUI;
 using GitUI.CommandsDialogs;
 using NSubstitute;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class RebaseWorkflowTests
 {
-    private const string GitSequenceEditor = "GIT_SEQUENCE_EDITOR";
-    private const string NoOpSequenceEditor = ":";
+    private const string _gitSequenceEditor = "GIT_SEQUENCE_EDITOR";
+    private const string _noOpSequenceEditor = ":";
 
     [Fact]
     public void Validate_should_reject_detached_head_and_empty_target()
     {
-        IGitModule module = Substitute.For<IGitModule>();
-        module.GetSelectedBranch(emptyIfDetached: true).Returns(string.Empty);
+        var module = Substitute.For<IGitModule>();
+        module.GetSelectedBranch(true).Returns(string.Empty);
 
         RebaseWorkflow.Validate(module, "main").Should().Be(TranslatedStrings.RebaseDetachedHeadError);
 
-        module.GetSelectedBranch(emptyIfDetached: true).Returns("feature");
+        module.GetSelectedBranch(true).Returns("feature");
         RebaseWorkflow.Validate(module, null).Should().Be(TranslatedStrings.RebaseTargetRequired);
     }
 
     [Fact]
     public void Validate_should_reject_current_branch_and_running_operations()
     {
-        IGitModule module = Substitute.For<IGitModule>();
-        module.GetSelectedBranch(emptyIfDetached: true).Returns("feature");
+        var module = Substitute.For<IGitModule>();
+        module.GetSelectedBranch(true).Returns("feature");
 
         RebaseWorkflow.Validate(module, "feature").Should().Be(TranslatedStrings.RebaseSameBranchError);
 
@@ -38,9 +37,9 @@ public sealed class RebaseWorkflowTests
     [Fact]
     public void BuildRebase_should_set_target_and_optional_auto_stash()
     {
-        RebaseWorkflow.BuildRebase(" main ", autoStash: false).ToString()
+        RebaseWorkflow.BuildRebase(" main ", false).ToString()
             .Should().Contain("rebase").And.Contain("\"main\"").And.NotContain("--autostash");
-        RebaseWorkflow.BuildRebase("main", autoStash: true).ToString()
+        RebaseWorkflow.BuildRebase("main", true).ToString()
             .Should().Contain("--autostash").And.Contain("\"main\"");
     }
 
@@ -48,11 +47,11 @@ public sealed class RebaseWorkflowTests
     public void BuildRebase_should_support_interactive_range_and_autosquash()
     {
         RebaseWorkflow.BuildRebase(new RebaseConfiguration(
-            "main",
-            AutoStash: true,
-            Interactive: true,
-            AutoSquash: true,
-            Upstream: "base")).ToString()
+                "main",
+                true,
+                true,
+                true,
+                "base")).ToString()
             .Should().Contain("-i").And.Contain("--autosquash").And.Contain("--autostash")
             .And.Contain("--onto main \"base\" \"HEAD\"");
     }
@@ -60,7 +59,7 @@ public sealed class RebaseWorkflowTests
     [Fact]
     public void BuildRebase_should_rebase_range_commits_onto_the_selected_branch()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-rebase-range-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-rebase-range-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
@@ -85,13 +84,13 @@ public sealed class RebaseWorkflowTests
             Git(directory, "commit -q -m target");
             Git(directory, "checkout -q feature");
 
-            Dictionary<string, string> editorEnvironment = new() { [GitSequenceEditor] = NoOpSequenceEditor };
+            Dictionary<string, string> editorEnvironment = new() { [_gitSequenceEditor] = _noOpSequenceEditor };
             Git(directory, RebaseWorkflow.BuildRebase(new RebaseConfiguration(
                 "main",
-                AutoStash: false,
-                Interactive: true,
-                AutoSquash: false,
-                Upstream: "upstream")).ToString(), environmentVariables: editorEnvironment);
+                false,
+                true,
+                false,
+                "upstream")).ToString(), environmentVariables: editorEnvironment);
 
             Git(directory, "merge-base --is-ancestor main HEAD");
             Git(directory, "log --format=%s main..HEAD").Should().Contain("feature-one").And.Contain("feature-two");
@@ -99,12 +98,12 @@ public sealed class RebaseWorkflowTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
     }
 
@@ -120,7 +119,7 @@ public sealed class RebaseWorkflowTests
     [Fact]
     public void BuildRebase_and_BuildEditTodo_and_BuildAbort_should_rebase_and_restore_conflicted_repository()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-rebase-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-rebase-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
@@ -134,19 +133,19 @@ public sealed class RebaseWorkflowTests
             Git(directory, "checkout -q feature");
             File.WriteAllText(Path.Combine(directory, "conflict.txt"), "feature\n");
             Git(directory, "commit -q -am feature");
-            string featureHead = Git(directory, "rev-parse HEAD");
+            var featureHead = Git(directory, "rev-parse HEAD");
             Git(directory, "checkout -q main");
             File.WriteAllText(Path.Combine(directory, "conflict.txt"), "main\n");
             Git(directory, "commit -q -am main-change");
             Git(directory, "checkout -q feature");
 
-            Dictionary<string, string> editorEnvironment = new() { [GitSequenceEditor] = NoOpSequenceEditor };
+            Dictionary<string, string> editorEnvironment = new() { [_gitSequenceEditor] = _noOpSequenceEditor };
             Git(directory, RebaseWorkflow.BuildRebase(new RebaseConfiguration(
                 "main",
-                AutoStash: false,
-                Interactive: true,
-                AutoSquash: false,
-                Upstream: null)).ToString(), expectedExitCode: 1, environmentVariables: editorEnvironment);
+                false,
+                true,
+                false,
+                null)).ToString(), 1, editorEnvironment);
             Git(directory, "rev-parse --verify REBASE_HEAD").Should().NotBeEmpty();
             Git(directory, RebaseWorkflow.BuildEditTodo().ToString(), environmentVariables: editorEnvironment);
             Git(directory, "rev-parse --verify REBASE_HEAD").Should().NotBeEmpty();
@@ -158,12 +157,12 @@ public sealed class RebaseWorkflowTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
     }
 
@@ -175,21 +174,19 @@ public sealed class RebaseWorkflowTests
     {
         ProcessStartInfo startInfo = new("git", arguments)
         {
-            WorkingDirectory = workingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            WorkingDirectory = workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true
         };
         if (environmentVariables is not null)
         {
-            foreach ((string key, string value) in environmentVariables)
+            foreach ((var key, var value) in environmentVariables)
             {
                 startInfo.Environment[key] = value;
             }
         }
 
-        using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start git.");
-        string output = process.StandardOutput.ReadToEnd().Trim();
-        string error = process.StandardError.ReadToEnd().Trim();
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start git.");
+        var output = process.StandardOutput.ReadToEnd().Trim();
+        var error = process.StandardError.ReadToEnd().Trim();
         process.WaitForExit();
         process.ExitCode.Should().Be(expectedExitCode, error);
         return output;

@@ -1,4 +1,4 @@
-namespace AzureDevOpsIntegration.Settings;
+namespace GitExtensions.Plugins.AzureDevOpsIntegration.Settings;
 
 partial class SettingsUserControl
 {

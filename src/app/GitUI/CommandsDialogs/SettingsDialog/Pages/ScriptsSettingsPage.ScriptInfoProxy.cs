@@ -2,6 +2,7 @@
 using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing.Design;
+using System.Windows.Forms.Design;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Design;
 using GitUI.ScriptsEngine;
@@ -13,37 +14,35 @@ partial class ScriptsSettingsPage
     [TypeConverter(typeof(PropertySorter))]
     private sealed class ScriptInfoProxy
     {
-        private const string ScriptCategory = "Script";
-        private const string ScriptBehaviourCategory = "Script behaviour";
-        private const string ScriptContextCategory = "Script context";
+        private const string _scriptCategory = "Script";
+        private const string _scriptBehaviourCategory = "Script behaviour";
+        private const string _scriptContextCategory = "Script context";
 
         // Needed for the ImageKeyConverter to work
-        [Browsable(false)]
-        public ImageList? ImageList { get; set; }
+        [Browsable(false)] public ImageList? ImageList { get; set; }
 
-        [Browsable(false)]
-        public int HotkeyCommandIdentifier { get; set; }
+        [Browsable(false)] public int HotkeyCommandIdentifier { get; set; }
 
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [PropertyOrder(0)]
         public string? Name { get; set; }
 
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [DefaultValue(true)]
         [PropertyOrder(1)]
         public bool Enabled { get; set; }
 
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [PropertyOrder(2)]
         [Editor(typeof(ExecutableFileNameEditor), typeof(UITypeEditor))]
         public string? Command { get; set; }
 
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [PropertyOrder(3)]
         [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public string? Arguments { get; set; }
 
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [PropertyOrder(4)]
         [DisplayName("Execute on event")]
         [DefaultValue(ScriptEvent.None)]
@@ -51,33 +50,34 @@ partial class ScriptsSettingsPage
 
         [TypeConverter(typeof(ImageKeyConverter))]
         [Editor("System.Windows.Forms.Design.ImageIndexEditor, System.Design", typeof(UITypeEditor))]
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [PropertyOrder(5)]
         public string? Icon { get; set; }
 
-        [Category(ScriptCategory)]
+        [Category(_scriptCategory)]
         [PropertyOrder(6)]
         [DisplayName("Icon or associated file path")]
-        [Description("This can either be a path to an .ico file or to any other file in which case its \"associated icon\" is used.")]
-        [Editor(typeof(System.Windows.Forms.Design.FileNameEditor), typeof(UITypeEditor))]
+        [Description(
+            "This can either be a path to an .ico file or to any other file in which case its \"associated icon\" is used.")]
+        [Editor(typeof(FileNameEditor), typeof(UITypeEditor))]
         public string? IconFilePath { get; set; }
 
-        [Category(ScriptBehaviourCategory)]
+        [Category(_scriptBehaviourCategory)]
         [DisplayName("Ask confirmation")]
         [DefaultValue(false)]
         public bool AskConfirmation { get; set; }
 
-        [Category(ScriptBehaviourCategory)]
+        [Category(_scriptBehaviourCategory)]
         [DefaultValue(false)]
         [DisplayName("Run in background")]
         public bool RunInBackground { get; set; }
 
-        [Category(ScriptBehaviourCategory)]
+        [Category(_scriptBehaviourCategory)]
         [DefaultValue(false)]
         [DisplayName("Is PowerShell script")]
         public bool IsPowerShell { get; set; }
 
-        [Category(ScriptContextCategory)]
+        [Category(_scriptContextCategory)]
         [DefaultValue(false)]
         [DisplayName("Show in RevisionGrid")]
         public bool AddToRevisionGridContextMenu { get; set; }
@@ -87,7 +87,7 @@ partial class ScriptsSettingsPage
             if (IconFilePath is not null)
             {
                 ScriptInfo scriptInfo = this;
-                Bitmap? icon = scriptInfo.GetIcon();
+                var icon = scriptInfo.GetIcon();
                 if (icon is not null && !images.Images.ContainsKey(IconFilePath))
                 {
                     images.Images.Add(IconFilePath, icon.AdaptLightness());

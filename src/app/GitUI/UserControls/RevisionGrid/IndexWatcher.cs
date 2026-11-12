@@ -1,30 +1,26 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 
 namespace GitUI.UserControls.RevisionGrid;
 
-public class IndexChangedEventArgs : EventArgs
+public class IndexChangedEventArgs(bool isIndexChanged) : EventArgs
 {
-    public IndexChangedEventArgs(bool isIndexChanged)
-    {
-        IsIndexChanged = isIndexChanged;
-    }
-
-    public bool IsIndexChanged { get; }
+    public bool IsIndexChanged { get; } = isIndexChanged;
 }
 
 public sealed class IndexWatcher : IDisposable
 {
-    public event EventHandler<IndexChangedEventArgs>? Changed;
+    private readonly IGitUiCommandsSource _uICommandsSource;
 
-    private readonly IGitUICommandsSource _uICommandsSource;
+    private bool _enabled;
+    private string? _gitDirPath;
 
-    private IGitModule Module => _uICommandsSource.UICommands.Module;
+    private bool _indexChanged;
 
-    public IndexWatcher(IGitUICommandsSource uiCommandsSource)
+    public IndexWatcher(IGitUiCommandsSource uiCommandsSource)
     {
         _uICommandsSource = uiCommandsSource;
-        _uICommandsSource.UICommandsChanged += OnUICommandsChanged;
+        _uICommandsSource.UiCommandsChanged += OnUICommandsChanged;
         GitIndexWatcher = new FileSystemWatcher();
         RefsWatcher = new FileSystemWatcher();
 
@@ -32,7 +28,61 @@ public sealed class IndexWatcher : IDisposable
         RefsWatcher.Changed += fileSystemWatcher_Changed;
     }
 
-    private void OnUICommandsChanged(object? sender, GitUICommandsChangedEventArgs e)
+    private IGitModule Module
+    {
+        get => _uICommandsSource.UiCommands.Module;
+    }
+
+    private bool IndexChanged
+    {
+        get
+        {
+            if (!_enabled)
+            {
+                return true;
+            }
+
+            if (_gitDirPath != Module.WorkingDirGitDir)
+            {
+                return true;
+            }
+
+            return _indexChanged;
+        }
+        set
+        {
+            _indexChanged = value;
+            try
+            {
+                GitIndexWatcher.EnableRaisingEvents = !IndexChanged
+                                                      && Directory.Exists(GitIndexWatcher.Path);
+            }
+            catch
+            {
+                GitIndexWatcher.EnableRaisingEvents = false;
+            }
+
+            Changed?.Invoke(this, new IndexChangedEventArgs(IndexChanged));
+        }
+    }
+
+    private FileSystemWatcher GitIndexWatcher { get; }
+    private FileSystemWatcher RefsWatcher { get; }
+
+    void IDisposable.Dispose()
+    {
+        _enabled = false;
+        GitIndexWatcher.EnableRaisingEvents = false;
+        RefsWatcher.EnableRaisingEvents = false;
+        GitIndexWatcher.Changed -= fileSystemWatcher_Changed;
+        RefsWatcher.Changed -= fileSystemWatcher_Changed;
+        GitIndexWatcher.Dispose();
+        RefsWatcher.Dispose();
+    }
+
+    public event EventHandler<IndexChangedEventArgs>? Changed;
+
+    private void OnUICommandsChanged(object? sender, GitUiCommandsChangedEventArgs e)
     {
         Clear();
     }
@@ -69,52 +119,13 @@ public sealed class IndexWatcher : IDisposable
         }
     }
 
-    private bool _indexChanged;
-    private bool IndexChanged
-    {
-        get
-        {
-            if (!_enabled)
-            {
-                return true;
-            }
-
-            if (_gitDirPath != Module.WorkingDirGitDir)
-            {
-                return true;
-            }
-
-            return _indexChanged;
-        }
-        set
-        {
-            _indexChanged = value;
-            try
-            {
-                GitIndexWatcher.EnableRaisingEvents = !IndexChanged
-                    && Directory.Exists(GitIndexWatcher.Path);
-            }
-            catch
-            {
-                GitIndexWatcher.EnableRaisingEvents = false;
-            }
-
-            Changed?.Invoke(this, new IndexChangedEventArgs(IndexChanged));
-        }
-    }
-
-    private bool _enabled;
-    private string? _gitDirPath;
-    private FileSystemWatcher GitIndexWatcher { get; }
-    private FileSystemWatcher RefsWatcher { get; }
-
     private void fileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
     {
         IndexChanged = true;
     }
 
     /// <summary>
-    /// Reenable indexwatcher (if disabled), reset icon.
+    ///     Reenable indexwatcher (if disabled), reset icon.
     /// </summary>
     public void Reset()
     {
@@ -123,7 +134,7 @@ public sealed class IndexWatcher : IDisposable
     }
 
     /// <summary>
-    /// Disable events, reset icon.
+    ///     Disable events, reset icon.
     /// </summary>
     public void Clear()
     {
@@ -138,16 +149,5 @@ public sealed class IndexWatcher : IDisposable
         {
             SetFileSystemWatcher();
         }
-    }
-
-    public void Dispose()
-    {
-        _enabled = false;
-        GitIndexWatcher.EnableRaisingEvents = false;
-        RefsWatcher.EnableRaisingEvents = false;
-        GitIndexWatcher.Changed -= fileSystemWatcher_Changed;
-        RefsWatcher.Changed -= fileSystemWatcher_Changed;
-        GitIndexWatcher.Dispose();
-        RefsWatcher.Dispose();
     }
 }

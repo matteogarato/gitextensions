@@ -2,19 +2,38 @@ using System.ComponentModel.Composition;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
 using GitExtensions.Plugins.BackgroundFetch.Properties;
 using GitExtUtils;
-using Microsoft;
 
 namespace GitExtensions.Plugins.BackgroundFetch;
 
 [Export(typeof(IGitPlugin))]
 public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
 {
+    private const string _defaultGitCommand = "fetch --all";
+    private readonly BoolSetting _autoRefresh = new("Refresh view after fetch", false);
+    private readonly BoolSetting _fetchAllSubmodules = new("Fetch all submodules", false);
+    private readonly BoolSetting _fetchImmediatelyOnRepoOpening = new("Fetch immediately on repository opening", false);
+    private readonly NumberSetting<int> _fetchInterval = new("Fetch every (seconds) - set to 0 to disable", 0);
+    private readonly StringSetting _gitCommand = new("Arguments of git command to run", _defaultGitCommand);
+
+    private readonly PseudoSetting _warningForceWithLease = new(
+        "WARNING: be careful when force push with lease having the periodic background fetch enabled but chose not to auto-refresh after each fetch.\r\n\r\nYou could lose new commits pushed by others to the remote branch.\r\n\r\nBe sure to refresh the revision grid before doing a force push with lease.",
+        textboxSettings: tb =>
+        {
+            tb.Multiline = true;
+            tb.Height = 500;
+        });
+
+    private IDisposable? _cancellationToken;
+    private IGitUiCommands? _currentGitUiCommands;
+
     public BackgroundFetchPlugin() : base(true)
     {
         Id = new Guid("D19A7905-8AAD-4271-ACA9-817669B94A1D");
@@ -22,21 +41,6 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
         Translate(AppSettings.CurrentTranslation);
         Icon = Resources.IconBackgroundFetch;
     }
-
-    private IDisposable? _cancellationToken;
-    private IGitUICommands? _currentGitUiCommands;
-
-    private readonly PseudoSetting _warningForceWithLease = new("WARNING: be careful when force push with lease having the periodic background fetch enabled but chose not to auto-refresh after each fetch.\r\n\r\nYou could lose new commits pushed by others to the remote branch.\r\n\r\nBe sure to refresh the revision grid before doing a force push with lease.", textboxSettings: tb =>
-    {
-        tb.Multiline = true;
-        tb.Height = 500;
-    });
-    private const string _defaultGitCommand = "fetch --all";
-    private readonly StringSetting _gitCommand = new("Arguments of git command to run", _defaultGitCommand);
-    private readonly NumberSetting<int> _fetchInterval = new("Fetch every (seconds) - set to 0 to disable", 0);
-    private readonly BoolSetting _autoRefresh = new("Refresh view after fetch", false);
-    private readonly BoolSetting _fetchAllSubmodules = new("Fetch all submodules", false);
-    private readonly BoolSetting _fetchImmediatelyOnRepoOpening = new("Fetch immediately on repository opening", false);
 
     public override IEnumerable<ISetting> GetSettings()
     {
@@ -49,7 +53,7 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
         yield return _warningForceWithLease;
     }
 
-    public override void Register(IGitUICommands gitUiCommands)
+    public override void Register(IGitUiCommands gitUiCommands)
     {
         base.Register(gitUiCommands);
 
@@ -59,7 +63,22 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
         RecreateObservable();
     }
 
-    private void OnPostSettings(object? sender, GitUIPostActionEventArgs e)
+    public override void Unregister(IGitUiCommands gitUiCommands)
+    {
+        CancelBackgroundOperation();
+        _currentGitUiCommands?.PostSettings -= OnPostSettings;
+        _currentGitUiCommands = null;
+
+        base.Unregister(gitUiCommands);
+    }
+
+    public override bool Execute(GitUiEventArgs args)
+    {
+        args.GitUiCommands.StartSettingsDialog(this);
+        return false;
+    }
+
+    private void OnPostSettings(object? sender, GitUiPostActionEventArgs e)
     {
         RecreateObservable();
     }
@@ -68,13 +87,13 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
     {
         CancelBackgroundOperation();
 
-        int fetchInterval = _fetchInterval.ValueOrDefault(Settings);
+        var fetchInterval = _fetchInterval.ValueOrDefault(Settings);
 
         Validates.NotNull(_currentGitUiCommands);
 
-        IGitModule gitModule = _currentGitUiCommands.Module;
-        bool fetchOnOpening = _fetchImmediatelyOnRepoOpening.ValueOrDefault(Settings);
-        bool isRefreshDisabled = fetchInterval <= 0;
+        var gitModule = _currentGitUiCommands.Module;
+        var fetchOnOpening = _fetchImmediatelyOnRepoOpening.ValueOrDefault(Settings);
+        var isRefreshDisabled = fetchInterval <= 0;
         if ((isRefreshDisabled && !fetchOnOpening) || !gitModule.IsValidGitWorkingDir())
         {
             return;
@@ -89,8 +108,8 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
         else
         {
             // generate triggers periodically
-            TimeSpan triggersInterval = TimeSpan.FromSeconds(Math.Max(5, fetchInterval));
-            TimeSpan firstTrigger = fetchOnOpening ? TimeSpan.FromMilliseconds(10) : triggersInterval;
+            var triggersInterval = TimeSpan.FromSeconds(Math.Max(5, fetchInterval));
+            var firstTrigger = fetchOnOpening ? TimeSpan.FromMilliseconds(10) : triggersInterval;
             fetchTriggers = Observable
                 .Timer(firstTrigger, triggersInterval)
                 .SelectMany(_ => WaitForRunningGitExitsObservable(gitModule))
@@ -124,13 +143,13 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
         {
             // The Git command is hardcoded compared, not using _gitCommand
             args = new GitArgumentBuilder("submodule")
-                        {
-                            "foreach",
-                            "--recursive",
-                            "git",
-                            "fetch",
-                            "--all"
-                        };
+            {
+                "foreach",
+                "--recursive",
+                "git",
+                "fetch",
+                "--all"
+            };
 
             try
             {
@@ -142,13 +161,13 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
             }
         }
 
-        string gitCmdString = _gitCommand.ValueOrDefault(Settings);
+        var gitCmdString = _gitCommand.ValueOrDefault(Settings);
         if (string.IsNullOrWhiteSpace(gitCmdString))
         {
             gitCmdString = _defaultGitCommand;
         }
 
-        string[] gitCmd = gitCmdString.Trim().Split(Delimiters.Space, StringSplitOptions.RemoveEmptyEntries);
+        var gitCmd = gitCmdString.Trim().Split(Delimiters.Space, StringSplitOptions.RemoveEmptyEntries);
         args = new GitArgumentBuilder(gitCmd[0]) { gitCmd.Skip(1) };
         string msg;
         try
@@ -184,20 +203,5 @@ public class BackgroundFetchPlugin : GitPluginBase, IGitPluginForRepository
     {
         _cancellationToken?.Dispose();
         _cancellationToken = null;
-    }
-
-    public override void Unregister(IGitUICommands gitUiCommands)
-    {
-        CancelBackgroundOperation();
-        _currentGitUiCommands?.PostSettings -= OnPostSettings;
-        _currentGitUiCommands = null;
-
-        base.Unregister(gitUiCommands);
-    }
-
-    public override bool Execute(GitUIEventArgs args)
-    {
-        args.GitUICommands.StartSettingsDialog(this);
-        return false;
     }
 }

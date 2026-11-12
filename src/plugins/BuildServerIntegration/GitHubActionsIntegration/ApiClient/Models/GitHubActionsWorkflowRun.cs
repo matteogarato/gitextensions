@@ -5,55 +5,41 @@ using GitExtensions.Extensibility.Git;
 namespace GitExtensions.Plugins.GitHubActionsIntegration.ApiClient.Models;
 
 /// <summary>
-/// Represents a single GitHub Actions workflow run as returned by the REST API.
+///     Represents a single GitHub Actions workflow run as returned by the REST API.
 /// </summary>
 public class GitHubActionsWorkflowRun
 {
-    [JsonPropertyName("id")]
-    public long Id { get; set; }
+    [JsonPropertyName("id")] public long Id { get; set; }
 
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
 
-    [JsonPropertyName("head_sha")]
-    public string HeadSha { get; set; } = string.Empty;
+    [JsonPropertyName("head_sha")] public string HeadSha { get; set; } = string.Empty;
 
-    [JsonPropertyName("head_branch")]
-    public string? HeadBranch { get; set; }
+    [JsonPropertyName("head_branch")] public string? HeadBranch { get; set; }
 
-    [JsonPropertyName("status")]
-    public string? Status { get; set; }
+    [JsonPropertyName("status")] public string? Status { get; set; }
 
-    [JsonPropertyName("conclusion")]
-    public string? Conclusion { get; set; }
+    [JsonPropertyName("conclusion")] public string? Conclusion { get; set; }
 
-    [JsonPropertyName("html_url")]
-    public string? HtmlUrl { get; set; }
+    [JsonPropertyName("html_url")] public string? HtmlUrl { get; set; }
 
-    [JsonPropertyName("created_at")]
-    public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
 
-    [JsonPropertyName("updated_at")]
-    public DateTime UpdatedAt { get; set; }
+    [JsonPropertyName("updated_at")] public DateTime UpdatedAt { get; set; }
 
-    [JsonPropertyName("run_started_at")]
-    public DateTime? RunStartedAt { get; set; }
+    [JsonPropertyName("run_started_at")] public DateTime? RunStartedAt { get; set; }
 
-    [JsonPropertyName("display_title")]
-    public string? DisplayTitle { get; set; }
+    [JsonPropertyName("display_title")] public string? DisplayTitle { get; set; }
 
-    [JsonPropertyName("event")]
-    public string? Event { get; set; }
+    [JsonPropertyName("event")] public string? Event { get; set; }
 
-    [JsonPropertyName("run_number")]
-    public int RunNumber { get; set; }
+    [JsonPropertyName("run_number")] public int RunNumber { get; set; }
 
-    [JsonPropertyName("run_attempt")]
-    public int RunAttempt { get; set; }
+    [JsonPropertyName("run_attempt")] public int RunAttempt { get; set; }
 
     public BuildInfo ToBuildInfo()
     {
-        BuildStatus status = MapStatus();
+        var status = MapStatus();
 
         BuildInfo result = new()
         {
@@ -83,19 +69,19 @@ public class GitHubActionsWorkflowRun
                 "cancelled" => BuildStatus.Stopped,
                 "action_required" or "stale" => BuildStatus.Unstable,
                 "skipped" or "neutral" => BuildStatus.Success,
-                _ => BuildStatus.Unknown,
+                _ => BuildStatus.Unknown
             };
         }
 
         string FormatDescription()
         {
-            string statusText = status switch
+            var statusText = status switch
             {
                 BuildStatus.InProgress => Status ?? "in progress",
-                _ => Conclusion ?? Status ?? "unknown",
+                _ => Conclusion ?? Status ?? "unknown"
             };
 
-            string name = Name ?? "workflow";
+            var name = Name ?? "workflow";
             return $"{name} #{RunNumber} ({statusText})";
         }
     }

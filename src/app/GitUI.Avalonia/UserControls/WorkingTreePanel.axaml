@@ -1,55 +1,56 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="GitUI.WorkingTreePanel">
-  <DockPanel>
-    <ScrollViewer DockPanel.Dock="Bottom" MaxHeight="280" VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="4" Spacing="4">
-      <TextBox x:Name="txtCommitMessage" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" MaxHeight="160" />
-      <WrapPanel>
-        <ComboBox x:Name="cbxPreviousCommitMessages" MinWidth="220" />
-        <ComboBox x:Name="cbxCommitTemplates" MinWidth="180" />
-      </WrapPanel>
-      <WrapPanel>
-        <CheckBox x:Name="chkAmend" Margin="0,0,8,0" />
-        <CheckBox x:Name="chkSignOff" Margin="0,0,8,0" />
-        <CheckBox x:Name="chkNoVerify" Margin="0,0,8,0" />
-        <CheckBox x:Name="chkResetAuthor" Margin="0,0,8,0" />
-      </WrapPanel>
-      <WrapPanel>
-        <TextBox x:Name="txtCommitAuthor" Width="220" />
-        <ComboBox x:Name="cbxCommitGpgSigning" MinWidth="180" />
-        <TextBox x:Name="txtCommitGpgKeyId" Width="140" />
-      </WrapPanel>
-      <WrapPanel>
-        <Button x:Name="btnCommit" HorizontalAlignment="Left" Margin="0,0,8,0" />
-        <Button x:Name="btnCommitAndPush" HorizontalAlignment="Left" IsVisible="False" />
-      </WrapPanel>
-    </StackPanel>
-    </ScrollViewer>
-    <TabControl x:Name="statusTabs">
-      <TabItem x:Name="unstagedTab">
-        <DockPanel Margin="4">
-          <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-            <Button x:Name="btnStageSelected" />
-            <Button x:Name="btnStageSelectedLines" />
-            <Button x:Name="btnDiscardSelectedLines" />
-            <Button x:Name="btnDiscardSelected" />
-            <Button x:Name="btnStashSelected" />
-            <Button x:Name="btnIgnoreSelected" />
-          </WrapPanel>
-          <ListBox x:Name="lstUnstaged" SelectionMode="Multiple" />
-        </DockPanel>
-      </TabItem>
-      <TabItem x:Name="stagedTab">
-        <DockPanel Margin="4">
-          <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-            <Button x:Name="btnUnstageSelected" />
-            <Button x:Name="btnUnstageSelectedLines" />
-            <Button x:Name="btnDiscardStagedSelectedLines" />
-          </WrapPanel>
-          <ListBox x:Name="lstStaged" SelectionMode="Multiple" />
-        </DockPanel>
-      </TabItem>
-    </TabControl>
-  </DockPanel>
+             x:Class="GitUI.UserControls.WorkingTreePanel">
+    <DockPanel>
+        <ScrollViewer DockPanel.Dock="Bottom" MaxHeight="280" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="4" Spacing="4">
+                <TextBox x:Name="txtCommitMessage" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                         MaxHeight="160" />
+                <WrapPanel>
+                    <ComboBox x:Name="cbxPreviousCommitMessages" MinWidth="220" />
+                    <ComboBox x:Name="cbxCommitTemplates" MinWidth="180" />
+                </WrapPanel>
+                <WrapPanel>
+                    <CheckBox x:Name="chkAmend" Margin="0,0,8,0" />
+                    <CheckBox x:Name="chkSignOff" Margin="0,0,8,0" />
+                    <CheckBox x:Name="chkNoVerify" Margin="0,0,8,0" />
+                    <CheckBox x:Name="chkResetAuthor" Margin="0,0,8,0" />
+                </WrapPanel>
+                <WrapPanel>
+                    <TextBox x:Name="txtCommitAuthor" Width="220" />
+                    <ComboBox x:Name="cbxCommitGpgSigning" MinWidth="180" />
+                    <TextBox x:Name="txtCommitGpgKeyId" Width="140" />
+                </WrapPanel>
+                <WrapPanel>
+                    <Button x:Name="btnCommit" HorizontalAlignment="Left" Margin="0,0,8,0" />
+                    <Button x:Name="btnCommitAndPush" HorizontalAlignment="Left" IsVisible="False" />
+                </WrapPanel>
+            </StackPanel>
+        </ScrollViewer>
+        <TabControl x:Name="statusTabs">
+            <TabItem x:Name="unstagedTab">
+                <DockPanel Margin="4">
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                        <Button x:Name="btnStageSelected" />
+                        <Button x:Name="btnStageSelectedLines" />
+                        <Button x:Name="btnDiscardSelectedLines" />
+                        <Button x:Name="btnDiscardSelected" />
+                        <Button x:Name="btnStashSelected" />
+                        <Button x:Name="btnIgnoreSelected" />
+                    </WrapPanel>
+                    <ListBox x:Name="lstUnstaged" SelectionMode="Multiple" />
+                </DockPanel>
+            </TabItem>
+            <TabItem x:Name="stagedTab">
+                <DockPanel Margin="4">
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                        <Button x:Name="btnUnstageSelected" />
+                        <Button x:Name="btnUnstageSelectedLines" />
+                        <Button x:Name="btnDiscardStagedSelectedLines" />
+                    </WrapPanel>
+                    <ListBox x:Name="lstStaged" SelectionMode="Multiple" />
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </UserControl>

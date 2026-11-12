@@ -1,4 +1,3 @@
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
@@ -27,7 +26,7 @@ internal static class CloneRepositoryWorkflow
             source,
             destination,
             destinationModule.GetPathForGitExecution,
-            central: bare,
-            initSubmodules: initializeSubmodules);
+            bare,
+            initializeSubmodules);
     }
 }

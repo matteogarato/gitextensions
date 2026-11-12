@@ -1,15 +1,9 @@
 ﻿namespace GitUI;
 
-public sealed class NestedSplitterManager
+public sealed class NestedSplitterManager(SplitterManager parent, string name)
 {
-    private SplitterManager _parent;
-    private string _prefix;
-
-    public NestedSplitterManager(SplitterManager parent, string name)
-    {
-        _parent = parent;
-        _prefix = $"{name}.";
-    }
+    private readonly SplitterManager _parent = parent;
+    private readonly string _prefix = $"{name}.";
 
     public NestedSplitterManager(NestedSplitterManager parent, string name)
         : this(parent._parent, parent._prefix + name)

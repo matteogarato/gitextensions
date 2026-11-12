@@ -1,5 +1,5 @@
 ﻿using GitExtUtils.GitUI;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
@@ -8,14 +8,14 @@ internal readonly struct MultilineIndicator
     private static readonly Brush _indicatorForeBrush = new SolidBrush(Color.FromArgb(128, SystemColors.WindowText));
     private static readonly Brush _indicatorBackBrush = new SolidBrush(Color.FromArgb(32, SystemColors.WindowText));
 
-    private const int DotCount = 3;
+    private const int _dotCount = 3;
 
-    private static readonly int paddingX = DpiUtil.Scale(4);
-    private static readonly int paddingTop = DpiUtil.Scale(5);
-    private static readonly int paddingBottom = DpiUtil.Scale(4);
-    private static readonly int marginX = DpiUtil.Scale(4);
-    private static readonly int dotSize = DpiUtil.Scale(2);
-    private static readonly int dotSpacing = DpiUtil.Scale(2);
+    private static readonly int _paddingX = DpiUtil.Scale(4);
+    private static readonly int _paddingTop = DpiUtil.Scale(5);
+    private static readonly int _paddingBottom = DpiUtil.Scale(4);
+    private static readonly int _marginX = DpiUtil.Scale(4);
+    private static readonly int _dotSize = DpiUtil.Scale(2);
+    private static readonly int _dotSpacing = DpiUtil.Scale(2);
 
     private readonly DataGridViewCellPaintingEventArgs _e;
     private readonly int _indicatorReservedWidth;
@@ -23,7 +23,10 @@ internal readonly struct MultilineIndicator
     private readonly int _indicatorRectWidth;
     private readonly bool _isMultiline;
 
-    public Rectangle RemainingCellBounds => _isMultiline ? _e.CellBounds.ReduceRight(_indicatorReservedWidth) : _e.CellBounds;
+    public Rectangle RemainingCellBounds
+    {
+        get => _isMultiline ? _e.CellBounds.ReduceRight(_indicatorReservedWidth) : _e.CellBounds;
+    }
 
     public MultilineIndicator(DataGridViewCellPaintingEventArgs e, GitRevision revision)
     {
@@ -33,9 +36,9 @@ internal readonly struct MultilineIndicator
 
         if (_isMultiline)
         {
-            _indicatorRectWidth = paddingX + paddingX + (DotCount * (dotSize + dotSpacing)) - dotSpacing;
-            _indicatorReservedWidth = _indicatorRectWidth + marginX + marginX;
-            _indicatorRectHeight = dotSize + paddingTop + paddingBottom;
+            _indicatorRectWidth = _paddingX + _paddingX + (_dotCount * (_dotSize + _dotSpacing)) - _dotSpacing;
+            _indicatorReservedWidth = _indicatorRectWidth + _marginX + _marginX;
+            _indicatorRectHeight = _dotSize + _paddingTop + _paddingBottom;
 
             if (e.CellBounds.Width < 2 * _indicatorReservedWidth)
             {
@@ -58,20 +61,20 @@ internal readonly struct MultilineIndicator
         }
 
         Rectangle indicatorRect = new(
-            _e.CellBounds.Right - marginX - _indicatorRectWidth,
+            _e.CellBounds.Right - _marginX - _indicatorRectWidth,
             _e.CellBounds.Y + ((_e.CellBounds.Height - _indicatorRectHeight) / 2),
             _indicatorRectWidth,
             _indicatorRectHeight);
 
         _e.Graphics!.FillRectangle(_indicatorBackBrush, indicatorRect);
 
-        int x = indicatorRect.X + paddingX;
-        int y = indicatorRect.Y + paddingTop;
+        var x = indicatorRect.X + _paddingX;
+        var y = indicatorRect.Y + _paddingTop;
 
-        for (int i = 0; i < DotCount; i++)
+        for (var i = 0; i < _dotCount; i++)
         {
-            _e.Graphics.FillRectangle(_indicatorForeBrush, x, y, dotSize, dotSize);
-            x += dotSize + dotSpacing;
+            _e.Graphics.FillRectangle(_indicatorForeBrush, x, y, _dotSize, _dotSize);
+            x += _dotSize + _dotSpacing;
         }
     }
 }

@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitUI.CommandsDialogs.GitIgnoreDialog;
 using ResourceManager;
 
@@ -8,60 +10,19 @@ namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormGitIgnore : GitModuleForm
 {
+    private readonly IGitIgnoreDialogModel _dialogModel;
+
     private readonly TranslationString _gitignoreOnlyInWorkingDirSupportedCaption =
         new("No working directory");
+
+    private readonly bool _localExclude;
 
     private readonly TranslationString _saveFileQuestionCaption =
         new("Save changes?");
 
-    private readonly bool _localExclude;
     private string _originalGitIgnoreFileContent = string.Empty;
 
-    #region default patterns
-
-    private static readonly string DefaultIgnorePatternsFile = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GitExtensions/DefaultIgnorePatterns.txt");
-
-    private static readonly string[] DefaultIgnorePatterns =
-    [
-        "#Ignore thumbnails created by Windows",
-        "Thumbs.db",
-        "#Ignore files built by Visual Studio",
-        "*.obj",
-        "*.exe",
-        "*.pdb",
-        "*.user",
-        "*.aps",
-        "*.pch",
-        "*.vspscc",
-        "*_i.c",
-        "*_p.c",
-        "*.ncb",
-        "*.suo",
-        "*.tlb",
-        "*.tlh",
-        "*.bak",
-        "*.cache",
-        "*.ilk",
-        "*.log",
-        "[Bb]in",
-        "[Dd]ebug*/",
-        "*.lib",
-        "*.sbr",
-        "obj/",
-        "[Rr]elease*/",
-        "_ReSharper*/",
-        "[Tt]est[Rr]esult*",
-        ".vs/",
-        ".idea/",
-        "#Nuget packages folder",
-        "packages/"
-    ];
-
-    #endregion
-
-    private readonly IGitIgnoreDialogModel _dialogModel;
-
-    public FormGitIgnore(IGitUICommands commands, bool localExclude)
+    public FormGitIgnore(IGitUiCommands commands, bool localExclude)
         : base(commands)
     {
         _localExclude = localExclude;
@@ -73,6 +34,11 @@ public sealed partial class FormGitIgnore : GitModuleForm
         Text = _dialogModel.FormCaption;
     }
 
+    private string? ExcludeFile
+    {
+        get => _dialogModel.ExcludeFile;
+    }
+
     private IGitIgnoreDialogModel CreateGitIgnoreDialogModel(bool localExclude)
     {
         if (localExclude)
@@ -82,8 +48,6 @@ public sealed partial class FormGitIgnore : GitModuleForm
 
         return new GitIgnoreModel(Module);
     }
-
-    private string? ExcludeFile => _dialogModel.ExcludeFile;
 
     protected override void OnRuntimeLoad(EventArgs e)
     {
@@ -139,7 +103,7 @@ public sealed partial class FormGitIgnore : GitModuleForm
                     ExcludeFile,
                     x =>
                     {
-                        string fileContent = _NO_TRANSLATE_GitIgnoreEdit.GetText();
+                        var fileContent = _NO_TRANSLATE_GitIgnoreEdit.GetText();
                         if (!fileContent.EndsWith(Environment.NewLine))
                         {
                             fileContent += Environment.NewLine;
@@ -164,7 +128,7 @@ public sealed partial class FormGitIgnore : GitModuleForm
         if (HasUnsavedChanges())
         {
             switch (MessageBoxes.Show(this, _dialogModel.SaveFileQuestion, _saveFileQuestionCaption.Text,
-                                MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
+                        MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
             {
                 case DialogResult.Yes:
                     if (!SaveGitIgnore())
@@ -187,16 +151,23 @@ public sealed partial class FormGitIgnore : GitModuleForm
             return;
         }
 
-        MessageBoxes.Show(this, _dialogModel.FileOnlyInWorkingDirSupported, _gitignoreOnlyInWorkingDirSupportedCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBoxes.Show(this, _dialogModel.FileOnlyInWorkingDirSupported,
+            _gitignoreOnlyInWorkingDirSupportedCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         Close();
     }
 
     private void AddDefaultClick(object sender, EventArgs e)
     {
-        string[] defaultIgnorePatterns = File.Exists(DefaultIgnorePatternsFile) ? File.ReadAllLines(DefaultIgnorePatternsFile) : DefaultIgnorePatterns;
+        var defaultIgnorePatterns = File.Exists(_defaultIgnorePatternsFile)
+            ? File.ReadAllLines(_defaultIgnorePatternsFile)
+            : _defaultIgnorePatterns;
 
-        string currentFileContent = _NO_TRANSLATE_GitIgnoreEdit.GetText();
-        string[] patternsToAdd = [.. defaultIgnorePatterns.Except(currentFileContent.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries))];
+        var currentFileContent = _NO_TRANSLATE_GitIgnoreEdit.GetText();
+        string[] patternsToAdd =
+        [
+            .. defaultIgnorePatterns.Except(currentFileContent.Split([Environment.NewLine],
+                StringSplitOptions.RemoveEmptyEntries))
+        ];
         if (patternsToAdd.Length == 0)
         {
             return;
@@ -205,19 +176,19 @@ public sealed partial class FormGitIgnore : GitModuleForm
         // workaround to prevent GitIgnoreFileLoaded event handling (it causes wrong _originalGitIgnoreFileContent update)
         // TODO: implement in FileViewer separate events for loading text from file and for setting text directly via ViewText
         _NO_TRANSLATE_GitIgnoreEdit.InvokeAndForget(async () =>
-            {
-                _NO_TRANSLATE_GitIgnoreEdit.TextLoaded -= GitIgnoreFileLoaded;
-                await _NO_TRANSLATE_GitIgnoreEdit.ViewTextAsync(
-                    ExcludeFile,
-                    $"{currentFileContent}{Environment.NewLine}{string.Join(Environment.NewLine, patternsToAdd)}{Environment.NewLine}");
-                _NO_TRANSLATE_GitIgnoreEdit.TextLoaded += GitIgnoreFileLoaded;
-            });
+        {
+            _NO_TRANSLATE_GitIgnoreEdit.TextLoaded -= GitIgnoreFileLoaded;
+            await _NO_TRANSLATE_GitIgnoreEdit.ViewTextAsync(
+                ExcludeFile,
+                $"{currentFileContent}{Environment.NewLine}{string.Join(Environment.NewLine, patternsToAdd)}{Environment.NewLine}");
+            _NO_TRANSLATE_GitIgnoreEdit.TextLoaded += GitIgnoreFileLoaded;
+        });
     }
 
     private void AddPattern_Click(object sender, EventArgs e)
     {
         SaveGitIgnore();
-        UICommands.StartAddToGitIgnoreDialog(this, _localExclude, "*.dll");
+        UiCommands.StartAddToGitIgnoreDialog(this, _localExclude, "*.dll");
         LoadGitIgnore();
     }
 
@@ -245,4 +216,48 @@ public sealed partial class FormGitIgnore : GitModuleForm
     {
         Close();
     }
+
+    #region default patterns
+
+    private static readonly string _defaultIgnorePatternsFile =
+        Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "GitExtensions/DefaultIgnorePatterns.txt");
+
+    private static readonly string[] _defaultIgnorePatterns =
+    [
+        "#Ignore thumbnails created by Windows",
+        "Thumbs.db",
+        "#Ignore files built by Visual Studio",
+        "*.obj",
+        "*.exe",
+        "*.pdb",
+        "*.user",
+        "*.aps",
+        "*.pch",
+        "*.vspscc",
+        "*_i.c",
+        "*_p.c",
+        "*.ncb",
+        "*.suo",
+        "*.tlb",
+        "*.tlh",
+        "*.bak",
+        "*.cache",
+        "*.ilk",
+        "*.log",
+        "[Bb]in",
+        "[Dd]ebug*/",
+        "*.lib",
+        "*.sbr",
+        "obj/",
+        "[Rr]elease*/",
+        "_ReSharper*/",
+        "[Tt]est[Rr]esult*",
+        ".vs/",
+        ".idea/",
+        "#Nuget packages folder",
+        "packages/"
+    ];
+
+    #endregion
 }

@@ -2,13 +2,9 @@
 
 namespace GitUI.SettingControlBindings;
 
-internal class PasswordSettingControlBinding : SettingControlBinding<PasswordSetting, TextBox>
+internal class PasswordSettingControlBinding(PasswordSetting setting, TextBox? customControl)
+    : SettingControlBinding<PasswordSetting, TextBox>(setting, customControl)
 {
-    public PasswordSettingControlBinding(PasswordSetting setting, TextBox? customControl)
-        : base(setting, customControl)
-    {
-    }
-
     public override TextBox CreateControl()
     {
         Setting.CustomControl = new TextBox { PasswordChar = '\u25CF' };
@@ -19,10 +15,11 @@ internal class PasswordSettingControlBinding : SettingControlBinding<PasswordSet
     {
         if (control.PlaceholderText.Length == 0 && StringSettingControlBinding.PlaceholderText.Length > 0)
         {
-            control.PlaceholderText = string.Format(StringSettingControlBinding.PlaceholderText, StringSettingControlBinding.EmptyStringValue);
+            control.PlaceholderText = string.Format(StringSettingControlBinding.PlaceholderText,
+                StringSettingControlBinding.EmptyStringValue);
         }
 
-        string? settingVal = settings.SettingLevel == SettingLevel.Effective
+        var settingVal = settings.SettingLevel == SettingLevel.Effective
             ? Setting.ValueOrDefault(settings)
             : Setting[settings];
 
@@ -37,7 +34,7 @@ internal class PasswordSettingControlBinding : SettingControlBinding<PasswordSet
     public override void SaveSetting(SettingsSource settings, TextBox control)
     {
         // Trim value because the XML serializer will trim it on load anyway.
-        string? controlValue = control.Text.Trim();
+        var controlValue = control.Text.Trim();
         control.Text = controlValue;
         if (controlValue.Length == 0)
         {

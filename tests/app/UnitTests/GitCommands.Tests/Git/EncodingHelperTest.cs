@@ -1,7 +1,8 @@
 ﻿using System.Text;
-using GitCommands;
+using GitCommands.Utils;
 
 namespace GitCommandsTests.Git;
+
 public class EncodingHelperTest
 {
     #region Unit tests of single methods
@@ -15,10 +16,10 @@ public class EncodingHelperTest
     [Fact]
     public void GetStringTestSingleLineOutput()
     {
-        string asciiString = "abcdefghijklmnop";
-        byte[] testBytes = new ASCIIEncoding().GetBytes(asciiString);
+        var asciiString = "abcdefghijklmnop";
+        var testBytes = new ASCIIEncoding().GetBytes(asciiString);
 
-        string getString = EncodingHelper.GetString(testBytes, null, Encoding.ASCII);
+        var getString = EncodingHelper.GetString(testBytes, null, Encoding.ASCII);
 
         getString.Should().Be(asciiString);
     }
@@ -26,10 +27,10 @@ public class EncodingHelperTest
     [Fact]
     public void GetStringTestSingleLineError()
     {
-        string asciiString = "abcdefghijklmnop";
-        byte[] testBytes = new ASCIIEncoding().GetBytes(asciiString);
+        var asciiString = "abcdefghijklmnop";
+        var testBytes = new ASCIIEncoding().GetBytes(asciiString);
 
-        string getString = EncodingHelper.GetString(null, testBytes, Encoding.ASCII);
+        var getString = EncodingHelper.GetString(null, testBytes, Encoding.ASCII);
 
         getString.Should().Be(asciiString);
     }
@@ -37,11 +38,11 @@ public class EncodingHelperTest
     [Fact]
     public void GetStringTestOutputAndError()
     {
-        string asciiString = "abcdefghijklmnop";
-        byte[] testBytesOutput = new ASCIIEncoding().GetBytes(asciiString);
-        byte[] testBytesError = new ASCIIEncoding().GetBytes(asciiString.ToUpper());
+        var asciiString = "abcdefghijklmnop";
+        var testBytesOutput = new ASCIIEncoding().GetBytes(asciiString);
+        var testBytesError = new ASCIIEncoding().GetBytes(asciiString.ToUpper());
 
-        string getString = EncodingHelper.GetString(testBytesOutput, testBytesError, Encoding.ASCII);
+        var getString = EncodingHelper.GetString(testBytesOutput, testBytesError, Encoding.ASCII);
 
         getString.Should().Be(asciiString + Environment.NewLine + asciiString.ToUpper());
     }
@@ -49,14 +50,14 @@ public class EncodingHelperTest
     [Fact]
     public void GetStringTestUtf8()
     {
-        byte[] testBytes = new byte[4];
+        var testBytes = new byte[4];
         testBytes[0] = 0xE3;
         testBytes[1] = 0x82;
         testBytes[2] = 0xA2;
 
-        string utf8String = new UTF8Encoding().GetString(testBytes);
+        var utf8String = new UTF8Encoding().GetString(testBytes);
 
-        string getString = EncodingHelper.GetString(null, testBytes, Encoding.UTF8);
+        var getString = EncodingHelper.GetString(null, testBytes, Encoding.UTF8);
 
         getString.Should().Be(utf8String);
     }
@@ -70,8 +71,8 @@ public class EncodingHelperTest
     [Fact]
     public void ConvertToTestUtf8()
     {
-        string unicodeString = "\u30a2\u30c3";
-        byte[] convertedBytes = EncodingHelper.ConvertTo(Encoding.UTF8, unicodeString);
+        var unicodeString = "\u30a2\u30c3";
+        var convertedBytes = EncodingHelper.ConvertTo(Encoding.UTF8, unicodeString);
 
         6.Should().Be(convertedBytes.Length);
         0xE3.Should().Be(convertedBytes[0]);
@@ -85,8 +86,8 @@ public class EncodingHelperTest
     [Fact]
     public void ConvertToTestUtf16()
     {
-        string unicodeString = "\u30a2\u30c3";
-        byte[] convertedBytes = EncodingHelper.ConvertTo(Encoding.Unicode, unicodeString);
+        var unicodeString = "\u30a2\u30c3";
+        var convertedBytes = EncodingHelper.ConvertTo(Encoding.Unicode, unicodeString);
 
         4.Should().Be(convertedBytes.Length);
         0xA2.Should().Be(convertedBytes[0]);
@@ -105,12 +106,12 @@ public class EncodingHelperTest
     [Fact]
     public void DecodeStringTestSingleLineOutput()
     {
-        string asciiString = "abcdefghijklmnop";
-        byte[] testBytes = new ASCIIEncoding().GetBytes(asciiString);
+        var asciiString = "abcdefghijklmnop";
+        var testBytes = new ASCIIEncoding().GetBytes(asciiString);
 
         Encoding enc = new ASCIIEncoding();
 
-        string decodedString = EncodingHelper.DecodeString(testBytes, null, ref enc);
+        var decodedString = EncodingHelper.DecodeString(testBytes, null, ref enc);
 
         decodedString.Should().Be(asciiString);
     }
@@ -118,12 +119,12 @@ public class EncodingHelperTest
     [Fact]
     public void DecodeStringTestSingleLineError()
     {
-        string asciiString = "abcdefghijklmnop";
-        byte[] testBytes = new ASCIIEncoding().GetBytes(asciiString);
+        var asciiString = "abcdefghijklmnop";
+        var testBytes = new ASCIIEncoding().GetBytes(asciiString);
 
         Encoding enc = new ASCIIEncoding();
 
-        string decodedString = EncodingHelper.DecodeString(null, testBytes, ref enc);
+        var decodedString = EncodingHelper.DecodeString(null, testBytes, ref enc);
 
         decodedString.Should().Be(asciiString);
     }
@@ -131,13 +132,13 @@ public class EncodingHelperTest
     [Fact]
     public void DecodeStringTestOutputAndError()
     {
-        string asciiString = "abcdefghijklmnop";
-        byte[] testBytesOutput = new ASCIIEncoding().GetBytes(asciiString);
-        byte[] testBytesError = new ASCIIEncoding().GetBytes(asciiString.ToUpper());
+        var asciiString = "abcdefghijklmnop";
+        var testBytesOutput = new ASCIIEncoding().GetBytes(asciiString);
+        var testBytesError = new ASCIIEncoding().GetBytes(asciiString.ToUpper());
 
         Encoding enc = new ASCIIEncoding();
 
-        string decodedString = EncodingHelper.DecodeString(testBytesOutput, testBytesError, ref enc);
+        var decodedString = EncodingHelper.DecodeString(testBytesOutput, testBytesError, ref enc);
 
         decodedString.Should().Be(asciiString + Environment.NewLine + asciiString.ToUpper());
     }
@@ -145,16 +146,16 @@ public class EncodingHelperTest
     [Fact]
     public void DecodeStringTestUtf8()
     {
-        byte[] testBytes = new byte[4];
+        var testBytes = new byte[4];
         testBytes[0] = 0xE3;
         testBytes[1] = 0x82;
         testBytes[2] = 0xA2;
 
         Encoding enc = new UTF8Encoding();
 
-        string utf8String = new UTF8Encoding().GetString(testBytes);
+        var utf8String = new UTF8Encoding().GetString(testBytes);
 
-        string decodedString = EncodingHelper.DecodeString(null, testBytes, ref enc);
+        var decodedString = EncodingHelper.DecodeString(null, testBytes, ref enc);
 
         decodedString.Should().Be(utf8String);
         enc.Should().Be(new UTF8Encoding());

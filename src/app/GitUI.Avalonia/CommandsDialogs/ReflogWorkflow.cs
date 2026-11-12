@@ -1,6 +1,4 @@
-using GitCommands;
 using GitCommands.Git;
-using GitCommands.Git.Extensions;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
@@ -15,18 +13,14 @@ internal static class ReflogWorkflow
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reference);
 
-        return new GitArgumentBuilder("reflog")
-        {
-            "--no-abbrev",
-            reference.Quote(),
-        };
+        return new GitArgumentBuilder("reflog") { "--no-abbrev", reference.Quote() };
     }
 
     public static ArgumentString BuildCreateBranch(string branchName, ReflogEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        return Commands.Branch(branchName, entry.Sha, checkout: true);
+        return Commands.Branch(branchName, entry.Sha, true);
     }
 
     public static ArgumentString BuildResetTo(ReflogEntry entry, ResetMode mode)
@@ -41,24 +35,24 @@ internal static class ReflogWorkflow
         ArgumentNullException.ThrowIfNull(output);
 
         List<ReflogEntry> entries = [];
-        foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
-            ReadOnlySpan<char> record = line.AsSpan().TrimEnd('\r');
-            int shaEnd = record.IndexOf(' ');
+            var record = line.AsSpan().TrimEnd('\r');
+            var shaEnd = record.IndexOf(' ');
             if (shaEnd <= 0)
             {
                 continue;
             }
 
-            int referenceEnd = record[(shaEnd + 1)..].IndexOf(": ");
-            if (referenceEnd < 0 || !ObjectId.TryParse(record[..shaEnd], out ObjectId sha))
+            var referenceEnd = record[(shaEnd + 1)..].IndexOf(": ");
+            if (referenceEnd < 0 || !ObjectId.TryParse(record[..shaEnd], out var sha))
             {
                 continue;
             }
 
             referenceEnd += shaEnd + 1;
-            string reference = record[(shaEnd + 1)..referenceEnd].ToString();
-            string action = record[(referenceEnd + 2)..].ToString();
+            var reference = record[(shaEnd + 1)..referenceEnd].ToString();
+            var action = record[(referenceEnd + 2)..].ToString();
             entries.Add(new ReflogEntry(sha, reference, action));
         }
 
@@ -68,7 +62,7 @@ internal static class ReflogWorkflow
     public static IReadOnlyList<ReflogEntry> Read(IGitModule module, string reference)
     {
         ArgumentNullException.ThrowIfNull(module);
-        string output = module.GitExecutable.GetOutput(BuildRead(reference));
+        var output = module.GitExecutable.GetOutput(BuildRead(reference));
         return Parse(output);
     }
 }

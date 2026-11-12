@@ -7,9 +7,10 @@ public static class EnumHelper
 {
     public static string GetDescription<T>(this T value) where T : Enum
     {
-        Type type = typeof(T);
-        MemberInfo[] memInfo = type.GetMember(value.ToString());
-        IEnumerable<DescriptionAttribute> attributes = memInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false)
+        var type = typeof(T);
+        var memInfo = type.GetMember(value.ToString());
+        var attributes = memInfo[0]
+            .GetCustomAttributes(typeof(DescriptionAttribute), false)
             .OfType<DescriptionAttribute>();
 
         return attributes.FirstOrDefault()?.Description ?? value.ToString();

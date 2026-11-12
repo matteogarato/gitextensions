@@ -3,34 +3,34 @@ using GitCommands.Git;
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Selects how a pull integrates the fetched changes.
+///     Selects how a pull integrates the fetched changes.
 /// </summary>
 public enum PullMode
 {
     Merge,
     Rebase,
-    FetchOnly,
+    FetchOnly
 }
 
 /// <summary>
-///  Selects how tags are handled while fetching.
+///     Selects how tags are handled while fetching.
 /// </summary>
 public enum PullTagsMode
 {
     Default,
     All,
-    None,
+    None
 }
 
 /// <summary>
-///  Describes a pull or fetch requested through the options dialog.
+///     Describes a pull or fetch requested through the options dialog.
 /// </summary>
 /// <param name="Remote">The remote to fetch from.</param>
-/// <param name="RemoteBranch">The remote branch to fetch, or <see langword="null"/> for the tracked/default branch.</param>
+/// <param name="RemoteBranch">The remote branch to fetch, or <see langword="null" /> for the tracked/default branch.</param>
 /// <param name="Mode">How fetched changes are integrated.</param>
 /// <param name="Tags">Tag handling.</param>
 /// <param name="Unshallow">Whether to convert a shallow repository to a complete one.</param>
-/// <param name="Prune">Whether to prune remote-tracking branches; only applies to <see cref="PullMode.FetchOnly"/>.</param>
+/// <param name="Prune">Whether to prune remote-tracking branches; only applies to <see cref="PullMode.FetchOnly" />.</param>
 /// <param name="AutoStash">Whether local changes are stashed and restored around the pull.</param>
 public sealed record PullOptions(
     string Remote,
@@ -42,20 +42,20 @@ public sealed record PullOptions(
     bool AutoStash);
 
 /// <summary>
-///  Selects what a push sends to the remote.
+///     Selects what a push sends to the remote.
 /// </summary>
 public enum PushScope
 {
     CurrentBranch,
     AllBranches,
-    Tags,
+    Tags
 }
 
 /// <summary>
-///  Describes a push requested through the options dialog.
+///     Describes a push requested through the options dialog.
 /// </summary>
 /// <param name="Remote">The destination remote.</param>
-/// <param name="RemoteBranch">The remote branch to update, or <see langword="null"/> to use the local branch name.</param>
+/// <param name="RemoteBranch">The remote branch to update, or <see langword="null" /> to use the local branch name.</param>
 /// <param name="Force">The force mode.</param>
 /// <param name="TrackUpstream">Whether to record the pushed branch as upstream.</param>
 /// <param name="RecurseSubmodules">0 for none, 1 to check and 2 to push on demand.</param>

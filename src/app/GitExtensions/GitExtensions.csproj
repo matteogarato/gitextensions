@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RepoRoot)\eng\Localisation.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\Project.Build.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\Project.Publish.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\Project.Loc.targets" />
+  <Import Project="$(RepoRoot)\eng\Localisation.targets"/>
+  <Import Project="$(MSBuildProjectDirectory)\Project.Build.targets"/>
+  <Import Project="$(MSBuildProjectDirectory)\Project.Publish.targets"/>
+  <Import Project="$(MSBuildProjectDirectory)\Project.Loc.targets"/>
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>..\..\..\setup\assets\Logo\git-extensions-logo.ico</ApplicationIcon>
-    <StartupObject />
+    <StartupObject/>
 
     <IsPublishable>true</IsPublishable>
     <PublishDir Condition="'$(IsPublishable)' == 'true'">$(AppPublishDir)</PublishDir>
@@ -34,11 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GitCommands\GitCommands.csproj" />
-    <ProjectReference Include="..\GitExtUtils\GitExtUtils.csproj" />
-    <ProjectReference Include="..\GitUI\GitUI.csproj" />
-    <ProjectReference Include="..\..\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj" />
-    <ProjectReference Include="..\ResourceManager\ResourceManager.csproj" />
+    <ProjectReference Include="..\GitCommands\GitCommands.csproj"/>
+    <ProjectReference Include="..\GitExtUtils\GitExtUtils.csproj"/>
+    <ProjectReference Include="..\GitUI\GitUI.csproj"/>
+    <ProjectReference Include="..\..\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj"/>
+    <ProjectReference Include="..\ResourceManager\ResourceManager.csproj"/>
   </ItemGroup>
 
 </Project>

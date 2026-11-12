@@ -4,12 +4,12 @@ namespace GitUITests.LeftPanel;
 
 public sealed class WorktreeTreeTests
 {
-    private static readonly char Sep = Path.DirectorySeparatorChar;
+    private static readonly char _sep = Path.DirectorySeparatorChar;
 
     [Fact]
     public void GetCommonPrefix_should_return_empty_for_no_paths()
     {
-        string result = WorktreeTree.GetCommonPrefix([]);
+        var result = WorktreeTree.GetCommonPrefix([]);
 
         result.Should().BeEmpty();
     }
@@ -18,9 +18,9 @@ public sealed class WorktreeTreeTests
     public void GetCommonPrefix_should_return_empty_for_single_path()
     {
         // A single path has nothing to compare against — no common prefix to strip.
-        string[] paths = [$"worktrees{Sep}feature-a"];
+        string[] paths = [$"worktrees{_sep}feature-a"];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().BeEmpty();
     }
@@ -30,13 +30,13 @@ public sealed class WorktreeTreeTests
     {
         string[] paths =
         [
-            $"my-repo.worktrees{Sep}feature-a",
-            $"my-repo.worktrees{Sep}feature-b",
+            $"my-repo.worktrees{_sep}feature-a",
+            $"my-repo.worktrees{_sep}feature-b"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
-        result.Should().Be($"my-repo.worktrees{Sep}");
+        result.Should().Be($"my-repo.worktrees{_sep}");
     }
 
     [Fact]
@@ -44,11 +44,11 @@ public sealed class WorktreeTreeTests
     {
         string[] paths =
         [
-            $"folder-a{Sep}feature-a",
-            $"folder-b{Sep}feature-b",
+            $"folder-a{_sep}feature-a",
+            $"folder-b{_sep}feature-b"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().BeEmpty();
     }
@@ -58,14 +58,14 @@ public sealed class WorktreeTreeTests
     {
         string[] paths =
         [
-            $"root{Sep}team-a{Sep}feature-1",
-            $"root{Sep}team-a{Sep}feature-2",
-            $"root{Sep}team-b{Sep}feature-3",
+            $"root{_sep}team-a{_sep}feature-1",
+            $"root{_sep}team-a{_sep}feature-2",
+            $"root{_sep}team-b{_sep}feature-3"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
-        result.Should().Be($"root{Sep}");
+        result.Should().Be($"root{_sep}");
     }
 
     [Fact]
@@ -73,13 +73,13 @@ public sealed class WorktreeTreeTests
     {
         string[] paths =
         [
-            $"root{Sep}sub{Sep}feature-1",
-            $"root{Sep}sub{Sep}feature-2",
+            $"root{_sep}sub{_sep}feature-1",
+            $"root{_sep}sub{_sep}feature-2"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
-        result.Should().Be($"root{Sep}sub{Sep}");
+        result.Should().Be($"root{_sep}sub{_sep}");
     }
 
     [Fact]
@@ -87,13 +87,13 @@ public sealed class WorktreeTreeTests
     {
         string[] paths =
         [
-            $"Worktrees{Sep}feature-a",
-            $"worktrees{Sep}feature-b",
+            $"Worktrees{_sep}feature-a",
+            $"worktrees{_sep}feature-b"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
-        result.Should().Be($"Worktrees{Sep}");
+        result.Should().Be($"Worktrees{_sep}");
     }
 
     [Fact]
@@ -103,10 +103,10 @@ public sealed class WorktreeTreeTests
         [
             "gitextensions3_configdata",
             "gitextensions3_dev",
-            "gitextensions3_test",
+            "gitextensions3_test"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().Be("gitextensions3_");
     }
@@ -117,10 +117,10 @@ public sealed class WorktreeTreeTests
         string[] paths =
         [
             "my-repo-feature-a",
-            "my-repo-feature-b",
+            "my-repo-feature-b"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().Be("my-repo-feature-");
     }
@@ -131,10 +131,10 @@ public sealed class WorktreeTreeTests
         string[] paths =
         [
             "repo.worktrees.alpha",
-            "repo.worktrees.beta",
+            "repo.worktrees.beta"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().Be("repo.worktrees.");
     }
@@ -145,10 +145,10 @@ public sealed class WorktreeTreeTests
         string[] paths =
         [
             "my repo feature-a",
-            "my repo feature-b",
+            "my repo feature-b"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().Be("my repo feature-");
     }
@@ -158,7 +158,7 @@ public sealed class WorktreeTreeTests
     {
         string[] paths = ["apricot", "apple"];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().BeEmpty();
     }
@@ -168,7 +168,7 @@ public sealed class WorktreeTreeTests
     {
         string[] paths = ["worktree"];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
         result.Should().BeEmpty();
     }
@@ -180,12 +180,12 @@ public sealed class WorktreeTreeTests
         // directory separator even when word boundaries exist beyond it.
         string[] paths =
         [
-            $"shared{Sep}gitextensions3_configdata",
-            $"shared{Sep}gitextensions3_dev",
+            $"shared{_sep}gitextensions3_configdata",
+            $"shared{_sep}gitextensions3_dev"
         ];
 
-        string result = WorktreeTree.GetCommonPrefix(paths);
+        var result = WorktreeTree.GetCommonPrefix(paths);
 
-        result.Should().Be($"shared{Sep}");
+        result.Should().Be($"shared{_sep}");
     }
 }

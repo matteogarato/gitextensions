@@ -7,42 +7,31 @@ public abstract class LockableNotifier : ILockableNotifier
     private int _lockCount;
     private bool _notifyRequested;
 
-    protected abstract void InternalNotify();
-
-    private void CheckNotify(int lockCount)
-    {
-        if (lockCount == 0 && _notifyRequested)
-        {
-            _notifyRequested = false;
-            InternalNotify();
-        }
-    }
-
     /// <summary>
-    /// notifies if is unlocked
+    ///     notifies if is unlocked
     /// </summary>
-    public void Notify()
+    void ILockableNotifier.Notify()
     {
         _notifyRequested = true;
         CheckNotify(_lockCount);
     }
 
     /// <summary>
-    /// locks raising notification
+    ///     locks raising notification
     /// </summary>
-    public void Lock()
+    void ILockableNotifier.Lock()
     {
         Interlocked.Increment(ref _lockCount);
     }
 
     /// <summary>
-    /// unlocks raising notification
-    /// to unlock raising notification, UnLock has to be called as many times as Lock was called
+    ///     unlocks raising notification
+    ///     to unlock raising notification, UnLock has to be called as many times as Lock was called
     /// </summary>
     /// <param name="requestNotify">true if Notify has to be called</param>
-    public void UnLock(bool requestNotify)
+    void ILockableNotifier.UnLock(bool requestNotify)
     {
-        int newCount = Interlocked.Decrement(ref _lockCount);
+        var newCount = Interlocked.Decrement(ref _lockCount);
 
         if (newCount < 0)
         {
@@ -58,19 +47,28 @@ public abstract class LockableNotifier : ILockableNotifier
     }
 
     /// <summary>
-    /// true if raising notification is locked
+    ///     true if raising notification is locked
     /// </summary>
-    public bool IsLocked => _lockCount != 0;
+    bool ILockableNotifier.IsLocked
+    {
+        get => _lockCount != 0;
+    }
+
+    protected abstract void InternalNotify();
+
+    private void CheckNotify(int lockCount)
+    {
+        if (lockCount == 0 && _notifyRequested)
+        {
+            _notifyRequested = false;
+            InternalNotify();
+        }
+    }
 }
 
-public class ActionNotifier : LockableNotifier
+public class ActionNotifier(Action notifyAction) : LockableNotifier
 {
-    private readonly Action _notifyAction;
-
-    public ActionNotifier(Action notifyAction)
-    {
-        _notifyAction = notifyAction ?? throw new ArgumentNullException(nameof(notifyAction));
-    }
+    private readonly Action _notifyAction = notifyAction ?? throw new ArgumentNullException(nameof(notifyAction));
 
     protected override void InternalNotify()
     {

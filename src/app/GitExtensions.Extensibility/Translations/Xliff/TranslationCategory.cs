@@ -17,20 +17,18 @@ public class TranslationCategory : IComparable<TranslationCategory>
         TargetLanguage = targetLanguage;
     }
 
-    [XmlAttribute("datatype")]
-    public string DataType { get; set; } = "plaintext";
+    [XmlAttribute("datatype")] public string DataType { get; set; } = "plaintext";
 
-    [XmlAttribute("original")]
-    public string? Name { get; set; }
+    [XmlAttribute("original")] public string? Name { get; set; }
 
-    [XmlAttribute("source-language")]
-    public string? SourceLanguage { get; set; }
+    [XmlAttribute("source-language")] public string? SourceLanguage { get; set; }
 
-    [XmlAttribute("target-language")]
-    public string? TargetLanguage { get; set; }
+    [XmlAttribute("target-language")] public string? TargetLanguage { get; set; }
 
-    [XmlElement(ElementName = "body")]
-    public TranslationBody Body { get; set; } = new();
+    [XmlElement(ElementName = "body")] public TranslationBody Body { get; set; } = new();
 
-    public int CompareTo(TranslationCategory? other) => StringComparer.InvariantCulture.Compare(Name, other?.Name);
+    int IComparable<TranslationCategory>.CompareTo(TranslationCategory? other)
+    {
+        return StringComparer.InvariantCulture.Compare(Name, other?.Name);
+    }
 }

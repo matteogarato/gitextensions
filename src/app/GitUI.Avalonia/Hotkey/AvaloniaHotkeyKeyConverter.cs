@@ -13,12 +13,12 @@ internal static class AvaloniaHotkeyKeyConverter
             return false;
         }
 
-        string keyName = key switch
+        var keyName = key switch
         {
             Key.Enter => nameof(Keys.Return),
             Key.PageUp => nameof(Keys.Prior),
             Key.PageDown => nameof(Keys.Next),
-            _ => key.ToString(),
+            _ => key.ToString()
         };
         if (!Enum.TryParse(keyName, out Keys keyCode))
         {

@@ -1,13 +1,14 @@
-﻿using GitCommands;
-using GitCommands.UserRepositoryHistory.Legacy;
+﻿using GitCommands.UserRepositoryHistory.Legacy;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 using Current = GitCommands.UserRepositoryHistory;
 
 namespace GitCommandsTests.UserRepositoryHistory.Legacy;
+
 public class RepositoryStorageTests
 {
-    private Current.IRepositorySerialiser<RepositoryCategory> _repositoryCategorySerialiser = null!;
-    private RepositoryStorage _repositoryStorage = null!;
+    private readonly Current.IRepositorySerialiser<RepositoryCategory> _repositoryCategorySerialiser = null!;
+    private readonly RepositoryStorage _repositoryStorage = null!;
 
     public RepositoryStorageTests()
     {
@@ -23,7 +24,7 @@ public class RepositoryStorageTests
     {
         AppSettings.SetString("repositories", setting!);
         RepositoryStorage repositoryStorage = new();
-        IReadOnlyList<RepositoryCategory> repositories = repositoryStorage.Load();
+        var repositories = repositoryStorage.Load();
 
         repositories.Should().BeEmpty();
     }
@@ -34,7 +35,7 @@ public class RepositoryStorageTests
         AppSettings.SetString("repositories", "repo");
         _repositoryCategorySerialiser.Deserialize(Arg.Any<string>()).Returns(x => null);
 
-        IReadOnlyList<RepositoryCategory> repositories = _repositoryStorage.Load();
+        var repositories = _repositoryStorage.Load();
 
         repositories.Should().BeEmpty();
     }
@@ -45,26 +46,38 @@ public class RepositoryStorageTests
         AppSettings.SetString("repositories", "repos");
         List<RepositoryCategory> history =
         [
-            new RepositoryCategory
+            new()
             {
                 Repositories =
                 [
-                    new Repository { Path = "C:\\Development\\RibbonWinForms\\", Description = "Check it out!", Anchor = "None" },
-                    new Repository { Path = "", Anchor = "None" },
+                    new Repository
+                    {
+                        Path = "C:\\Development\\RibbonWinForms\\", Description = "Check it out!", Anchor = "None"
+                    },
+                    new Repository { Path = "", Anchor = "None" }
                 ],
                 CategoryType = "Repositories",
                 Description = "3rd Party"
             },
-            new RepositoryCategory
+            new()
             {
-                Repositories = [new Repository { Title = "Git Extensions", Path = "C:\\Development\\gitextensions\\", Description = "Mega project!", Anchor = "Pinned" }],
+                Repositories =
+                [
+                    new Repository
+                    {
+                        Title = "Git Extensions",
+                        Path = "C:\\Development\\gitextensions\\",
+                        Description = "Mega project!",
+                        Anchor = "Pinned"
+                    }
+                ],
                 CategoryType = "Repositories",
                 Description = "Test"
-            },
+            }
         ];
         _repositoryCategorySerialiser.Deserialize(Arg.Any<string>()).Returns(x => history);
 
-        IReadOnlyList<RepositoryCategory> repositories = _repositoryStorage.Load();
+        var repositories = _repositoryStorage.Load();
 
         repositories.Should().BeSameAs(history);
     }

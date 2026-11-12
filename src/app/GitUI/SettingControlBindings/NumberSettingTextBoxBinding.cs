@@ -34,7 +34,7 @@ internal class NumberSettingTextBoxBinding<T> : SettingControlBinding<NumberSett
             control.PlaceholderText = NumberSettingControlBinding.PlaceholderText;
         }
 
-        object? settingVal = settings.SettingLevel == SettingLevel.Effective
+        var settingVal = settings.SettingLevel == SettingLevel.Effective
             ? Setting.ValueOrDefault(settings)
             : Setting[settings];
 
@@ -43,9 +43,10 @@ internal class NumberSettingTextBoxBinding<T> : SettingControlBinding<NumberSett
 
     public override void SaveSetting(SettingsSource settings, TextBox control)
     {
-        string controlValue = control.Text;
+        var controlValue = control.Text;
 
-        if (string.IsNullOrEmpty(controlValue) || !NumberSetting<T>.TryConvertFromString(controlValue, out object? parsedValue))
+        if (string.IsNullOrEmpty(controlValue) ||
+            !NumberSetting<T>.TryConvertFromString(controlValue, out var parsedValue))
         {
             Setting[settings] = null;
             return;
@@ -66,9 +67,10 @@ internal class NumberSettingTextBoxBinding<T> : SettingControlBinding<NumberSett
     {
         if (sender is TextBox textBox)
         {
-            bool isValid = string.IsNullOrEmpty(textBox.Text) || NumberSetting<T>.TryConvertFromString(textBox.Text, out _);
+            var isValid = string.IsNullOrEmpty(textBox.Text) ||
+                          NumberSetting<T>.TryConvertFromString(textBox.Text, out _);
             textBox.BackColor = isValid ? SystemColors.Window : OtherColors.BrightRed;
-            textBox.ForeColor = isValid ? SystemColors.WindowText : ColorHelper.GetTextColor(OtherColors.BrightRed);
+            textBox.ForeColor = isValid ? SystemColors.WindowText : OtherColors.BrightRed.GetTextColor();
         }
     }
 }

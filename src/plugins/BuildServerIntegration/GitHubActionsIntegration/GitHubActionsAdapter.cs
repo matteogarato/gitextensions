@@ -8,14 +8,13 @@ using GitExtensions.Extensibility.Settings;
 using GitExtensions.Plugins.GitHubActionsIntegration.ApiClient;
 using GitExtensions.Plugins.GitHubActionsIntegration.ApiClient.Models;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 
 namespace GitExtensions.Plugins.GitHubActionsIntegration;
 
 [Export(typeof(IBuildServerAdapter))]
 [GitHubActionsIntegrationMetadata(PluginName)]
 [PartCreationPolicy(CreationPolicy.NonShared)]
-public sealed class GitHubActionsAdapter : IBuildServerAdapter
+public sealed class GitHubActionsAdapter(IGitHubActionsApiClientFactory apiClientFactory) : IBuildServerAdapter
 {
     public const string PluginName = "GitHub Actions";
 
@@ -24,11 +23,10 @@ public sealed class GitHubActionsAdapter : IBuildServerAdapter
     internal const string SettingOwner = "GitHubActionsOwner";
     internal const string SettingRepository = "GitHubActionsRepository";
 
-    private const string DefaultApiUrl = "https://api.github.com";
-    private const int PageSize = 100;
+    private const string _defaultApiUrl = "https://api.github.com";
+    private const int _pageSize = 100;
 
     private readonly ConcurrentDictionary<string, DateTime> _loadedItems = new();
-    private readonly IGitHubActionsApiClientFactory _apiClientFactory;
 
     private IGitHubActionsApiClient? _apiClient;
 
@@ -37,27 +35,23 @@ public sealed class GitHubActionsAdapter : IBuildServerAdapter
     {
     }
 
-    public GitHubActionsAdapter(IGitHubActionsApiClientFactory apiClientFactory)
+    void IBuildServerAdapter.Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config,
+        Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
     {
-        _apiClientFactory = apiClientFactory;
-    }
-
-    public void Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
-    {
-        string apiUrl = config.GetString(SettingApiUrl, null) ?? DefaultApiUrl;
-        string? apiToken = config.GetString(SettingApiToken, null);
-        string? owner = config.GetString(SettingOwner, null);
-        string? repository = config.GetString(SettingRepository, null);
+        var apiUrl = config.GetString(SettingApiUrl, null) ?? _defaultApiUrl;
+        var apiToken = config.GetString(SettingApiToken, null);
+        var owner = config.GetString(SettingOwner, null);
+        var repository = config.GetString(SettingRepository, null);
 
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repository))
         {
             return;
         }
 
-        _apiClient = _apiClientFactory.CreateApiClient(apiUrl, owner, repository, apiToken);
+        _apiClient = apiClientFactory.CreateApiClient(apiUrl, owner, repository, apiToken);
     }
 
-    public string UniqueKey
+    string IBuildServerAdapter.UniqueKey
     {
         get
         {
@@ -66,14 +60,19 @@ public sealed class GitHubActionsAdapter : IBuildServerAdapter
         }
     }
 
-    public IObservable<BuildInfo> GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
+    IObservable<BuildInfo> IBuildServerAdapter.GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
     {
-        return GetBuilds(scheduler, sinceDate, running: false);
+        return GetBuilds(scheduler, sinceDate, false);
     }
 
-    public IObservable<BuildInfo> GetRunningBuilds(IScheduler scheduler)
+    IObservable<BuildInfo> IBuildServerAdapter.GetRunningBuilds(IScheduler scheduler)
     {
-        return GetBuilds(scheduler, sinceDate: null, running: true);
+        return GetBuilds(scheduler, null, true);
+    }
+
+    void IDisposable.Dispose()
+    {
+        _apiClient?.Dispose();
     }
 
     private IObservable<BuildInfo> GetBuilds(IScheduler scheduler, DateTime? sinceDate, bool running)
@@ -91,27 +90,28 @@ public sealed class GitHubActionsAdapter : IBuildServerAdapter
 
             try
             {
-                int page = 1;
+                var page = 1;
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    GitHubActionsWorkflowRunsResponse response = await _apiClient.GetWorkflowRunsAsync(
+                    var response = await _apiClient.GetWorkflowRunsAsync(
                         running,
                         sinceDate,
                         page,
-                        PageSize,
+                        _pageSize,
                         cancellationToken);
 
-                    foreach (GitHubActionsWorkflowRun run in response.WorkflowRuns)
+                    foreach (var run in response.WorkflowRuns)
                     {
-                        if (!_loadedItems.TryGetValue(run.HeadSha, out DateTime lastUpdated) || lastUpdated < run.UpdatedAt)
+                        if (!_loadedItems.TryGetValue(run.HeadSha, out var lastUpdated) ||
+                            lastUpdated < run.UpdatedAt)
                         {
                             _loadedItems[run.HeadSha] = run.UpdatedAt;
                             observer.OnNext(run.ToBuildInfo());
                         }
                     }
 
-                    if (response.WorkflowRuns.Count < PageSize)
+                    if (response.WorkflowRuns.Count < _pageSize)
                     {
                         break;
                     }
@@ -131,10 +131,5 @@ public sealed class GitHubActionsAdapter : IBuildServerAdapter
 
             observer.OnCompleted();
         }
-    }
-
-    public void Dispose()
-    {
-        _apiClient?.Dispose();
     }
 }

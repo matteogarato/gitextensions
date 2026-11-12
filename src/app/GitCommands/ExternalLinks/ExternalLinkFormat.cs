@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
-using GitUIPluginInterfaces;
-using Microsoft;
+using GitExtUtils;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitCommands.ExternalLinks;
 
@@ -10,8 +10,8 @@ public class ExternalLinkFormat
 {
     public string? Caption { get; set; }
     public string? Format { get; set; }
-    [XmlIgnore]
-    public bool IsValid { get; private set; }
+
+    [XmlIgnore] public bool IsValid { get; private set; }
 
     public ExternalLink Apply(Match? remoteMatch, Match? revisionMatch, GitRevision revision)
     {
@@ -40,12 +40,14 @@ public class ExternalLinkFormat
 
         void AddGroupsFromMatches(Match? match)
         {
-            if (match is not null)
+            if (match is null)
             {
-                for (int i = match.Groups.Count > 1 ? 1 : 0; i < match.Groups.Count; i++)
-                {
-                    groups.Add(match.Groups[i].Value);
-                }
+                return;
+            }
+
+            for (var i = match.Groups.Count > 1 ? 1 : 0; i < match.Groups.Count; i++)
+            {
+                groups.Add(match.Groups[i].Value);
             }
         }
     }

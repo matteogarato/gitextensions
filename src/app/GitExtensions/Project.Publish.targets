@@ -10,11 +10,11 @@
     -->
   <Target Name="_PublishTranslations">
     <_GetAvailableTranslationsCodeTask
-          TranslationFolder="$(TargetDir)Translation\">
+      TranslationFolder="$(TargetDir)Translation\">
       <Output ItemName="Translations" TaskParameter="Output"/>
     </_GetAvailableTranslationsCodeTask>
 
-    <Copy SourceFiles="@(Translations)" DestinationFolder="$(PublishDir)Translation" ContinueOnError="false" />
+    <Copy SourceFiles="@(Translations)" DestinationFolder="$(PublishDir)Translation" ContinueOnError="false"/>
   </Target>
 
   <!--
@@ -36,7 +36,7 @@
 
     <PropertyGroup>
       <CurrentBuildVersion>%(ExeAssemblyIdentities.Version)</CurrentBuildVersion>
-    </PropertyGroup>    
+    </PropertyGroup>
   </Target>
 
   <!--
@@ -51,9 +51,9 @@
   </PropertyGroup>
 
   <Target Name="_DownloadPluginManager">
-    <Exec 
+    <Exec
       Condition="!Exists('$(_PluginManagerPath)')"
-      Command="powershell.exe $(RepoRoot)\eng\Download-PluginManager.ps1 -ExtractRootPath '$(_PluginManagerPath)'" />
+      Command="powershell.exe $(RepoRoot)\eng\Download-PluginManager.ps1 -ExtractRootPath '$(_PluginManagerPath)'"/>
   </Target>
 
   <!--
@@ -81,7 +81,7 @@
       <UnnecessaryFiles Remove="$(AppPublishDir)\GitExtensions.dll.*"/>
     </ItemGroup>
 
-    <Delete Files="@(UnnecessaryFiles)" />
+    <Delete Files="@(UnnecessaryFiles)"/>
 
   </Target>
 
@@ -93,13 +93,13 @@
     See https://github.com/gitextensions/gitextensions/issues/10337 for more details.
     ============================================================
     -->
-    <Target Name="_PatchRuntimeConfigJson" AfterTargets="Publish">
-      <ItemGroup>
-        <RuntimeConfigJsonFiles Include="$(AppPublishDir)\*.runtimeconfig.json"/>
-      </ItemGroup>
-  
-      <Exec Command="powershell.exe $(RepoRoot)\eng\Patch-RuntimeConfigJsonFiles.ps1 '@(RuntimeConfigJsonFiles)'" />
-    </Target>
+  <Target Name="_PatchRuntimeConfigJson" AfterTargets="Publish">
+    <ItemGroup>
+      <RuntimeConfigJsonFiles Include="$(AppPublishDir)\*.runtimeconfig.json"/>
+    </ItemGroup>
+
+    <Exec Command="powershell.exe $(RepoRoot)\eng\Patch-RuntimeConfigJsonFiles.ps1 '@(RuntimeConfigJsonFiles)'"/>
+  </Target>
 
   <!--
     ============================================================
@@ -125,69 +125,69 @@
 
     <!-- Determine plugins assemblies and their required references -->
     <_GetPluginAssembliesCodeTask
-          SolutionPath="$(SolutionPath)"
-          BuildConfiguration="$(Configuration)"
-          IsContinuousIntegrationBuild="$(ContinuousIntegrationBuild)">
+      SolutionPath="$(SolutionPath)"
+      BuildConfiguration="$(Configuration)"
+      IsContinuousIntegrationBuild="$(ContinuousIntegrationBuild)">
       <Output ItemName="CollectedPluginAssemblies" TaskParameter="Output"/>
     </_GetPluginAssembliesCodeTask>
 
     <ItemGroup>
-      <UserDictionaries Include="$(_UserDictionariesSourceDir)\*.dic" />
+      <UserDictionaries Include="$(_UserDictionariesSourceDir)\*.dic"/>
     </ItemGroup>
 
     <ItemGroup>
       <!-- Collect plugin and their direct reference -->
-      <PluginAssemblies Include="@(CollectedPluginAssemblies)" />
-      <PluginAssemblies Remove="@(PluginAssemblies)" Condition="$([System.String]::Copy('%(Filename)').EndsWith('.resources'))" />
+      <PluginAssemblies Include="@(CollectedPluginAssemblies)"/>
+      <PluginAssemblies Remove="@(PluginAssemblies)" Condition="$([System.String]::Copy('%(Filename)').EndsWith('.resources'))"/>
 
       <!-- Collect resources for plugins -->
-      <PluginResourcesAssemblies Include="@(CollectedPluginAssemblies)" />
-      <PluginResourcesAssemblies Remove="@(PluginResourcesAssemblies)" Condition="!$([System.String]::Copy('%(Filename)').EndsWith('.resources'))" />
+      <PluginResourcesAssemblies Include="@(CollectedPluginAssemblies)"/>
+      <PluginResourcesAssemblies Remove="@(PluginResourcesAssemblies)" Condition="!$([System.String]::Copy('%(Filename)').EndsWith('.resources'))"/>
       <!-- Resources must leave in own folders, so replace the base path with the plugins target folder -->
       <PluginResourcesAssemblies>
         <DestinationFiles>$([System.String]::Copy('%(Identity)').Replace('%(BasePath)', '$(_AppPluginsPublishDir)'))</DestinationFiles>
       </PluginResourcesAssemblies>
       <!-- Collect resources for UserPlugins -->
-      <UserPluginResources Include="$(_PluginManagerBinPath)\**\*.*" />
+      <UserPluginResources Include="$(_PluginManagerBinPath)\**\*.*"/>
     </ItemGroup>
 
     <!-- Copy the dictionaries to the Dictionaries folder -->
     <Copy
-            SourceFiles="@(UserDictionaries)"
-            DestinationFolder="$(_UserDictionariesPublishDir)"
-            ContinueOnError="ErrorAndStop"
-          />
+      SourceFiles="@(UserDictionaries)"
+      DestinationFolder="$(_UserDictionariesPublishDir)"
+      ContinueOnError="ErrorAndStop"
+    />
 
     <ItemGroup>
-      <NativeAssemblies Include="$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'GitExtSshAskPass'))\*.dll" />
-      <NativeAssemblies Include="$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'GitExtensionsShellEx'))\*.dll" />
+      <NativeAssemblies Include="$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'GitExtSshAskPass'))\*.dll"/>
+      <NativeAssemblies Include="$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'GitExtensionsShellEx'))\*.dll"/>
     </ItemGroup>
 
     <!-- Copy the native components -->
     <Copy
-            SourceFiles="@(NativeAssemblies)"
-            DestinationFolder="$(AppPublishDir)"
-            ContinueOnError="ErrorAndStop"
-          />
+      SourceFiles="@(NativeAssemblies)"
+      DestinationFolder="$(AppPublishDir)"
+      ContinueOnError="ErrorAndStop"
+    />
 
     <!-- Copy the plugins to the Plugins folder -->
     <Copy
-            SourceFiles="@(PluginAssemblies)"
-            DestinationFolder="$(_AppPluginsPublishDir)"
-            ContinueOnError="ErrorAndStop"
-          />
+      SourceFiles="@(PluginAssemblies)"
+      DestinationFolder="$(_AppPluginsPublishDir)"
+      ContinueOnError="ErrorAndStop"
+    />
     <!-- Copy the plugins' resources to the Plugins folder -->
     <Copy
-            SourceFiles="@(PluginResourcesAssemblies)"
-            DestinationFiles="@(PluginResourcesAssemblies->'%(DestinationFiles)')"
-            ContinueOnError="ErrorAndStop"
-          />
+      SourceFiles="@(PluginResourcesAssemblies)"
+      DestinationFiles="@(PluginResourcesAssemblies->'%(DestinationFiles)')"
+      ContinueOnError="ErrorAndStop"
+    />
     <!-- Copy the PluginManager to the UserPlugins folder -->
     <Copy
-            SourceFiles="@(UserPluginResources)"
-            DestinationFolder="$(_PluginManagerPublishDir)\%(RecursiveDir)"
-            ContinueOnError="ErrorAndStop"
-          />
+      SourceFiles="@(UserPluginResources)"
+      DestinationFolder="$(_PluginManagerPublishDir)\%(RecursiveDir)"
+      ContinueOnError="ErrorAndStop"
+    />
 
   </Target>
 
@@ -205,25 +205,25 @@
       <_AvaloniaFilesWxs>$([MSBuild]::NormalizePath('$(RepoRoot)', 'setup', 'installer', 'obj', '$(Configuration)', 'AvaloniaFiles.wxs'))</_AvaloniaFilesWxs>
     </PropertyGroup>
 
-    <RemoveDir Directories="$(_AvaloniaPublishDir)" />
-    <MakeDir Directories="$(_AvaloniaPublishDir)" />
+    <RemoveDir Directories="$(_AvaloniaPublishDir)"/>
+    <MakeDir Directories="$(_AvaloniaPublishDir)"/>
     <Exec
-        Command="dotnet publish &quot;$(RepoRoot)src\app\GitExtensions.Avalonia\GitExtensions.Avalonia.csproj&quot; --configuration $(Configuration) --runtime $(_AvaloniaRuntimeIdentifier) --self-contained false --output &quot;$(_AvaloniaPublishDir)&quot; -p:BuildAvalonia=true -p:UseAppHost=true"
-        WorkingDirectory="$(RepoRoot)"
-        ContinueOnError="false" />
+      Command="dotnet publish &quot;$(RepoRoot)src\app\GitExtensions.Avalonia\GitExtensions.Avalonia.csproj&quot; --configuration $(Configuration) --runtime $(_AvaloniaRuntimeIdentifier) --self-contained false --output &quot;$(_AvaloniaPublishDir)&quot; -p:BuildAvalonia=true -p:UseAppHost=true"
+      WorkingDirectory="$(RepoRoot)"
+      ContinueOnError="false"/>
     <Exec
-        Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(RepoRoot)setup\installer\GenerateAvaloniaFiles.ps1&quot; -PublishPath &quot;$(_AvaloniaPublishDir)&quot; -OutputPath &quot;$(_AvaloniaFilesWxs)&quot;"
-        WorkingDirectory="$(RepoRoot)"
-        ContinueOnError="false" />
+      Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(RepoRoot)setup\installer\GenerateAvaloniaFiles.ps1&quot; -PublishPath &quot;$(_AvaloniaPublishDir)&quot; -OutputPath &quot;$(_AvaloniaFilesWxs)&quot;"
+      WorkingDirectory="$(RepoRoot)"
+      ContinueOnError="false"/>
   </Target>
 
   <Target Name="_CheckBundlesConsistent" AfterTargets="Publish" DependsOnTargets="_PublishTranslations;_DownloadPluginManager;_EnsureBundleContent;_CleanupBeforePack;_PublishAvaloniaForInstaller">
     <Exec
-        Command="powershell.exe .\setup\installer\Check-BundlesConsistent.ps1 '$(PublishDir)' '$(RepoRoot)\setup\installer\obj\$(Configuration)\AvaloniaFiles.wxs'"
-        WorkingDirectory="$(RepoRoot)"
-        EchoOff="true"
-        ConsoleToMsBuild="true"
-        StandardOutputImportance="High">
+      Command="powershell.exe .\setup\installer\Check-BundlesConsistent.ps1 '$(PublishDir)' '$(RepoRoot)\setup\installer\obj\$(Configuration)\AvaloniaFiles.wxs'"
+      WorkingDirectory="$(RepoRoot)"
+      EchoOff="true"
+      ConsoleToMsBuild="true"
+      StandardOutputImportance="High">
     </Exec>
   </Target>
 
@@ -264,24 +264,24 @@
 
     <!-- Mark the package as "portable" -->
     <XmlPoke XmlInputPath="$(_PublishAppConfigPath)"
-            Query="configuration/applicationSettings/GitCommands.Properties.Settings/setting[@name='IsPortable']/value" 
-            Value="True"
-            ContinueOnError="ErrorAndStop"
-          />
+             Query="configuration/applicationSettings/GitCommands.Properties.Settings/setting[@name='IsPortable']/value"
+             Value="True"
+             ContinueOnError="ErrorAndStop"
+    />
 
     <ZipDirectory
-            SourceDirectory="$(_PublishedPath)"
-            DestinationFile="$(_PublishPortablePath)"
-            Overwrite="true"
-            ContinueOnError="ErrorAndStop"
-          />
+      SourceDirectory="$(_PublishedPath)"
+      DestinationFile="$(_PublishPortablePath)"
+      Overwrite="true"
+      ContinueOnError="ErrorAndStop"
+    />
 
     <!-- Reset the "portable" flag -->
     <XmlPoke XmlInputPath="$(_PublishAppConfigPath)"
-            Query="configuration/applicationSettings/GitCommands.Properties.Settings/setting[@name='IsPortable']/value" 
-            Value="False"
-            ContinueOnError="ErrorAndStop"
-          />
+             Query="configuration/applicationSettings/GitCommands.Properties.Settings/setting[@name='IsPortable']/value"
+             Value="False"
+             ContinueOnError="ErrorAndStop"
+    />
   </Target>
 
   <!--
@@ -304,9 +304,9 @@
 
     <!-- Determine WiX version from the referenced package -->
     <ItemGroup>
-      <_WiX Include="@(PackageVersion)"  Condition="$([System.String]::Copy('%(Identity)')) == 'WiX'" />
+      <_WiX Include="@(PackageVersion)" Condition="$([System.String]::Copy('%(Identity)')) == 'WiX'"/>
     </ItemGroup>
-    <Error Text="WiX package reference can't be found" Condition="'@(_WiX->Count())' != 1" />
+    <Error Text="WiX package reference can't be found" Condition="'@(_WiX->Count())' != 1"/>
 
     <PropertyGroup>
       <_WiXVersion>%(_WiX.Version)</_WiXVersion>
@@ -318,12 +318,12 @@
     </PropertyGroup>
 
     <Exec
-        Command="vswhere.exe -latest -prerelease -property installationPath -requires Microsoft.Component.MSBuild"
-        WorkingDirectory="$(VSWherePath)"
-        EchoOff="true"
-        ConsoleToMsBuild="true"
-        StandardOutputImportance="Low">
-        <Output TaskParameter="ConsoleOutput" PropertyName="_VSInstallPath" />
+      Command="vswhere.exe -latest -prerelease -property installationPath -requires Microsoft.Component.MSBuild"
+      WorkingDirectory="$(VSWherePath)"
+      EchoOff="true"
+      ConsoleToMsBuild="true"
+      StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_VSInstallPath"/>
     </Exec>
 
     <PropertyGroup>
@@ -331,13 +331,13 @@
       <_SetupArgs>/p:Configuration=$(Configuration);Platform=$(TargetPlatform);WiXVersion=$(_WiXVersion);Version=$(CurrentBuildVersion);ArtifactsBinPath=$(ArtifactsBinDir);ArtifactsPublishPath=$(AppPublishDir);OutputPath=$(_PublishMsiPath.TrimEnd('\'));TargetName=$(_PublishMsiFileName)</_SetupArgs>
     </PropertyGroup>
 
-    <!-- WiX isn't yet compatible with .NET. See: https://github.com/wixtoolset/issues/issues/5627 
+    <!-- WiX isn't yet compatible with .NET. See: https://github.com/wixtoolset/issues/issues/5627
          So can't use the normal tool chain (i.e. dotnet publish or MSBuild task) and must fall back
          to manually invoke msbuild.exe.
 
          When WiX becomes .NET compatible we may be able to invoke the following:
 
-    <MSBuild 
+    <MSBuild
         Projects="$(ProjectDir)\..\Setup\Setup.wixproj"
         Targets="Build"
         Properties="Configuration=$(Configuration);Platform=$(TargetPlatform);WiXVersion=$(_WiXVersion);Version=$(CurrentBuildVersion);ArtifactsBinPath=$(ArtifactsBinDir);ArtifactsPublishPath=$(AppPublishDir);OutputPath=$(_PublishMsiPath.TrimEnd('\'));TargetName=$(_PublishMsiFileName)"
@@ -345,11 +345,11 @@
         />
       -->
     <Exec
-        Command="msbuild.exe $(RepoRoot)\setup\installer\Setup.wixproj /v:q /t:Build $(_SetupArgs) /bl:$(ArtifactsLogDir)\setup.binlog"
-        WorkingDirectory="$(_MSBuildCurrentPath)"
-        EchoOff="true"
-        ConsoleToMsBuild="true"
-        StandardOutputImportance="High">
+      Command="msbuild.exe $(RepoRoot)\setup\installer\Setup.wixproj /v:q /t:Build $(_SetupArgs) /bl:$(ArtifactsLogDir)\setup.binlog"
+      WorkingDirectory="$(_MSBuildCurrentPath)"
+      EchoOff="true"
+      ConsoleToMsBuild="true"
+      StandardOutputImportance="High">
     </Exec>
   </Target>
 

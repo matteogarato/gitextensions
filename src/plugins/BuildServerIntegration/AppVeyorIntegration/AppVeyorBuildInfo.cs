@@ -2,7 +2,7 @@
 using GitExtensions.Extensibility.Git;
 using GitUIPluginInterfaces.BuildServerIntegration;
 
-namespace AppVeyorIntegration;
+namespace GitExtensions.Plugins.AppVeyorIntegration;
 
 public sealed class AppVeyorBuildInfo : BuildInfo
 {
@@ -20,21 +20,9 @@ public sealed class AppVeyorBuildInfo : BuildInfo
     public string? PullRequestTitle { get; set; }
     public string? TestsResultText { get; set; }
 
-    public bool IsRunning => Status == BuildStatus.InProgress;
-
-    public void ChangeProgressCounter()
+    public bool IsRunning
     {
-        _buildProgressCount = (_buildProgressCount % 3) + 1;
-    }
-
-    public void UpdateDescription()
-    {
-        Description = _buildDurationFormatter.Format(Duration) + " " + TestsResultText + (!string.IsNullOrWhiteSpace(PullRequestText) ? " " + PullRequestText : string.Empty) + " " + Id;
-        Tooltip = DisplayStatus + Environment.NewLine
-                                + (Duration.HasValue ? _buildDurationFormatter.Format(Duration) + Environment.NewLine : string.Empty)
-                                + (!string.IsNullOrWhiteSpace(TestsResultText) ? TestsResultText + Environment.NewLine : string.Empty)
-                                + (!string.IsNullOrWhiteSpace(PullRequestText) ? PullRequestText + ": " + PullRequestTitle + Environment.NewLine : string.Empty)
-                                + Id;
+        get => Status == BuildStatus.InProgress;
     }
 
     private string DisplayStatus
@@ -48,5 +36,27 @@ public sealed class AppVeyorBuildInfo : BuildInfo
 
             return "In progress" + new string('.', _buildProgressCount) + new string(' ', 3 - _buildProgressCount);
         }
+    }
+
+    public void ChangeProgressCounter()
+    {
+        _buildProgressCount = (_buildProgressCount % 3) + 1;
+    }
+
+    public void UpdateDescription()
+    {
+        Description = _buildDurationFormatter.Format(Duration) + " " + TestsResultText +
+                      (!string.IsNullOrWhiteSpace(PullRequestText) ? " " + PullRequestText : string.Empty) + " " + Id;
+        Tooltip = DisplayStatus + Environment.NewLine
+                                + (Duration.HasValue
+                                    ? _buildDurationFormatter.Format(Duration) + Environment.NewLine
+                                    : string.Empty)
+                                + (!string.IsNullOrWhiteSpace(TestsResultText)
+                                    ? TestsResultText + Environment.NewLine
+                                    : string.Empty)
+                                + (!string.IsNullOrWhiteSpace(PullRequestText)
+                                    ? PullRequestText + ": " + PullRequestTitle + Environment.NewLine
+                                    : string.Empty)
+                                + Id;
     }
 }

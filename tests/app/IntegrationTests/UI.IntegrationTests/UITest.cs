@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using CommonTestUtils;
-using GitUI;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitExtensions.UITests;
+namespace UITests;
 
-public static class UITest
+public static class UiTest
 {
     public static async Task WaitForIdleAsync()
     {
@@ -32,7 +32,8 @@ public static class UITest
         bool debug = false)
         where T : Form
     {
-        Application.OpenForms.OfType<T>().Should().BeEmpty($"{Application.OpenForms.OfType<T>().Count()} open form(s) before test");
+        Application.OpenForms.OfType<T>().Should()
+            .BeEmpty($"{Application.OpenForms.OfType<T>().Count()} open form(s) before test");
 
         // Needed for FormBrowse, ScriptOptionsParser
         ManagedExtensibility.Initialise();
@@ -45,7 +46,7 @@ public static class UITest
             // Avoid using ThreadHelper.JoinableTaskFactory for the outermost operation because we don't want the task
             // tracked by its collection. Otherwise, test code would not be able to wait for pending operations to
             // complete.
-            JoinableTask test = ThreadHelper.JoinableTaskContext.Factory.RunAsync(async () =>
+            var test = ThreadHelper.JoinableTaskContext.Factory.RunAsync(async () =>
             {
                 Log("switching to UI thread");
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -81,7 +82,8 @@ public static class UITest
         finally
         {
             form?.Dispose();
-            Application.OpenForms.OfType<T>().Should().BeEmpty($"{Application.OpenForms.OfType<T>().Count()} open form(s) after test");
+            Application.OpenForms.OfType<T>().Should()
+                .BeEmpty($"{Application.OpenForms.OfType<T>().Count()} open form(s) after test");
         }
 
         return;
@@ -102,21 +104,25 @@ public static class UITest
     {
         T? control = null;
         RunForm<Form>(
-            showForm: () =>
+            () =>
             {
                 Form form = new() { Text = $"Test {typeof(T).Name}" };
                 control = createControl(form);
                 form.Controls.Contains(control).Should().BeTrue();
                 Application.Run(form);
             },
-            runTestAsync: form => runTestAsync(control!));
+            form => runTestAsync(control!));
     }
 
     public static void ProcessUntil(string processName, Func<bool> condition, int maxMilliseconds = 1500)
-        => WinFormsTestHelper.ProcessUntil(processName, condition, maxMilliseconds);
+    {
+        WinFormsTestHelper.ProcessUntil(processName, condition, maxMilliseconds);
+    }
 
     public static void ProcessEventsFor(int milliseconds)
-        => WinFormsTestHelper.ProcessEventsFor(milliseconds);
+    {
+        WinFormsTestHelper.ProcessEventsFor(milliseconds);
+    }
 
     private readonly struct VoidResult
     {

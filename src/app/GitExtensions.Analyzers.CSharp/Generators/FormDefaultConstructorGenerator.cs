@@ -3,19 +3,34 @@ using System.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace System.Windows.Forms.Generators;
+namespace GitExtensions.Analyzers.Generators;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class FormDefaultConstructorGenerator : IIncrementalGenerator
 {
-    private static void Execute(SourceProductionContext context, Compilation compilation, ImmutableArray<string?> candidateTypes)
+    void IIncrementalGenerator.Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        var syntaxProvider = context.SyntaxProvider.CreateSyntaxProvider(
+            static (syntaxNode, _) => IsSupportedSyntaxNode(syntaxNode),
+            static (generatorSyntaxContext, _) => GetTypeName(generatorSyntaxContext.Node));
+
+        var compilationAndTypes
+            = context.CompilationProvider.Combine(syntaxProvider.Collect());
+
+        context.RegisterSourceOutput(
+            compilationAndTypes,
+            (context, source) => Execute(context, source.Item1, source.Item2));
+    }
+
+    private static void Execute(SourceProductionContext context, Compilation compilation,
+        ImmutableArray<string?> candidateTypes)
     {
         if (candidateTypes.IsEmpty)
         {
             return;
         }
 
-        foreach (string? candidateType in candidateTypes)
+        foreach (var candidateType in candidateTypes)
         {
             if (string.IsNullOrEmpty(candidateType))
             {
@@ -24,18 +39,19 @@ internal sealed class FormDefaultConstructorGenerator : IIncrementalGenerator
 
             Debug.WriteLine($"candidateType: {candidateType}");
 
-            bool generateDefaultCtor = true;
-            bool containsInitializeComponent = false;
+            var generateDefaultCtor = true;
+            var containsInitializeComponent = false;
             string? @namespace = null;
-            string typeName = candidateType!;
+            var typeName = candidateType!;
 
-            if (compilation.GetSymbolsWithName(candidateType!, SymbolFilter.Type).FirstOrDefault() is INamedTypeSymbol typeSymbol)
+            if (compilation.GetSymbolsWithName(candidateType!, SymbolFilter.Type).FirstOrDefault() is INamedTypeSymbol
+                typeSymbol)
             {
                 Debug.WriteLine($"symbol: {candidateType}");
 
                 if (typeSymbol.InstanceConstructors.Length > 0)
                 {
-                    foreach (IMethodSymbol ctor in typeSymbol.InstanceConstructors)
+                    foreach (var ctor in typeSymbol.InstanceConstructors)
                     {
                         if (ctor.Parameters.Length == 0)
                         {
@@ -64,9 +80,9 @@ internal sealed class FormDefaultConstructorGenerator : IIncrementalGenerator
 
             if (generateDefaultCtor)
             {
-                string ctorBody = containsInitializeComponent ? "InitializeComponent();" : "";
+                var ctorBody = containsInitializeComponent ? "InitializeComponent();" : "";
                 Debug.WriteLine($"Generating .ctor for {candidateType}");
-                string? code = $@"
+                var code = $@"
 namespace {@namespace}
 {{
     partial class {typeName}
@@ -115,20 +131,6 @@ namespace {@namespace}
         }
     }
 
-    public void Initialize(IncrementalGeneratorInitializationContext context)
-    {
-        IncrementalValuesProvider<string?> syntaxProvider = context.SyntaxProvider.CreateSyntaxProvider(
-            predicate: static (syntaxNode, _) => IsSupportedSyntaxNode(syntaxNode),
-            transform: static (generatorSyntaxContext, _) => GetTypeName(generatorSyntaxContext.Node));
-
-        IncrementalValueProvider<(Compilation, ImmutableArray<string?>)> compilationAndTypes
-            = context.CompilationProvider.Combine(syntaxProvider.Collect());
-
-        context.RegisterSourceOutput(
-            compilationAndTypes,
-            (context, source) => Execute(context, source.Item1, source.Item2));
-    }
-
     private static string? GetTypeName(SyntaxNode node)
     {
         string? typeName = null;
@@ -146,7 +148,7 @@ namespace {@namespace}
     {
         if (syntaxNode is ClassDeclarationSyntax
             {
-                BaseList: BaseListSyntax
+                BaseList:
                 {
                     Types.Count: > 0
                 }

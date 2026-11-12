@@ -1,19 +1,19 @@
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
-using GitUI;
+using GitUI.Plugin;
 using NSubstitute;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class RepositoryPluginCommandRunnerTests
 {
     [Fact]
     public async Task ExecuteAsync_should_run_enabled_command_and_notify_repository_change()
     {
-        IGitModule module = Substitute.For<IGitModule>();
-        ILockableNotifier notifier = Substitute.For<ILockableNotifier>();
-        IGitUICommands uiCommands = Substitute.For<IGitUICommands>();
+        var module = Substitute.For<IGitModule>();
+        var notifier = Substitute.For<ILockableNotifier>();
+        var uiCommands = Substitute.For<IGitUiCommands>();
         uiCommands.Module.Returns(module);
         uiCommands.RepoChangedNotifier.Returns(notifier);
         RepositoryPluginCommand command = new() { ChangesRepository = true };
@@ -28,8 +28,8 @@ public sealed class RepositoryPluginCommandRunnerTests
     [Fact]
     public async Task ExecuteAsync_should_skip_disabled_command_without_notifying()
     {
-        IGitUICommands uiCommands = Substitute.For<IGitUICommands>();
-        ILockableNotifier notifier = Substitute.For<ILockableNotifier>();
+        var uiCommands = Substitute.For<IGitUiCommands>();
+        var notifier = Substitute.For<ILockableNotifier>();
         uiCommands.RepoChangedNotifier.Returns(notifier);
         RepositoryPluginCommand command = new() { CanRun = false, ChangesRepository = true };
 
@@ -42,16 +42,15 @@ public sealed class RepositoryPluginCommandRunnerTests
     [Fact]
     public async Task ExecuteAsync_should_notify_when_a_state_changing_command_fails()
     {
-        IGitUICommands uiCommands = Substitute.For<IGitUICommands>();
-        ILockableNotifier notifier = Substitute.For<ILockableNotifier>();
+        var uiCommands = Substitute.For<IGitUiCommands>();
+        var notifier = Substitute.For<ILockableNotifier>();
         uiCommands.RepoChangedNotifier.Returns(notifier);
         RepositoryPluginCommand command = new()
         {
-            ChangesRepository = true,
-            Exception = new InvalidOperationException("plugin failure"),
+            ChangesRepository = true, Exception = new InvalidOperationException("plugin failure")
         };
 
-        Func<Task> execute = () => RepositoryPluginCommandRunner.ExecuteAsync(uiCommands, command);
+        var execute = () => RepositoryPluginCommandRunner.ExecuteAsync(uiCommands, command);
 
         await execute.Should().ThrowAsync<InvalidOperationException>();
         notifier.Received(1).Notify();
@@ -59,17 +58,34 @@ public sealed class RepositoryPluginCommandRunnerTests
 
     private sealed class RepositoryPluginCommand : IRepositoryPluginCommand
     {
-        public string Id => "test-command";
-        public string Name => "Test command";
-        public bool ChangesRepository { get; init; }
+        private bool ChangesRepository { get; init; }
+
         public bool CanRun { get; init; } = true;
         public Exception? Exception { get; init; }
         public int ExecutionCount { get; private set; }
         public IGitModule? ExecutedModule { get; private set; }
 
-        public bool CanExecute(IGitModule module) => CanRun;
+        string IRepositoryPluginCommand.Id
+        {
+            get => "test-command";
+        }
 
-        public Task ExecuteAsync(IGitModule module, CancellationToken cancellationToken)
+        string IRepositoryPluginCommand.Name
+        {
+            get => "Test command";
+        }
+
+        bool IRepositoryPluginCommand.ChangesRepository
+        {
+            get => ChangesRepository;
+        }
+
+        bool IRepositoryPluginCommand.CanExecute(IGitModule module)
+        {
+            return CanRun;
+        }
+
+        Task IRepositoryPluginCommand.ExecuteAsync(IGitModule module, CancellationToken cancellationToken)
         {
             ExecutionCount++;
             ExecutedModule = module;

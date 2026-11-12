@@ -1,29 +1,34 @@
 using Avalonia.Controls;
-using Avalonia.Layout;
+using Avalonia.Media;
 using GitCommands.Git.Tag;
 using GitExtensions.Extensibility.Git;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Collects the name and annotation for a lightweight or annotated tag.
+///     Collects the name and annotation for a lightweight or annotated tag.
 /// </summary>
 public sealed class TagOptionsWindow : OptionsWindow
 {
+    private readonly CheckBox _annotated = new() { Content = TranslatedStrings.AnnotatedTagOption };
+
+    private readonly TextBox _message = new()
+    {
+        MinHeight = 90, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, IsEnabled = false
+    };
+
     private readonly TextBox _name = new() { MinWidth = 320 };
-    private readonly CheckBox _annotated = new() { Content = GitUI.TranslatedStrings.AnnotatedTagOption };
-    private readonly TextBox _message = new() { MinHeight = 90, AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, IsEnabled = false };
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="TagOptionsWindow"/> class.
+    ///     Initializes a new instance of the <see cref="TagOptionsWindow" /> class.
     /// </summary>
     /// <param name="objectId">The commit to tag.</param>
     public TagOptionsWindow(ObjectId objectId)
-        : base(GitUI.TranslatedStrings.TagOptionsTitle, 460, 380)
+        : base(TranslatedStrings.TagOptionsTitle, 460, 380)
     {
         _annotated.IsCheckedChanged += (_, _) => _message.IsEnabled = _annotated.IsChecked == true;
 
-        Button create = new() { Content = GitUI.TranslatedStrings.CreateTagMenu, IsDefault = true };
+        Button create = new() { Content = TranslatedStrings.CreateTagMenu, IsDefault = true };
         create.Click += (_, _) => Close(new TagConfiguration(
             _name.Text?.Trim() ?? string.Empty,
             objectId,
@@ -33,11 +38,11 @@ public sealed class TagOptionsWindow : OptionsWindow
         SetOptionsContent(
             create,
             [
-                new TextBlock { Text = GitUI.TranslatedStrings.TagNamePrompt },
+                new TextBlock { Text = TranslatedStrings.TagNamePrompt },
                 _name,
                 _annotated,
-                new TextBlock { Text = GitUI.TranslatedStrings.TagMessagePrompt },
-                _message,
+                new TextBlock { Text = TranslatedStrings.TagMessagePrompt },
+                _message
             ]);
     }
 }

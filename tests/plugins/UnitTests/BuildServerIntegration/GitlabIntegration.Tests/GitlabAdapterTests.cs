@@ -7,22 +7,23 @@ using GitExtensions.Plugins.GitlabIntegration.ApiClient.Models;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using Xunit;
 
 namespace GitlabIntegrationTests;
+
 public class GitlabAdapterTests : IDisposable
 {
-    private readonly GitlabAdapter _target;
+    private readonly IGitlabApiClient _apiClient;
 
     private readonly IScheduler _scheduler;
-    private readonly IGitlabApiClient _apiClient;
+    private readonly GitlabAdapter _target;
 
     public GitlabAdapterTests()
     {
         _apiClient = Substitute.For<IGitlabApiClient>();
 
-        IGitlabApiClientFactory apiClientFactory = Substitute.For<IGitlabApiClientFactory>();
-        apiClientFactory.CreateGitlabApiClient(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>()).Returns(_apiClient);
+        var apiClientFactory = Substitute.For<IGitlabApiClientFactory>();
+        apiClientFactory.CreateGitlabApiClient(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>())
+            .Returns(_apiClient);
 
         _scheduler = Substitute.For<IScheduler>();
 
@@ -30,7 +31,7 @@ public class GitlabAdapterTests : IDisposable
         _target.Initialize(Substitute.For<IBuildServerWatcher>(), new MemorySettings(), () => { });
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _target.Dispose();
         _apiClient.Dispose();
@@ -61,10 +62,12 @@ public class GitlabAdapterTests : IDisposable
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
             .Returns(pagedResponse);
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
-        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
+        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should()
+            .BeTrue();
     }
 
     [Fact]
@@ -76,24 +79,23 @@ public class GitlabAdapterTests : IDisposable
             PageSize = 1,
             PageNumber = 1,
             Total = 1,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[1].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[1].Item2 }
         };
 
         List<BuildInfo> expected =
         [
-            GitlabAdapterTestData.Builds[1].Item1,
+            GitlabAdapterTestData.Builds[1].Item1
         ];
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
             .Returns(pagedResponse);
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
-        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
+        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should()
+            .BeTrue();
     }
 
     [Fact]
@@ -105,24 +107,23 @@ public class GitlabAdapterTests : IDisposable
             PageSize = 1,
             PageNumber = 1,
             Total = 1,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[-7].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[-7].Item2 }
         };
 
         List<BuildInfo> expected =
         [
-            GitlabAdapterTestData.Builds[-7].Item1,
+            GitlabAdapterTestData.Builds[-7].Item1
         ];
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), true, 1, Arg.Any<CancellationToken>())
             .Returns(pagedResponse);
 
-        List<BuildInfo> result = ProcessGetRunningBuildsRequest();
+        var result = ProcessGetRunningBuildsRequest();
 
-        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
+        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should()
+            .BeTrue();
     }
 
     [Fact]
@@ -136,9 +137,8 @@ public class GitlabAdapterTests : IDisposable
             Total = 6,
             Items = new[]
             {
-                GitlabAdapterTestData.Builds[6].Item2,
-                GitlabAdapterTestData.Builds[5].Item2,
-                GitlabAdapterTestData.Builds[4].Item2,
+                GitlabAdapterTestData.Builds[6].Item2, GitlabAdapterTestData.Builds[5].Item2,
+                GitlabAdapterTestData.Builds[4].Item2
             }
         };
 
@@ -150,9 +150,8 @@ public class GitlabAdapterTests : IDisposable
             Total = 6,
             Items = new[]
             {
-                GitlabAdapterTestData.Builds[3].Item2,
-                GitlabAdapterTestData.Builds[2].Item2,
-                GitlabAdapterTestData.Builds[1].Item2,
+                GitlabAdapterTestData.Builds[3].Item2, GitlabAdapterTestData.Builds[2].Item2,
+                GitlabAdapterTestData.Builds[1].Item2
             }
         };
 
@@ -171,10 +170,12 @@ public class GitlabAdapterTests : IDisposable
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 2, Arg.Any<CancellationToken>())
             .Returns(secondPagedResponse);
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
-        _apiClient.Received(2).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should().BeTrue();
+        _apiClient.Received(2).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.OrderBy(x => x.Id).SequenceEqual(expected.OrderBy(x => x.Id), new BuildInfoEqualityComparer()).Should()
+            .BeTrue();
     }
 
     [Fact]
@@ -188,8 +189,7 @@ public class GitlabAdapterTests : IDisposable
             Total = 5,
             Items = new[]
             {
-                GitlabAdapterTestData.Builds[5].Item2,
-                GitlabAdapterTestData.Builds[4].Item2,
+                GitlabAdapterTestData.Builds[5].Item2, GitlabAdapterTestData.Builds[4].Item2,
                 GitlabAdapterTestData.Builds[3].Item2
             }
         };
@@ -202,8 +202,7 @@ public class GitlabAdapterTests : IDisposable
             Total = 6,
             Items = new[]
             {
-                GitlabAdapterTestData.Builds[3].Item2,
-                GitlabAdapterTestData.Builds[2].Item2,
+                GitlabAdapterTestData.Builds[3].Item2, GitlabAdapterTestData.Builds[2].Item2,
                 GitlabAdapterTestData.Builds[1].Item2
             }
         };
@@ -214,7 +213,7 @@ public class GitlabAdapterTests : IDisposable
             GitlabAdapterTestData.Builds[4].Item1,
             GitlabAdapterTestData.Builds[3].Item1,
             GitlabAdapterTestData.Builds[2].Item1,
-            GitlabAdapterTestData.Builds[1].Item1,
+            GitlabAdapterTestData.Builds[1].Item1
         ];
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
@@ -222,10 +221,11 @@ public class GitlabAdapterTests : IDisposable
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 2, Arg.Any<CancellationToken>())
             .Returns(secondPagedResponse);
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
-        _apiClient.Received(2).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.Should().BeEquivalentTo(expected, o => o.Using<BuildInfo>(new BuildInfoEqualityComparer()));
+        _apiClient.Received(2).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.Should().BeEquivalentTo(expected, o => o.Using(new BuildInfoEqualityComparer()));
     }
 
     [Fact]
@@ -238,24 +238,22 @@ public class GitlabAdapterTests : IDisposable
             PageSize = 1,
             PageNumber = 1,
             Total = 1,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[1].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[1].Item2 }
         };
 
         List<BuildInfo> firstExpected =
         [
-            GitlabAdapterTestData.Builds[1].Item1,
+            GitlabAdapterTestData.Builds[1].Item1
         ];
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
             .Returns(firstResponse);
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
-        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.Should().BeEquivalentTo(firstExpected, o => o.Using<BuildInfo>(new BuildInfoEqualityComparer()));
+        _apiClient.Received(1).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.Should().BeEquivalentTo(firstExpected, o => o.Using(new BuildInfoEqualityComparer()));
 
         // Request running build
         PagedResponse<GitlabPipeline> runningResponse = new()
@@ -264,15 +262,12 @@ public class GitlabAdapterTests : IDisposable
             PageSize = 1,
             PageNumber = 1,
             Total = 1,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[-7].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[-7].Item2 }
         };
 
         List<BuildInfo> runningExpected =
         [
-            GitlabAdapterTestData.Builds[-7].Item1,
+            GitlabAdapterTestData.Builds[-7].Item1
         ];
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), true, 1, Arg.Any<CancellationToken>())
@@ -280,8 +275,9 @@ public class GitlabAdapterTests : IDisposable
 
         result = ProcessGetRunningBuildsRequest();
 
-        _apiClient.Received(2).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.Should().BeEquivalentTo(runningExpected, o => o.Using<BuildInfo>(new BuildInfoEqualityComparer()));
+        _apiClient.Received(2).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.Should().BeEquivalentTo(runningExpected, o => o.Using(new BuildInfoEqualityComparer()));
 
         // Simulate running build to be finished
         PagedResponse<GitlabPipeline> secondResponse = new()
@@ -290,17 +286,13 @@ public class GitlabAdapterTests : IDisposable
             PageSize = 2,
             PageNumber = 1,
             Total = 2,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[1].Item2,
-                GitlabAdapterTestData.Builds[7].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[1].Item2, GitlabAdapterTestData.Builds[7].Item2 }
         };
 
         // should receive only updated BuildInfo
         List<BuildInfo> secondExpected =
         [
-            GitlabAdapterTestData.Builds[7].Item1,
+            GitlabAdapterTestData.Builds[7].Item1
         ];
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
@@ -308,8 +300,9 @@ public class GitlabAdapterTests : IDisposable
 
         result = ProcessGetFinishedBuildsRequest();
 
-        _apiClient.Received(3).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        result.Should().BeEquivalentTo(secondExpected, o => o.Using<BuildInfo>(new BuildInfoEqualityComparer()));
+        _apiClient.Received(3).GetPipelinesAsync(Arg.Any<DateTime?>(), Arg.Any<bool>(), Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
+        result.Should().BeEquivalentTo(secondExpected, o => o.Using(new BuildInfoEqualityComparer()));
     }
 
     [Theory]
@@ -331,10 +324,7 @@ public class GitlabAdapterTests : IDisposable
             PageNumber = 1,
             NextPage = 2,
             Total = totalPages,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[3].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[3].Item2 }
         };
 
         PagedResponse<GitlabPipeline> secondPagedResponse = new()
@@ -344,10 +334,7 @@ public class GitlabAdapterTests : IDisposable
             PageNumber = 2,
             NextPage = 3,
             Total = totalPages,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[2].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[2].Item2 }
         };
 
         PagedResponse<GitlabPipeline> thirdPagedResponse = new()
@@ -357,10 +344,7 @@ public class GitlabAdapterTests : IDisposable
             PageNumber = 3,
             NextPage = null,
             Total = totalPages,
-            Items = new[]
-            {
-                GitlabAdapterTestData.Builds[1].Item2,
-            }
+            Items = new[] { GitlabAdapterTestData.Builds[1].Item2 }
         };
 
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
@@ -370,18 +354,19 @@ public class GitlabAdapterTests : IDisposable
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 3, Arg.Any<CancellationToken>())
             .Returns(thirdPagedResponse);
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
         result.Should().HaveCount(expectedPages);
     }
 
-    [Fact(Skip = "Settings check should be added first. Otherwise, System.UnauthorizedAccessException : Attempted to perform an unauthorized operation.")]
+    [Fact(Skip =
+        "Settings check should be added first. Otherwise, System.UnauthorizedAccessException : Attempted to perform an unauthorized operation.")]
     public void Should_handle_unauthorized_access_exception()
     {
         _apiClient.GetPipelinesAsync(Arg.Any<DateTime?>(), false, 1, Arg.Any<CancellationToken>())
             .Throws(new UnauthorizedAccessException());
 
-        List<BuildInfo> result = ProcessGetFinishedBuildsRequest();
+        var result = ProcessGetFinishedBuildsRequest();
 
         result.Should().BeEmpty();
     }
@@ -391,7 +376,7 @@ public class GitlabAdapterTests : IDisposable
         ManualResetEvent observableEvent = new(false);
         List<BuildInfo> result = [];
 
-        IObservable<BuildInfo> observable = _target.GetFinishedBuildsSince(_scheduler);
+        var observable = _target.GetFinishedBuildsSince(_scheduler);
         observable.Subscribe(e =>
             {
                 result.Add(e);
@@ -411,7 +396,7 @@ public class GitlabAdapterTests : IDisposable
         ManualResetEvent observableEvent = new(false);
         List<BuildInfo> result = [];
 
-        IObservable<BuildInfo> observable = _target.GetRunningBuilds(_scheduler);
+        var observable = _target.GetRunningBuilds(_scheduler);
         observable.Subscribe(e =>
             {
                 result.Add(e);

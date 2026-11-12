@@ -1,43 +1,42 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitExtUtils;
-using GitUIPluginInterfaces;
-using ResourceManager;
+using GitUI.Compat;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Creates a ZIP or TAR archive from a selected revision.
+///     Creates a ZIP or TAR archive from a selected revision.
 /// </summary>
 public sealed class ArchiveWindow : GitExtensionsFormBase
 {
-    private readonly IGitUICommands _uiCommands;
-    private readonly GitRevision _revision;
-    private readonly GitRevision? _diffRevision;
-    private readonly CheckBox _specificPathsOnly = new();
     private readonly CheckBox _changedPathsOnly = new();
+    private readonly GitRevision? _diffRevision;
+
     private readonly TextBox _paths = new()
     {
-        AcceptsReturn = true,
-        MinHeight = 90,
-        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-        IsEnabled = false,
+        AcceptsReturn = true, MinHeight = 90, TextWrapping = TextWrapping.Wrap, IsEnabled = false
     };
-    private readonly RadioButton _zipFormat = new() { GroupName = "ArchiveFormat" };
+
+    private readonly GitRevision _revision;
+    private readonly CheckBox _specificPathsOnly = new();
     private readonly RadioButton _tarFormat = new() { GroupName = "ArchiveFormat" };
+    private readonly IGitUiCommands _uiCommands;
+    private readonly RadioButton _zipFormat = new() { GroupName = "ArchiveFormat" };
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="ArchiveWindow"/> class.
+    ///     Initializes a new instance of the <see cref="ArchiveWindow" /> class.
     /// </summary>
     /// <param name="uiCommands">Commands used to run Git with process feedback.</param>
     /// <param name="revision">The revision to archive.</param>
     /// <param name="diffRevision">Optional older revision used to limit the archive to changed paths.</param>
     /// <param name="path">An optional pathspec to archive exclusively.</param>
     public ArchiveWindow(
-        IGitUICommands uiCommands,
+        IGitUiCommands uiCommands,
         GitRevision revision,
         GitRevision? diffRevision = null,
         string? path = null)
@@ -49,17 +48,17 @@ public sealed class ArchiveWindow : GitExtensionsFormBase
         _revision = revision;
         _diffRevision = diffRevision;
 
-        Title = GitUI.TranslatedStrings.ArchiveRevisionTitle;
+        Title = TranslatedStrings.ArchiveRevisionTitle;
         Width = 560;
         SizeToContent = SizeToContent.Height;
         MinWidth = 440;
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-        _specificPathsOnly.Content = GitUI.TranslatedStrings.ArchiveSpecificPathsOnly;
+        _specificPathsOnly.Content = TranslatedStrings.ArchiveSpecificPathsOnly;
         _specificPathsOnly.IsChecked = !string.IsNullOrWhiteSpace(path);
         _specificPathsOnly.IsCheckedChanged += (_, _) => UpdatePathFilterState();
-        _changedPathsOnly.Content = GitUI.TranslatedStrings.ArchiveChangedPathsOnly;
+        _changedPathsOnly.Content = TranslatedStrings.ArchiveChangedPathsOnly;
         _changedPathsOnly.IsEnabled = diffRevision is not null;
         _changedPathsOnly.IsChecked = diffRevision is not null && string.IsNullOrWhiteSpace(path);
         _changedPathsOnly.IsCheckedChanged += (_, _) => UpdatePathFilterState();
@@ -72,29 +71,28 @@ public sealed class ArchiveWindow : GitExtensionsFormBase
 
         TextBlock revisionDetails = new()
         {
-            Text = $"{revision.ObjectId.ToShortString()}  {revision.Subject}",
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Text = $"{revision.ObjectId.ToShortString()}  {revision.Subject}", TextWrapping = TextWrapping.Wrap
         };
 
-        Button save = new() { Content = GitUI.TranslatedStrings.ArchiveSaveAs, IsDefault = true };
+        Button save = new() { Content = TranslatedStrings.ArchiveSaveAs, IsDefault = true };
         save.Click += (_, _) => ThreadHelper.FileAndForget(SaveArchiveAsync);
-        Button cancel = new() { Content = GitUI.TranslatedStrings.Cancel, IsCancel = true };
+        Button cancel = new() { Content = TranslatedStrings.Cancel, IsCancel = true };
         cancel.Click += (_, _) => Close(false);
 
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 8,
             Children =
             {
-                new TextBlock { Text = GitUI.TranslatedStrings.ArchiveRevisionLabel },
+                new TextBlock { Text = TranslatedStrings.ArchiveRevisionLabel },
                 revisionDetails,
-                new TextBlock { Text = GitUI.TranslatedStrings.ArchiveFormat },
+                new TextBlock { Text = TranslatedStrings.ArchiveFormat },
                 new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
                     Spacing = 12,
-                    Children = { _zipFormat, _tarFormat },
+                    Children = { _zipFormat, _tarFormat }
                 },
                 _changedPathsOnly,
                 _specificPathsOnly,
@@ -104,10 +102,10 @@ public sealed class ArchiveWindow : GitExtensionsFormBase
                     Orientation = Orientation.Horizontal,
                     HorizontalAlignment = HorizontalAlignment.Right,
                     Spacing = 8,
-                    Margin = new Avalonia.Thickness(0, 8, 0, 0),
-                    Children = { save, cancel },
-                },
-            },
+                    Margin = new Thickness(0, 8, 0, 0),
+                    Children = { save, cancel }
+                }
+            }
         };
     }
 
@@ -130,11 +128,14 @@ public sealed class ArchiveWindow : GitExtensionsFormBase
         IReadOnlyList<string>? paths = null;
         if (_specificPathsOnly.IsChecked == true)
         {
-            paths = [.. (_paths.Text ?? string.Empty)
-                .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+            paths =
+            [
+                .. (_paths.Text ?? string.Empty)
+                .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ];
             if (paths.Count == 0)
             {
-                MessageBoxes.ShowError(this, GitUI.TranslatedStrings.NoResultsFound);
+                MessageBoxes.ShowError(this, TranslatedStrings.NoResultsFound);
                 return;
             }
         }
@@ -143,50 +144,49 @@ public sealed class ArchiveWindow : GitExtensionsFormBase
             paths = await Task.Run(() => ArchiveWorkflow.GetChangedPaths(_uiCommands.Module, _diffRevision, _revision));
             if (paths.Count == 0)
             {
-                MessageBoxes.ShowError(this, GitUI.TranslatedStrings.NoResultsFound);
+                MessageBoxes.ShowError(this, TranslatedStrings.NoResultsFound);
                 return;
             }
         }
 
-        ArchiveFormat format = _tarFormat.IsChecked == true ? ArchiveFormat.Tar : ArchiveFormat.Zip;
-        string extension = format == ArchiveFormat.Zip ? "zip" : "tar";
+        var format = _tarFormat.IsChecked == true ? ArchiveFormat.Tar : ArchiveFormat.Zip;
+        var extension = format == ArchiveFormat.Zip ? "zip" : "tar";
         FilePickerFileType fileType = new(
             format == ArchiveFormat.Zip
-                ? GitUI.TranslatedStrings.ZipFileFilter
-                : GitUI.TranslatedStrings.TarFileFilter)
-        {
-            Patterns = [$"*.{extension}"],
-        };
-        string repositoryName = string.IsNullOrWhiteSpace(_uiCommands.Module.WorkingDir)
+                ? TranslatedStrings.ZipFileFilter
+                : TranslatedStrings.TarFileFilter) { Patterns = [$"*.{extension}"] };
+        var repositoryName = string.IsNullOrWhiteSpace(_uiCommands.Module.WorkingDir)
             ? "repository"
             : new DirectoryInfo(_uiCommands.Module.WorkingDir).Name;
-        IStorageFile? outputFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var outputFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = GitUI.TranslatedStrings.SaveArchiveAs,
+            Title = TranslatedStrings.SaveArchiveAs,
             SuggestedFileName = $"{repositoryName}_{_revision.ObjectId.ToShortString()}",
             DefaultExtension = extension,
-            FileTypeChoices = [fileType],
+            FileTypeChoices = [fileType]
         });
         if (outputFile is null)
         {
             return;
         }
 
-        if (outputFile.TryGetLocalPath() is not string outputPath)
+        if (outputFile.TryGetLocalPath() is not { } outputPath)
         {
-            MessageBoxes.ShowError(this, GitUI.TranslatedStrings.ArchiveFilePathRequired);
+            MessageBoxes.ShowError(this, TranslatedStrings.ArchiveFilePathRequired);
             return;
         }
 
         try
         {
-            ArgumentString arguments = ArchiveWorkflow.BuildArchive(_uiCommands.Module, _revision, outputPath, format, paths);
+            var arguments =
+                ArchiveWorkflow.BuildArchive(_uiCommands.Module, _revision, outputPath, format, paths);
             if (_uiCommands.StartGitCommandProcessDialog(this, arguments))
             {
                 Close(true);
             }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException
+                                              or InvalidOperationException)
         {
             MessageBoxes.ShowError(this, exception.Message);
         }

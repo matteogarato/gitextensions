@@ -8,42 +8,37 @@ public interface IThemePersistence
     void Save(Theme theme, string themeFileName);
 }
 
-public class ThemePersistence : IThemePersistence
+public class ThemePersistence(IThemeLoader themeLoader) : IThemePersistence
 {
-    private const string Format = ".{0} {{ color: {1}}}";
-    private readonly IThemeLoader _themeLoader;
+    private const string _format = ".{0} {{ color: {1}}}";
 
-    public ThemePersistence(IThemeLoader themeLoader)
+    Theme IThemePersistence.Load(string themeFileName, ThemeId themeId, IReadOnlyList<string> variations)
     {
-        _themeLoader = themeLoader;
+        return themeLoader.LoadTheme(themeFileName, themeId, variations);
     }
 
-    public Theme Load(string themeFileName, ThemeId themeId, IReadOnlyList<string> variations)
+    void IThemePersistence.Save(Theme theme, string themeFileName)
     {
-        return _themeLoader.LoadTheme(themeFileName, themeId, allowedClasses: variations);
-    }
-
-    public void Save(Theme theme, string themeFileName)
-    {
-        IThemeSerializationData serializationData = (IThemeSerializationData)theme;
-        string serialized = string.Join(
+        IThemeSerializationData serializationData = theme;
+        var serialized = string.Join(
             Environment.NewLine,
-            Enumerable.Concat(
-                serializationData.SysColorValues.Select(_ => string.Format(Format, _.Key, FormatColor(_.Value))),
-                serializationData.AppColorValues.Select(_ => string.Format(Format, _.Key, FormatColor(_.Value)))));
+            serializationData.SysColorValues.Select(_ => string.Format(_format, _.Key, FormatColor(_.Value))).Concat(
+                serializationData.AppColorValues.Select(_ => string.Format(_format, _.Key, FormatColor(_.Value)))));
 
         File.WriteAllText(themeFileName, serialized);
     }
 
     private static string FormatColor(Color color)
     {
-        int rgb = color.ToArgb() & 0x00_ff_ff_ff;
+        var rgb = color.ToArgb() & 0x00_ff_ff_ff;
         return $"#{rgb:x6}";
     }
 
     internal static class TestAccessor
     {
-        public static string FormatColor(Color color) =>
-            ThemePersistence.FormatColor(color);
+        public static string FormatColor(Color color)
+        {
+            return ThemePersistence.FormatColor(color);
+        }
     }
 }

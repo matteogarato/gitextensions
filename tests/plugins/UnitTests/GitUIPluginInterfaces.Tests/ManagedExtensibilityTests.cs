@@ -1,7 +1,7 @@
 ﻿using GitUIPluginInterfaces;
-using Xunit;
 
 namespace GitUIPluginInterfacesTests;
+
 public class ManagedExtensibilityTests
 {
     [Fact]

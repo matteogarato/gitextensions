@@ -1,6 +1,6 @@
-﻿namespace System;
+﻿namespace GitUI.Interops;
 
-internal static partial class Libraries
+internal static class Libraries
 {
     public const string Gdi32 = "gdi32.dll";
     public const string Kernel32 = "kernel32.dll";

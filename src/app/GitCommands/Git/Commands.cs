@@ -1,5 +1,6 @@
 ﻿using GitCommands.Git.Extensions;
 using GitCommands.Git.Tag;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 
@@ -14,7 +15,7 @@ public static partial class Commands
         CheckoutNewBranchMode newBranchMode = CheckoutNewBranchMode.DontCreate,
         string? newBranchName = null)
     {
-        return new GitCommand(accessesRemote: false, changesRepoState: true,
+        return new GitCommand(false, true,
             new GitArgumentBuilder("checkout")
             {
                 { localChanges is LocalChangesAction.Merge, "--merge" },
@@ -22,23 +23,27 @@ public static partial class Commands
                 { remote && newBranchMode is CheckoutNewBranchMode.Create, $"-b {newBranchName.Quote()}" },
                 { remote && newBranchMode is CheckoutNewBranchMode.Reset, $"-B {newBranchName.Quote()}" },
                 { remote && newBranchMode is CheckoutNewBranchMode.Create, "--track" },
-                branchName.QuoteNE()
+                branchName.QuoteNe()
             });
     }
 
-    public static IGitCommand CreateTag(GitCreateTagArgs gitCreateTagArgs, string? tagMessageFileName, Func<string?, string?> getPathForGitExecution)
+    public static IGitCommand CreateTag(GitCreateTagArgs gitCreateTagArgs, string? tagMessageFileName,
+        Func<string?, string?> getPathForGitExecution)
     {
         Validate(gitCreateTagArgs, tagMessageFileName);
 
-        return new GitCommand(accessesRemote: false, changesRepoState: true,
+        return new GitCommand(false, true,
             new GitArgumentBuilder("tag")
             {
-                    { gitCreateTagArgs.Force, "-f" },
-                    GetArgumentForOperation(gitCreateTagArgs),
-                    { gitCreateTagArgs.Operation.CanProvideMessage(), $"-F {getPathForGitExecution(tagMessageFileName).Quote()}" },
-                    gitCreateTagArgs.TagName.Trim().Quote(),
-                    "--",
-                    gitCreateTagArgs.ObjectId
+                { gitCreateTagArgs.Force, "-f" },
+                GetArgumentForOperation(gitCreateTagArgs),
+                {
+                    gitCreateTagArgs.Operation.CanProvideMessage(),
+                    $"-F {getPathForGitExecution(tagMessageFileName).Quote()}"
+                },
+                gitCreateTagArgs.TagName.Trim().Quote(),
+                "--",
+                gitCreateTagArgs.ObjectId
             });
 
         static string? GetArgumentForOperation(GitCreateTagArgs gitCreateTagArgs)
@@ -61,7 +66,8 @@ public static partial class Commands
         {
             if (gitCreateTagArgs.ObjectId.IsArtificial)
             {
-                throw new ArgumentException("A valid, non-artificial revision is required for tagging.", nameof(gitCreateTagArgs.ObjectId));
+                throw new ArgumentException("A valid, non-artificial revision is required for tagging.",
+                    nameof(gitCreateTagArgs.ObjectId));
             }
 
             if (string.IsNullOrWhiteSpace(gitCreateTagArgs.TagName))
@@ -74,7 +80,8 @@ public static partial class Commands
                 throw new ArgumentException("TagMessageFileName is required.");
             }
 
-            if (gitCreateTagArgs.Operation == TagOperation.SignWithSpecificKey && string.IsNullOrWhiteSpace(gitCreateTagArgs.SignKeyId))
+            if (gitCreateTagArgs.Operation == TagOperation.SignWithSpecificKey &&
+                string.IsNullOrWhiteSpace(gitCreateTagArgs.SignKeyId))
             {
                 throw new ArgumentException("SignKeyId is required.");
             }
@@ -82,7 +89,7 @@ public static partial class Commands
     }
 
     /// <summary>
-    ///  Builds a command to delete a local tag.
+    ///     Builds a command to delete a local tag.
     /// </summary>
     /// <param name="tagName">The tag name to delete.</param>
     /// <returns>A state-changing local Git command.</returns>
@@ -90,22 +97,17 @@ public static partial class Commands
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
 
-        return new GitCommand(accessesRemote: false, changesRepoState: true,
-            new GitArgumentBuilder("tag")
-            {
-                "-d",
-                "--",
-                tagName.QuoteNE()
-            });
+        return new GitCommand(false, true,
+            new GitArgumentBuilder("tag") { "-d", "--", tagName.QuoteNe() });
     }
 
     /// <summary>
-    ///  Builds a command to run Git garbage collection for the current repository.
+    ///     Builds a command to run Git garbage collection for the current repository.
     /// </summary>
     /// <returns>A state-changing local Git command.</returns>
     public static IGitCommand GarbageCollect()
     {
-        return new GitCommand(accessesRemote: false, changesRepoState: true,
+        return new GitCommand(false, true,
             new GitArgumentBuilder("gc"));
     }
 
@@ -117,16 +119,16 @@ public static partial class Commands
             throw new ArgumentException("At least one branch is required.", nameof(branches));
         }
 
-        bool hasRemoteBranch = branches.Any(branch => branch.IsRemote);
-        bool hasNonRemoteBranch = branches.Any(branch => !branch.IsRemote);
-        return new GitCommand(accessesRemote: false, changesRepoState: true,
+        var hasRemoteBranch = branches.Any(branch => branch.IsRemote);
+        var hasNonRemoteBranch = branches.Any(branch => !branch.IsRemote);
+        return new GitCommand(false, true,
             new GitArgumentBuilder("branch")
             {
-                    { "--delete" },
-                    { force, "--force" },
-                    { hasRemoteBranch && hasNonRemoteBranch, "--all" },
-                    { hasRemoteBranch && !hasNonRemoteBranch, "--remotes" },
-                    branches.Select(branch => branch.Name.Quote())
+                "--delete",
+                { force, "--force" },
+                { hasRemoteBranch && hasNonRemoteBranch, "--all" },
+                { hasRemoteBranch && !hasNonRemoteBranch, "--remotes" },
+                branches.Select(branch => branch.Name.Quote())
             });
     }
 
@@ -135,11 +137,10 @@ public static partial class Commands
         ArgumentNullException.ThrowIfNull(remote);
         ArgumentNullException.ThrowIfNull(branchLocalNames);
 
-        return new GitCommand(accessesRemote: true, changesRepoState: true,
+        return new GitCommand(true, true,
             new GitArgumentBuilder("push")
             {
-                    remote,
-                    branchLocalNames.Select(branch => $":refs/heads/{branch.Quote()}")
+                remote, branchLocalNames.Select(branch => $":refs/heads/{branch.Quote()}")
             });
     }
 }

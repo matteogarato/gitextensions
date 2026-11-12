@@ -6,7 +6,7 @@ namespace GitExtUtils;
 public delegate void TraceHandler(in string message);
 
 /// <summary>
-///  Provides an event for receiving the <see cref="Trace"/> output.
+///     Provides an event for receiving the <see cref="Trace" /> output.
 /// </summary>
 public interface ISubscribableTraceListener
 {
@@ -19,12 +19,18 @@ internal sealed class SubscribableTraceListener : TraceListener, ISubscribableTr
 
     private readonly StringBuilder _trace = new();
 
-    public event TraceHandler? TraceReceived;
-
     public SubscribableTraceListener()
     {
         Trace.Listeners.Add(this);
     }
+
+    event TraceHandler? ISubscribableTraceListener.TraceReceived
+    {
+        add => TraceReceived += value;
+        remove => TraceReceived -= value;
+    }
+
+    private event TraceHandler? TraceReceived;
 
     protected override void Dispose(bool disposing)
     {

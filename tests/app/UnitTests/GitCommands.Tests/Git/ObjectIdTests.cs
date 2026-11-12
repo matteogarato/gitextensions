@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using JetBrains.Annotations;
 
 namespace GitCommandsTests.Git;
@@ -9,12 +8,17 @@ namespace GitCommandsTests.Git;
 // TODO SUT is in GitUIPluginInterfaces but no test assembly exists for that assembly
 public sealed partial class ObjectIdTests
 {
+    private const string _nonHexAscii = "0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz";
+    private const string _hexAscii = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
+
     [GeneratedRegex(@"[a-f0-9]{40}", RegexOptions.ExplicitCapture)]
     private static partial Regex Sha40Regex { get; }
+
     [GeneratedRegex(@"[a-f0-9]{39}", RegexOptions.ExplicitCapture)]
     private static partial Regex Sha39Regex { get; }
+
     [GeneratedRegex(@"[XYZa-f0-9]{39}", RegexOptions.ExplicitCapture)]
-    private static partial Regex ShaXYZRegex { get; }
+    private static partial Regex ShaXyzRegex { get; }
 
     [Theory]
     [InlineData("0000000000000000000000000000000000000000")]
@@ -22,7 +26,7 @@ public sealed partial class ObjectIdTests
     [InlineData("0123456789abcdef0123456789abcdef01234567")]
     public void TryParse_handles_valid_hashes(string sha1)
     {
-        ObjectId.TryParse(sha1, out ObjectId id).Should().BeTrue();
+        ObjectId.TryParse(sha1, out var id).Should().BeTrue();
         id.ToString().Should().Be(sha1.ToLower());
     }
 
@@ -47,7 +51,7 @@ public sealed partial class ObjectIdTests
     [InlineData("__0102030405060708091011121314151617181920__", 2)]
     public void TryParse_with_offset_handles_valid_hashes(string sha1, int offset)
     {
-        ObjectId.TryParse(sha1, offset, out ObjectId id).Should().BeTrue();
+        ObjectId.TryParse(sha1, offset, out var id).Should().BeTrue();
         id.ToString().Should().Be(sha1.Substring(offset, 40));
     }
 
@@ -108,12 +112,12 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void ParseFromRegexCapture()
     {
-        ObjectId objectId = ObjectId.Random();
-        string str = "XYZ" + objectId + "XYZ";
+        var objectId = ObjectId.Random();
+        var str = "XYZ" + objectId + "XYZ";
 
         ObjectId.Parse(str, Sha40Regex.Match(str)).Should().Be(objectId);
         ((Action)(() => ObjectId.Parse(str, Sha39Regex.Match(str)))).Should().Throw<FormatException>();
-        ((Action)(() => ObjectId.Parse(str, ShaXYZRegex.Match(str)))).Should().Throw<FormatException>();
+        ((Action)(() => ObjectId.Parse(str, ShaXyzRegex.Match(str)))).Should().Throw<FormatException>();
     }
 
     [Fact]
@@ -155,9 +159,11 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void Equivalent_ids_are_equal()
     {
-        ObjectId.Parse("0102030405060708091011121314151617181920").Should().Be(ObjectId.Parse("0102030405060708091011121314151617181920"));
+        ObjectId.Parse("0102030405060708091011121314151617181920").Should()
+            .Be(ObjectId.Parse("0102030405060708091011121314151617181920"));
 
-        ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd").Should().Be(ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
+        ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd").Should()
+            .Be(ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
 
         ObjectId.WorkTreeId.Should().Be(ObjectId.WorkTreeId);
 
@@ -175,7 +181,8 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void Different_ids_are_not_equal()
     {
-        ObjectId.Parse("0102030405060708091011121314151617181920").Should().NotBe(ObjectId.Parse("0000000000000000000000000000000000000000"));
+        ObjectId.Parse("0102030405060708091011121314151617181920").Should()
+            .NotBe(ObjectId.Parse("0000000000000000000000000000000000000000"));
 
         ObjectId.IndexId.Should().NotBe(ObjectId.WorkTreeId);
     }
@@ -183,9 +190,11 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void Equivalent_ids_have_equal_hash_codes()
     {
-        ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode().Should().Be(ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode());
+        ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode().Should()
+            .Be(ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode());
 
-        ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd").GetHashCode().Should().Be(ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd").GetHashCode());
+        ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd").GetHashCode().Should()
+            .Be(ObjectId.Parse("abcdefabcdefabcdefabcdefabcdefabcdefabcd").GetHashCode());
 
         ObjectId.WorkTreeId.GetHashCode().Should().Be(ObjectId.WorkTreeId.GetHashCode());
 
@@ -195,25 +204,23 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void Different_ids_have_different_hash_codes()
     {
-        ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode().Should().NotBe(ObjectId.Parse("0000000000000000000000000000000000000000").GetHashCode());
+        ObjectId.Parse("0102030405060708091011121314151617181920").GetHashCode().Should()
+            .NotBe(ObjectId.Parse("0000000000000000000000000000000000000000").GetHashCode());
 
         ObjectId.IndexId.GetHashCode().Should().NotBe(ObjectId.WorkTreeId.GetHashCode());
     }
 
-    private const string NonHexAscii = "0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz";
-    private const string HexAscii = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
-
     [Theory]
-    [InlineData(HexAscii, 0, "000102030405060708090a0b0c0d0e0f10111213")]
-    [InlineData(HexAscii, 1, "00102030405060708090a0b0c0d0e0f101112131")]
-    [InlineData(HexAscii, 2, "0102030405060708090a0b0c0d0e0f1011121314")]
-    [InlineData(HexAscii, 3, "102030405060708090a0b0c0d0e0f10111213141")]
-    [InlineData(HexAscii, 26, "0d0e0f101112131415161718191a1b1c1d1e1f20")]
+    [InlineData(_hexAscii, 0, "000102030405060708090a0b0c0d0e0f10111213")]
+    [InlineData(_hexAscii, 1, "00102030405060708090a0b0c0d0e0f101112131")]
+    [InlineData(_hexAscii, 2, "0102030405060708090a0b0c0d0e0f1011121314")]
+    [InlineData(_hexAscii, 3, "102030405060708090a0b0c0d0e0f10111213141")]
+    [InlineData(_hexAscii, 26, "0d0e0f101112131415161718191a1b1c1d1e1f20")]
     public void TryParse_works_as_expected(string source, int offset, [CanBeNull] string? expected)
     {
-        byte[] sourceBytes = Encoding.ASCII.GetBytes(source);
+        var sourceBytes = Encoding.ASCII.GetBytes(source);
 
-        ObjectId.TryParse(sourceBytes.AsSpan(offset, 40), out ObjectId id).Should().Be(expected is not null);
+        ObjectId.TryParse(sourceBytes.AsSpan(offset, 40), out var id).Should().Be(expected is not null);
 
         if (expected is not null)
         {
@@ -222,18 +229,18 @@ public sealed partial class ObjectIdTests
     }
 
     [Theory]
-    [InlineData(NonHexAscii, 0, null)]
+    [InlineData(_nonHexAscii, 0, null)]
     public void TryParse_returns_false_zero_with_illegal_input(string source, int offset, [CanBeNull] string? expected)
     {
-        byte[] sourceBytes = Encoding.ASCII.GetBytes(source);
-        ObjectId.TryParse(sourceBytes.AsSpan(offset, 40), out ObjectId objectId).Should().Be(expected is not null);
+        var sourceBytes = Encoding.ASCII.GetBytes(source);
+        ObjectId.TryParse(sourceBytes.AsSpan(offset, 40), out var objectId).Should().Be(expected is not null);
         objectId.IsZero.Should().BeTrue();
     }
 
     [Fact]
     public void TryParse_returns_false_when_array_null()
     {
-        ObjectId.TryParse(default, out ObjectId objectId).Should().BeFalse();
+        ObjectId.TryParse(default, out var objectId).Should().BeFalse();
         objectId.IsZero.Should().BeTrue();
         ObjectId.TryParse(default(Span<byte>), out objectId).Should().BeFalse();
         objectId.IsZero.Should().BeTrue();
@@ -242,9 +249,9 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void TryParse_returns_false_when_bounds_check_fails()
     {
-        byte[] bytes = new byte[ObjectId.Sha1CharCount];
+        var bytes = new byte[ObjectId.Sha1CharCount];
 
-        ObjectId.TryParse(bytes.AsSpan(1), out ObjectId objectId).Should().BeFalse();
+        ObjectId.TryParse(bytes.AsSpan(1), out var objectId).Should().BeFalse();
         objectId.IsZero.Should().BeTrue();
     }
 
@@ -252,9 +259,9 @@ public sealed partial class ObjectIdTests
     public void ToShortString()
     {
         const string s = "0102030405060708091011121314151617181920";
-        ObjectId id = ObjectId.Parse(s);
+        var id = ObjectId.Parse(s);
 
-        for (int length = 1; length < ObjectId.Sha1CharCount; length++)
+        for (var length = 1; length < ObjectId.Sha1CharCount; length++)
         {
             id.ToShortString(length).Should().Be(s[..length]);
         }
@@ -266,7 +273,7 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void Equals_using_operator()
     {
-        string objectIdString = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        var objectIdString = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         (ObjectId.Parse(objectIdString) == ObjectId.Parse(objectIdString)).Should().BeTrue();
         (ObjectId.Parse(objectIdString) != ObjectId.Parse(objectIdString)).Should().BeFalse();
         (ObjectId.Parse(objectIdString) == ObjectId.Random()).Should().BeFalse();
@@ -279,7 +286,7 @@ public sealed partial class ObjectIdTests
     [InlineData("0000000000000000000000000000000000000000")]
     public void WriteTo_writes_full_hex(string sha1)
     {
-        ObjectId id = ObjectId.Parse(sha1);
+        var id = ObjectId.Parse(sha1);
         Span<char> buffer = stackalloc char[ObjectId.Sha1CharCount];
 
         id.WriteTo(buffer).Should().BeTrue();
@@ -289,7 +296,7 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void WriteTo_returns_false_when_destination_too_small()
     {
-        ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
+        var id = ObjectId.Parse("0102030405060708091011121314151617181920");
         Span<char> buffer = stackalloc char[39];
 
         id.WriteTo(buffer).Should().BeFalse();
@@ -299,7 +306,7 @@ public sealed partial class ObjectIdTests
     public void WriteTo_writes_into_larger_buffer()
     {
         const string sha1 = "abcdefabcdefabcdefabcdefabcdefabcdefabcd";
-        ObjectId id = ObjectId.Parse(sha1);
+        var id = ObjectId.Parse(sha1);
         Span<char> buffer = stackalloc char[50];
         buffer.Fill('X');
 
@@ -313,10 +320,10 @@ public sealed partial class ObjectIdTests
     [InlineData("abcdefabcdefabcdefabcdefabcdefabcdefabcd")]
     public void ISpanFormattable_writes_hex(string sha1)
     {
-        ObjectId id = ObjectId.Parse(sha1);
+        var id = ObjectId.Parse(sha1);
 
         Span<char> buffer = stackalloc char[ObjectId.Sha1CharCount];
-        bool result = ((ISpanFormattable)id).TryFormat(buffer, out int charsWritten, default, null);
+        var result = ((ISpanFormattable)id).TryFormat(buffer, out var charsWritten, default, null);
 
         result.Should().BeTrue();
         charsWritten.Should().Be(ObjectId.Sha1CharCount);
@@ -326,10 +333,10 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void ISpanFormattable_returns_false_when_destination_too_small()
     {
-        ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
+        var id = ObjectId.Parse("0102030405060708091011121314151617181920");
 
         Span<char> buffer = stackalloc char[39];
-        bool result = ((ISpanFormattable)id).TryFormat(buffer, out int charsWritten, default, null);
+        var result = ((ISpanFormattable)id).TryFormat(buffer, out var charsWritten, default, null);
 
         result.Should().BeFalse();
         charsWritten.Should().Be(0);
@@ -339,9 +346,9 @@ public sealed partial class ObjectIdTests
     public void ISpanFormattable_works_with_interpolation()
     {
         const string sha1 = "0102030405060708091011121314151617181920";
-        ObjectId id = ObjectId.Parse(sha1);
+        var id = ObjectId.Parse(sha1);
 
-        string result = $"{id}";
+        var result = $"{id}";
 
         result.Should().Be(sha1);
     }
@@ -349,7 +356,7 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void CompareTo_returns_zero_for_equal_ids()
     {
-        ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
+        var id = ObjectId.Parse("0102030405060708091011121314151617181920");
 
         id.CompareTo(ObjectId.Parse("0102030405060708091011121314151617181920")).Should().Be(0);
     }
@@ -357,7 +364,7 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void CompareTo_returns_positive_for_zero()
     {
-        ObjectId id = ObjectId.Parse("0102030405060708091011121314151617181920");
+        var id = ObjectId.Parse("0102030405060708091011121314151617181920");
 
         id.CompareTo(default).Should().BePositive();
     }
@@ -365,8 +372,8 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void CompareTo_respects_ordering()
     {
-        ObjectId lower = ObjectId.Parse("0000000000000000000000000000000000000001");
-        ObjectId higher = ObjectId.Parse("ff00000000000000000000000000000000000000");
+        var lower = ObjectId.Parse("0000000000000000000000000000000000000001");
+        var higher = ObjectId.Parse("ff00000000000000000000000000000000000000");
 
         lower.CompareTo(higher).Should().BeNegative();
         higher.CompareTo(lower).Should().BePositive();
@@ -376,8 +383,8 @@ public sealed partial class ObjectIdTests
     [InlineData("0123456789abcdef0123456789abcdef01234567")]
     public void TryParse_bytes_roundtrips_correctly(string sha1)
     {
-        byte[] asciiBytes = Encoding.ASCII.GetBytes(sha1);
-        ObjectId.TryParse((ReadOnlySpan<byte>)asciiBytes.AsSpan(), out ObjectId id).Should().BeTrue();
+        var asciiBytes = Encoding.ASCII.GetBytes(sha1);
+        ObjectId.TryParse(asciiBytes.AsSpan(), out var id).Should().BeTrue();
 
         id.ToString().Should().Be(sha1);
     }
@@ -385,11 +392,11 @@ public sealed partial class ObjectIdTests
     [Fact]
     public void TryParse_bytes_rejects_uppercase()
     {
-        byte[] asciiBytes = Encoding.ASCII.GetBytes("ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD");
+        var asciiBytes = Encoding.ASCII.GetBytes("ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD");
 
         // Convert.FromHexString accepts uppercase, so this will parse successfully.
         // SHA-1 strings are always lowercase in git output, and ToString normalises to lowercase.
-        ObjectId.TryParse((ReadOnlySpan<byte>)asciiBytes.AsSpan(), out ObjectId id).Should().BeTrue();
+        ObjectId.TryParse(asciiBytes.AsSpan(), out var id).Should().BeTrue();
         id.ToString().Should().Be("abcdefabcdefabcdefabcdefabcdefabcdefabcd");
     }
 }

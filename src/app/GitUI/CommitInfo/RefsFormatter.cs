@@ -1,31 +1,27 @@
 ﻿using System.Net;
 using System.Text;
-using GitCommands;
+using GitCommands.Settings;
 using ResourceManager;
 
 namespace GitUI.CommitInfo;
 
-public sealed class RefsFormatter
+public sealed class RefsFormatter(ILinkFactory linkFactory)
 {
     /// <summary>
-    /// The number of displayed lines if the list is limited.
+    ///     The number of displayed lines if the list is limited.
     /// </summary>
-    private const int MaximumDisplayedLinesIfLimited = 12;
+    private const int _maximumDisplayedLinesIfLimited = 12;
 
     /// <summary>
-    /// The number of displayed refs if the list is limited.
-    ///
-    /// If limited, the line "[Show all]" and an empty line are added.
-    /// Hence the list needs to be limited only if it exceeds MaximumDisplayedRefsIfLimited + 2.
+    ///     The number of displayed refs if the list is limited.
+    ///     If limited, the line "[Show all]" and an empty line are added.
+    ///     Hence the list needs to be limited only if it exceeds MaximumDisplayedRefsIfLimited + 2.
     /// </summary>
-    private const int MaximumDisplayedRefsIfLimited = MaximumDisplayedLinesIfLimited - 2;
+    private const int _maximumDisplayedRefsIfLimited = _maximumDisplayedLinesIfLimited - 2;
 
-    private readonly ILinkFactory _linkFactory;
-
-    public RefsFormatter(ILinkFactory linkFactory)
-    {
-        _linkFactory = linkFactory ?? throw new ArgumentNullException(nameof(linkFactory), "RefsFormatter requires an ILinkFactory instance");
-    }
+    private readonly ILinkFactory _linkFactory = linkFactory ??
+                                                 throw new ArgumentNullException(nameof(linkFactory),
+                                                     "RefsFormatter requires an ILinkFactory instance");
 
     public string FormatBranches(IEnumerable<string>? branches, bool showAsLinks, bool limit)
     {
@@ -34,8 +30,9 @@ public sealed class RefsFormatter
             return string.Empty;
         }
 
-        (IEnumerable<string> formattedBranches, bool truncated) = FilterAndFormatBranches(branches, showAsLinks, limit);
-        return ToString(formattedBranches, TranslatedStrings.ContainedInBranches, TranslatedStrings.ContainedInNoBranch, "branches", truncated);
+        var (formattedBranches, truncated) = FilterAndFormatBranches(branches, showAsLinks, limit);
+        return ToString(formattedBranches, TranslatedStrings.ContainedInBranches, TranslatedStrings.ContainedInNoBranch,
+            "branches", truncated);
     }
 
     public string FormatTags(IReadOnlyList<string> tags, bool showAsLinks, bool limit)
@@ -45,36 +42,39 @@ public sealed class RefsFormatter
             return string.Empty;
         }
 
-        bool truncate = limit && tags.Count > MaximumDisplayedLinesIfLimited;
-        IEnumerable<string> formattedTags = FormatTags(truncate ? tags.Take(MaximumDisplayedRefsIfLimited) : tags);
-        return ToString(formattedTags, TranslatedStrings.ContainedInTags, TranslatedStrings.ContainedInNoTag, "tags", truncate);
+        var truncate = limit && tags.Count > _maximumDisplayedLinesIfLimited;
+        var formattedTags = FormatTags(truncate ? tags.Take(_maximumDisplayedRefsIfLimited) : tags);
+        return ToString(formattedTags, TranslatedStrings.ContainedInTags, TranslatedStrings.ContainedInNoTag, "tags",
+            truncate);
 
         IEnumerable<string> FormatTags(IEnumerable<string> selectedTags)
         {
-            return selectedTags.Select(s => showAsLinks ? _linkFactory.CreateTagLink(s ?? string.Empty) : WebUtility.HtmlEncode(s));
+            return selectedTags.Select(s =>
+                showAsLinks ? _linkFactory.CreateTagLink(s ?? string.Empty) : WebUtility.HtmlEncode(s));
         }
     }
 
-    private (IEnumerable<string> formattedBranches, bool truncated) FilterAndFormatBranches(IEnumerable<string> branches, bool showAsLinks, bool limit)
+    private (IEnumerable<string> formattedBranches, bool truncated) FilterAndFormatBranches(
+        IEnumerable<string> branches, bool showAsLinks, bool limit)
     {
         List<string> formattedBranches = [];
-        bool truncated = false;
+        var truncated = false;
 
         const string remotesPrefix = "remotes/";
 
         // Include local branches if explicitly requested or when needed to decide whether to show remotes
-        bool getLocal = AppSettings.CommitInfoShowContainedInBranchesLocal ||
-                        AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
+        var getLocal = AppSettings.CommitInfoShowContainedInBranchesLocal ||
+                       AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
 
         // Include remote branches if requested
-        bool getRemote = AppSettings.CommitInfoShowContainedInBranchesRemote ||
-                         AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
-        bool allowLocal = AppSettings.CommitInfoShowContainedInBranchesLocal;
-        bool allowRemote = getRemote;
+        var getRemote = AppSettings.CommitInfoShowContainedInBranchesRemote ||
+                        AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
+        var allowLocal = AppSettings.CommitInfoShowContainedInBranchesLocal;
+        var allowRemote = getRemote;
 
-        foreach (string branch in branches)
+        foreach (var branch in branches)
         {
-            string noPrefixBranch = branch;
+            var noPrefixBranch = branch;
             bool branchIsLocal;
             if (getLocal && getRemote)
             {
@@ -96,13 +96,14 @@ public sealed class RefsFormatter
 
             if ((branchIsLocal && allowLocal) || (!branchIsLocal && allowRemote))
             {
-                string branchText = showAsLinks
+                var branchText = showAsLinks
                     ? _linkFactory.CreateBranchLink(noPrefixBranch)
                     : WebUtility.HtmlEncode(noPrefixBranch);
 
-                if (limit && formattedBranches.Count == MaximumDisplayedLinesIfLimited)
+                if (limit && formattedBranches.Count == _maximumDisplayedLinesIfLimited)
                 {
-                    formattedBranches.RemoveRange(MaximumDisplayedRefsIfLimited, MaximumDisplayedLinesIfLimited - MaximumDisplayedRefsIfLimited);
+                    formattedBranches.RemoveRange(_maximumDisplayedRefsIfLimited,
+                        _maximumDisplayedLinesIfLimited - _maximumDisplayedRefsIfLimited);
                     truncated = true;
                     break; // from foreach
                 }
@@ -119,21 +120,22 @@ public sealed class RefsFormatter
         return (formattedBranches, truncated);
     }
 
-    private string ToString(IEnumerable<string> formattedRefs, string prefix, string textIfEmpty, string refsType, bool truncated)
+    private string ToString(IEnumerable<string> formattedRefs, string prefix, string textIfEmpty, string refsType,
+        bool truncated)
     {
-        string? linksJoined = formattedRefs?.Join(Environment.NewLine);
+        var linksJoined = formattedRefs?.Join(Environment.NewLine);
         if (string.IsNullOrEmpty(linksJoined))
         {
             return WebUtility.HtmlEncode(textIfEmpty);
         }
 
-        StringBuilder sb = new StringBuilder()
+        var sb = new StringBuilder()
             .AppendLine(WebUtility.HtmlEncode(prefix))
             .Append(linksJoined);
         if (truncated)
         {
             sb.AppendLine()
-              .Append(_linkFactory.CreateShowAllLink(refsType));
+                .Append(_linkFactory.CreateShowAllLink(refsType));
         }
 
         return sb.ToString();

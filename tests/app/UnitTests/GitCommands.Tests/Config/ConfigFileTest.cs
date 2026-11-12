@@ -1,21 +1,38 @@
 ﻿using System.Text;
-using GitCommands;
 using GitCommands.Config;
 using GitCommands.Git;
 using GitExtUtils;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitCommandsTests.Config;
 
 /// <summary>
-/// Tests for <see cref="ConfigFile"/>.
-/// The ConfigFile class should respond the same as "git config".
-/// Since .gitconfig is often hidden, also make sure this is tested.
+///     Tests for <see cref="ConfigFile" />.
+///     The ConfigFile class should respond the same as "git config".
+///     Since .gitconfig is often hidden, also make sure this is tested.
 /// </summary>
 public class ConfigFileTest : IDisposable
 {
     private GitModule _module = null!;
 
-    private GitModule Module => _module ??= new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), GetTempFolder());
+    private GitModule Module
+    {
+        get => _module ??= new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), GetTempFolder());
+    }
+
+    /// <summary>
+    ///     Always delete the test config file after each test.
+    /// </summary>
+    void IDisposable.Dispose()
+    {
+        if (File.Exists(GetConfigFileName()))
+        {
+            // Make sure it is hidden
+            FileInfo configFile = new(GetConfigFileName()) { Attributes = FileAttributes.Normal };
+
+            File.Delete(GetConfigFileName());
+        }
+    }
 
     private static string GetTempFolder()
     {
@@ -55,7 +72,8 @@ public class ConfigFileTest : IDisposable
 
     private void CheckValueIsEqual(ConfigFile configFile, string key, string expectedValue)
     {
-        configFile.GetValue(key, string.Empty).Should().Be(GetConfigValue(configFile.FileName, key), "git config --get");
+        configFile.GetValue(key, string.Empty).Should()
+            .Be(GetConfigValue(configFile.FileName, key), "git config --get");
         configFile.GetValue(key, string.Empty).Should().Be(expectedValue, "ConfigFile");
     }
 
@@ -84,7 +102,7 @@ public class ConfigFileTest : IDisposable
     {
         try
         {
-            ConfigFile file = new(fileName: null!);
+            ConfigFile file = new(null!);
             file.GetValue("nonexistentSetting", string.Empty);
         }
         catch (Exception e)
@@ -100,15 +118,15 @@ public class ConfigFileTest : IDisposable
         configFile.SetValue("branch.BranchName1.remote", "origin1");
         configFile.Save();
 
-        byte[] expectedFileContent =
+        var expectedFileContent =
             GitModule.SystemEncoding.GetBytes(
                 string.Format("[branch \"BranchName1\"]{0}\tremote = origin1{0}", Environment.NewLine));
 
         File.Exists(GetConfigFileName()).Should().BeTrue();
-        byte[] fileContent = File.ReadAllBytes(GetConfigFileName());
+        var fileContent = File.ReadAllBytes(GetConfigFileName());
 
         fileContent.Length.Should().Be(expectedFileContent.Length);
-        for (int index = 0; index < fileContent.Length; index++)
+        for (var index = 0; index < fileContent.Length; index++)
         {
             fileContent[index].Should().Be(expectedFileContent[index]);
         }
@@ -211,10 +229,7 @@ public class ConfigFileTest : IDisposable
             File.WriteAllText(GetConfigFileName(), GetDefaultConfigFileContent(), GitModule.SystemEncoding);
 
             // Make sure it is hidden
-            FileInfo configFile = new(GetConfigFileName())
-            {
-                Attributes = FileAttributes.Hidden
-            };
+            FileInfo configFile = new(GetConfigFileName()) { Attributes = FileAttributes.Hidden };
         }
 
         // PERFORM TEST
@@ -498,18 +513,20 @@ public class ConfigFileTest : IDisposable
         {
             ConfigFile configFile = new(GetConfigFileName());
 
-            string remote = "branch.BranchName1.remote";
+            var remote = "branch.BranchName1.remote";
             CheckValueIsEqual(configFile, remote, "origin1");
 
             remote = "branch.branchName1.remote";
             CheckIsNotEqual(configFile, remote, "origin1");
 
             remote = "branch \"BranchName1\".remote";
-            configFile.GetValue(remote, string.Empty).Should().Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), "git config --get");
+            configFile.GetValue(remote, string.Empty).Should()
+                .Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), "git config --get");
             configFile.GetValue(remote, string.Empty).Should().Be("origin1", "ConfigFile");
 
             remote = "branch \"BranchName2\".remote";
-            configFile.GetValue(remote, string.Empty).Should().Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), "git config --get");
+            configFile.GetValue(remote, string.Empty).Should()
+                .Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), "git config --get");
             configFile.GetValue(remote, string.Empty).Should().Be("origin2", "ConfigFile");
 
             remote = "branch \"branchName2\".remote";
@@ -517,11 +534,13 @@ public class ConfigFileTest : IDisposable
             configFile.GetValue(remote, string.Empty).Should().NotBe("origin2", "ConfigFile");
 
             remote = "branch \"branchName2\".remote";
-            configFile.GetValue(remote, string.Empty).Should().Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), string.Empty, "git config --get");
+            configFile.GetValue(remote, string.Empty).Should().Be(
+                GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), string.Empty, "git config --get");
             configFile.GetValue(remote, string.Empty).Should().Be("origin3", "ConfigFile");
 
             remote = "branch \"branchname2\".remote";
-            configFile.GetValue(remote, string.Empty).Should().Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), "git config --get");
+            configFile.GetValue(remote, string.Empty).Should()
+                .Be(GetConfigValue(configFile.FileName, remote.Replace(" ", ".")), "git config --get");
             configFile.GetValue(remote, string.Empty).Should().Be("", "ConfigFile");
         }
     }
@@ -530,15 +549,15 @@ public class ConfigFileTest : IDisposable
     public void TwoSections_ValueInTheLast()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
-        string configFileContent = @"
+        var configFileContent = @"
 [status]
 [status]
       showUntrackedFiles = no
 ";
         ConfigFile cfg = new("");
         cfg.LoadFromString(configFileContent);
-        string actual = cfg.GetValue("status.showuntrackedfiles", string.Empty);
-        string expected = "no";
+        var actual = cfg.GetValue("status.showuntrackedfiles", string.Empty);
+        var expected = "no";
         actual.Should().Be(expected);
     }
 
@@ -546,15 +565,15 @@ public class ConfigFileTest : IDisposable
     public void TwoSections_ValueInTheFirst()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
-        string configFileContent = @"
+        var configFileContent = @"
 [status]
       showUntrackedFiles = no
 [status]
 ";
         ConfigFile cfg = new("");
         cfg.LoadFromString(configFileContent);
-        string actual = cfg.GetValue("status.showuntrackedfiles", string.Empty);
-        string expected = "no";
+        var actual = cfg.GetValue("status.showuntrackedfiles", string.Empty);
+        var expected = "no";
         actual.Should().Be(expected);
     }
 
@@ -562,7 +581,7 @@ public class ConfigFileTest : IDisposable
     public void TwoSections_ValueInBoth()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
-        string configFileContent = @"
+        var configFileContent = @"
 [status]
       showUntrackedFiles = yes
 [status]
@@ -570,8 +589,8 @@ public class ConfigFileTest : IDisposable
 ";
         ConfigFile cfg = new("");
         cfg.LoadFromString(configFileContent);
-        string actual = cfg.GetValue("status.showuntrackedfiles", string.Empty);
-        string expected = "no";
+        var actual = cfg.GetValue("status.showuntrackedfiles", string.Empty);
+        var expected = "no";
         actual.Should().Be(expected);
     }
 
@@ -579,7 +598,7 @@ public class ConfigFileTest : IDisposable
     public void TwoSections_ValueInBoth_GetValues()
     {
         // test for bug reported in https://github.com/gitextensions/gitextensions/pull/3151/commits/282c6c1df45024c3c997f1a79aa7aba5a96a1a68
-        string configFileContent = @"
+        var configFileContent = @"
 [status]
       showUntrackedFiles = yes
 [status]
@@ -603,8 +622,8 @@ public class ConfigFileTest : IDisposable
 
         ConfigFile cfg = new("");
         cfg.LoadFromString(content.ToString());
-        string actual = cfg.GetValue("branch.reporting_bad_behaviour.merge", string.Empty);
-        string expected = "refs/heads/[en]reporting_bad_behaviour";
+        var actual = cfg.GetValue("branch.reporting_bad_behaviour.merge", string.Empty);
+        var expected = "refs/heads/[en]reporting_bad_behaviour";
         actual.Should().Be(expected);
     }
 
@@ -619,25 +638,8 @@ public class ConfigFileTest : IDisposable
 
         ConfigFile cfg = new("");
         cfg.LoadFromString(content.ToString());
-        string actual = cfg.GetValue("branch.[en]reporting_bad_behaviour.merge", string.Empty);
-        string expected = "refs/heads/reporting_bad_behaviour";
+        var actual = cfg.GetValue("branch.[en]reporting_bad_behaviour.merge", string.Empty);
+        var expected = "refs/heads/reporting_bad_behaviour";
         actual.Should().Be(expected);
-    }
-
-    /// <summary>
-    /// Always delete the test config file after each test.
-    /// </summary>
-    public void Dispose()
-    {
-        if (File.Exists(GetConfigFileName()))
-        {
-            // Make sure it is hidden
-            FileInfo configFile = new(GetConfigFileName())
-            {
-                Attributes = FileAttributes.Normal
-            };
-
-            File.Delete(GetConfigFileName());
-        }
     }
 }

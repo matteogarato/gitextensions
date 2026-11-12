@@ -12,8 +12,8 @@ public static class GitItemStatusConverter
     public const char RenamedStatus = 'R';
     public const char TypeChangedStatus = 'T';
     public const char UnmergedStatus = 'U';
-    public const char UnmodifiedStatus_v1 = ' ';
-    public const char UnmodifiedStatus_v2 = '.';
+    public const char UnmodifiedStatusV1 = ' ';
+    public const char UnmodifiedStatusV2 = '.';
     public const char IgnoredStatus = '!';
     public const char UntrackedStatus = '?';
 
@@ -22,7 +22,7 @@ public static class GitItemStatusConverter
 
     public static GitItemStatus FromStatusCharacter(StagedStatus staged, string fileName, char x)
     {
-        bool isNew = x is AddedStatus or UntrackedStatus or IgnoredStatus;
+        var isNew = x is AddedStatus or UntrackedStatus or IgnoredStatus;
 
         return new GitItemStatus(fileName)
         {
@@ -31,7 +31,7 @@ public static class GitItemStatusConverter
             IsDeleted = x is DeletedStatus,
             IsRenamed = x is RenamedStatus,
             IsCopied = x is CopiedStatus,
-            IsTracked = !(x is UntrackedStatus or IgnoredStatus or UnmodifiedStatus_v1) || !isNew,
+            IsTracked = !(x is UntrackedStatus or IgnoredStatus or UnmodifiedStatusV1) || !isNew,
             IsIgnored = x is IgnoredStatus,
             IsUnmerged = x is UnmergedStatus,
             Staged = staged

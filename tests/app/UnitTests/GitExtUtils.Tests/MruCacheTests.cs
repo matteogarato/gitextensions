@@ -1,12 +1,13 @@
 ﻿using GitExtUtils;
 
 namespace GitExtUtilsTests;
+
 public sealed class MruCacheTests
 {
     [Fact]
     public void Add_expires_last_used_entry_when_at_capacity()
     {
-        MruCache<int, string> cache = new(capacity: 3);
+        MruCache<int, string> cache = new(3);
 
         cache.Add(1, "one");
         cache.Add(2, "two");
@@ -27,7 +28,7 @@ public sealed class MruCacheTests
     [Fact]
     public void TryGetValue_renews_lifespan_of_entry()
     {
-        MruCache<int, string> cache = new(capacity: 3);
+        MruCache<int, string> cache = new(3);
 
         cache.Add(1, "one");
         cache.Add(2, "two");
@@ -48,7 +49,7 @@ public sealed class MruCacheTests
     [Fact]
     public void Clear_removes_all_entries()
     {
-        MruCache<int, string> cache = new(capacity: 3);
+        MruCache<int, string> cache = new(3);
 
         cache.Add(1, "one");
         cache.Add(2, "two");
@@ -64,13 +65,13 @@ public sealed class MruCacheTests
     [Fact]
     public void TryRemove_removes_existing_entries()
     {
-        MruCache<int, string> cache = new(capacity: 3);
+        MruCache<int, string> cache = new(3);
 
         cache.Add(1, "one");
         cache.Add(2, "two");
         cache.Add(3, "three");
 
-        cache.TryRemove(1, out string? removed).Should().BeTrue();
+        cache.TryRemove(1, out var removed).Should().BeTrue();
         removed.Should().Be("one");
         cache.TryGetValue(1, out _).Should().BeFalse();
 
@@ -81,11 +82,11 @@ public sealed class MruCacheTests
     [Fact]
     public void TryRemove_returns_false_for_unknown_entry()
     {
-        MruCache<int, string> cache = new(capacity: 3);
+        MruCache<int, string> cache = new(3);
 
         cache.Add(1, "one");
 
-        cache.TryRemove(2, out string? removed).Should().BeFalse();
+        cache.TryRemove(2, out var removed).Should().BeFalse();
         removed.Should().BeNull();
     }
 }

@@ -1,60 +1,25 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
 using GitUI.HelperDialogs;
+using GitUI.Properties;
+using GitUI.UserControls;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormRebase : GitExtensionsDialog
 {
-    #region Mnemonics
-    // Available: GHJLVWXYZ
-    // A Add files
-    // B Abort
-    // C Continue rebase
-    // D Ignore date
-    // E Update dependent refs
-    // F From
-    // I Interactive
-    // K Skip
-    // M Committer date
-    // N Specific range
-    // O Commit...
-    // P Preserve Merges
-    // Q Autosquash
-    // R Rebase on
-    // S Solve conflicts
-    // T To
-    // U Auto stash
-    #endregion
-
-    #region Translation
-    private readonly TranslationString _continueRebaseText = new("&Continue rebase");
-    private readonly TranslationString _solveConflictsText = new("&Solve conflicts");
-
-    private readonly TranslationString _solveConflictsText2 = new(">&Solve conflicts<");
-    private readonly TranslationString _continueRebaseText2 = new(">&Continue rebase<");
-
-    private readonly TranslationString _noBranchSelectedText = new("Please select a branch");
-
-    private readonly TranslationString _branchUpToDateText =
-        new("Current branch a is up to date." + Environment.NewLine + "Nothing to rebase.");
-    private readonly TranslationString _branchUpToDateCaption = new("Rebase");
-
-    private readonly TranslationString _hoverShowImageLabelText = new("Hover to see scenario when fast forward is possible.");
-    #endregion
-
-    private static readonly List<PatchFile> Skipped = [];
+    private static readonly List<PatchFile> _skipped = [];
 
     private readonly string? _defaultBranch;
     private readonly string? _defaultToBranch;
     private readonly bool _startRebaseImmediately;
 
-    public FormRebase(IGitUICommands commands, string? defaultBranch)
-        : base(commands, enablePositionRestore: false)
+    public FormRebase(IGitUiCommands commands, string? defaultBranch)
+        : base(commands, false)
     {
         _defaultBranch = defaultBranch;
 
@@ -62,11 +27,11 @@ public partial class FormRebase : GitExtensionsDialog
 
         btnSolveMergeconflicts.BackColor = OtherColors.MergeConflictsColor;
         btnSolveMergeconflicts.SetForeColorForBackColor();
-        PanelLeftImage.Image1 = Properties.Images.HelpCommandRebase.AdaptLightness();
+        PanelLeftImage.Image1 = Images.HelpCommandRebase.AdaptLightness();
 
         PanelLeftImage.Visible = !AppSettings.DontShowHelpImages;
         PanelLeftImage.IsOnHoverShowImage2NoticeText = _hoverShowImageLabelText.Text;
-        PatchGrid.SetSkipped(Skipped);
+        PatchGrid.SetSkipped(_skipped);
         if (AppSettings.AlwaysShowAdvOpt)
         {
             ShowOptions_LinkClicked(this, null!);
@@ -80,7 +45,8 @@ public partial class FormRebase : GitExtensionsDialog
         InitializeComplete();
     }
 
-    public FormRebase(IGitUICommands commands, string? from, string? to, string? defaultBranch, bool interactive = false, bool startRebaseImmediately = true)
+    public FormRebase(IGitUiCommands commands, string? from, string? to, string? defaultBranch,
+        bool interactive = false, bool startRebaseImmediately = true)
         : this(commands, defaultBranch)
     {
         txtFrom.Text = from;
@@ -102,7 +68,7 @@ public partial class FormRebase : GitExtensionsDialog
 
         PatchGrid.SelectCurrentlyApplyingPatch();
 
-        string selectedHead = Module.GetSelectedBranch();
+        var selectedHead = Module.GetSelectedBranch();
         Currentbranch.Text = selectedHead;
 
         // Offer rebase on refs also for tags (but not stash, notes etc)
@@ -148,7 +114,7 @@ public partial class FormRebase : GitExtensionsDialog
 
     private void EnableButtons()
     {
-        bool conflictedMerge = Module.InTheMiddleOfConflictedMerge();
+        var conflictedMerge = Module.InTheMiddleOfConflictedMerge();
         if (Module.InTheMiddleOfRebase())
         {
             if (Height < 200)
@@ -195,7 +161,9 @@ public partial class FormRebase : GitExtensionsDialog
             AcceptButton = btnSolveConflicts;
             btnSolveConflicts.Focus();
             btnSolveConflicts.Text = _solveConflictsText2.Text;
-            MergeToolPanel.BackColor = Application.IsDarkModeEnabled ? Color.FromArgb(136, 136, 0) : Color.Yellow.AdaptBackColor();
+            MergeToolPanel.BackColor = Application.IsDarkModeEnabled
+                ? Color.FromArgb(136, 136, 0)
+                : Color.Yellow.AdaptBackColor();
         }
         else if (Module.InTheMiddleOfRebase())
         {
@@ -207,7 +175,7 @@ public partial class FormRebase : GitExtensionsDialog
 
     private void MergetoolClick(object sender, EventArgs e)
     {
-        UICommands.StartResolveConflictsDialog(this);
+        UiCommands.StartResolveConflictsDialog(this);
         EnableButtons();
     }
 
@@ -232,19 +200,21 @@ public partial class FormRebase : GitExtensionsDialog
         chkIgnoreDate.Enabled = !chkCommitterDateIsAuthorDate.Checked;
         chkInteractive.Enabled = !chkIgnoreDate.Checked && !chkCommitterDateIsAuthorDate.Checked;
         chkPreserveMerges.Enabled = !chkIgnoreDate.Checked && !chkCommitterDateIsAuthorDate.Checked;
-        chkAutosquash.Enabled = chkInteractive.Checked && !chkIgnoreDate.Checked && !chkCommitterDateIsAuthorDate.Checked;
+        chkAutosquash.Enabled =
+            chkInteractive.Checked && !chkIgnoreDate.Checked && !chkCommitterDateIsAuthorDate.Checked;
     }
 
     private void AddFilesClick(object sender, EventArgs e)
     {
-        UICommands.StartAddFilesDialog(this);
+        UiCommands.StartAddFilesDialog(this);
     }
 
     private void ResolvedClick(object sender, EventArgs e)
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.ContinueRebase(), Module.WorkingDir, input: null, useDialogSettings: true, out string cmdOutput);
+            FormProcess.ShowDialog(this, UiCommands, Commands.ContinueRebase(), Module.WorkingDir, null, true,
+                out var cmdOutput);
 
             if (!Module.InTheMiddleOfRebase())
             {
@@ -264,14 +234,14 @@ public partial class FormRebase : GitExtensionsDialog
     {
         using (WaitCursorScope.Enter())
         {
-            PatchFile? applyingPatch = PatchGrid.PatchFiles!.FirstOrDefault(p => p.IsNext);
+            var applyingPatch = PatchGrid.PatchFiles!.FirstOrDefault(p => p.IsNext);
             if (applyingPatch is not null)
             {
                 applyingPatch.IsSkipped = true;
-                Skipped.Add(applyingPatch);
+                _skipped.Add(applyingPatch);
             }
 
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.SkipRebase(), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.SkipRebase(), Module.WorkingDir, null, true);
 
             if (!Module.InTheMiddleOfRebase())
             {
@@ -288,11 +258,11 @@ public partial class FormRebase : GitExtensionsDialog
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.AbortRebase(), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.AbortRebase(), Module.WorkingDir, null, true);
 
             if (!Module.InTheMiddleOfRebase())
             {
-                Skipped.Clear();
+                _skipped.Clear();
                 Close();
             }
 
@@ -305,11 +275,11 @@ public partial class FormRebase : GitExtensionsDialog
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.EditTodoRebase(), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.EditTodoRebase(), Module.WorkingDir, null, true);
 
             if (!Module.InTheMiddleOfRebase())
             {
-                Skipped.Clear();
+                _skipped.Clear();
                 Close();
             }
 
@@ -324,16 +294,18 @@ public partial class FormRebase : GitExtensionsDialog
         {
             if (string.IsNullOrEmpty(cboBranches.Text))
             {
-                MessageBoxes.Show(this, _noBranchSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _noBranchSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 return;
             }
 
             AppSettings.RebaseAutoStash = chkStash.Checked;
 
-            Skipped.Clear();
+            _skipped.Clear();
 
             bool? updateRefChoice = null;
-            if (Module.GitVersion.SupportUpdateRefs && Module.GetEffectiveSetting<bool>("rebase.updaterefs") != checkBoxUpdateRefs.Checked)
+            if (Module.GitVersion.SupportUpdateRefs &&
+                Module.GetEffectiveSetting<bool>("rebase.updaterefs") != checkBoxUpdateRefs.Checked)
             {
                 updateRefChoice = checkBoxUpdateRefs.Checked;
             }
@@ -346,10 +318,11 @@ public partial class FormRebase : GitExtensionsDialog
                 AutoStash = chkStash.Checked,
                 IgnoreDate = chkIgnoreDate.Checked,
                 CommitterDateIsAuthorDate = chkCommitterDateIsAuthorDate.Checked,
-                UpdateRefs = updateRefChoice,
+                UpdateRefs = updateRefChoice
             };
 
-            if (chkSpecificRange.Checked && !string.IsNullOrWhiteSpace(txtFrom.Text) && !string.IsNullOrWhiteSpace(cboTo.Text))
+            if (chkSpecificRange.Checked && !string.IsNullOrWhiteSpace(txtFrom.Text) &&
+                !string.IsNullOrWhiteSpace(cboTo.Text))
             {
                 // Rebase onto
                 rebaseOptions.OnTo = cboBranches.Text;
@@ -363,10 +336,11 @@ public partial class FormRebase : GitExtensionsDialog
 
             string rebaseCmd = Commands.Rebase(rebaseOptions);
 
-            string cmdOutput = FormProcess.ReadDialog(this, UICommands, arguments: rebaseCmd, Module.WorkingDir, input: null, useDialogSettings: true);
+            var cmdOutput = FormProcess.ReadDialog(this, UiCommands, rebaseCmd, Module.WorkingDir, null, true);
             if (cmdOutput.Trim() == "Current branch a is up to date.")
             {
-                MessageBoxes.Show(this, _branchUpToDateText.Text, _branchUpToDateCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBoxes.Show(this, _branchUpToDateText.Text, _branchUpToDateCaption.Text, MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
 
             if (!Module.InTheMiddleOfAction() &&
@@ -408,13 +382,14 @@ public partial class FormRebase : GitExtensionsDialog
         bool previousValueBranchFilterEnabled = AppSettings.BranchFilterEnabled;
         bool previousValueShowCurrentBranchOnly = AppSettings.ShowCurrentBranchOnly;
         bool previousValueShowReflogReferences = AppSettings.ShowReflogReferences;
-        bool previousValueShowStashes = AppSettings.ShowStashes;
+        var previousValueShowStashes = AppSettings.ShowStashes;
 
         try
         {
             AppSettings.ShowStashes = false;
-            ObjectId firstParent = UICommands.Module.RevParse("HEAD~");
-            string preSelectedCommit = !string.IsNullOrWhiteSpace(txtFrom.Text) ? txtFrom.Text : firstParent.IsZero ? string.Empty : firstParent.ToString();
+            var firstParent = UiCommands.Module.RevParse("HEAD~");
+            var preSelectedCommit = !string.IsNullOrWhiteSpace(txtFrom.Text) ? txtFrom.Text :
+                firstParent.IsZero ? string.Empty : firstParent.ToString();
 
             string? mergeBaseCommitId = null;
 
@@ -422,9 +397,9 @@ public partial class FormRebase : GitExtensionsDialog
             {
                 try
                 {
-                    ObjectId commit1 = UICommands.Module.RevParse(cboBranches.Text);
-                    ObjectId commit2 = UICommands.Module.RevParse("HEAD");
-                    ObjectId mergeBase = UICommands.Module.GetMergeBase(commit1, commit2);
+                    var commit1 = UiCommands.Module.RevParse(cboBranches.Text);
+                    var commit2 = UiCommands.Module.RevParse("HEAD");
+                    var mergeBase = UiCommands.Module.GetMergeBase(commit1, commit2);
                     mergeBaseCommitId = mergeBase.IsZero ? null : mergeBase.ToString();
                 }
                 catch (Exception)
@@ -433,7 +408,8 @@ public partial class FormRebase : GitExtensionsDialog
                 }
             }
 
-            using FormChooseCommit chooseForm = new(UICommands, preSelectedCommit, showCurrentBranchOnly: true, lastRevisionToDisplayHash: mergeBaseCommitId);
+            using FormChooseCommit chooseForm = new(UiCommands, preSelectedCommit, showCurrentBranchOnly: true,
+                lastRevisionToDisplayHash: mergeBaseCommitId);
             if (chooseForm.ShowDialog(this) == DialogResult.OK && chooseForm.SelectedRevision is not null)
             {
                 txtFrom.Text = chooseForm.SelectedRevision.ObjectId.ToShortString();
@@ -450,26 +426,88 @@ public partial class FormRebase : GitExtensionsDialog
 
     private void Commit_Click(object sender, EventArgs e)
     {
-        UICommands.StartCommitDialog(this);
+        UiCommands.StartCommitDialog(this);
         EnableButtons();
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly FormRebase _form;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(FormRebase form)
+    internal readonly struct TestAccessor(FormRebase form)
+    {
+        public CheckBox ChkInteractive
         {
-            _form = form;
+            get => form.chkInteractive;
         }
 
-        public CheckBox chkInteractive => _form.chkInteractive;
-        public CheckBox chkPreserveMerges => _form.chkPreserveMerges;
-        public CheckBox chkAutosquash => _form.chkAutosquash;
-        public CheckBox chkStash => _form.chkStash;
-        public CheckBox chkIgnoreDate => _form.chkIgnoreDate;
-        public CheckBox chkCommitterDateIsAuthorDate => _form.chkCommitterDateIsAuthorDate;
+        public CheckBox ChkPreserveMerges
+        {
+            get => form.chkPreserveMerges;
+        }
+
+        public CheckBox ChkAutosquash
+        {
+            get => form.chkAutosquash;
+        }
+
+        public CheckBox ChkStash
+        {
+            get => form.chkStash;
+        }
+
+        public CheckBox ChkIgnoreDate
+        {
+            get => form.chkIgnoreDate;
+        }
+
+        public CheckBox ChkCommitterDateIsAuthorDate
+        {
+            get => form.chkCommitterDateIsAuthorDate;
+        }
     }
+
+    #region Mnemonics
+
+    // Available: GHJLVWXYZ
+    // A Add files
+    // B Abort
+    // C Continue rebase
+    // D Ignore date
+    // E Update dependent refs
+    // F From
+    // I Interactive
+    // K Skip
+    // M Committer date
+    // N Specific range
+    // O Commit...
+    // P Preserve Merges
+    // Q Autosquash
+    // R Rebase on
+    // S Solve conflicts
+    // T To
+    // U Auto stash
+
+    #endregion
+
+    #region Translation
+
+    private readonly TranslationString _continueRebaseText = new("&Continue rebase");
+    private readonly TranslationString _solveConflictsText = new("&Solve conflicts");
+
+    private readonly TranslationString _solveConflictsText2 = new(">&Solve conflicts<");
+    private readonly TranslationString _continueRebaseText2 = new(">&Continue rebase<");
+
+    private readonly TranslationString _noBranchSelectedText = new("Please select a branch");
+
+    private readonly TranslationString _branchUpToDateText =
+        new("Current branch a is up to date." + Environment.NewLine + "Nothing to rebase.");
+
+    private readonly TranslationString _branchUpToDateCaption = new("Rebase");
+
+    private readonly TranslationString _hoverShowImageLabelText =
+        new("Hover to see scenario when fast forward is possible.");
+
+    #endregion
 }

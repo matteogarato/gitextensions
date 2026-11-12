@@ -1,55 +1,65 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using Avalonia.Media;
 using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitExtUtils;
-using ResourceManager;
+using GitExtensions.Shims.WinForms;
+using GitUI.Compat;
+using CheckBox = Avalonia.Controls.CheckBox;
+using ListBox = Avalonia.Controls.ListBox;
+using TextBox = Avalonia.Controls.TextBox;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Inspects unreachable Git objects and offers recovery and cleanup operations.
+///     Inspects unreachable Git objects and offers recovery and cleanup operations.
 /// </summary>
 public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
 {
-    private const string LostFoundTagPrefix = "LOST_FOUND_";
+    private const string _lostFoundTagPrefix = "LOST_FOUND_";
+    private readonly Button _btnClose = new() { Content = TranslatedStrings.Close, IsCancel = true };
+    private readonly Button _btnDeleteTags = new() { Content = TranslatedStrings.VerifyDeleteLostFoundTags };
+    private readonly Button _btnPrune = new() { Content = TranslatedStrings.VerifyPrune };
+    private readonly Button _btnRecover = new() { Content = TranslatedStrings.VerifyRecoverSelected };
+    private readonly Button _btnSaveLostFound = new() { Content = TranslatedStrings.VerifySaveLostFound };
+    private readonly Button _btnScan = new() { Content = TranslatedStrings.VerifyScan, IsDefault = true };
 
-    private readonly IGitUICommands _uiCommands;
-    private readonly CheckBox _chkUnreachable = new() { Content = GitUI.TranslatedStrings.VerifyShowUnreachable };
-    private readonly CheckBox _chkFull = new() { Content = GitUI.TranslatedStrings.VerifyFullCheck };
-    private readonly CheckBox _chkNoReflogs = new() { Content = GitUI.TranslatedStrings.VerifyNoReflogs };
-    private readonly CheckBox _chkCommitsAndTags = new() { Content = GitUI.TranslatedStrings.VerifyShowCommitsAndTags, IsChecked = true };
-    private readonly CheckBox _chkOtherObjects = new() { Content = GitUI.TranslatedStrings.VerifyShowOtherObjects, IsChecked = true };
+    private readonly CheckBox _chkCommitsAndTags =
+        new() { Content = TranslatedStrings.VerifyShowCommitsAndTags, IsChecked = true };
+
+    private readonly CheckBox _chkFull = new() { Content = TranslatedStrings.VerifyFullCheck };
+    private readonly CheckBox _chkNoReflogs = new() { Content = TranslatedStrings.VerifyNoReflogs };
+
+    private readonly CheckBox _chkOtherObjects =
+        new() { Content = TranslatedStrings.VerifyShowOtherObjects, IsChecked = true };
+
+    private readonly CheckBox _chkUnreachable = new() { Content = TranslatedStrings.VerifyShowUnreachable };
     private readonly ListBox _objects = new() { SelectionMode = SelectionMode.Multiple };
+
     private readonly TextBox _preview = new()
     {
-        AcceptsReturn = true,
-        IsReadOnly = true,
-        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        AcceptsReturn = true, IsReadOnly = true, TextWrapping = TextWrapping.Wrap
     };
-    private readonly Button _btnScan = new() { Content = GitUI.TranslatedStrings.VerifyScan, IsDefault = true };
-    private readonly Button _btnSaveLostFound = new() { Content = GitUI.TranslatedStrings.VerifySaveLostFound };
-    private readonly Button _btnRecover = new() { Content = GitUI.TranslatedStrings.VerifyRecoverSelected };
-    private readonly Button _btnPrune = new() { Content = GitUI.TranslatedStrings.VerifyPrune };
-    private readonly Button _btnDeleteTags = new() { Content = GitUI.TranslatedStrings.VerifyDeleteLostFoundTags };
-    private readonly Button _btnClose = new() { Content = GitUI.TranslatedStrings.Close, IsCancel = true };
+
+    private readonly IGitUiCommands _uiCommands;
     private IReadOnlyList<VerifyObject> _allObjects = [];
-    private CancellationTokenSource? _previewCancellation;
     private bool _isScanning;
+    private CancellationTokenSource? _previewCancellation;
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="VerifyRepositoryWindow"/> class.
+    ///     Initializes a new instance of the <see cref="VerifyRepositoryWindow" /> class.
     /// </summary>
     /// <param name="uiCommands">Commands used to run Git with process feedback.</param>
-    public VerifyRepositoryWindow(IGitUICommands uiCommands)
+    public VerifyRepositoryWindow(IGitUiCommands uiCommands)
     {
         ArgumentNullException.ThrowIfNull(uiCommands);
         _uiCommands = uiCommands;
 
-        Title = GitUI.TranslatedStrings.VerifyRepositoryTitle;
+        Title = TranslatedStrings.VerifyRepositoryTitle;
         Width = 1080;
         Height = 680;
         MinWidth = 760;
@@ -60,10 +70,10 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
             (verifyObject, _) => new TextBlock
             {
                 Text = verifyObject.ToString(),
-                Margin = new Avalonia.Thickness(4, 2),
-                TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(4, 2),
+                TextTrimming = TextTrimming.CharacterEllipsis
             },
-            supportsRecycling: false);
+            false);
         _objects.SelectionChanged += (_, _) => ThreadHelper.FileAndForget(PreviewSelectedObjectAsync);
 
         _chkUnreachable.IsCheckedChanged += (_, _) => ThreadHelper.FileAndForget(ScanAsync);
@@ -72,10 +82,12 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         _chkCommitsAndTags.IsCheckedChanged += (_, _) => ApplyTypeFilter();
         _chkOtherObjects.IsCheckedChanged += (_, _) => ApplyTypeFilter();
         _btnScan.Click += (_, _) => ThreadHelper.FileAndForget(ScanAsync);
-        _btnSaveLostFound.Click += (_, _) => ThreadHelper.FileAndForget(() => RunRepositoryActionAsync(SaveLostFoundAsync));
+        _btnSaveLostFound.Click +=
+            (_, _) => ThreadHelper.FileAndForget(() => RunRepositoryActionAsync(SaveLostFoundAsync));
         _btnRecover.Click += (_, _) => ThreadHelper.FileAndForget(() => RunRepositoryActionAsync(RecoverSelectedAsync));
         _btnPrune.Click += (_, _) => ThreadHelper.FileAndForget(() => RunRepositoryActionAsync(PruneAsync));
-        _btnDeleteTags.Click += (_, _) => ThreadHelper.FileAndForget(() => RunRepositoryActionAsync(DeleteLostFoundTagsAsync));
+        _btnDeleteTags.Click += (_, _) =>
+            ThreadHelper.FileAndForget(() => RunRepositoryActionAsync(DeleteLostFoundTagsAsync));
         _btnClose.Click += (_, _) => Close(false);
 
         StackPanel filters = new()
@@ -83,14 +95,14 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = GitUI.TranslatedStrings.VerifyOptions, FontWeight = Avalonia.Media.FontWeight.Bold },
+                new TextBlock { Text = TranslatedStrings.VerifyOptions, FontWeight = FontWeight.Bold },
                 _chkUnreachable,
                 _chkFull,
                 _chkNoReflogs,
-                new TextBlock { Text = GitUI.TranslatedStrings.VerifyObjectTypes, FontWeight = Avalonia.Media.FontWeight.Bold },
+                new TextBlock { Text = TranslatedStrings.VerifyObjectTypes, FontWeight = FontWeight.Bold },
                 _chkCommitsAndTags,
-                _chkOtherObjects,
-            },
+                _chkOtherObjects
+            }
         };
 
         Grid results = new()
@@ -100,8 +112,8 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
             {
                 _objects,
                 new GridSplitter { ResizeDirection = GridResizeDirection.Rows, Height = 4 },
-                new ScrollViewer { Content = _preview },
-            },
+                new ScrollViewer { Content = _preview }
+            }
         };
         Grid.SetRow(results.Children[1], 1);
         Grid.SetRow(results.Children[2], 2);
@@ -109,7 +121,10 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         Grid workspace = new()
         {
             ColumnDefinitions = new ColumnDefinitions("220,8,*"),
-            Children = { filters, new GridSplitter { ResizeDirection = GridResizeDirection.Columns, Width = 8 }, results },
+            Children =
+            {
+                filters, new GridSplitter { ResizeDirection = GridResizeDirection.Columns, Width = 8 }, results
+            }
         };
         Grid.SetColumn(workspace.Children[1], 1);
         Grid.SetColumn(results, 2);
@@ -118,36 +133,31 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
-            Children = { _btnSaveLostFound, _btnRecover, _btnPrune, _btnDeleteTags },
+            Children = { _btnSaveLostFound, _btnRecover, _btnPrune, _btnDeleteTags }
         };
         StackPanel buttons = new()
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Children = { _btnScan, _btnClose },
+            Children = { _btnScan, _btnClose }
         };
 
         DockPanel footer = new() { Children = { buttons, operationButtons } };
         DockPanel.SetDock(buttons, Dock.Right);
         DockPanel.SetDock(operationButtons, Dock.Left);
 
-        Content = new DockPanel
-        {
-            Margin = new Avalonia.Thickness(12),
-            Children =
-            {
-                footer,
-                workspace,
-            },
-        };
+        Content = new DockPanel { Margin = new Thickness(12), Children = { footer, workspace } };
         DockPanel.SetDock(footer, Dock.Bottom);
 
         Opened += (_, _) => ThreadHelper.FileAndForget(ScanAsync);
         Closed += (_, _) => CancelPreview();
     }
 
-    private IGitModule Module => _uiCommands.Module;
+    private IGitModule Module
+    {
+        get => _uiCommands.Module;
+    }
 
     private async Task ScanAsync()
     {
@@ -157,15 +167,15 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         }
 
         _isScanning = true;
-        SetBusy(isBusy: true);
+        SetBusy(true);
         try
         {
-            ArgumentString arguments = VerifyWorkflow.BuildFsck(
+            var arguments = VerifyWorkflow.BuildFsck(
                 _chkUnreachable.IsChecked == true,
                 _chkFull.IsChecked == true,
                 _chkNoReflogs.IsChecked == true);
-            ExecutionResult result = await Task.Run(
-                () => Module.GitExecutable.Execute(arguments, throwOnErrorExit: false));
+            var result =
+                await Task.Run(() => Module.GitExecutable.Execute(arguments, throwOnErrorExit: false));
             if (!result.ExitedSuccessfully)
             {
                 MessageBoxes.ShowError(this, result.AllOutput);
@@ -175,21 +185,23 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
             _allObjects = VerifyWorkflow.ParseFsckOutput(result.AllOutput);
             ApplyTypeFilter();
         }
-        catch (Exception exception) when (exception is ExternalOperationException or IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (exception is ExternalOperationException or IOException
+                                              or UnauthorizedAccessException or ArgumentException
+                                              or InvalidOperationException)
         {
             MessageBoxes.ShowError(this, exception.ToStringWithData());
         }
         finally
         {
             _isScanning = false;
-            SetBusy(isBusy: false);
+            SetBusy(false);
         }
     }
 
     private async Task PreviewSelectedObjectAsync()
     {
         CancelPreview();
-        if ((_objects.SelectedItems?.OfType<VerifyObject>() ?? []).FirstOrDefault() is not VerifyObject selected)
+        if ((_objects.SelectedItems?.OfType<VerifyObject>() ?? []).FirstOrDefault() is not { } selected)
         {
             _preview.Text = string.Empty;
             return;
@@ -199,8 +211,8 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         _previewCancellation = cancellation;
         try
         {
-            string content = await Task.Run(
-                () => Module.ShowObject(selected.ObjectId, returnRaw: selected.Type == "blob") ?? string.Empty,
+            var content = await Task.Run(
+                () => Module.ShowObject(selected.ObjectId, selected.Type == "blob") ?? string.Empty,
                 cancellation.Token);
             if (!cancellation.IsCancellationRequested && IsVisible)
             {
@@ -241,16 +253,16 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         VerifyObject[] selectedObjects = [.. _objects.SelectedItems?.OfType<VerifyObject>() ?? []];
         if (selectedObjects.Length == 0)
         {
-            MessageBoxes.ShowError(this, GitUI.TranslatedStrings.VerifySelectObjects);
+            MessageBoxes.ShowError(this, TranslatedStrings.VerifySelectObjects);
             return;
         }
 
-        HashSet<string> existingTags = Module.GetRefs(RefsFilter.Tags)
+        var existingTags = Module.GetRefs(RefsFilter.Tags)
             .Select(gitRef => gitRef.Name)
             .ToHashSet(StringComparer.Ordinal);
-        foreach (VerifyObject verifyObject in selectedObjects)
+        foreach (var verifyObject in selectedObjects)
         {
-            string tagName = $"{LostFoundTagPrefix}{verifyObject.ObjectId}";
+            var tagName = $"{_lostFoundTagPrefix}{verifyObject.ObjectId}";
             if (existingTags.Contains(tagName))
             {
                 continue;
@@ -270,11 +282,11 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
     private async Task PruneAsync()
     {
         if (!MessageBoxes.Confirm(
-            this,
-            GitUI.TranslatedStrings.VerifyPruneConfirm,
-            GitUI.TranslatedStrings.VerifyPruneCaption,
-            MessageBoxIcon.Warning,
-            GitExtensions.Shims.WinForms.MessageBoxDefaultButton.Button2))
+                this,
+                TranslatedStrings.VerifyPruneConfirm,
+                TranslatedStrings.VerifyPruneCaption,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2))
         {
             return;
         }
@@ -290,9 +302,9 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
 
     private async Task DeleteLostFoundTagsAsync()
     {
-        string[] tagNames = Module.GetRefs(RefsFilter.Tags)
+        var tagNames = Module.GetRefs(RefsFilter.Tags)
             .Select(gitRef => gitRef.Name)
-            .Where(name => name.StartsWith(LostFoundTagPrefix, StringComparison.Ordinal))
+            .Where(name => name.StartsWith(_lostFoundTagPrefix, StringComparison.Ordinal))
             .ToArray();
         if (tagNames.Length == 0)
         {
@@ -300,16 +312,16 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         }
 
         if (!MessageBoxes.Confirm(
-            this,
-            GitUI.TranslatedStrings.VerifyDeleteTagsConfirm,
-            GitUI.TranslatedStrings.VerifyDeleteTagsCaption,
-            MessageBoxIcon.Warning,
-            GitExtensions.Shims.WinForms.MessageBoxDefaultButton.Button2))
+                this,
+                TranslatedStrings.VerifyDeleteTagsConfirm,
+                TranslatedStrings.VerifyDeleteTagsCaption,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2))
         {
             return;
         }
 
-        foreach (string tagName in tagNames)
+        foreach (var tagName in tagNames)
         {
             if (!_uiCommands.StartCommandLineProcessDialog(this, Commands.DeleteTag(tagName)))
             {
@@ -327,11 +339,11 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
             _chkOtherObjects.IsChecked = true;
         }
 
-        bool showCommitsAndTags = _chkCommitsAndTags.IsChecked == true;
-        bool showOtherObjects = _chkOtherObjects.IsChecked == true;
+        var showCommitsAndTags = _chkCommitsAndTags.IsChecked == true;
+        var showOtherObjects = _chkOtherObjects.IsChecked == true;
         _objects.ItemsSource = _allObjects
-            .Where(item => (showCommitsAndTags && (item.Type is "commit" or "tag"))
-                || (showOtherObjects && item.Type is not ("commit" or "tag")))
+            .Where(item => (showCommitsAndTags && item.Type is "commit" or "tag")
+                           || (showOtherObjects && item.Type is not ("commit" or "tag")))
             .ToArray();
     }
 
@@ -360,7 +372,9 @@ public sealed class VerifyRepositoryWindow : GitExtensionsFormBase
         {
             await action();
         }
-        catch (Exception exception) when (exception is ExternalOperationException or IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (exception is ExternalOperationException or IOException
+                                              or UnauthorizedAccessException or ArgumentException
+                                              or InvalidOperationException)
         {
             MessageBoxes.ShowError(this, exception.ToStringWithData());
         }

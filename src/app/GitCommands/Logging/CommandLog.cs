@@ -2,8 +2,9 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
-using GitUI;
+using GitExtUtils.GitUI;
 
 namespace GitCommands.Logging;
 
@@ -14,8 +15,8 @@ namespace GitCommands.Logging;
 public sealed class ProcessOperation
 {
     private readonly CommandLogEntry _entry;
-    private readonly Stopwatch _stopwatch;
     private readonly Action _raiseCommandsChanged;
+    private readonly Stopwatch _stopwatch;
 
     internal ProcessOperation(CommandLogEntry entry, Stopwatch stopwatch, Action raiseCommandsChanged)
     {
@@ -24,9 +25,15 @@ public sealed class ProcessOperation
         _raiseCommandsChanged = raiseCommandsChanged;
     }
 
-    public void LogProcessEnd(int exitCode, string? error = null) => LogProcessEnd(exitCode, error, ex: null);
+    public void LogProcessEnd(int exitCode, string? error = null)
+    {
+        LogProcessEnd(exitCode, error, null);
+    }
 
-    public void LogProcessEnd(Exception ex) => LogProcessEnd(exitCode: null, error: null, ex);
+    public void LogProcessEnd(Exception ex)
+    {
+        LogProcessEnd(null, null, ex);
+    }
 
     public void SetProcessId(int processId)
     {
@@ -45,7 +52,7 @@ public sealed class ProcessOperation
     {
         if (_entry.Duration is null)
         {
-            LogProcessEnd(exitCode: null, error: ".NET object disposed", ex: null);
+            LogProcessEnd(null, ".NET object disposed", null);
         }
     }
 
@@ -68,6 +75,22 @@ public sealed class ProcessOperation
 
 public sealed partial class CommandLogEntry
 {
+    // Log display name for the git command when run through WSL.
+    internal const string WslGitLogName = "~git";
+
+    // Log display name for the git command when run natively.
+    internal const string NativeGitLogName = "git";
+
+    internal CommandLogEntry(string fileName, string arguments, string workingDir, DateTime startedAt,
+        bool isOnMainThread)
+    {
+        FileName = fileName;
+        Arguments = arguments;
+        WorkingDir = workingDir;
+        StartedAt = startedAt;
+        IsOnMainThread = isOnMainThread;
+    }
+
     [GeneratedRegex(@"((-c +[^ ""]+(""[^""]*"")?)|(--no-optional-locks)) *", RegexOptions.ExplicitCapture)]
     private static partial Regex GitArgumentsWithoutConfigurationRegex { get; }
 
@@ -83,21 +106,6 @@ public sealed partial class CommandLogEntry
     public Exception? Exception { get; set; }
     public StackTrace? CallStack { get; set; }
 
-    internal CommandLogEntry(string fileName, string arguments, string workingDir, DateTime startedAt, bool isOnMainThread)
-    {
-        FileName = fileName;
-        Arguments = arguments;
-        WorkingDir = workingDir;
-        StartedAt = startedAt;
-        IsOnMainThread = isOnMainThread;
-    }
-
-    // Log display name for the git command when run through WSL.
-    internal const string WslGitLogName = "~git";
-
-    // Log display name for the git command when run natively.
-    internal const string NativeGitLogName = "git";
-
     public string ColumnLine
     {
         get
@@ -107,11 +115,11 @@ public sealed partial class CommandLogEntry
             // git executable name the log will display only `NativeGitLogName` alternatively `WslGitLogName` when the git command is run via WSL.
             // All other commands are displayed as is without any special treatment.
 
-            string wslCmd = AppSettings.WslCommand;
-            string wslGitCmd = AppSettings.WslGitCommand;
-            string gitCmd = AppSettings.GitCommand;
+            var wslCmd = AppSettings.WslCommand;
+            var wslGitCmd = AppSettings.WslGitCommand;
+            var gitCmd = AppSettings.GitCommand;
 
-            string duration = Duration is null
+            var duration = Duration is null
                 ? "running"
                 : $"{((TimeSpan)Duration).TotalMilliseconds:0,0} ms";
 
@@ -149,10 +157,11 @@ public sealed partial class CommandLogEntry
                 arguments = Arguments;
             }
 
-            string exit = ExitCode is not null ? $"{ExitCode}" : Exception is not null ? "exc" : string.Empty;
-            string ex = Exception is not null ? $"  {Exception.GetType().Name}: {Exception.Message}" : string.Empty;
+            var exit = ExitCode is not null ? $"{ExitCode}" : Exception is not null ? "exc" : string.Empty;
+            var ex = Exception is not null ? $"  {Exception.GetType().Name}: {Exception.Message}" : string.Empty;
 
-            return $"{StartedAt:HH:mm:ss.fff} {duration,9} {ProcessId,7} {(IsOnMainThread ? "UI" : "  ")} {exit,3} {fileName} {arguments}{ex}";
+            return
+                $"{StartedAt:HH:mm:ss.fff} {duration,9} {ProcessId,7} {(IsOnMainThread ? "UI" : "  ")} {exit,3} {fileName} {arguments}{ex}";
         }
     }
 
@@ -160,29 +169,11 @@ public sealed partial class CommandLogEntry
     {
         get
         {
-            bool quoteFileName = FileName.Contains(' ') && !FileName.StartsWith('"') && !FileName.StartsWith("wsl ");
+            var quoteFileName = FileName.Contains(' ') && !FileName.StartsWith('"') && !FileName.StartsWith("wsl ");
             return quoteFileName
                 ? $"\"{FileName}\" {Arguments}"
                 : $"{FileName} {Arguments}";
         }
-    }
-
-    public string FullLine(string sep)
-    {
-        string duration = Duration is null ? "" : $"{((TimeSpan)Duration).TotalMilliseconds:0}";
-
-        string fileName = FileName;
-
-        if (fileName.EndsWith("git.exe"))
-        {
-            fileName = "git";
-        }
-
-        string exit = ExitCode is not null ? $"{ExitCode}" : Exception is not null ? "exc" : string.Empty;
-        string ex = Exception is not null ? $"{Environment.NewLine}{Exception}" : string.Empty;
-        string callStack = CallStack is not null ? $"{Environment.NewLine}{CallStack}" : string.Empty;
-
-        return $"{StartedAt:O}{sep}{duration}{sep}{ProcessId}{sep}{(IsOnMainThread ? "UI" : "")}{sep}{exit}{sep}{fileName}{sep}{Arguments}{sep}{WorkingDir}{callStack}{ex}";
     }
 
     public string Detail
@@ -197,32 +188,60 @@ public sealed partial class CommandLogEntry
             s.Append("Process ID:  ").AppendLine(ProcessId is not null ? $"{ProcessId}" : "unknown");
             s.Append("Started at:  ").AppendLine($"{StartedAt:O}");
             s.Append("UI Thread?:  ").AppendLine($"{IsOnMainThread}");
-            s.Append("Duration:    ").AppendLine(Duration is not null ? $"{Duration.Value.TotalMilliseconds:0.###} ms" : "still running");
-            s.Append("Exit code:   ").AppendLine(ExitCode is int exitCode ? ExecutionResult.FormatExitCode(exitCode) : Exception is not null ? $"{Exception}" : "unknown");
+            s.Append("Duration:    ")
+                .AppendLine(Duration is not null ? $"{Duration.Value.TotalMilliseconds:0.###} ms" : "still running");
+            s.Append("Exit code:   ").AppendLine(ExitCode is { } exitCode ? ExecutionResult.FormatExitCode(exitCode) :
+                Exception is not null ? $"{Exception}" : "unknown");
             s.Append("Error:       ").AppendLine(Error is not null ? Error : "not captured");
-            s.Append("Call stack:  ").Append(CallStack is not null ? $"{Environment.NewLine}{CallStack}" : "not captured");
+            s.Append("Call stack:  ")
+                .Append(CallStack is not null ? $"{Environment.NewLine}{CallStack}" : "not captured");
 
             return s.ToString();
         }
     }
 
+    public string FullLine(string sep)
+    {
+        var duration = Duration is null ? "" : $"{((TimeSpan)Duration).TotalMilliseconds:0}";
+
+        var fileName = FileName;
+
+        if (fileName.EndsWith("git.exe"))
+        {
+            fileName = "git";
+        }
+
+        var exit = ExitCode is not null ? $"{ExitCode}" : Exception is not null ? "exc" : string.Empty;
+        var ex = Exception is not null ? $"{Environment.NewLine}{Exception}" : string.Empty;
+        var callStack = CallStack is not null ? $"{Environment.NewLine}{CallStack}" : string.Empty;
+
+        return
+            $"{StartedAt:O}{sep}{duration}{sep}{ProcessId}{sep}{(IsOnMainThread ? "UI" : "")}{sep}{exit}{sep}{fileName}{sep}{Arguments}{sep}{WorkingDir}{callStack}{ex}";
+    }
+
     public static string GetGitArgumentsWithoutConfiguration(string arguments)
-        => GitArgumentsWithoutConfigurationRegex.Replace(arguments, "").TrimEnd();
+    {
+        return GitArgumentsWithoutConfigurationRegex.Replace(arguments, "").TrimEnd();
+    }
 }
 
 public static class CommandLog
 {
-    public static event Action? CommandsChanged;
-
     private static ConcurrentQueue<CommandLogEntry> _queue = new();
 
-    public static IEnumerable<CommandLogEntry> Commands => _queue;
+    public static IEnumerable<CommandLogEntry> Commands
+    {
+        get => _queue;
+    }
+
+    public static event Action? CommandsChanged;
 
     public static ProcessOperation LogProcessStart(string fileName, string arguments = "", string workDir = "")
     {
-        const int MaxEntryCount = 500;
+        const int maxEntryCount = 500;
 
-        CommandLogEntry entry = new(fileName, arguments, workDir, DateTime.Now, ThreadHelper.JoinableTaskContext.IsOnMainThread);
+        CommandLogEntry entry = new(fileName, arguments, workDir, DateTime.Now,
+            ThreadHelper.JoinableTaskContext.IsOnMainThread);
 
         if (AppSettings.LogCaptureCallStacks)
         {
@@ -232,7 +251,7 @@ public static class CommandLog
         _queue.Enqueue(entry);
 
         // Trim extra items
-        while (_queue.Count >= MaxEntryCount)
+        while (_queue.Count >= maxEntryCount)
         {
             _queue.TryDequeue(out _);
         }

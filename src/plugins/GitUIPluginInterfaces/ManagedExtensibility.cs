@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Composition;
 
 namespace GitUIPluginInterfaces;
@@ -12,12 +12,12 @@ public static class ManagedExtensibility
     private static Lazy<ExportProvider>? _exportProvider;
 
     /// <summary>
-    /// Gets a root path where user installed plugins are located.
+    ///     Gets a root path where user installed plugins are located.
     /// </summary>
     public static string? UserPluginsPath { get; private set; }
 
     /// <summary>
-    /// Sets a root path to a folder where user plugins are located.
+    ///     Sets a root path to a folder where user plugins are located.
     /// </summary>
     /// <param name="userPluginsPath">A root path to a folder where user plugins are located.</param>
     public static void SetUserPluginsPath(string? userPluginsPath)
@@ -32,12 +32,14 @@ public static class ManagedExtensibility
 
     private static Lazy<ExportProvider> GetOrCreateLazyExportProvider(string? applicationDataFolder)
     {
-        Lazy<ExportProvider>? lazyExportProvider = Volatile.Read(ref _exportProvider);
+        var lazyExportProvider = Volatile.Read(ref _exportProvider);
         if (lazyExportProvider is null)
         {
-            string? capturedApplicationDataFolder = applicationDataFolder;
-            Lazy<ExportProvider> newLazyExportProvider = new(() => CreateExportProvider(capturedApplicationDataFolder), LazyThreadSafetyMode.ExecutionAndPublication);
-            lazyExportProvider = Interlocked.CompareExchange(ref _exportProvider, newLazyExportProvider, null) ?? newLazyExportProvider;
+            var capturedApplicationDataFolder = applicationDataFolder;
+            Lazy<ExportProvider> newLazyExportProvider = new(() => CreateExportProvider(capturedApplicationDataFolder),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+            lazyExportProvider = Interlocked.CompareExchange(ref _exportProvider, newLazyExportProvider, null) ??
+                                 newLazyExportProvider;
         }
 
         return lazyExportProvider;
@@ -45,40 +47,46 @@ public static class ManagedExtensibility
 
     private static ExportProvider CreateExportProvider(string? applicationDataFolder)
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
-        string defaultPluginsPath = Path.Join(new FileInfo(Application.ExecutablePath).Directory!.FullName, "Plugins");
-        string? userPluginsPath = UserPluginsPath;
+        var defaultPluginsPath = Path.Join(new FileInfo(Application.ExecutablePath).Directory!.FullName, "Plugins");
+        var userPluginsPath = UserPluginsPath;
 
         // The plugins that are bundled up with the app must follow this naming convention: GitExtensions.Plugins.*.dll
-        IEnumerable<FileInfo> pluginFiles = PluginsPathScanner.GetFiles(defaultPluginsPath).Where(f => f.Name.StartsWith("GitExtensions.Plugins."));
+        var pluginFiles = PluginsPathScanner.GetFiles(defaultPluginsPath)
+            .Where(f => f.Name.StartsWith("GitExtensions.Plugins."));
 
         // Custom plugins must follow this naming convention: GitExtensions.*.dll
-        IEnumerable<FileInfo> userPluginFiles = PluginsPathScanner.GetFiles(userPluginsPath).Where(f => f.Name.StartsWith("GitExtensions."));
+        var userPluginFiles =
+            PluginsPathScanner.GetFiles(userPluginsPath).Where(f => f.Name.StartsWith("GitExtensions."));
 
-        string cacheFile = Path.Combine(applicationDataFolder ?? "ignored", "Plugins", "composition.cache");
+        var cacheFile = Path.Combine(applicationDataFolder ?? "ignored", "Plugins", "composition.cache");
         IExportProviderFactory exportProviderFactory;
         if (applicationDataFolder is not null && File.Exists(cacheFile))
         {
-            using FileStream cacheStream = File.OpenRead(cacheFile);
-            exportProviderFactory = ThreadHelper.JoinableTaskFactory.Run(() => new CachedComposition().LoadExportProviderFactoryAsync(cacheStream, Resolver.DefaultInstance));
+            using var cacheStream = File.OpenRead(cacheFile);
+            exportProviderFactory = ThreadHelper.JoinableTaskFactory.Run(() =>
+                new CachedComposition().LoadExportProviderFactoryAsync(cacheStream, Resolver.DefaultInstance));
         }
         else
         {
-            Assembly[] assemblies = [.. pluginFiles.Union(userPluginFiles)
-                                               .Select(TryLoadAssembly)
-                                               .WhereNotNull()];
+            Assembly[] assemblies =
+            [
+                .. pluginFiles.Union(userPluginFiles)
+                    .Select(TryLoadAssembly)
+                    .WhereNotNull()
+            ];
 
-            PartDiscovery? discovery = PartDiscovery.Combine(
+            var discovery = PartDiscovery.Combine(
                 new AttributedPartDiscoveryV1(Resolver.DefaultInstance),
-                new AttributedPartDiscovery(Resolver.DefaultInstance, isNonPublicSupported: true));
-            DiscoveredParts? parts = ThreadHelper.JoinableTaskFactory.Run(() => discovery.CreatePartsAsync(assemblies));
-            ComposableCatalog catalog = ComposableCatalog.Create(Resolver.DefaultInstance)
+                new AttributedPartDiscovery(Resolver.DefaultInstance, true));
+            var parts = ThreadHelper.JoinableTaskFactory.Run(() => discovery.CreatePartsAsync(assemblies));
+            var catalog = ComposableCatalog.Create(Resolver.DefaultInstance)
                 .AddCatalog(_aggregateCatalog!)
                 .AddParts(parts);
 
-            CompositionConfiguration configuration = CompositionConfiguration.Create(catalog.WithCompositionService());
-            RuntimeComposition runtimeComposition = RuntimeComposition.CreateRuntimeComposition(configuration);
+            var configuration = CompositionConfiguration.Create(catalog.WithCompositionService());
+            var runtimeComposition = RuntimeComposition.CreateRuntimeComposition(configuration);
             if (applicationDataFolder is not null)
             {
 #if false // Composition caching currently disabled
@@ -97,7 +105,7 @@ public static class ManagedExtensibility
         {
             try
             {
-                Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(file.FullName);
+                var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(file.FullName);
 
                 // Eagerly validate that all types in the assembly can be resolved.
                 // Outdated plugins targeting an incompatible interface version succeed
@@ -123,13 +131,13 @@ public static class ManagedExtensibility
         DiscoveredParts? parts = null;
         if (assemblies is not null && assemblies.Count > 0)
         {
-            PartDiscovery? discovery = PartDiscovery.Combine(
-              new AttributedPartDiscoveryV1(Resolver.DefaultInstance),
-              new AttributedPartDiscovery(Resolver.DefaultInstance, isNonPublicSupported: true));
+            var discovery = PartDiscovery.Combine(
+                new AttributedPartDiscoveryV1(Resolver.DefaultInstance),
+                new AttributedPartDiscovery(Resolver.DefaultInstance, true));
             parts = ThreadHelper.JoinableTaskFactory.Run(() => discovery.CreatePartsAsync(assemblies));
         }
 
-        ComposableCatalog? catalog = ComposableCatalog.Create(Resolver.DefaultInstance);
+        var catalog = ComposableCatalog.Create(Resolver.DefaultInstance);
 
         if (parts is not null)
         {
@@ -155,11 +163,12 @@ public static class ManagedExtensibility
     }
 
     /// <summary>
-    /// Workaround for not working assembly probing in MEF.
-    /// Some plugins have third-party dependencies.
-    /// True way to load dependencies from subfolders is probing in app config.
-    /// But there is known issue (https://stackoverflow.com/questions/20306892/mef-plugin-application-without-probing-config-or-assembly-resolve-event)
-    /// Until it'll be fixed, we trying to find dependent assembly in the same plugin folder.
+    ///     Workaround for not working assembly probing in MEF.
+    ///     Some plugins have third-party dependencies.
+    ///     True way to load dependencies from subfolders is probing in app config.
+    ///     But there is known issue
+    ///     (https://stackoverflow.com/questions/20306892/mef-plugin-application-without-probing-config-or-assembly-resolve-event)
+    ///     Until it'll be fixed, we trying to find dependent assembly in the same plugin folder.
     /// </summary>
     private static Assembly? CurrentDomain_AssemblyResolve(object? sender, ResolveEventArgs args)
     {
@@ -170,16 +179,16 @@ public static class ManagedExtensibility
                 return null;
             }
 
-            string? fullName = Directory.GetParent(args.RequestingAssembly.Location)?.FullName;
+            var fullName = Directory.GetParent(args.RequestingAssembly.Location)?.FullName;
             if (fullName is null)
             {
                 return null;
             }
 
-            string? dll = Directory.GetFiles(fullName)
+            var dll = Directory.GetFiles(fullName)
                 .FirstOrDefault(f =>
                 {
-                    string? fileDescription = FileVersionInfo.GetVersionInfo(f).FileDescription;
+                    var fileDescription = FileVersionInfo.GetVersionInfo(f).FileDescription;
 
                     return fileDescription is not null && args.Name.StartsWith(fileDescription);
                 });

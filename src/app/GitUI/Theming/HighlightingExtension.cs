@@ -1,5 +1,5 @@
 ﻿using GitExtUtils.GitUI.Theming;
-using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.HighlightingStrategy;
 
 namespace GitUI.Theming;
 
@@ -7,16 +7,16 @@ internal static class HighlightingExtension
 {
     public static HighlightColor Transform(this HighlightColor original)
     {
-        Color originalBackColor = original.BackgroundColor;
-        bool hasNoBackground = originalBackColor.IsEmpty || originalBackColor.A == 0;
-        Color backColor = !original.Adaptable || originalBackColor.IsSystemColor || hasNoBackground
+        var originalBackColor = original.BackgroundColor;
+        var hasNoBackground = originalBackColor.IsEmpty || originalBackColor.A == 0;
+        var backColor = !original.Adaptable || originalBackColor.IsSystemColor || hasNoBackground
             ? originalBackColor
-            : ColorHelper.AdaptBackColor(originalBackColor);
+            : originalBackColor.AdaptBackColor();
 
-        Color effectiveBackColor = hasNoBackground
+        var effectiveBackColor = hasNoBackground
             ? AppColor.EditorBackground.GetThemeColor()
             : originalBackColor;
-        Color foreColor = !original.Adaptable || original.Color.IsSystemColor
+        var foreColor = !original.Adaptable || original.Color.IsSystemColor
             ? original.Color
             : original.Color.AdaptForeColor(hasNoBackground ? effectiveBackColor : backColor);
 

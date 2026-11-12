@@ -1,9 +1,9 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
-using GitUI.Properties;
 using GitUI.Shells;
 using GitUI.UserControls;
 using ResourceManager.Hotkey;
@@ -33,7 +33,7 @@ partial class FormBrowse
         new ToolStripItem[]
         {
             recoverLostObjectsToolStripMenuItem, // Repository->Git maintenance->Recover lost objects
-            branchSelect, // main toolbar
+            branchSelect // main toolbar
         }.ForEach(ColorHelper.AdaptImageLightness);
 
         pullToolStripMenuItem1.Tag = GitPullAction.None;
@@ -43,18 +43,18 @@ partial class FormBrowse
         fetchAllToolStripMenuItem.Tag = GitPullAction.FetchAll;
         fetchPruneAllToolStripMenuItem.Tag = GitPullAction.FetchPruneAll;
 
-        Color toolForeColor = SystemColors.WindowText;
+        var toolForeColor = SystemColors.WindowText;
         BackColor = SystemColors.Window;
         ForeColor = toolForeColor;
         mainMenuStrip.ForeColor = toolForeColor;
         InitToolStripStyles(toolForeColor, Color.Transparent);
 
-        UpdateCommitButtonAndGetBrush(status: null, AppSettings.ShowGitStatusInBrowseToolbar);
+        UpdateCommitButtonAndGetBrush(null, AppSettings.ShowGitStatusInBrowseToolbar);
 
         FillNextPullActionAsDefaultToolStripMenuItems();
         RefreshDefaultPullAction();
 
-        FillUserShells(defaultShell: BashShell.ShellName);
+        FillUserShells(BashShell.ShellName);
 
         InsertFetchPullShortcuts();
 
@@ -93,7 +93,7 @@ partial class FormBrowse
 
             if (!string.IsNullOrWhiteSpace(pathFilter))
             {
-                SetPathFilter(pathFilter.QuoteNE());
+                SetPathFilter(pathFilter.QuoteNe());
             }
         }
 
@@ -107,23 +107,24 @@ partial class FormBrowse
             toolPanel.TopToolStripPanel.Controls.Clear();
 
             // 2. Add all the toolbars back in a reverse order, every added toolbar pushing existing ones to the right
-            ToolStrip[] toolStrips = new[] { ToolStripScripts, ToolStripFilters, ToolStripMain };
-            foreach (ToolStrip toolStrip in toolStrips)
+            ToolStrip[] toolStrips = { ToolStripScripts, ToolStripFilters, ToolStripMain };
+            foreach (var toolStrip in toolStrips)
             {
                 toolPanel.TopToolStripPanel.Controls.Add(toolStrip);
             }
 
 #if DEBUG
             // 3. Assert all toolbars on the same row
-            foreach (ToolStrip toolStrip in toolStrips)
+            foreach (var toolStrip in toolStrips)
             {
                 DebugHelpers.Assert(toolStrip.Top == 0, $"{toolStrip.Name} must be placed on the 1st row");
             }
 
             // 4. Assert the correct order of toolbars
-            for (int i = toolStrips.Length - 1; i > 0; i--)
+            for (var i = toolStrips.Length - 1; i > 0; i--)
             {
-                DebugHelpers.Assert(toolStrips[i].Left < toolStrips[i - 1].Left, $"{toolStrips[i - 1].Name} must be placed before {toolStrips[i].Name}");
+                DebugHelpers.Assert(toolStrips[i].Left < toolStrips[i - 1].Left,
+                    $"{toolStrips[i - 1].Name} must be placed before {toolStrips[i].Name}");
             }
 #endif
         }
@@ -139,7 +140,7 @@ partial class FormBrowse
 
         ThreadHelper.FileAndForget(async () =>
         {
-            IReadOnlyList<GitWorktree> worktrees = Module.GetWorktrees();
+            var worktrees = Module.GetWorktrees();
 
             await this.SwitchToMainThreadAsync();
 
@@ -148,14 +149,18 @@ partial class FormBrowse
     }
 
     private void UpdateTooltipWithShortcut(ToolStripItem button, Command command)
-        => UpdateTooltipWithShortcut(button, GetShortcutKeys(command));
+    {
+        UpdateTooltipWithShortcut(button, GetShortcutKeys(command));
+    }
 
     private static void UpdateTooltipWithShortcut(ToolStripItem button, Keys keys)
-        => button.ToolTipText = button.ToolTipText!.UpdateSuffix(keys.ToShortcutKeyToolTipString());
+    {
+        button.ToolTipText = button.ToolTipText!.UpdateSuffix(keys.ToShortcutKeyToolTipString());
+    }
 
     private void InsertFetchPullShortcuts()
     {
-        int i = ToolStripMain.Items.IndexOf(toolStripButtonPull);
+        var i = ToolStripMain.Items.IndexOf(toolStripButtonPull);
         ToolStripMain.Items.Insert(i++, CreateCorrespondingToolbarButton(fetchToolStripMenuItem, Command.QuickFetch));
         ToolStripMain.Items.Insert(i++, CreateCorrespondingToolbarButton(fetchAllToolStripMenuItem));
         ToolStripMain.Items.Insert(i++, CreateCorrespondingToolbarButton(fetchPruneAllToolStripMenuItem));
@@ -165,15 +170,16 @@ partial class FormBrowse
 
         ToolStripButton CreateCorrespondingToolbarButton(ToolStripMenuItem toolStripMenuItem, Command? command = null)
         {
-            string toolTipText = toolStripMenuItem.Text!.Replace("&", string.Empty);
+            var toolTipText = toolStripMenuItem.Text!.Replace("&", string.Empty);
             ToolStripButton clonedToolStripMenuItem = new()
             {
                 Image = toolStripMenuItem.Image,
                 Name = FetchPullToolbarShortcutsPrefix + toolStripMenuItem.Name,
                 Size = toolStripMenuItem.Size,
                 Text = toolTipText,
-                ToolTipText = toolTipText.UpdateSuffix(command.HasValue ? GetShortcutKeyTooltipString(command.Value) : null!),
-                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                ToolTipText =
+                    toolTipText.UpdateSuffix(command.HasValue ? GetShortcutKeyTooltipString(command.Value) : null!),
+                DisplayStyle = ToolStripItemDisplayStyle.Image
             };
 
             clonedToolStripMenuItem.Click += (_, _) => toolStripMenuItem.PerformClick();
@@ -183,7 +189,8 @@ partial class FormBrowse
 
     private void FillNextPullActionAsDefaultToolStripMenuItems()
     {
-        ToolStripDropDownMenu setDefaultPullActionDropDown = (ToolStripDropDownMenu)setDefaultPullButtonActionToolStripMenuItem.DropDown;
+        var setDefaultPullActionDropDown =
+            (ToolStripDropDownMenu)setDefaultPullButtonActionToolStripMenuItem.DropDown;
 
         // Show both Check and Image margins in a menu
         setDefaultPullActionDropDown.ShowImageMargin = true;
@@ -198,7 +205,7 @@ partial class FormBrowse
             }
         };
 
-        IEnumerable<ToolStripItem> setDefaultPullActionDropDownItems = toolStripButtonPull.DropDownItems
+        var setDefaultPullActionDropDownItems = toolStripButtonPull.DropDownItems
             .OfType<ToolStripMenuItem>()
             .Where(tsmi => tsmi.Tag is GitPullAction)
             .Select(tsmi =>
@@ -221,7 +228,7 @@ partial class FormBrowse
 
         void SetDefaultPullActionMenuItemClick(object? sender, EventArgs eventArgs)
         {
-            ToolStripMenuItem clickedMenuItem = (ToolStripMenuItem)sender!;
+            var clickedMenuItem = (ToolStripMenuItem)sender!;
             AppSettings.DefaultPullAction = (GitPullAction)clickedMenuItem.Tag!;
             RefreshDefaultPullAction();
         }
@@ -231,9 +238,9 @@ partial class FormBrowse
     {
         userShell.DropDownItems.Clear();
 
-        bool userShellAccessible = false;
+        var userShellAccessible = false;
         ToolStripMenuItem? selectedDefaultShell = null;
-        foreach (IShellDescriptor shell in _shellProvider.GetShells())
+        foreach (var shell in _shellProvider.GetShells())
         {
             if (!shell.HasExecutable)
             {
@@ -247,7 +254,8 @@ partial class FormBrowse
             toolStripMenuItem.ToolTipText = shell.Name;
             toolStripMenuItem.Click += userShell_Click;
 
-            if (selectedDefaultShell is null || string.Equals(shell.Name, defaultShell, StringComparison.InvariantCultureIgnoreCase))
+            if (selectedDefaultShell is null ||
+                string.Equals(shell.Name, defaultShell, StringComparison.InvariantCultureIgnoreCase))
             {
                 userShellAccessible = true;
                 selectedDefaultShell = toolStripMenuItem;
@@ -267,7 +275,7 @@ partial class FormBrowse
         // set the first available shell as default
         if (userShell.Visible && !userShellAccessible)
         {
-            IShellDescriptor shell = (IShellDescriptor)userShell.DropDownItems[0].Tag!;
+            var shell = (IShellDescriptor)userShell.DropDownItems[0].Tag!;
             userShell.Image = shell.Icon;
             userShell.ToolTipText = shell.Name;
             userShell.Tag = shell;
@@ -282,7 +290,7 @@ partial class FormBrowse
             return;
         }
 
-        GitPullAction defaultPullAction = AppSettings.DefaultPullAction;
+        var defaultPullAction = AppSettings.DefaultPullAction;
 
         foreach (ToolStripMenuItem menuItem in setDefaultPullButtonActionToolStripMenuItem.DropDown.Items)
         {
@@ -326,12 +334,12 @@ partial class FormBrowse
     }
 
     /// <summary>
-    ///  Hides "Fetch all" item when there is only one remote,
-    ///  since it is redundant with the single-remote "Fetch" command.
+    ///     Hides "Fetch all" item when there is only one remote,
+    ///     since it is redundant with the single-remote "Fetch" command.
     /// </summary>
     private void UpdateFetchAllVisibility()
     {
-        bool hasMultipleRemotes = Module.IsValidGitWorkingDir() && Module.GetRemoteNames().Count > 1;
+        var hasMultipleRemotes = Module.IsValidGitWorkingDir() && Module.GetRemoteNames().Count > 1;
 
         // Toolbar button drop down menu
         fetchAllToolStripMenuItem.Visible = hasMultipleRemotes;
@@ -355,7 +363,7 @@ partial class FormBrowse
         {
             ToolStripMain.SuspendLayout();
             RepoStateVisualiser repoStateVisualiser = new();
-            (Image image, Brush brush) = repoStateVisualiser.Invoke(status);
+            (var image, var brush) = repoStateVisualiser.Invoke(status);
 
             if (showCount)
             {
@@ -368,7 +376,7 @@ partial class FormBrowse
                 }
                 else
                 {
-                    int width = toolStripButtonCommit.Width;
+                    var width = toolStripButtonCommit.Width;
                     toolStripButtonCommit.Text = _commitButtonText.Text;
                     if (width > toolStripButtonCommit.Width)
                     {

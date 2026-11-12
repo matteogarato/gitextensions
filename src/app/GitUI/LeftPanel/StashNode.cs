@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI.Properties;
 
@@ -37,17 +38,17 @@ internal sealed class StashNode : BaseRevisionNode
 
     internal bool OpenStash(IWin32Window owner)
     {
-        return UICommands.StartStashDialog(owner, manageStashes: true, ReflogSelector);
+        return UiCommands.StartStashDialog(owner, true, ReflogSelector);
     }
 
     public void ApplyStash(IWin32Window owner)
     {
-        UICommands.StashApply(owner, ReflogSelector);
+        UiCommands.StashApply(owner, ReflogSelector);
     }
 
     public void PopStash(IWin32Window owner)
     {
-        UICommands.StashPop(owner, ReflogSelector);
+        UiCommands.StashPop(owner, ReflogSelector);
     }
 
     public void DropStash(IWin32Window owner)
@@ -68,10 +69,7 @@ internal sealed class StashNode : BaseRevisionNode
                     Heading = TranslatedStrings.CannotBeUndone,
                     Buttons = { TaskDialogButton.Yes, TaskDialogButton.No },
                     Icon = TaskDialogIcon.Information,
-                    Verification = new TaskDialogVerificationCheckBox
-                    {
-                        Text = TranslatedStrings.DontShowAgain
-                    },
+                    Verification = new TaskDialogVerificationCheckBox { Text = TranslatedStrings.DontShowAgain },
                     SizeToContent = true
                 };
 
@@ -85,7 +83,7 @@ internal sealed class StashNode : BaseRevisionNode
 
             if (result == TaskDialogButton.Yes)
             {
-                UICommands.StashDrop(owner, ReflogSelector);
+                UiCommands.StashDrop(owner, ReflogSelector);
             }
         }
     }

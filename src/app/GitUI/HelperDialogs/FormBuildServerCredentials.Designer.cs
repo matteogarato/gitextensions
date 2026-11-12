@@ -142,7 +142,7 @@ partial class FormBuildServerCredentials
         radioButtonGuestAccess.TabStop = true;
         radioButtonGuestAccess.Text = "Guest access";
         radioButtonGuestAccess.UseVisualStyleBackColor = true;
-        radioButtonGuestAccess.CheckedChanged += authenticationMethodChanged;
+        radioButtonGuestAccess.CheckedChanged += AuthenticationMethodChanged;
         // 
         // radioButtonAuthenticatedUser
         // 
@@ -154,7 +154,7 @@ partial class FormBuildServerCredentials
         radioButtonAuthenticatedUser.TabStop = true;
         radioButtonAuthenticatedUser.Text = "Authenticated user";
         radioButtonAuthenticatedUser.UseVisualStyleBackColor = true;
-        radioButtonAuthenticatedUser.CheckedChanged += authenticationMethodChanged;
+        radioButtonAuthenticatedUser.CheckedChanged += AuthenticationMethodChanged;
         // 
         // radioButtonBearerToken
         // 
@@ -166,7 +166,7 @@ partial class FormBuildServerCredentials
         radioButtonBearerToken.TabStop = true;
         radioButtonBearerToken.Text = "Bearer token";
         radioButtonBearerToken.UseVisualStyleBackColor = true;
-        radioButtonBearerToken.CheckedChanged += authenticationMethodChanged;
+        radioButtonBearerToken.CheckedChanged += AuthenticationMethodChanged;
         // 
         // FormBuildServerCredentials
         // 

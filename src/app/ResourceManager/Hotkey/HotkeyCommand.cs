@@ -1,24 +1,11 @@
 using System.Diagnostics;
 using System.Xml.Serialization;
 
-namespace ResourceManager;
+namespace ResourceManager.Hotkey;
 
 [DebuggerDisplay("Hotkey: {CommandCode} {Name}")]
 public class HotkeyCommand
 {
-    #region Properties
-
-    [XmlAttribute]
-    public int CommandCode { get; set; }
-
-    [XmlAttribute]
-    public string? Name { get; set; }
-
-    [XmlAttribute]
-    public Keys KeyData { get; set; }
-
-    #endregion
-
     public HotkeyCommand()
     {
     }
@@ -51,4 +38,14 @@ public class HotkeyCommand
     {
         return base.GetHashCode();
     }
+
+    #region Properties
+
+    [XmlAttribute] public int CommandCode { get; set; }
+
+    [XmlAttribute] public string? Name { get; set; }
+
+    [XmlAttribute] public Keys KeyData { get; set; }
+
+    #endregion
 }

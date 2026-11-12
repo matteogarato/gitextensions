@@ -1,4 +1,4 @@
-using GitCommands;
+using GitCommands.Settings;
 
 namespace ResourceManager.CommitDataRenders;
 
@@ -19,7 +19,7 @@ public sealed class TabbedHeaderRenderStyleProvider : IHeaderRenderStyleProvider
             TranslatedStrings.GetParents(10)
         ];
 
-        int tabStop = strings
+        var tabStop = strings
             .Select(s => TextRenderer.MeasureText(s + "  ", AppSettings.Font).Width)
             .Max();
 
@@ -27,9 +27,18 @@ public sealed class TabbedHeaderRenderStyleProvider : IHeaderRenderStyleProvider
         _tabStops = new[] { tabStop, tabStop + 1, tabStop + 2, tabStop + 3 };
     }
 
-    public Font GetFont(Graphics g) => AppSettings.Font;
+    Font IHeaderRenderStyleProvider.GetFont(Graphics g)
+    {
+        return AppSettings.Font;
+    }
 
-    public int GetMaxWidth() => 16;
+    int IHeaderRenderStyleProvider.GetMaxWidth()
+    {
+        return 16;
+    }
 
-    public IEnumerable<int> GetTabStops() => _tabStops;
+    IEnumerable<int> IHeaderRenderStyleProvider.GetTabStops()
+    {
+        return _tabStops;
+    }
 }

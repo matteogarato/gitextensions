@@ -1,12 +1,13 @@
-﻿using GitCommands;
-using GitCommands.UserRepositoryHistory;
+﻿using GitCommands.UserRepositoryHistory;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitCommandsTests.UserRepositoryHistory;
+
 public class RepositoryStorageTests
 {
-    private IRepositorySerialiser<Repository> _repositorySerialiser = null!;
-    private RepositoryStorage _repositoryStorage = null!;
+    private readonly IRepositorySerialiser<Repository> _repositorySerialiser = null!;
+    private readonly RepositoryStorage _repositoryStorage = null!;
 
     public RepositoryStorageTests()
     {
@@ -26,7 +27,7 @@ public class RepositoryStorageTests
     [Fact]
     public void Load_should_return_empty_collection_if_settings_value_null()
     {
-        IReadOnlyList<Repository> repositories = _repositoryStorage.Load("a");
+        var repositories = _repositoryStorage.Load("a");
 
         repositories.Should().BeEmpty();
     }
@@ -36,7 +37,7 @@ public class RepositoryStorageTests
     {
         _repositorySerialiser.Deserialize(Arg.Any<string>()).Returns(x => null);
 
-        IReadOnlyList<Repository> repositories = _repositoryStorage.Load("a");
+        var repositories = _repositoryStorage.Load("a");
 
         repositories.Should().BeEmpty();
     }
@@ -47,20 +48,16 @@ public class RepositoryStorageTests
         AppSettings.SetString("a", "repos");
         List<Repository> history =
         [
-            new Repository(@"C:\Development\gitextensions\"),
-            new Repository(@"C:\Development\gitextensions\Externals\NBug\")
+            new(@"C:\Development\gitextensions\"),
+            new(@"C:\Development\gitextensions\Externals\NBug\") { Anchor = Repository.RepositoryAnchor.AnchoredInTop },
+            new(@"C:\Development\gitextensions\GitExtensionsDoc\")
             {
-                Anchor = Repository.RepositoryAnchor.AnchoredInTop,
-            },
-            new Repository(@"C:\Development\gitextensions\GitExtensionsDoc\")
-            {
-                Anchor = Repository.RepositoryAnchor.AnchoredInRecent,
+                Anchor = Repository.RepositoryAnchor.AnchoredInRecent
             }
-
         ];
         _repositorySerialiser.Deserialize(Arg.Any<string>()).Returns(x => history);
 
-        IReadOnlyList<Repository> repositories = _repositoryStorage.Load("a");
+        var repositories = _repositoryStorage.Load("a");
 
         repositories.Should().BeSameAs(history);
     }

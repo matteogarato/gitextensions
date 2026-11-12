@@ -9,35 +9,36 @@ namespace GitCommands.Git;
 public static partial class Commands
 {
     /// <summary>
-    ///  Get all config settings from git according to the scope.
+    ///     Get all config settings from git according to the scope.
     /// </summary>
-    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable"/> for the affected repo.</param>
+    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable" /> for the affected repo.</param>
     /// <param name="settingLevel">The scope for the config.</param>
     /// <returns>The names and values of the settings delimited by '\0'.</returns>
     public static string GetGitSettings(this IExecutable gitExecutable, GitSettingLevel settingLevel)
     {
         GitArgumentBuilder args = new("config")
+        {
+            gitExecutable.SupportNewGitConfigSyntax() ? "list" : "--list",
+            settingLevel switch
             {
-                gitExecutable.SupportNewGitConfigSyntax() ? "list" : "--list",
-                settingLevel switch
-                {
-                    GitSettingLevel.Effective => "",
-                    GitSettingLevel.Local => "--local",
-                    GitSettingLevel.Global => "--global",
-                    GitSettingLevel.SystemWide => "--system",
-                    _ => throw new ArgumentOutOfRangeException(nameof(settingLevel))
-                },
-                "--includes",
-                "--null"
-            };
-        ExecutionResult result = gitExecutable.Execute(args, throwOnErrorExit: false);
+                GitSettingLevel.Effective => "",
+                GitSettingLevel.Local => "--local",
+                GitSettingLevel.Global => "--global",
+                GitSettingLevel.SystemWide => "--system",
+                _ => throw new ArgumentOutOfRangeException(nameof(settingLevel))
+            },
+            "--includes",
+            "--null"
+        };
+        var result = gitExecutable.Execute(args, throwOnErrorExit: false);
 
         if (result.ExitedSuccessfully)
         {
             return result.StandardOutput;
         }
 
-        if (result.StandardError.StartsWith("fatal: unable to read config file") && result.StandardError.TrimEnd().EndsWith(": No such file or directory"))
+        if (result.StandardError.StartsWith("fatal: unable to read config file") &&
+            result.StandardError.TrimEnd().EndsWith(": No such file or directory"))
         {
             return "";
         }
@@ -47,18 +48,23 @@ public static partial class Commands
     }
 
     /// <summary>
-    ///  Gets the name of the currently checked out branch.
+    ///     Gets the name of the currently checked out branch.
     /// </summary>
     /// <param name="gitExecutor">The IGitExecutor for the repo of interest.</param>
-    /// <param name="emptyIfDetached">Defines the value returned if HEAD is detached. <see langword="true"/> to return <see cref="string.Empty"/>; <see langword="false"/> to return "(no branch)".</param>
+    /// <param name="emptyIfDetached">
+    ///     Defines the value returned if HEAD is detached. <see langword="true" /> to return
+    ///     <see cref="string.Empty" />; <see langword="false" /> to return "(no branch)".
+    /// </param>
     /// <returns>
-    ///  The name of the branch (for example: "main"); the value requested by <paramref name="emptyIfDetached"/>, if HEAD is detached; <see cref="string.Empty"/> if it fails to retrieve the branch name for any reason (for example, if the repository is not reachable).
+    ///     The name of the branch (for example: "main"); the value requested by <paramref name="emptyIfDetached" />, if HEAD
+    ///     is detached; <see cref="string.Empty" /> if it fails to retrieve the branch name for any reason (for example, if
+    ///     the repository is not reachable).
     /// </returns>
     public static string GetSelectedBranch(IGitExecutor gitExecutor, bool emptyIfDetached = false)
     {
         if (!gitExecutor.IsReftableRepo && !string.IsNullOrEmpty(gitExecutor.WorkingDir))
         {
-            string head = GetSelectedBranchFast(gitExecutor.GetGitDirectory(), emptyIfDetached);
+            var head = GetSelectedBranchFast(gitExecutor.GetGitDirectory(), emptyIfDetached);
 
             if (head == ".invalid")
             {
@@ -71,15 +77,11 @@ public static partial class Commands
             }
         }
 
-        GitArgumentBuilder args = new("symbolic-ref")
-        {
-            "--quiet",
-            "HEAD"
-        };
+        GitArgumentBuilder args = new("symbolic-ref") { "--quiet", "HEAD" };
 
         try
         {
-            ExecutionResult result = gitExecutor.GitExecutable.Execute(args, throwOnErrorExit: false);
+            var result = gitExecutor.GitExecutable.Execute(args, throwOnErrorExit: false);
 
             if (result.ExitedSuccessfully)
             {
@@ -103,7 +105,7 @@ public static partial class Commands
             try
             {
                 // eg. "/path/to/repo/.git/HEAD"
-                string headFileName = Path.Join(gitDirectory, "HEAD");
+                var headFileName = Path.Join(gitDirectory, "HEAD");
 
                 if (!File.Exists(headFileName))
                 {
@@ -112,7 +114,8 @@ public static partial class Commands
 
                 headFileContents = File.ReadAllText(headFileName, GitExecutor.SystemEncoding);
             }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SecurityException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException ||
+                                       ex is SecurityException)
             {
                 // ignore inaccessible file
                 return string.Empty;
@@ -138,58 +141,60 @@ public static partial class Commands
     }
 
     /// <summary>
-    ///  Removes a git config (sub)section.
+    ///     Removes a git config (sub)section.
     /// </summary>
-    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable"/> for the affected repo.</param>
-    /// <param name="settingLevel">The scope for the config (must not be <see cref="GitSettingLevel.Effective"/>).</param>
+    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable" /> for the affected repo.</param>
+    /// <param name="settingLevel">The scope for the config (must not be <see cref="GitSettingLevel.Effective" />).</param>
     /// <param name="section">The name of the section.</param>
     /// <param name="subsection">The optional name of the subsection.</param>
-    public static void RemoveConfigSection(this IExecutable gitExecutable, GitSettingLevel settingLevel, string section, string? subsection = null)
+    public static void RemoveConfigSection(this IExecutable gitExecutable, GitSettingLevel settingLevel, string section,
+        string? subsection = null)
     {
         GitArgumentBuilder args = new("config")
+        {
+            gitExecutable.SupportNewGitConfigSyntax() ? "remove-section" : "--remove-section",
+            settingLevel switch
             {
-                gitExecutable.SupportNewGitConfigSyntax() ? "remove-section" : "--remove-section",
-                settingLevel switch
-                {
-                    GitSettingLevel.Local => "--local",
-                    GitSettingLevel.Global => "--global",
-                    GitSettingLevel.SystemWide => "--system",
-                    GitSettingLevel.Effective or _ => throw new ArgumentOutOfRangeException(nameof(settingLevel))
-                },
-                "--",
-                subsection is null ? section : @$"""{section}.{subsection}"""
-            };
+                GitSettingLevel.Local => "--local",
+                GitSettingLevel.Global => "--global",
+                GitSettingLevel.SystemWide => "--system",
+                GitSettingLevel.Effective or _ => throw new ArgumentOutOfRangeException(nameof(settingLevel))
+            },
+            "--",
+            subsection is null ? section : @$"""{section}.{subsection}"""
+        };
         gitExecutable.Execute(args);
     }
 
     /// <summary>
-    ///  Sets or unsets a git config setting.
+    ///     Sets or unsets a git config setting.
     /// </summary>
-    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable"/> for the affected repo.</param>
-    /// <param name="settingLevel">The scope for the config (must not be <see cref="GitSettingLevel.Effective"/>).</param>
+    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable" /> for the affected repo.</param>
+    /// <param name="settingLevel">The scope for the config (must not be <see cref="GitSettingLevel.Effective" />).</param>
     /// <param name="setting">The name of the setting (may contain dots, e.g. "core.autocrlf").</param>
-    /// <param name="value">The value of the setting or <see langword="null"/> for removing the setting.</param>
-    public static void SetGitSetting(this IExecutable gitExecutable, GitSettingLevel settingLevel, string setting, string? value, bool append)
+    /// <param name="value">The value of the setting or <see langword="null" /> for removing the setting.</param>
+    public static void SetGitSetting(this IExecutable gitExecutable, GitSettingLevel settingLevel, string setting,
+        string? value, bool append)
     {
-        bool isSet = !string.IsNullOrEmpty(value);
-        bool newSyntax = gitExecutable.SupportNewGitConfigSyntax();
+        var isSet = !string.IsNullOrEmpty(value);
+        var newSyntax = gitExecutable.SupportNewGitConfigSyntax();
         GitArgumentBuilder args = new("config")
+        {
+            { newSyntax, isSet ? "set" : "unset" },
+            { !newSyntax && !isSet, "--unset" },
+            { isSet && append, newSyntax ? "--append" : "--add" },
+            settingLevel switch
             {
-                { newSyntax, isSet ? "set" : "unset" },
-                { !newSyntax && !isSet, "--unset" },
-                { isSet && append, newSyntax ? "--append" : "--add" },
-                settingLevel switch
-                {
-                    GitSettingLevel.Local => "--local",
-                    GitSettingLevel.Global => "--global",
-                    GitSettingLevel.SystemWide => "--system",
-                    GitSettingLevel.Effective or _ => throw new ArgumentOutOfRangeException(nameof(settingLevel))
-                },
-                "--",
-                setting.Quote(),
-                { isSet, QuoteSettingValue(value) }
-            };
-        ExecutionResult result = gitExecutable.Execute(args, throwOnErrorExit: false);
+                GitSettingLevel.Local => "--local",
+                GitSettingLevel.Global => "--global",
+                GitSettingLevel.SystemWide => "--system",
+                GitSettingLevel.Effective or _ => throw new ArgumentOutOfRangeException(nameof(settingLevel))
+            },
+            "--",
+            setting.Quote(),
+            { isSet, QuoteSettingValue(value) }
+        };
+        var result = gitExecutable.Execute(args, throwOnErrorExit: false);
         const int exitCodeOnUnsetNotExistingSetting = 5;
         if (isSet || result.ExitCode != exitCodeOnUnsetNotExistingSetting)
         {
@@ -209,5 +214,8 @@ public static partial class Commands
         }
     }
 
-    private static bool SupportNewGitConfigSyntax(this IExecutable gitExecutable) => GitVersion.CurrentVersion(gitExecutable).SupportNewGitConfigSyntax;
+    private static bool SupportNewGitConfigSyntax(this IExecutable gitExecutable)
+    {
+        return GitVersion.CurrentVersion(gitExecutable).SupportNewGitConfigSyntax;
+    }
 }

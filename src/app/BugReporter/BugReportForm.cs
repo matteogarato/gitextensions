@@ -10,14 +10,14 @@
 using System.Text.RegularExpressions;
 using BugReporter.Properties;
 using BugReporter.Serialization;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Translations;
 using GitExtensions.Extensibility.Translations.Xliff;
+using GitExtUtils;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
-using GitUI;
-using Microsoft;
 using ResourceManager;
 using Report = BugReporter.Info.Report;
 
@@ -25,31 +25,35 @@ namespace BugReporter;
 
 public partial class BugReportForm : Form, ITranslate
 {
-    private readonly TranslationString _title = new("Error Report");
-    private readonly TranslationString _submitGitHubMessage = new(@"Give as much as information as possible please to help the developers solve this issue. Otherwise, your issue ticket may be closed without any follow-up from the developers.
+    private static readonly IErrorReportUrlBuilder _errorReportBodyBuilder;
+    private static readonly GitHubUrlBuilder _urlBuilder;
+
+    private readonly TranslationString _noReproStepsSuppliedErrorMessage =
+        new("Please provide as much as information as possible to help the developers solve this issue.");
+
+    private readonly TranslationString _submitGitHubMessage = new(
+        @"Give as much as information as possible please to help the developers solve this issue. Otherwise, your issue ticket may be closed without any follow-up from the developers.
 
 Because of this, make sure to fill in all the fields in the report template please.
 
 Send report?");
-    private readonly TranslationString _toolTipCopy = new("Copy the issue details into clipboard");
-    private readonly TranslationString _toolTipSendQuit = new("Report the issue to GitHub and quit application.\r\nA valid GitHub account is required");
-    private readonly TranslationString _toolTipQuit = new("Quit application without reporting the issue");
-    private readonly TranslationString _noReproStepsSuppliedErrorMessage = new("Please provide as much as information as possible to help the developers solve this issue.");
 
-    private static readonly IErrorReportUrlBuilder ErrorReportBodyBuilder;
-    private static readonly GitHubUrlBuilder UrlBuilder;
+    private readonly TranslationString _title = new("Error Report");
+    private readonly TranslationString _toolTipCopy = new("Copy the issue details into clipboard");
+    private readonly TranslationString _toolTipQuit = new("Quit application without reporting the issue");
+
+    private readonly TranslationString _toolTipSendQuit =
+        new("Report the issue to GitHub and quit application.\r\nA valid GitHub account is required");
+
+    private string? _environmentInfo;
+    private string? _exceptionInfo;
     private SerializableException? _lastException;
     private Report? _lastReport;
-    private string? _exceptionInfo;
-    private string? _environmentInfo;
-
-    [GeneratedRegex(@"\s|\r|\n", RegexOptions.ExplicitCapture)]
-    private static partial Regex WhitespaceRegex { get; }
 
     static BugReportForm()
     {
-        ErrorReportBodyBuilder = new ErrorReportUrlBuilder();
-        UrlBuilder = new GitHubUrlBuilder(ErrorReportBodyBuilder);
+        _errorReportBodyBuilder = new ErrorReportUrlBuilder();
+        _urlBuilder = new GitHubUrlBuilder(_errorReportBodyBuilder);
     }
 
     public BugReportForm()
@@ -81,7 +85,11 @@ Send report?");
         mainTabs.TabPages.Remove(mainTabs.TabPages["reportContentsTabPage"]!);
     }
 
-    public DialogResult ShowDialog(IWin32Window? owner, SerializableException exception, string exceptionInfo, string environmentInfo, bool canIgnore, bool showIgnore, bool focusDetails)
+    [GeneratedRegex(@"\s|\r|\n", RegexOptions.ExplicitCapture)]
+    private static partial Regex WhitespaceRegex { get; }
+
+    public DialogResult ShowDialog(IWin32Window? owner, SerializableException exception, string exceptionInfo,
+        string environmentInfo, bool canIgnore, bool showIgnore, bool focusDetails)
     {
         _lastException = exception;
         _lastReport = new Report(_lastException);
@@ -97,7 +105,8 @@ Send report?");
         exceptionTextBox.Text = _lastException.Type;
         exceptionMessageTextBox.Text = _lastException.Message;
         targetSiteTextBox.Text = _lastException.TargetSite;
-        applicationTextBox.Text = $@"{_lastReport.GeneralInfo.HostApplication} [{_lastReport.GeneralInfo.HostApplicationVersion}]";
+        applicationTextBox.Text =
+            $@"{_lastReport.GeneralInfo.HostApplication} [{_lastReport.GeneralInfo.HostApplicationVersion}]";
         gitTextBox.Text = _lastReport.GeneralInfo.GitVersion;
         dateTimeTextBox.Text = _lastReport.GeneralInfo.DateTime;
         clrTextBox.Text = _lastReport.GeneralInfo.ClrVersion;
@@ -120,7 +129,7 @@ Send report?");
         DialogResult = DialogResult.None;
 
         // ToDo: Fill in the 'Report Contents' tab);
-        DialogResult result = ShowDialog(owner);
+        var result = ShowDialog(owner);
 
         // Write back the user description (as we passed 'report' as a reference since it is a reference object anyway)
         _lastReport.GeneralInfo.UserDescription = descriptionTextBox.Text;
@@ -142,7 +151,7 @@ Send report?");
 
     private static bool CheckContainsInfo(string input)
     {
-        string text = WhitespaceRegex.Replace(input, string.Empty);
+        var text = WhitespaceRegex.Replace(input, string.Empty);
         return !string.IsNullOrWhiteSpace(text);
     }
 
@@ -154,7 +163,7 @@ Send report?");
 
     private void SendAndQuitButton_Click(object sender, EventArgs e)
     {
-        bool hasUserText = CheckContainsInfo(descriptionTextBox.Text);
+        var hasUserText = CheckContainsInfo(descriptionTextBox.Text);
         if (!hasUserText)
         {
             MessageBoxes.ShowError(this, _noReproStepsSuppliedErrorMessage.Text, _title.Text);
@@ -170,7 +179,8 @@ Send report?");
 
         Validates.NotNull(_lastException);
 
-        string? url = UrlBuilder.Build("https://github.com/gitextensions/gitextensions/issues/new", _lastException, _exceptionInfo, _environmentInfo, descriptionTextBox.Text);
+        var url = _urlBuilder.Build("https://github.com/gitextensions/gitextensions/issues/new", _lastException,
+            _exceptionInfo, _environmentInfo, descriptionTextBox.Text);
         new Executable(url!).Start(useShellExecute: true, throwOnErrorExit: false);
 
         DialogResult = DialogResult.Abort;
@@ -181,7 +191,8 @@ Send report?");
     {
         Validates.NotNull(_lastException);
 
-        string report = ErrorReportBodyBuilder.CopyText(_lastException, _exceptionInfo, _environmentInfo, descriptionTextBox.Text);
+        var report = _errorReportBodyBuilder.CopyText(_lastException, _exceptionInfo, _environmentInfo,
+            descriptionTextBox.Text);
         if (string.IsNullOrWhiteSpace(report))
         {
             return;
@@ -198,6 +209,59 @@ Send report?");
         Close();
     }
 
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
+
+    internal readonly struct TestAccessor(BugReportForm form)
+    {
+        public TextBox ExceptionTextBox
+        {
+            get => form.exceptionTextBox;
+        }
+
+        public TextBox ExceptionMessageTextBox
+        {
+            get => form.exceptionMessageTextBox;
+        }
+
+        public TextBox TargetSiteTextBox
+        {
+            get => form.targetSiteTextBox;
+        }
+
+        public ExceptionDetails ExceptionDetails
+        {
+            get => form.exceptionDetails;
+        }
+
+        public TextBox ApplicationTextBox
+        {
+            get => form.applicationTextBox;
+        }
+
+        public TextBox GitTextBox
+        {
+            get => form.gitTextBox;
+        }
+
+        public TextBox DateTimeTextBox
+        {
+            get => form.dateTimeTextBox;
+        }
+
+        public TextBox ClrTextBox
+        {
+            get => form.clrTextBox;
+        }
+
+        public static bool CheckContainsInfo(string input)
+        {
+            return BugReportForm.CheckContainsInfo(input);
+        }
+    }
+
     #region Translation
 
     public virtual void AddTranslationItems(ITranslation translation)
@@ -212,7 +276,7 @@ Send report?");
 
     protected void TranslateItem(string itemName, object item)
     {
-        IDictionary<string, TranslationFile> translation = Translator.GetTranslation(AppSettings.CurrentTranslation);
+        var translation = Translator.GetTranslation(AppSettings.CurrentTranslation);
 
         if (translation.Count == 0)
         {
@@ -221,36 +285,11 @@ Send report?");
 
         (string itemName, object item)[] itemsToTranslate = [(itemName, item)];
 
-        foreach (KeyValuePair<string, TranslationFile> pair in translation)
+        foreach (var pair in translation)
         {
             TranslationUtils.TranslateItemsFromList(Name, pair.Value, itemsToTranslate);
         }
     }
 
     #endregion
-
-    internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
-    {
-        private readonly BugReportForm _form;
-
-        public TestAccessor(BugReportForm form)
-        {
-            _form = form;
-        }
-
-        public TextBox ExceptionTextBox => _form.exceptionTextBox;
-        public TextBox ExceptionMessageTextBox => _form.exceptionMessageTextBox;
-        public TextBox TargetSiteTextBox => _form.targetSiteTextBox;
-        public ExceptionDetails ExceptionDetails => _form.exceptionDetails;
-
-        public TextBox ApplicationTextBox => _form.applicationTextBox;
-        public TextBox GitTextBox => _form.gitTextBox;
-        public TextBox DateTimeTextBox => _form.dateTimeTextBox;
-        public TextBox ClrTextBox => _form.clrTextBox;
-
-        public static bool CheckContainsInfo(string input) => BugReportForm.CheckContainsInfo(input);
-    }
 }

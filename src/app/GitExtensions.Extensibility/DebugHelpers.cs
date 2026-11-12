@@ -5,10 +5,15 @@ using System.Runtime.CompilerServices;
 namespace GitExtensions.Extensibility;
 
 /// <summary>
-///  Set of DEBUG-only helpers.
+///     Set of DEBUG-only helpers.
 /// </summary>
 public static class DebugHelpers
 {
+    private static bool IsTestRunning
+    {
+        get => Application.ExecutablePath.EndsWith("testhost.exe");
+    }
+
     [Conditional("DEBUG")]
     public static void Assert([DoesNotReturnIf(false)] bool condition, string message)
     {
@@ -52,7 +57,4 @@ public static class DebugHelpers
             Trace(message, caller);
         }
     }
-
-    private static bool IsTestRunning
-        => Application.ExecutablePath.EndsWith("testhost.exe");
 }

@@ -1,9 +1,9 @@
-﻿namespace GitUI;
+﻿namespace GitExtUtils.GitUI;
 
 public static class TableLayoutPanelExtensions
 {
     /// <summary>
-    /// Adjusts the width of the required column to the largest value from the supplied set.
+    ///     Adjusts the width of the required column to the largest value from the supplied set.
     /// </summary>
     /// <param name="table">The table to adjust.</param>
     /// <param name="columnIndex">The index of the column to resize.</param>
@@ -19,7 +19,8 @@ public static class TableLayoutPanelExtensions
 
         if (columnIndex < 0 || columnIndex >= table.ColumnCount)
         {
-            throw new ArgumentOutOfRangeException(nameof(columnIndex), columnIndex, $"Column index must be within [0, {table.ColumnCount - 1}] range");
+            throw new ArgumentOutOfRangeException(nameof(columnIndex), columnIndex,
+                $"Column index must be within [0, {table.ColumnCount - 1}] range");
         }
 
         ArgumentNullException.ThrowIfNull(controls);
@@ -29,7 +30,7 @@ public static class TableLayoutPanelExtensions
             throw new ArgumentException("At least one control is required", nameof(controls));
         }
 
-        int requiredWidth = controls.Max(c => c.Margin.Left + c.Width + c.Margin.Right);
+        var requiredWidth = controls.Max(c => c.Margin.Left + c.Width + c.Margin.Right);
         table.ColumnStyles[columnIndex].SizeType = SizeType.Absolute;
         table.ColumnStyles[columnIndex].Width = requiredWidth;
     }

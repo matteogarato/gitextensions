@@ -1,24 +1,24 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="GitUI.RevisionGridControl">
-  <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="4">
-      <TextBox x:Name="txtRevisionFilter" Width="280" />
-      <ComboBox x:Name="cbxRevisionFilterField" Width="130" />
-      <Button x:Name="btnApplyRevisionFilter" />
-      <Button x:Name="btnClearRevisionFilter" />
-      <Button x:Name="btnMoreRevisionFilters" />
-    </StackPanel>
-    <TextBlock DockPanel.Dock="Bottom" x:Name="lblLoadingStatus" Margin="4,2" Opacity="0.7" />
-    <ListBox x:Name="lstRevisions" SelectionMode="Multiple">
-      <ListBox.Styles>
-        <!-- Rows must be exactly RowHeight tall: the graph renderer draws each row's lane
+             x:Class="GitUI.UserControls.RevisionGrid.RevisionGridControl">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="4">
+            <TextBox x:Name="txtRevisionFilter" Width="280" />
+            <ComboBox x:Name="cbxRevisionFilterField" Width="130" />
+            <Button x:Name="btnApplyRevisionFilter" />
+            <Button x:Name="btnClearRevisionFilter" />
+            <Button x:Name="btnMoreRevisionFilters" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" x:Name="lblLoadingStatus" Margin="4,2" Opacity="0.7" />
+        <ListBox x:Name="lstRevisions" SelectionMode="Multiple">
+            <ListBox.Styles>
+                <!-- Rows must be exactly RowHeight tall: the graph renderer draws each row's lane
              segment assuming adjacent rows abut, so any container padding breaks the lines. -->
-        <Style Selector="ListBoxItem">
-          <Setter Property="Padding" Value="0" />
-          <Setter Property="MinHeight" Value="0" />
-        </Style>
-      </ListBox.Styles>
-    </ListBox>
-  </DockPanel>
+                <Style Selector="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                </Style>
+            </ListBox.Styles>
+        </ListBox>
+    </DockPanel>
 </UserControl>

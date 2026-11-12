@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace System;
+namespace GitUI.Interops.Kernel32;
 
 internal static partial class NativeMethods
 {

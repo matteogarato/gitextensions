@@ -1,9 +1,10 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using GitExtensions.Extensibility.Git;
-using GitUI;
+using GitUI.UserControls;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class FileStatusListTests
 {
@@ -14,13 +15,13 @@ public sealed class FileStatusListTests
         Window window = new() { Content = list };
         window.Show();
 
-        list.SetDiffs([new GitItemStatus(name: "a.txt"), new GitItemStatus(name: "b.txt")]);
-        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        list.SetDiffs([new GitItemStatus("a.txt"), new GitItemStatus("b.txt")]);
+        Dispatcher.UIThread.RunJobs();
 
-        Action act = () =>
+        var act = () =>
         {
             list.Clear();
-            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Dispatcher.UIThread.RunJobs();
         };
 
         act.Should().NotThrow();

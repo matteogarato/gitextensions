@@ -27,12 +27,13 @@ internal interface IRevisionDiffController
     bool ShouldShowDifftoolMenus(ContextMenuSelectionInfo selectionInfo);
 }
 
-internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPathResolver fullPathResolver) : IRevisionDiffController
+internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPathResolver fullPathResolver)
+    : IRevisionDiffController
 {
-    private readonly Func<IGitModule> _getModule = getModule;
     private readonly IFullPathResolver _fullPathResolver = fullPathResolver;
+    private readonly Func<IGitModule> _getModule = getModule;
 
-    public void SaveFiles(List<FileStatusItem> files, Func<string, string?> userSelection)
+    void IRevisionDiffController.SaveFiles(List<FileStatusItem> files, Func<string, string?> userSelection)
     {
         ArgumentNullException.ThrowIfNull(files);
 
@@ -54,14 +55,16 @@ internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPa
 
         void SaveMultipleFiles(List<FileStatusItem> selectedFiles)
         {
-            string longestCommonPath = GetLongestCommonPath(selectedFiles);
-            string? baseSourceDirectory = _fullPathResolver.Resolve(longestCommonPath.Length == 0 ? "." : longestCommonPath).EnsureTrailingPathSeparator();
+            var longestCommonPath = GetLongestCommonPath(selectedFiles);
+            var baseSourceDirectory = _fullPathResolver
+                .Resolve(longestCommonPath.Length == 0 ? "." : longestCommonPath).EnsureTrailingPathSeparator();
             if (baseSourceDirectory is null)
             {
-                throw new ExternalOperationException(innerException: new DirectoryNotFoundException(@$"Could not resolve common relative path ""{longestCommonPath}"" in ""{_getModule().WorkingDir}""."));
+                throw new ExternalOperationException(innerException: new DirectoryNotFoundException(
+                    @$"Could not resolve common relative path ""{longestCommonPath}"" in ""{_getModule().WorkingDir}""."));
             }
 
-            string? selectedPath = userSelection(baseSourceDirectory);
+            var selectedPath = userSelection(baseSourceDirectory);
             if (selectedPath is null)
             {
                 // User has cancelled the selection
@@ -70,10 +73,11 @@ internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPa
 
             Uri baseSourceDirectoryUri = new(baseSourceDirectory!);
 
-            foreach (FileStatusItem item in selectedFiles)
+            foreach (var item in selectedFiles)
             {
-                string? selectedItemFullName = _fullPathResolver.Resolve(item.Item.Name);
-                string? selectedItemSourceDirectory = Path.GetDirectoryName(selectedItemFullName).EnsureTrailingPathSeparator();
+                var selectedItemFullName = _fullPathResolver.Resolve(item.Item.Name);
+                var selectedItemSourceDirectory =
+                    Path.GetDirectoryName(selectedItemFullName).EnsureTrailingPathSeparator();
 
                 string targetDirectory;
                 if (selectedItemSourceDirectory == baseSourceDirectory)
@@ -83,14 +87,16 @@ internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPa
                 else
                 {
                     Uri selectedItemUri = new(selectedItemSourceDirectory!);
-                    targetDirectory = Path.Combine(selectedPath, baseSourceDirectoryUri.MakeRelativeUri(selectedItemUri).OriginalString);
+                    targetDirectory = Path.Combine(selectedPath,
+                        baseSourceDirectoryUri.MakeRelativeUri(selectedItemUri).OriginalString);
                 }
 
                 // TODO: check target file exists.
                 // TODO: allow cancel the whole sequence
 
                 Directory.CreateDirectory(targetDirectory);
-                string targetFileName = Path.Join(targetDirectory, Path.GetFileName(selectedItemFullName)!).ToNativePath();
+                var targetFileName =
+                    Path.Join(targetDirectory, Path.GetFileName(selectedItemFullName)!).ToNativePath();
                 Debug.WriteLine($"Saving {selectedItemFullName} --> {targetFileName}");
 
                 GetModule().SaveBlobAs(targetFileName, $"{item.SecondRevision.Guid}:\"{item.Item.Name}\"");
@@ -100,10 +106,10 @@ internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPa
 
             static string GetLongestCommonPath(List<FileStatusItem> files)
             {
-                string firstFile = files[0].Item.Name;
-                for (int length = files.Min(f => f.Item.Path.Length) + 1; length > 0; --length)
+                var firstFile = files[0].Item.Name;
+                for (var length = files.Min(f => f.Item.Path.Length) + 1; length > 0; --length)
                 {
-                    string possibleMatch = firstFile[..length];
+                    var possibleMatch = firstFile[..length];
                     if (files.All(f => f.Item.Name.StartsWith(possibleMatch)))
                     {
                         return Path.GetDirectoryName(possibleMatch)!;
@@ -116,8 +122,8 @@ internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPa
 
         void SaveSingleFile(FileStatusItem item)
         {
-            string? fullName = _fullPathResolver.Resolve(item.Item.Name);
-            string? selectedFileName = userSelection(fullName!);
+            var fullName = _fullPathResolver.Resolve(item.Item.Name);
+            var selectedFileName = userSelection(fullName!);
             if (selectedFileName is null)
             {
                 // User has cancelled the selection
@@ -130,102 +136,109 @@ internal sealed class RevisionDiffController(Func<IGitModule> getModule, IFullPa
 
     // The enabling of menu items is related to how the actions have been implemented
 
-    public bool ShouldShowDifftoolMenus(ContextMenuSelectionInfo selectionInfo)
+    bool IRevisionDiffController.ShouldShowDifftoolMenus(ContextMenuSelectionInfo selectionInfo)
     {
         return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsDisplayOnlyDiff;
     }
 
-    public bool ShouldShowResetFileMenus(ContextMenuSelectionInfo selectionInfo)
+    bool IRevisionDiffController.ShouldShowResetFileMenus(ContextMenuSelectionInfo selectionInfo)
     {
         return selectionInfo.SelectedGitItemCount > 0
-            && !selectionInfo.IsBareRepository
-            && selectionInfo.IsAnyTracked
-            && !selectionInfo.IsDisplayOnlyDiff
-            && !(selectionInfo.IsAnySubmodule && selectionInfo.SelectedGitItemCount == 1 && selectionInfo.IsAnyItemWorkTree);
+               && !selectionInfo.IsBareRepository
+               && selectionInfo.IsAnyTracked
+               && !selectionInfo.IsDisplayOnlyDiff
+               && !(selectionInfo.IsAnySubmodule && selectionInfo.SelectedGitItemCount == 1 &&
+                    selectionInfo.IsAnyItemWorkTree);
     }
-
-    #region Main menu items
-    public bool ShouldShowMenuSaveAs(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsAnySubmodule
-            && !(selectionInfo.SelectedRevision?.IsArtificial ?? false)
-            && !selectionInfo.IsDisplayOnlyDiff;
-    }
-
-    public bool ShouldShowMenuCherryPick(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.SupportPatches && !selectionInfo.IsAnyItemWorkTree;
-    }
-
-    // Stage/unstage must limit the selected items, IsStaged is not reflecting Staged status
-    public bool ShouldShowMenuStage(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.IsAnyItemWorkTree;
-    }
-
-    public bool ShouldShowMenuUnstage(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.IsAnyItemIndex;
-    }
-
-    public bool ShouldShowSubmoduleMenus(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.IsAnySubmodule && selectionInfo.SelectedRevision?.ObjectId == ObjectId.WorkTreeId && selectionInfo.AllDirectoriesExist;
-    }
-
-    public bool ShouldShowMenuEditWorkingDirectoryFile(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.SelectedGitItemCount == 1 && selectionInfo.AllFilesExist;
-    }
-
-    public bool ShouldShowMenuDeleteFile(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.AllFilesOrUntrackedDirectoriesExist && (selectionInfo.SelectedRevision?.IsArtificial ?? false);
-    }
-
-    public bool ShouldShowMenuMove(ContextMenuSelectionInfo selectionInfo)
-    {
-        return (selectionInfo.SelectedGitItemCount == 1 && selectionInfo.IsAnyTracked && !selectionInfo.IsAnySubmodule)
-            || selectionInfo.SelectedFolder is not null;
-    }
-
-    public bool ShouldShowMenuOpenRevision(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.SelectedGitItemCount == 1
-            && !selectionInfo.IsAnySubmodule
-            && !selectionInfo.IsDisplayOnlyDiff
-            && !(selectionInfo.SelectedRevision?.IsArtificial ?? false);
-    }
-
-    public bool ShouldShowMenuCopyFileName(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsStatusOnly;
-    }
-
-    public bool ShouldShowMenuShowInFolder(ContextMenuSelectionInfo selectionInfo)
-    {
-        return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsStatusOnly;
-    }
-
-    public bool ShouldShowMenuShowInFileTree(ContextMenuSelectionInfo selectionInfo)
-    {
-        return (selectionInfo.SelectedGitItemCount == 1 && selectionInfo.IsAnyTracked && !selectionInfo.IsDeleted)
-            || selectionInfo.SelectedFolder is not null;
-    }
-
-    public bool ShouldShowMenuFileHistory(ContextMenuSelectionInfo selectionInfo)
-    {
-        return (selectionInfo.SelectedGitItemCount == 1 || !string.IsNullOrEmpty(selectionInfo.SelectedFolder?.Value)) && selectionInfo.IsAnyTracked;
-    }
-
-    public bool ShouldShowMenuBlame(ContextMenuSelectionInfo selectionInfo)
-    {
-        return ShouldShowMenuFileHistory(selectionInfo) && !selectionInfo.IsAnySubmodule && selectionInfo.SelectedFolder is null;
-    }
-    #endregion
 
     private IGitModule GetModule()
     {
         return _getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
     }
+
+    #region Main menu items
+
+    bool IRevisionDiffController.ShouldShowMenuSaveAs(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsAnySubmodule
+                                                      && !(selectionInfo.SelectedRevision?.IsArtificial ?? false)
+                                                      && !selectionInfo.IsDisplayOnlyDiff;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuCherryPick(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.SupportPatches && !selectionInfo.IsAnyItemWorkTree;
+    }
+
+    // Stage/unstage must limit the selected items, IsStaged is not reflecting Staged status
+    bool IRevisionDiffController.ShouldShowMenuStage(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.IsAnyItemWorkTree;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuUnstage(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.IsAnyItemIndex;
+    }
+
+    bool IRevisionDiffController.ShouldShowSubmoduleMenus(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.IsAnySubmodule && selectionInfo.SelectedRevision?.ObjectId == ObjectId.WorkTreeId &&
+               selectionInfo.AllDirectoriesExist;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuEditWorkingDirectoryFile(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.SelectedGitItemCount == 1 && selectionInfo.AllFilesExist;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuDeleteFile(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.AllFilesOrUntrackedDirectoriesExist &&
+               (selectionInfo.SelectedRevision?.IsArtificial ?? false);
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuMove(ContextMenuSelectionInfo selectionInfo)
+    {
+        return (selectionInfo.SelectedGitItemCount == 1 && selectionInfo.IsAnyTracked && !selectionInfo.IsAnySubmodule)
+               || selectionInfo.SelectedFolder is not null;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuOpenRevision(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.SelectedGitItemCount == 1
+               && !selectionInfo.IsAnySubmodule
+               && !selectionInfo.IsDisplayOnlyDiff
+               && !(selectionInfo.SelectedRevision?.IsArtificial ?? false);
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuCopyFileName(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsStatusOnly;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuShowInFolder(ContextMenuSelectionInfo selectionInfo)
+    {
+        return selectionInfo.SelectedGitItemCount > 0 && !selectionInfo.IsStatusOnly;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuShowInFileTree(ContextMenuSelectionInfo selectionInfo)
+    {
+        return (selectionInfo.SelectedGitItemCount == 1 && selectionInfo.IsAnyTracked && !selectionInfo.IsDeleted)
+               || selectionInfo.SelectedFolder is not null;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuFileHistory(ContextMenuSelectionInfo selectionInfo)
+    {
+        return (selectionInfo.SelectedGitItemCount == 1 ||
+                !string.IsNullOrEmpty(selectionInfo.SelectedFolder?.Value)) && selectionInfo.IsAnyTracked;
+    }
+
+    bool IRevisionDiffController.ShouldShowMenuBlame(ContextMenuSelectionInfo selectionInfo)
+    {
+        return ShouldShowMenuFileHistory(selectionInfo) && !selectionInfo.IsAnySubmodule &&
+               selectionInfo.SelectedFolder is null;
+    }
+
+    #endregion
 }

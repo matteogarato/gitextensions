@@ -26,8 +26,8 @@ public sealed partial class EmptyRepoControl : GitModuleControl
         }
         else
         {
-            btnEditGitIgnore.Click += (_, e) => UICommands.StartEditGitIgnoreDialog(this, localExcludes: false);
-            btnOpenCommitForm.Click += (_, e) => UICommands.StartCommitDialog(this);
+            btnEditGitIgnore.Click += (_, e) => UiCommands.StartEditGitIgnoreDialog(this, false);
+            btnOpenCommitForm.Click += (_, e) => UiCommands.StartCommitDialog(this);
         }
 
         Dock = DockStyle.Fill;

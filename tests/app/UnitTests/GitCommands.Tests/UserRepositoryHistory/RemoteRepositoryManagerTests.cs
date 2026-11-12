@@ -1,14 +1,15 @@
-﻿using GitCommands;
-using GitCommands.UserRepositoryHistory;
+﻿using GitCommands.UserRepositoryHistory;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitCommandsTests.UserRepositoryHistory;
+
 public class RemoteRepositoryManagerTests : IDisposable
 {
-    private const string Key = "history remote";
-    private IRepositoryStorage _repositoryStorage = null!;
-    private RemoteRepositoryManager _manager = null!;
-    private int _userSetting;
+    private const string _key = "history remote";
+    private readonly RemoteRepositoryManager _manager = null!;
+    private readonly IRepositoryStorage _repositoryStorage = null!;
+    private readonly int _userSetting;
 
     public RemoteRepositoryManagerTests()
     {
@@ -20,7 +21,7 @@ public class RemoteRepositoryManagerTests : IDisposable
         _manager = new RemoteRepositoryManager(_repositoryStorage);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.RecentRepositoriesHistorySize = _userSetting;
     }
@@ -31,14 +32,14 @@ public class RemoteRepositoryManagerTests : IDisposable
         const string repoToAdd = "https://path.to/add";
         List<Repository> history =
         [
-            new Repository("http://path1/"),
-            new Repository("http://path3/"),
-            new Repository("http://path4/"),
-            new Repository("http://path5/"),
+            new("http://path1/"),
+            new("http://path3/"),
+            new("http://path4/"),
+            new("http://path5/")
         ];
-        _repositoryStorage.Load(Key).Returns(x => history);
+        _repositoryStorage.Load(_key).Returns(x => history);
 
-        IList<Repository> newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
+        var newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
 
         newHistory.Should().HaveCount(5);
         newHistory[0].Path.Should().Be(repoToAdd);
@@ -50,15 +51,15 @@ public class RemoteRepositoryManagerTests : IDisposable
         const string repoToAdd = "https://path.to/add";
         List<Repository> history =
         [
-            new Repository("git://path1/"),
-            new Repository("git://path3/"),
-            new Repository("git://path4/"),
-            new Repository(repoToAdd),
-            new Repository("git://path5/"),
+            new("git://path1/"),
+            new("git://path3/"),
+            new("git://path4/"),
+            new(repoToAdd),
+            new("git://path5/")
         ];
-        _repositoryStorage.Load(Key).Returns(x => history);
+        _repositoryStorage.Load(_key).Returns(x => history);
 
-        IList<Repository> newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
+        var newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
 
         newHistory.Should().HaveCount(5);
         newHistory[0].Path.Should().Be(repoToAdd);
@@ -70,16 +71,16 @@ public class RemoteRepositoryManagerTests : IDisposable
         const string repoToAdd = "https://path.to/add";
         List<Repository> history =
         [
-            new Repository("ssh://path1/"),
-            new Repository("ssh://path3/"),
-            new Repository(repoToAdd),
-            new Repository("ssh://path4/"),
-            new Repository(repoToAdd),
-            new Repository("http://path5/"),
+            new("ssh://path1/"),
+            new("ssh://path3/"),
+            new(repoToAdd),
+            new("ssh://path4/"),
+            new(repoToAdd),
+            new("http://path5/")
         ];
-        _repositoryStorage.Load(Key).Returns(x => history);
+        _repositoryStorage.Load(_key).Returns(x => history);
 
-        IList<Repository> newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
+        var newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
 
         newHistory.Should().HaveCount(6);
         newHistory[0].Path.Should().Be(repoToAdd);
@@ -92,19 +93,19 @@ public class RemoteRepositoryManagerTests : IDisposable
         const string repoToAdd = "https://path.to/add";
         List<Repository> history =
         [
-            new Repository(repoToAdd),
-            new Repository("http://path1/"),
-            new Repository("http://path3/"),
-            new Repository("http://path4/"),
-            new Repository("http://path5/"),
+            new(repoToAdd),
+            new("http://path1/"),
+            new("http://path3/"),
+            new("http://path4/"),
+            new("http://path5/")
         ];
-        _repositoryStorage.Load(Key).Returns(x => history);
+        _repositoryStorage.Load(_key).Returns(x => history);
 
-        IList<Repository> newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
+        var newHistory = await _manager.AddAsMostRecentAsync(repoToAdd);
 
         newHistory.Should().HaveCount(5);
         newHistory[0].Path.Should().Be(repoToAdd);
-        _repositoryStorage.DidNotReceive().Save(Key, Arg.Any<IList<Repository>>());
+        _repositoryStorage.DidNotReceive().Save(_key, Arg.Any<IList<Repository>>());
     }
 
     [Fact]
@@ -113,21 +114,22 @@ public class RemoteRepositoryManagerTests : IDisposable
         const string repoToDelete = "path to delete";
         List<Repository> history =
         [
-            new Repository("path1"),
-            new Repository(repoToDelete),
-            new Repository("path3"),
-            new Repository("path4"),
-            new Repository("path5"),
+            new("path1"),
+            new(repoToDelete),
+            new("path3"),
+            new("path4"),
+            new("path5")
         ];
-        _repositoryStorage.Load(Key).Returns(x => history);
+        _repositoryStorage.Load(_key).Returns(x => history);
 
-        IList<Repository> newHistory = await _manager.RemoveRecentAsync(repoToDelete);
+        var newHistory = await _manager.RemoveRecentAsync(repoToDelete);
 
         newHistory.Should().HaveCount(4);
         newHistory.Should().NotContain(r => r.Path == repoToDelete);
 
-        _repositoryStorage.Received(1).Load(Key);
-        _repositoryStorage.Received(1).Save(Key, Arg.Is<IEnumerable<Repository>>(h => h.All(r => r.Path != repoToDelete)));
+        _repositoryStorage.Received(1).Load(_key);
+        _repositoryStorage.Received(1)
+            .Save(_key, Arg.Is<IEnumerable<Repository>>(h => h.All(r => r.Path != repoToDelete)));
     }
 
     [Fact]
@@ -136,27 +138,27 @@ public class RemoteRepositoryManagerTests : IDisposable
         const string repoToDelete = "path to delete";
         List<Repository> history =
         [
-            new Repository("path1"),
-            new Repository("path2"),
-            new Repository("path3"),
-            new Repository("path4"),
-            new Repository("path5"),
+            new("path1"),
+            new("path2"),
+            new("path3"),
+            new("path4"),
+            new("path5")
         ];
-        _repositoryStorage.Load(Key).Returns(x => history);
+        _repositoryStorage.Load(_key).Returns(x => history);
 
-        IList<Repository> newHistory = await _manager.RemoveRecentAsync(repoToDelete);
+        var newHistory = await _manager.RemoveRecentAsync(repoToDelete);
 
         newHistory.Should().HaveCount(5);
         newHistory.Should().NotContain(r => r.Path == repoToDelete);
 
-        _repositoryStorage.Received(1).Load(Key);
-        _repositoryStorage.DidNotReceive().Save(Key, Arg.Any<IEnumerable<Repository>>());
+        _repositoryStorage.Received(1).Load(_key);
+        _repositoryStorage.DidNotReceive().Save(_key, Arg.Any<IEnumerable<Repository>>());
     }
 
     [Fact]
     public void SaveRecentHistoryAsync_should_throw_if_repositories_null()
     {
-        Func<Task> action = async () => await _manager.SaveRecentHistoryAsync(null!);
+        var action = async () => await _manager.SaveRecentHistoryAsync(null!);
         action.Should().ThrowAsync<ArgumentNullException>();
     }
 
@@ -167,15 +169,15 @@ public class RemoteRepositoryManagerTests : IDisposable
         AppSettings.RecentRepositoriesHistorySize = size;
         List<Repository> history =
         [
-            new Repository("path1"),
-            new Repository("path2"),
-            new Repository("path3"),
-            new Repository("path4"),
-            new Repository("path5"),
+            new("path1"),
+            new("path2"),
+            new("path3"),
+            new("path4"),
+            new("path5")
         ];
 
         await _manager.SaveRecentHistoryAsync(history);
 
-        _repositoryStorage.Received(1).Save(Key, Arg.Is<IEnumerable<Repository>>(h => h.Count() == size));
+        _repositoryStorage.Received(1).Save(_key, Arg.Is<IEnumerable<Repository>>(h => h.Count() == size));
     }
 }

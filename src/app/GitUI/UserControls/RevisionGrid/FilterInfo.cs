@@ -1,5 +1,7 @@
 ﻿using System.Text;
 using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 
@@ -7,19 +9,19 @@ namespace GitUI.UserControls.RevisionGrid;
 
 public record FilterInfo
 {
-    private DateTime _dateFrom;
-    private DateTime _dateTo;
     private string _author = string.Empty;
-    private string _committer = string.Empty;
-    private string _message = string.Empty;
-    private string _content = string.Empty;
-    private string _pathFilter = string.Empty;
     private string _branchFilter = string.Empty;
     private int _commitsLimit = -1;
+    private string _committer = string.Empty;
+    private string _content = string.Empty;
+    private DateTime _dateFrom;
+    private DateTime _dateTo;
+    private string _message = string.Empty;
+    private string _pathFilter = string.Empty;
 
     /// <summary>
-    ///  Gets whether all properties will unconditionally return the underlying data.
-    ///  Otherwise return values will depend on the respective filter, e.g. "get => ByXyz ? Xyz : default".
+    ///     Gets whether all properties will unconditionally return the underlying data.
+    ///     Otherwise return values will depend on the respective filter, e.g. "get => ByXyz ? Xyz : default".
     /// </summary>
     public bool IsRaw { get; init; } = false;
 
@@ -77,7 +79,10 @@ public record FilterInfo
 
     public bool ByCommitsLimit { get; set; } = false;
 
-    public int CommitsLimitDefault => AppSettings.MaxRevisionGraphCommits;
+    public int CommitsLimitDefault
+    {
+        get => AppSettings.MaxRevisionGraphCommits;
+    }
 
     public int CommitsLimit
     {
@@ -107,22 +112,21 @@ public record FilterInfo
         set => _branchFilter = value ?? string.Empty;
     }
 
-    public void SetBranchFilter(string filter)
+    public bool IsShowAllBranchesChecked
     {
-        // Set filtered branches if there is a filter, handled as all branches otherwise
-        ShowCurrentBranchOnly = false;
-
-        string newFilter = filter?.Trim() ?? string.Empty;
-        ByBranchFilter = !string.IsNullOrWhiteSpace(newFilter);
-        BranchFilter = newFilter;
+        get => !ByBranchFilter && !ShowCurrentBranchOnly;
     }
 
-    public bool IsShowAllBranchesChecked => !ByBranchFilter && !ShowCurrentBranchOnly;
-
-    public bool IsShowCurrentBranchOnlyChecked => ShowCurrentBranchOnly;
+    public bool IsShowCurrentBranchOnlyChecked
+    {
+        get => ShowCurrentBranchOnly;
+    }
 
     // IsChecked is not the same as a filter is active, see ByBranchFilter
-    public bool IsShowFilteredBranchesChecked => ByBranchFilter && !ShowCurrentBranchOnly;
+    public bool IsShowFilteredBranchesChecked
+    {
+        get => ByBranchFilter && !ShowCurrentBranchOnly;
+    }
 
     public bool ShowCurrentBranchOnly
     {
@@ -167,43 +171,53 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Has any filters in addition to revision filters that sets the history.
-    /// Currently, this is only branch and date filters.
-    /// Note that Current/Reflog are not considered as filters (All is default).
+    ///     Has any filters in addition to revision filters that sets the history.
+    ///     Currently, this is only branch and date filters.
+    ///     Note that Current/Reflog are not considered as filters (All is default).
     /// </summary>
     public bool HasFilter
     {
         get => HasRevisionFilter
-            || ByDateFrom
-            || ByDateTo
-            || ShowOnlyFirstParent
-            || !string.IsNullOrWhiteSpace(BranchFilter);
+               || ByDateFrom
+               || ByDateTo
+               || ShowOnlyFirstParent
+               || !string.IsNullOrWhiteSpace(BranchFilter);
     }
 
     /// <summary>
-    /// Has revision filters that potentially hides parents, not just branches.
+    ///     Has revision filters that potentially hides parents, not just branches.
     /// </summary>
     public bool HasRevisionFilter
     {
         get => ByAuthor
-            || ByCommitter
-            || ByMessage
-            || ByDiffContent
-            || !string.IsNullOrWhiteSpace(PathFilter)
-            || HideMergeCommits
-            || ShowSimplifyByDecoration;
+               || ByCommitter
+               || ByMessage
+               || ByDiffContent
+               || !string.IsNullOrWhiteSpace(PathFilter)
+               || HideMergeCommits
+               || ShowSimplifyByDecoration;
     }
 
     /// <summary>
-    /// The hash of the last revision to display (i.e. the oldest one displayed at the bottom).
-    /// This hash is used to query history only until this given commit.
+    ///     The hash of the last revision to display (i.e. the oldest one displayed at the bottom).
+    ///     This hash is used to query history only until this given commit.
     /// </summary>
     public string LastRevisionToDisplayHash { get; internal set; } = null!;
 
+    public void SetBranchFilter(string filter)
+    {
+        // Set filtered branches if there is a filter, handled as all branches otherwise
+        ShowCurrentBranchOnly = false;
+
+        var newFilter = filter?.Trim() ?? string.Empty;
+        ByBranchFilter = !string.IsNullOrWhiteSpace(newFilter);
+        BranchFilter = newFilter;
+    }
+
     /// <summary>
-    /// Disables all active filters.
-    /// CurrentBranch and Reflog are not disabled.
-    /// FullHistory and SimplifyMerges are considered settings and not reset.
+    ///     Disables all active filters.
+    ///     CurrentBranch and Reflog are not disabled.
+    ///     FullHistory and SimplifyMerges are considered settings and not reset.
     /// </summary>
     public void ResetAllFilters()
     {
@@ -221,10 +235,11 @@ public record FilterInfo
     }
 
     /// <summary>
-    ///  Applies the conditions from the supplied <paramref name="filter"/> only those are different from the current filter conditions.
+    ///     Applies the conditions from the supplied <paramref name="filter" /> only those are different from the current
+    ///     filter conditions.
     /// </summary>
     /// <param name="filter">The filter to apply.</param>
-    /// <returns><see langword="true"/> if the current filter has changed; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the current filter has changed; otherwise <see langword="false" />.</returns>
     public bool Apply(RevisionFilter filter)
     {
         if (IsRaw)
@@ -232,7 +247,7 @@ public record FilterInfo
             DebugHelpers.Fail("Not supported");
         }
 
-        bool searchParametersChanged = filter.FilterByAuthor != ByAuthor
+        var searchParametersChanged = filter.FilterByAuthor != ByAuthor
                                       || filter.FilterByCommitter != ByCommitter
                                       || filter.FilterByCommit != ByMessage
                                       || filter.FilterByDiffContent != ByDiffContent;
@@ -325,8 +340,8 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Internal grouping of filter arguments.
-    /// Commit limiting filters, normally not affecting parents.
+    ///     Internal grouping of filter arguments.
+    ///     Commit limiting filters, normally not affecting parents.
     /// </summary>
     /// <param name="filter">ArgumentBuilder arg</param>
     private void GetCommitRevisionFilter(ArgumentBuilder filter)
@@ -348,8 +363,8 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Internal grouping of filter arguments.
-    /// Commit limiting filters (affecting parents).
+    ///     Internal grouping of filter arguments.
+    ///     Commit limiting filters (affecting parents).
     /// </summary>
     /// <param name="filter">ArgumentBuilder arg</param>
     private void GetLimitingRevisionFilter(ArgumentBuilder filter)
@@ -413,8 +428,8 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Internal grouping of filter arguments.
-    /// Branch revision filters, not affecting parent rewriting.
+    ///     Internal grouping of filter arguments.
+    ///     Branch revision filters, not affecting parent rewriting.
     /// </summary>
     /// <param name="filter">ArgumentBuilder arg</param>
     /// <param name="currentCheckout">Commit currently checked out</param>
@@ -454,9 +469,10 @@ public record FilterInfo
 
             // Split at whitespace (char[])null is default) but with split options.
             // Ignore quouting, Git revisions do not allow spaces.
-            foreach (string branch in BranchFilter.Split((char[]?)null, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            foreach (var branch in BranchFilter.Split((char[]?)null,
+                         StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
             {
-                bool wildcardBranchFilter = branch.IndexOfAny(Delimiters.WildcardBranchSearchValues) >= 0;
+                var wildcardBranchFilter = branch.IndexOfAny(Delimiters.WildcardBranchSearchValues) >= 0;
                 filter.Add(wildcardBranchFilter && !branch.StartsWith("--") && !branch.Contains("..")
                     ? $"--branches={branch}"
                     : branch);
@@ -525,8 +541,8 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Internal grouping of filter arguments.
-    /// Commit limiting filters normally not affecting parents.
+    ///     Internal grouping of filter arguments.
+    ///     Commit limiting filters normally not affecting parents.
     /// </summary>
     /// <param name="filter">StringBuilder arg</param>
     private void GetCommitFilterSummary(StringBuilder filter)
@@ -543,8 +559,8 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Internal grouping of filter arguments.
-    /// Commit limiting filters (affecting parents).
+    ///     Internal grouping of filter arguments.
+    ///     Commit limiting filters (affecting parents).
     /// </summary>
     /// <param name="filter">StringBuilder arg</param>
     private void GetLimitingFilterSummary(StringBuilder filter)
@@ -590,8 +606,8 @@ public record FilterInfo
     }
 
     /// <summary>
-    /// Internal grouping of filter arguments.
-    /// Branch revision filters, not affecting parent rewriting.
+    ///     Internal grouping of filter arguments.
+    ///     Branch revision filters, not affecting parent rewriting.
     /// </summary>
     /// <param name="filter">StringBuilder arg</param>
     private void GetBranchFilterSummary(StringBuilder filter)

@@ -4,8 +4,8 @@ using GitExtensions.Shims.WinForms;
 namespace GitUI.Compat;
 
 /// <summary>
-///  Installs the Avalonia implementations of the shim services
-///  (see <see cref="ShimHost"/>).
+///     Installs the Avalonia implementations of the shim services
+///     (see <see cref="ShimHost" />).
 /// </summary>
 public static class ShimServices
 {

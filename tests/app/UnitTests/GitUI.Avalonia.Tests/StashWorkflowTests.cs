@@ -1,21 +1,24 @@
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using GitExtensions.Extensibility.Git;
-using GitUI;
 using GitUI.CommandsDialogs;
-using GitUIPluginInterfaces;
+using GitUI.UserControls;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class StashWorkflowTests
 {
-    private static GitStash CreateStash(int index = 0) => new(index, "On main: wip");
+    private static GitStash CreateStash(int index = 0)
+    {
+        return new GitStash(index, "On main: wip");
+    }
 
     [Fact]
     public void BuildSave_should_include_message_and_untracked_flag()
     {
-        string args = StashWorkflow.BuildSave(includeUntrackedFiles: true, keepIndex: false, "  wip  ");
+        string args = StashWorkflow.BuildSave(true, false, "  wip  ");
 
         args.Should().Contain("stash").And.Contain("-u").And.Contain("wip");
     }
@@ -29,7 +32,8 @@ public sealed class StashWorkflowTests
     [Fact]
     public void BuildApplyLatest_should_target_the_newly_created_stash()
     {
-        ((string)StashWorkflow.BuildApplyLatest()).Should().Contain("stash").And.Contain("apply").And.Contain("stash@{0}");
+        ((string)StashWorkflow.BuildApplyLatest()).Should().Contain("stash").And.Contain("apply").And
+            .Contain("stash@{0}");
     }
 
     [Fact]
@@ -68,7 +72,7 @@ public sealed class StashWorkflowTests
     [Fact]
     public void BuildSave_and_BuildApplyLatest_should_preserve_changes_across_checkout()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-stash-checkout-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-stash-checkout-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
@@ -85,7 +89,7 @@ public sealed class StashWorkflowTests
 
             File.WriteAllText(Path.Combine(directory, "README"), "local edit\n");
             File.WriteAllText(Path.Combine(directory, "untracked.txt"), "untracked edit\n");
-            Git(directory, StashWorkflow.BuildSave(includeUntrackedFiles: true, keepIndex: false, message: string.Empty).ToString());
+            Git(directory, StashWorkflow.BuildSave(true, false, string.Empty).ToString());
             Git(directory, "status --porcelain=v1").Should().BeEmpty();
 
             Git(directory, "checkout topic");
@@ -98,25 +102,23 @@ public sealed class StashWorkflowTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
 
         return;
 
         static string Git(string workingDirectory, string arguments)
         {
-            using System.Diagnostics.Process process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo("git", arguments)
             {
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                WorkingDirectory = workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true
             })!;
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            var output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
             process.ExitCode.Should().Be(0, process.StandardError.ReadToEnd());
             return output;
@@ -126,7 +128,7 @@ public sealed class StashWorkflowTests
     [Fact]
     public void BuildSave_with_selected_files_should_stash_only_matching_tracked_and_untracked_changes()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-stash-partial-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-stash-partial-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
@@ -142,10 +144,10 @@ public sealed class StashWorkflowTests
             File.WriteAllText(Path.Combine(directory, "other-untracked.txt"), "untracked other change\n");
 
             Git(directory, StashWorkflow.BuildSave(
-                includeUntrackedFiles: true,
-                keepIndex: false,
-                message: "partial",
-                selectedFiles: ["selected.txt", "selected-untracked.txt"]).ToString());
+                true,
+                false,
+                "partial",
+                ["selected.txt", "selected-untracked.txt"]).ToString());
 
             File.ReadAllText(Path.Combine(directory, "selected.txt")).Should().Be("base\n");
             File.ReadAllText(Path.Combine(directory, "other.txt")).Should().Be("other change\n");
@@ -157,25 +159,23 @@ public sealed class StashWorkflowTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
 
         return;
 
         static string Git(string workingDirectory, string arguments)
         {
-            using System.Diagnostics.Process process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo("git", arguments)
             {
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                WorkingDirectory = workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true
             })!;
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            var output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
             process.ExitCode.Should().Be(0, process.StandardError.ReadToEnd());
             return output;
@@ -185,7 +185,7 @@ public sealed class StashWorkflowTests
     [Fact]
     public void BuildPop_when_stash_conflicts_should_preserve_stash_and_report_unmerged_file()
     {
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-stash-conflict-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-stash-conflict-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         try
         {
@@ -201,7 +201,7 @@ public sealed class StashWorkflowTests
             File.WriteAllText(Path.Combine(directory, "conflict.txt"), "committed change\n");
             Git(directory, "commit -q -am head");
 
-            Git(directory, StashWorkflow.BuildPop(CreateStash()).ToString(), expectedExitCode: 1);
+            Git(directory, StashWorkflow.BuildPop(CreateStash()).ToString(), 1);
 
             Git(directory, "status --porcelain=v1").Should().Contain("UU conflict.txt");
             File.ReadAllText(Path.Combine(directory, "conflict.txt")).Should().Contain("<<<<<<<");
@@ -209,26 +209,24 @@ public sealed class StashWorkflowTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
 
         return;
 
         static string Git(string workingDirectory, string arguments, int expectedExitCode = 0)
         {
-            using System.Diagnostics.Process process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo("git", arguments)
             {
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                WorkingDirectory = workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true
             })!;
-            string output = process.StandardOutput.ReadToEnd().Trim();
-            string error = process.StandardError.ReadToEnd();
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
             process.ExitCode.Should().Be(expectedExitCode, error);
             return output;
@@ -241,16 +239,17 @@ public sealed class StashWorkflowTests
         WorkingTreePanel panel = new();
         Window window = new() { Content = panel };
         window.Show();
-        ListBox unstagedList = panel.FindControl<ListBox>("lstUnstaged")
-            ?? throw new InvalidOperationException("The unstaged files list was not created.");
+        var unstagedList = panel.FindControl<ListBox>("lstUnstaged")
+                           ?? throw new InvalidOperationException("The unstaged files list was not created.");
         GitItemStatus item = new("selected.txt") { Staged = StagedStatus.WorkTree };
         panel.SetStatus([item]);
         List<string>? selectedFiles = null;
-        panel.StashSelectedFilesRequested += (_, _) => selectedFiles = [.. panel.SelectedItems.Select(status => status.Name)];
+        panel.StashSelectedFilesRequested +=
+            (_, _) => selectedFiles = [.. panel.SelectedItems.Select(status => status.Name)];
 
         unstagedList.SelectedItems!.Add(item);
-        Button stashButton = panel.FindControl<Button>("btnStashSelected")
-            ?? throw new InvalidOperationException("The stash selected button was not created.");
+        var stashButton = panel.FindControl<Button>("btnStashSelected")
+                          ?? throw new InvalidOperationException("The stash selected button was not created.");
         stashButton.IsEnabled.Should().BeTrue();
         panel.StashSelectedFiles();
 
@@ -262,16 +261,16 @@ public sealed class StashWorkflowTests
     {
         Window owner = new();
         owner.Show();
-        StashOptionsWindow dialog = new(includeUntrackedFiles: false, keepIndex: false);
-        Task<ManualStashOptions?> result = dialog.ShowDialog<ManualStashOptions?>(owner);
-        StackPanel content = (StackPanel)dialog.Content!;
+        StashOptionsWindow dialog = new(false, false);
+        var result = dialog.ShowDialog<ManualStashOptions?>(owner);
+        var content = (StackPanel)dialog.Content!;
         CheckBox[] options = [.. content.Children.OfType<CheckBox>()];
         options[0].IsChecked = true;
         options[1].IsChecked = true;
-        Button save = content.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First();
+        var save = content.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First();
         save.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-        (await result).Should().Be(new ManualStashOptions(IncludeUntrackedFiles: true, KeepIndex: true));
+        (await result).Should().Be(new ManualStashOptions(true, true));
         owner.Close();
     }
 
@@ -280,13 +279,13 @@ public sealed class StashWorkflowTests
     {
         Window owner = new();
         owner.Show();
-        StashOptionsWindow dialog = new(includeUntrackedFiles: true, keepIndex: false);
-        Task<ManualStashOptions?> result = dialog.ShowDialog<ManualStashOptions?>(owner);
-        StackPanel content = (StackPanel)dialog.Content!;
+        StashOptionsWindow dialog = new(true, false);
+        var result = dialog.ShowDialog<ManualStashOptions?>(owner);
+        var content = (StackPanel)dialog.Content!;
         CheckBox[] options = [.. content.Children.OfType<CheckBox>()];
         options[0].IsChecked.Should().BeTrue();
         options[1].IsChecked.Should().BeFalse();
-        Button cancel = content.Children.OfType<StackPanel>().Single().Children.OfType<Button>().Last();
+        var cancel = content.Children.OfType<StackPanel>().Single().Children.OfType<Button>().Last();
         cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
         (await result).Should().BeNull();

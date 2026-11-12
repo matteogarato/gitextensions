@@ -6,8 +6,8 @@ namespace GitUI.Avatars;
 public sealed partial class CustomAvatarProvider
 {
     /// <summary>
-    /// A type that holds and prepares for variables in custom avatar templates.
-    /// It's processed by an <see cref="UriTemplateResolver"/>.
+    ///     A type that holds and prepares for variables in custom avatar templates.
+    ///     It's processed by an <see cref="UriTemplateResolver" />.
     /// </summary>
     private sealed class UriTemplateData
     {
@@ -37,8 +37,8 @@ public sealed partial class CustomAvatarProvider
         {
             using (hashAlgorithm)
             {
-                byte[] inputBytes = Encoding.UTF8.GetBytes(input);
-                byte[] hashBytes = hashAlgorithm.ComputeHash(inputBytes);
+                var inputBytes = Encoding.UTF8.GetBytes(input);
+                var hashBytes = hashAlgorithm.ComputeHash(inputBytes);
                 return HexString.FromByteArray(hashBytes);
             }
         }

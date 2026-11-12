@@ -1,6 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+using GitCommands.Git;
+using GitCommands.Settings;
+using GitCommands.Utils;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using JetBrains.Annotations;
@@ -9,30 +12,32 @@ namespace GitCommands.Patches;
 
 public static class PatchManager
 {
-    public static byte[]? GetResetWorkTreeLinesAsPatch(string text, int selectionPosition, int selectionLength, Encoding fileContentEncoding)
+    public static byte[]? GetResetWorkTreeLinesAsPatch(string text, int selectionPosition, int selectionLength,
+        Encoding fileContentEncoding)
     {
-        IReadOnlyList<Chunk>? selectedChunks = GetSelectedChunks(text, selectionPosition, selectionLength, out string? header);
+        var selectedChunks =
+            GetSelectedChunks(text, selectionPosition, selectionLength, out var header);
 
         if (selectedChunks is null)
         {
             return null;
         }
 
-        string? body = ToResetWorkTreeLinesPatch(selectedChunks);
+        var body = ToResetWorkTreeLinesPatch(selectedChunks);
 
         if (header is null || body is null)
         {
             return null;
         }
-        else
-        {
-            return GetPatchBytes(header, body, fileContentEncoding);
-        }
+
+        return GetPatchBytes(header, body, fileContentEncoding);
     }
 
-    public static byte[]? GetSelectedLinesAsPatch(string text, int selectionPosition, int selectionLength, bool isIndex, Encoding fileContentEncoding, bool reset, bool isNewFile, bool isRenamed)
+    public static byte[]? GetSelectedLinesAsPatch(string text, int selectionPosition, int selectionLength, bool isIndex,
+        Encoding fileContentEncoding, bool reset, bool isNewFile, bool isRenamed)
     {
-        IReadOnlyList<Chunk>? selectedChunks = GetSelectedChunks(text, selectionPosition, selectionLength, out string? header);
+        var selectedChunks =
+            GetSelectedChunks(text, selectionPosition, selectionLength, out var header);
 
         if (selectedChunks is null || header is null)
         {
@@ -51,7 +56,7 @@ public static class PatchManager
             header = CorrectHeaderForRenamedFile(header);
         }
 
-        string? body = ToIndexPatch(selectedChunks, isIndex, isWholeFile: false);
+        var body = ToIndexPatch(selectedChunks, isIndex, false);
 
         if (body is null)
         {
@@ -63,9 +68,9 @@ public static class PatchManager
 
     private static string CorrectHeaderForNewFile(string header)
     {
-        string[] headerLines = header.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var headerLines = header.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         string? pppLine = null;
-        foreach (string line in headerLines)
+        foreach (var line in headerLines)
         {
             if (line.StartsWith("+++"))
             {
@@ -75,7 +80,7 @@ public static class PatchManager
 
         StringBuilder sb = new();
 
-        foreach (string line in headerLines)
+        foreach (var line in headerLines)
         {
             if (line.StartsWith("---"))
             {
@@ -109,10 +114,10 @@ public static class PatchManager
         // --- a/original2.txt
         // +++ b/original2.txt
 
-        string[] headerLines = header.Split('\n');
+        var headerLines = header.Split('\n');
         string? oldNameWithPrefix = null;
         string? newName = null;
-        foreach (string line in headerLines)
+        foreach (var line in headerLines)
         {
             if (line.StartsWith("+++"))
             {
@@ -128,9 +133,9 @@ public static class PatchManager
 
         StringBuilder sb = new();
 
-        for (int i = 0; i < headerLines.Length; i++)
+        for (var i = 0; i < headerLines.Length; i++)
         {
-            string line = headerLines[i];
+            var line = headerLines[i];
             if (line.StartsWith("--- "))
             {
                 line = $"--- a/{newName}";
@@ -139,7 +144,8 @@ public static class PatchManager
             {
                 line = line.Replace($" {oldNameWithPrefix} ", $" a/{newName} ");
             }
-            else if (line.StartsWith("rename from ") || line.StartsWith("rename to ") || line.StartsWith("similarity index "))
+            else if (line.StartsWith("rename from ") || line.StartsWith("rename to ") ||
+                     line.StartsWith("similarity index "))
             {
                 // Note: this logic depends on git not localizing patch file format
                 continue;
@@ -156,11 +162,14 @@ public static class PatchManager
         return sb.ToString();
     }
 
-    public static byte[]? GetSelectedLinesAsNewPatch(IGitModule module, string newFileName, string text, int selectionPosition, int selectionLength, Encoding fileContentEncoding, bool reset, byte[] filePreamble, string? treeGuid)
+    public static byte[]? GetSelectedLinesAsNewPatch(IGitModule module, string newFileName, string text,
+        int selectionPosition, int selectionLength, Encoding fileContentEncoding, bool reset, byte[] filePreamble,
+        string? treeGuid)
     {
-        IReadOnlyList<Chunk> selectedChunks = FromNewFile(module, text, selectionPosition, selectionLength, reset, filePreamble, fileContentEncoding);
-        bool isTracked = treeGuid is not null;
-        string? body = ToIndexPatch(selectedChunks, isIndex: isTracked, isWholeFile: true);
+        var selectedChunks = FromNewFile(module, text, selectionPosition, selectionLength, reset,
+            filePreamble, fileContentEncoding);
+        var isTracked = treeGuid is not null;
+        var body = ToIndexPatch(selectedChunks, isTracked, true);
 
         if (body is null)
         {
@@ -195,15 +204,16 @@ public static class PatchManager
 
     private static byte[] GetPatchBytes(string header, string body, Encoding fileContentEncoding)
     {
-        byte[] hb = EncodingHelper.ConvertTo(GitModule.SystemEncoding, header);
-        byte[] bb = EncodingHelper.ConvertTo(fileContentEncoding, body);
-        byte[] result = new byte[hb.Length + bb.Length];
+        var hb = EncodingHelper.ConvertTo(GitModule.SystemEncoding, header);
+        var bb = EncodingHelper.ConvertTo(fileContentEncoding, body);
+        var result = new byte[hb.Length + bb.Length];
         hb.CopyTo(result, 0);
         bb.CopyTo(result, hb.Length);
         return result;
     }
 
-    private static IReadOnlyList<Chunk>? GetSelectedChunks(string text, int selectionPosition, int selectionLength, out string? header)
+    private static IReadOnlyList<Chunk>? GetSelectedChunks(string text, int selectionPosition, int selectionLength,
+        out string? header)
     {
         header = null;
 
@@ -215,29 +225,29 @@ public static class PatchManager
 
         // TODO: handling submodules
         // Divide diff into header and patch
-        int patchPos = text.IndexOf("@@", StringComparison.Ordinal);
+        var patchPos = text.IndexOf("@@", StringComparison.Ordinal);
         if (patchPos < 1)
         {
             return null;
         }
 
         header = text[..patchPos];
-        string diff = text[(patchPos - 1)..];
+        var diff = text[(patchPos - 1)..];
 
-        string[] chunks = diff.Split(["\n@@"], StringSplitOptions.RemoveEmptyEntries);
+        var chunks = diff.Split(["\n@@"], StringSplitOptions.RemoveEmptyEntries);
         List<Chunk> selectedChunks = [];
-        int i = 0;
-        int currentPos = patchPos - 1;
+        var i = 0;
+        var currentPos = patchPos - 1;
 
         while (i < chunks.Length && currentPos <= selectionPosition + selectionLength)
         {
-            string chunkStr = chunks[i];
+            var chunkStr = chunks[i];
             currentPos += 3;
 
             // if selection intersects with chunks
             if (currentPos + chunkStr.Length >= selectionPosition)
             {
-                Chunk? chunk = Chunk.ParseChunk(chunkStr, currentPos, selectionPosition, selectionLength);
+                var chunk = Chunk.ParseChunk(chunkStr, currentPos, selectionPosition, selectionLength);
                 if (chunk is not null)
                 {
                     selectedChunks.Add(chunk);
@@ -251,14 +261,20 @@ public static class PatchManager
         return selectedChunks;
     }
 
-    private static IReadOnlyList<Chunk> FromNewFile(IGitModule module, string text, int selectionPosition, int selectionLength, bool reset, byte[] filePreamble, Encoding fileContentEncoding)
+    private static IReadOnlyList<Chunk> FromNewFile(IGitModule module, string text, int selectionPosition,
+        int selectionLength, bool reset, byte[] filePreamble, Encoding fileContentEncoding)
     {
-        return new[] { Chunk.FromNewFile(module, text, selectionPosition, selectionLength, reset, filePreamble, fileContentEncoding) };
+        return new[]
+        {
+            Chunk.FromNewFile(module, text, selectionPosition, selectionLength, reset, filePreamble,
+                fileContentEncoding)
+        };
     }
 
     private static string? ToResetWorkTreeLinesPatch(IEnumerable<Chunk> chunks)
     {
-        static string? SubChunkToPatch(SubChunk subChunk, ref int addedCount, ref int removedCount, ref bool wereSelectedLines)
+        static string? SubChunkToPatch(SubChunk subChunk, ref int addedCount, ref int removedCount,
+            ref bool wereSelectedLines)
         {
             return subChunk.ToResetWorkTreeLinesPatch(ref addedCount, ref removedCount, ref wereSelectedLines);
         }
@@ -280,7 +296,7 @@ public static class PatchManager
     {
         StringBuilder result = new();
 
-        foreach (Chunk chunk in chunks)
+        foreach (var chunk in chunks)
         {
             if (result.Length != 0)
             {
@@ -302,16 +318,10 @@ public static class PatchManager
 }
 
 [DebuggerDisplay("{" + nameof(Text) + "}")]
-internal sealed class PatchLine
+internal sealed class PatchLine(string text, bool selected = false)
 {
-    public string Text { get; private set; }
-    public bool Selected { get; set; }
-
-    public PatchLine(string text, bool selected = false)
-    {
-        Text = text;
-        Selected = selected;
-    }
+    public string Text { get; private set; } = text;
+    public bool Selected { get; set; } = selected;
 
     public PatchLine Clone()
     {
@@ -333,25 +343,26 @@ internal sealed class SubChunk
     public string? WasNoNewLineAtTheEnd { get; set; }
     public string? IsNoNewLineAtTheEnd { get; set; }
 
-    public string? ToIndexPatch(ref int addedCount, ref int removedCount, ref bool wereSelectedLines, bool isIndex, bool isWholeFile)
+    public string? ToIndexPatch(ref int addedCount, ref int removedCount, ref bool wereSelectedLines, bool isIndex,
+        bool isWholeFile)
     {
         string? diff = null;
         string? removePart = null;
         string? addPart = null;
         string? prePart = null;
         string? postPart = null;
-        bool inPostPart = false;
-        bool selectedLastRemovedLine = false;
-        bool selectedLastAddedLine = false;
+        var inPostPart = false;
+        var selectedLastRemovedLine = false;
+        var selectedLastAddedLine = false;
         addedCount += PreContext.Count + PostContext.Count;
         removedCount += PreContext.Count + PostContext.Count;
 
-        foreach (PatchLine line in PreContext)
+        foreach (var line in PreContext)
         {
             diff = diff.Combine("\n", line.Text);
         }
 
-        foreach (PatchLine removedLine in RemovedLines)
+        foreach (var removedLine in RemovedLines)
         {
             selectedLastAddedLine = removedLine.Selected;
             if (removedLine.Selected)
@@ -377,7 +388,7 @@ internal sealed class SubChunk
             }
         }
 
-        foreach (PatchLine addedLine in AddedLines)
+        foreach (var addedLine in AddedLines)
         {
             selectedLastRemovedLine = addedLine.Selected;
             if (addedLine.Selected)
@@ -412,7 +423,7 @@ internal sealed class SubChunk
 
         diff = diff.Combine("\n", addPart);
         diff = diff.Combine("\n", postPart);
-        foreach (PatchLine line in PostContext)
+        foreach (var line in PostContext)
         {
             diff = diff.Combine("\n", line.Text);
         }
@@ -436,16 +447,16 @@ internal sealed class SubChunk
         string? addPart = null;
         string? prePart = null;
         string? postPart = null;
-        bool inPostPart = false;
+        var inPostPart = false;
         addedCount += PreContext.Count + PostContext.Count;
         removedCount += PreContext.Count + PostContext.Count;
 
-        foreach (PatchLine line in PreContext)
+        foreach (var line in PreContext)
         {
             diff = diff.Combine("\n", line.Text);
         }
 
-        foreach (PatchLine removedLine in RemovedLines)
+        foreach (var removedLine in RemovedLines)
         {
             if (removedLine.Selected)
             {
@@ -456,7 +467,7 @@ internal sealed class SubChunk
             }
         }
 
-        foreach (PatchLine addedLine in AddedLines)
+        foreach (var addedLine in AddedLines)
         {
             if (addedLine.Selected)
             {
@@ -490,7 +501,7 @@ internal sealed class SubChunk
 
         diff = diff.Combine("\n", addPart);
         diff = diff.Combine("\n", postPart);
-        foreach (PatchLine line in PostContext)
+        foreach (var line in PostContext)
         {
             diff = diff.Combine("\n", line.Text);
         }
@@ -508,13 +519,14 @@ internal sealed class SubChunk
     }
 }
 
-internal delegate string? SubChunkToPatchFnc(SubChunk subChunk, ref int addedCount, ref int removedCount, ref bool wereSelectedLines);
+internal delegate string? SubChunkToPatchFnc(SubChunk subChunk, ref int addedCount, ref int removedCount,
+    ref bool wereSelectedLines);
 
 internal sealed partial class Chunk
 {
-    private int _startLine;
     private readonly List<SubChunk> _subChunks = [];
     private SubChunk? _currentSubChunk;
+    private int _startLine;
 
     [GeneratedRegex(@".*-(?<startline>\d+),", RegexOptions.ExplicitCapture)]
     private static partial Regex HeaderRegex { get; }
@@ -564,18 +576,18 @@ internal sealed partial class Chunk
     }
 
     /// <summary>
-    /// Parses a header line, setting the start index.
+    ///     Parses a header line, setting the start index.
     /// </summary>
     /// <remarks>
-    /// An example header line is:
-    /// <code>
+    ///     An example header line is:
+    ///     <code>
     ///  -116,12 +117,15 @@ private string LoadFile(string fileName, Encoding filesContentEncoding)
     /// </code>
-    /// In which case the start line is <c>116</c>.
+    ///     In which case the start line is <c>116</c>.
     /// </remarks>
     private void ParseHeader(string header)
     {
-        Match match = HeaderRegex.Match(header);
+        var match = HeaderRegex.Match(header);
 
         if (match.Success)
         {
@@ -585,15 +597,15 @@ internal sealed partial class Chunk
 
     public static Chunk? ParseChunk(string chunkStr, int currentPos, int selectionPosition, int selectionLength)
     {
-        string[] lines = chunkStr.Split(Delimiters.LineFeed);
+        var lines = chunkStr.Split(Delimiters.LineFeed);
         if (lines.Length < 2)
         {
             return null;
         }
 
-        bool inPatch = true;
-        bool inPreContext = true;
-        int i = 1;
+        var inPatch = true;
+        var inPreContext = true;
+        var i = 1;
 
         Chunk result = new();
         result.ParseHeader(lines[0]);
@@ -601,7 +613,7 @@ internal sealed partial class Chunk
 
         while (i < lines.Length)
         {
-            string line = lines[i];
+            var line = lines[i];
             if (inPatch)
             {
                 PatchLine patchLine = new(line);
@@ -650,28 +662,29 @@ internal sealed partial class Chunk
         return result;
     }
 
-    public static Chunk FromNewFile(IGitModule module, string fileText, int selectionPosition, int selectionLength, bool reset, byte[] filePreamble, Encoding fileContentEncoding)
+    public static Chunk FromNewFile(IGitModule module, string fileText, int selectionPosition, int selectionLength,
+        bool reset, byte[] filePreamble, Encoding fileContentEncoding)
     {
         Chunk result = new() { _startLine = 0 };
 
-        int currentPos = 0;
-        string gitEol = module.GetEffectiveSetting("core.eol");
-        string eol = gitEol switch
+        var currentPos = 0;
+        var gitEol = module.GetEffectiveSetting("core.eol");
+        var eol = gitEol switch
         {
             "crlf" => "\r\n",
             "native" => Environment.NewLine,
             _ => "\n"
         };
 
-        int eolLength = eol.Length;
+        var eolLength = eol.Length;
 
-        string[] lines = fileText.Split([eol], StringSplitOptions.None);
-        int i = 0;
+        var lines = fileText.Split([eol], StringSplitOptions.None);
+        var i = 0;
 
         while (i < lines.Length)
         {
-            string line = lines[i];
-            string preamble = i == 0 ? new string(fileContentEncoding.GetChars(filePreamble)) : string.Empty;
+            var line = lines[i];
+            var preamble = i == 0 ? new string(fileContentEncoding.GetChars(filePreamble)) : string.Empty;
             PatchLine patchLine = new((reset ? "-" : "+") + preamble + line);
 
             // do not refactor, there are no breakpoints condition in VS Express
@@ -690,11 +703,12 @@ internal sealed partial class Chunk
                     {
                         // if the last line is selected to be reset and there is no new line at the end of file
                         // then we also have to remove the last not selected line in order to add it right again with the "No newline.." indicator
-                        PatchLine? lastNotSelectedLine = result.CurrentSubChunk.RemovedLines.LastOrDefault(l => !l.Selected);
+                        var lastNotSelectedLine =
+                            result.CurrentSubChunk.RemovedLines.LastOrDefault(l => !l.Selected);
                         if (lastNotSelectedLine is not null)
                         {
                             lastNotSelectedLine.Selected = true;
-                            PatchLine clonedLine = lastNotSelectedLine.Clone();
+                            var clonedLine = lastNotSelectedLine.Clone();
                             clonedLine.SetOperation("+");
                             result.CurrentSubChunk.AddedLines.Add(clonedLine);
                         }
@@ -717,12 +731,12 @@ internal sealed partial class Chunk
 
     public void ToPatch(SubChunkToPatchFnc subChunkToPatch, StringBuilder str)
     {
-        bool wereSelectedLines = false;
-        int addedCount = 0;
-        int removedCount = 0;
+        var wereSelectedLines = false;
+        var addedCount = 0;
+        var removedCount = 0;
 
         StringBuilder diff = new();
-        foreach (SubChunk subChunk in _subChunks)
+        foreach (var subChunk in _subChunks)
         {
             if (diff.Length != 0)
             {

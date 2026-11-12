@@ -8,9 +8,10 @@ internal abstract class BaseBranchLeafNode : BaseRevisionNode
     private readonly string _imageKeyMerged;
     private readonly string _imageKeyUnmerged;
 
-    private bool _isMerged = false;
+    private bool _isMerged;
 
-    public BaseBranchLeafNode(Tree tree, in ObjectId objectId, string fullPath, bool visible, string imageKeyUnmerged, string imageKeyMerged)
+    public BaseBranchLeafNode(Tree tree, in ObjectId objectId, string fullPath, bool visible, string imageKeyUnmerged,
+        string imageKeyMerged)
         : base(tree, fullPath, visible)
     {
         ObjectId = objectId;
@@ -69,7 +70,7 @@ internal abstract class BaseBranchLeafNode : BaseRevisionNode
 
     protected override void SelectRevision()
     {
-        string branch = RelatedBranch is null || !Control.ModifierKeys.HasFlag(Keys.Alt)
+        var branch = RelatedBranch is null || !Control.ModifierKeys.HasFlag(Keys.Alt)
             ? FullPath
             : RelatedBranch;
         GoToRevision(branch);

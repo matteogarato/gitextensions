@@ -6,17 +6,17 @@ namespace GitUI.Infrastructure.Telemetry;
 
 internal sealed class MonitorsTelemetryInitializer : ITelemetryInitializer
 {
-    public void Initialize(ITelemetry telemetry)
+    void ITelemetryInitializer.Initialize(ITelemetry telemetry)
     {
-        IDictionary<string, string> properties = telemetry.Context.GlobalProperties;
+        var properties = telemetry.Context.GlobalProperties;
         properties["Monitor count"] = Screen.AllScreens.Length.ToString();
         properties["Monitor primary DPI"] = DpiUtil.DpiX.ToString();
 
-        for (int i = 0; i < Screen.AllScreens.Length; i++)
+        for (var i = 0; i < Screen.AllScreens.Length; i++)
         {
-            string key = Screen.AllScreens[i].Primary ? "primary" : $"secondary{i}";
+            var key = Screen.AllScreens[i].Primary ? "primary" : $"secondary{i}";
 
-            Rectangle bounds = Screen.AllScreens[i].Bounds;
+            var bounds = Screen.AllScreens[i].Bounds;
             properties[$"Monitor {key} resolution"] = $"{bounds.Width}x{bounds.Height}";
         }
     }

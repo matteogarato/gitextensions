@@ -3,11 +3,12 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests;
+
 public class CommitDataManagerTest
 {
+    private readonly Func<IGitModule> _getModule = null!;
+    private readonly IGitModule _module = null!;
     private CommitDataManager _commitDataManager = null!;
-    private IGitModule _module = null!;
-    private Func<IGitModule> _getModule = null!;
 
     public CommitDataManagerTest()
     {

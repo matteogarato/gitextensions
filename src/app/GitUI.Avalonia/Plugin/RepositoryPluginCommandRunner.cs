@@ -1,16 +1,16 @@
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 
-namespace GitUI;
+namespace GitUI.Plugin;
 
 internal static class RepositoryPluginCommandRunner
 {
-    internal static async Task ExecuteAsync(IGitUICommands uiCommands, IRepositoryPluginCommand command)
+    internal static async Task ExecuteAsync(IGitUiCommands uiCommands, IRepositoryPluginCommand command)
     {
         ArgumentNullException.ThrowIfNull(uiCommands);
         ArgumentNullException.ThrowIfNull(command);
 
-        IGitModule module = uiCommands.Module;
+        var module = uiCommands.Module;
         if (!command.CanExecute(module))
         {
             return;

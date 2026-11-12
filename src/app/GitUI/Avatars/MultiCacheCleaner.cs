@@ -1,7 +1,7 @@
 ﻿namespace GitUI.Avatars;
 
 /// <summary>
-/// Wraps multiple caches and clears all of them with a single call.
+///     Wraps multiple caches and clears all of them with a single call.
 /// </summary>
 public sealed class MultiCacheCleaner : IAvatarCacheCleaner
 {
@@ -17,17 +17,24 @@ public sealed class MultiCacheCleaner : IAvatarCacheCleaner
         }
     }
 
-    /// <inheritdoc/>
-    public event EventHandler? CacheCleared;
-
-    /// <inheritdoc/>
-    public async Task ClearCacheAsync()
+    /// <inheritdoc />
+    event EventHandler? IAvatarCacheCleaner.CacheCleared
     {
-        foreach (IAvatarCacheCleaner cacheCleaner in _inner)
+        add => CacheCleared += value;
+        remove => CacheCleared -= value;
+    }
+
+    /// <inheritdoc />
+    async Task IAvatarCacheCleaner.ClearCacheAsync()
+    {
+        foreach (var cacheCleaner in _inner)
         {
             await cacheCleaner.ClearCacheAsync();
         }
 
         CacheCleared?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <inheritdoc />
+    private event EventHandler? CacheCleared;
 }

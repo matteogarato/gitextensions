@@ -1,6 +1,6 @@
 using GitUI.CommandsDialogs;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class IgnoreWorkflowTests
 {
@@ -13,7 +13,7 @@ public sealed class IgnoreWorkflowTests
     [Fact]
     public void AddToGitIgnore_should_append_new_patterns_once()
     {
-        string directory = Directory.CreateTempSubdirectory().FullName;
+        var directory = Directory.CreateTempSubdirectory().FullName;
         try
         {
             File.WriteAllText(Path.Combine(directory, ".gitignore"), "/bin");
@@ -21,19 +21,20 @@ public sealed class IgnoreWorkflowTests
             IgnoreWorkflow.AddToGitIgnore(directory, ["a.txt", "bin"]).Should().Equal("/a.txt");
             IgnoreWorkflow.AddToGitIgnore(directory, ["a.txt"]).Should().BeEmpty();
 
-            File.ReadAllText(Path.Combine(directory, ".gitignore")).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            File.ReadAllText(Path.Combine(directory, ".gitignore"))
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                 .Should().Equal("/bin", "/a.txt");
         }
         finally
         {
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
     }
 
     [Fact]
     public void AddToGitIgnore_should_create_the_file_when_missing()
     {
-        string directory = Directory.CreateTempSubdirectory().FullName;
+        var directory = Directory.CreateTempSubdirectory().FullName;
         try
         {
             IgnoreWorkflow.AddToGitIgnore(directory, ["x/y.log"]);
@@ -42,7 +43,7 @@ public sealed class IgnoreWorkflowTests
         }
         finally
         {
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
     }
 }

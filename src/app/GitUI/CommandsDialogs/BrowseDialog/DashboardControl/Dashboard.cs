@@ -1,9 +1,11 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtUtils;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
+using GitUI.Plugin;
 using GitUI.Properties;
 using ResourceManager;
 
@@ -19,8 +21,6 @@ public partial class Dashboard : GitModuleControl
     private readonly TranslationString _issues = new("Issues");
     private readonly TranslationString _openRepository = new("Open repository");
     private readonly TranslationString _translate = new("Translate");
-
-    public event EventHandler<GitModuleEventArgs>? GitModuleChanged;
 
     public Dashboard()
     {
@@ -45,6 +45,8 @@ public partial class Dashboard : GitModuleControl
         userRepositoriesList.HeaderHeight = pnlLogo.Height;
     }
 
+    public event EventHandler<GitModuleEventArgs>? GitModuleChanged;
+
     protected override void OnVisibleChanged(EventArgs e)
     {
         base.OnVisibleChanged(e);
@@ -55,7 +57,7 @@ public partial class Dashboard : GitModuleControl
 
     public void RefreshContent()
     {
-        DashboardTheme selectedTheme = Application.IsDarkModeEnabled ? DashboardTheme.Dark : DashboardTheme.Light;
+        var selectedTheme = Application.IsDarkModeEnabled ? DashboardTheme.Dark : DashboardTheme.Light;
 
         InitDashboardLayout();
         ApplyTheme();
@@ -79,7 +81,8 @@ public partial class Dashboard : GitModuleControl
             userRepositoriesList.HoverColor = selectedTheme.StartBackColor;
             userRepositoriesList.SearchBackColor = selectedTheme.SearchBackColor;
 
-            foreach (LinkLabel item in flpnlContribute.Controls.OfType<LinkLabel>().Union(flpnlStart.Controls.OfType<LinkLabel>()))
+            foreach (var item in flpnlContribute.Controls.OfType<LinkLabel>()
+                         .Union(flpnlStart.Controls.OfType<LinkLabel>()))
             {
                 item.LinkColor = selectedTheme.PrimaryText;
             }
@@ -97,17 +100,18 @@ public partial class Dashboard : GitModuleControl
                     panel =>
                     {
                         panel.Controls.Add(lblContribute);
-                        lblContribute.Font = new Font(AppSettings.Font.FontFamily, AppSettings.Font.SizeInPoints + 5.5f);
+                        lblContribute.Font =
+                            new Font(AppSettings.Font.FontFamily, AppSettings.Font.SizeInPoints + 5.5f);
 
                         CreateLink(panel, _develop.Text, Images.Develop.AdaptLightness(), GitHubItem_Click);
                         CreateLink(panel, _donate.Text, Images.DollarSign, DonateItem_Click);
                         CreateLink(panel, _translate.Text, Images.Translate.AdaptLightness(), TranslateItem_Click);
-                        Control lastControl = CreateLink(panel, _issues.Text, Images.Bug, IssuesItem_Click);
+                        var lastControl = CreateLink(panel, _issues.Text, Images.Bug, IssuesItem_Click);
                         return lastControl;
                     },
                     (panel, lastControl) =>
                     {
-                        int height = lastControl.Location.Y + lastControl.Size.Height + panel.Padding.Bottom;
+                        var height = lastControl.Location.Y + lastControl.Size.Height + panel.Padding.Bottom;
                         panel.Height = height;
                         panel.MinimumSize = new Size(0, height);
                     });
@@ -117,19 +121,22 @@ public partial class Dashboard : GitModuleControl
                     {
                         CreateLink(panel, _createRepository.Text, Images.RepoCreate, createItem_Click);
                         CreateLink(panel, _openRepository.Text, Images.RepoOpen, openItem_Click);
-                        Control lastControl = CreateLink(panel, _cloneRepository.Text, Images.CloneRepoGit, cloneItem_Click);
+                        var lastControl = CreateLink(panel, _cloneRepository.Text, Images.CloneRepoGit,
+                            cloneItem_Click);
 
-                        foreach (IRepositoryHostPlugin gitHoster in PluginRegistry.GitHosters)
+                        foreach (var gitHoster in PluginRegistry.GitHosters)
                         {
-                            lastControl = CreateLink(panel, string.Format(_cloneFork.Text, gitHoster.Name), Images.CloneRepoGitHub,
-                                (repoSender, eventArgs) => UICommands.StartCloneForkFromHoster(this, gitHoster, GitModuleChanged));
+                            lastControl = CreateLink(panel, string.Format(_cloneFork.Text, gitHoster.Name),
+                                Images.CloneRepoGitHub,
+                                (repoSender, eventArgs) =>
+                                    UiCommands.StartCloneForkFromHoster(this, gitHoster, GitModuleChanged));
                         }
 
                         return lastControl;
                     },
                     (panel, lastControl) =>
                     {
-                        int height = lastControl.Location.Y + lastControl.Size.Height + panel.Padding.Bottom;
+                        var height = lastControl.Location.Y + lastControl.Size.Height + panel.Padding.Bottom;
                         panel.MinimumSize = new Size(0, height);
                     });
             }
@@ -137,7 +144,8 @@ public partial class Dashboard : GitModuleControl
             {
                 pnlLeft.ResumeLayout(false);
                 pnlLeft.PerformLayout();
-                AutoScrollMinSize = new Size(0, pnlLogo.Height + flpnlStart.MinimumSize.Height + flpnlContribute.MinimumSize.Height);
+                AutoScrollMinSize = new Size(0,
+                    pnlLogo.Height + flpnlStart.MinimumSize.Height + flpnlContribute.MinimumSize.Height);
             }
 
             static void AddLinks(Panel panel, Func<Panel, Control> addLinks, Action<Panel, Control> onLayout)
@@ -145,7 +153,7 @@ public partial class Dashboard : GitModuleControl
                 panel.SuspendLayout();
                 panel.Controls.Clear();
 
-                Control lastControl = addLinks(panel);
+                var lastControl = addLinks(panel);
 
                 panel.ResumeLayout(false);
                 panel.PerformLayout();
@@ -155,8 +163,8 @@ public partial class Dashboard : GitModuleControl
 
             Control CreateLink(Control container, string text, Image icon, EventHandler handler)
             {
-                int padding24 = DpiUtil.Scale(24);
-                int padding3 = DpiUtil.Scale(3);
+                var padding24 = DpiUtil.Scale(24);
+                var padding3 = DpiUtil.Scale(3);
                 LinkLabel linkLabel = new()
                 {
                     AutoSize = true,
@@ -184,7 +192,7 @@ public partial class Dashboard : GitModuleControl
 
     protected virtual void OnModuleChanged(object? sender, GitModuleEventArgs e)
     {
-        EventHandler<GitModuleEventArgs>? handler = GitModuleChanged;
+        var handler = GitModuleChanged;
         handler?.Invoke(this, e);
     }
 
@@ -217,7 +225,8 @@ public partial class Dashboard : GitModuleControl
 
     private void openItem_Click(object? sender, EventArgs e)
     {
-        IGitModule? module = FormOpenDirectory.OpenModule(this, UICommands.GetRequiredService<IGitExecutorProvider>(), currentModule: null);
+        var module =
+            FormOpenDirectory.OpenModule(this, UiCommands.GetRequiredService<IGitExecutorProvider>(), null);
         if (module is not null)
         {
             OnModuleChanged(this, new GitModuleEventArgs(module));
@@ -226,12 +235,12 @@ public partial class Dashboard : GitModuleControl
 
     private void cloneItem_Click(object? sender, EventArgs e)
     {
-        UICommands.StartCloneDialog(this, null, false, OnModuleChanged);
+        UiCommands.StartCloneDialog(this, null, false, OnModuleChanged);
     }
 
     private void createItem_Click(object? sender, EventArgs e)
     {
-        UICommands.StartInitializeDialog(this, Module.WorkingDir, OnModuleChanged);
+        UiCommands.StartInitializeDialog(this, Module.WorkingDir, OnModuleChanged);
     }
 
     private static void DonateItem_Click(object? sender, EventArgs e)

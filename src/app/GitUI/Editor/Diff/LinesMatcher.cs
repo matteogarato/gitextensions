@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using GitExtensions.Extensibility;
 using ICSharpCode.TextEditor.Document;
 
 namespace GitUI.Editor.Diff;
@@ -9,7 +8,7 @@ internal static class LinesMatcher
     internal static IEnumerable<(ISegment RemovedLine, ISegment AddedLine)> FindLinePairs(
         Func<ISegment, string> getText, IReadOnlyList<ISegment> removedLines, IReadOnlyList<ISegment> addedLines)
     {
-        int numberOfCombinations = removedLines.Count * addedLines.Count;
+        var numberOfCombinations = removedLines.Count * addedLines.Count;
         if (numberOfCombinations < 1)
         {
             yield break;
@@ -19,8 +18,8 @@ internal static class LinesMatcher
         const int maxCombinations = 100 * 100;
         if (numberOfCombinations == 1 || numberOfCombinations > maxCombinations)
         {
-            int minCount = Math.Min(removedLines.Count, addedLines.Count);
-            for (int i = 0; i < minCount; ++i)
+            var minCount = Math.Min(removedLines.Count, addedLines.Count);
+            for (var i = 0; i < minCount; ++i)
             {
                 yield return (removedLines[i], addedLines[i]);
             }
@@ -31,19 +30,21 @@ internal static class LinesMatcher
         LineData[] removed = [.. removedLines.Select(line => new LineData(line, getText(line)))];
         LineData[] added = [.. addedLines.Select(line => new LineData(line, getText(line)))];
 
-        foreach ((ISegment, ISegment) linePair in FindLinePairs(removed, added))
+        foreach (var linePair in FindLinePairs(removed, added))
         {
             yield return linePair;
         }
     }
 
-    private static IEnumerable<(ISegment RemovedLine, ISegment AddedLine)> FindLinePairs(LineData[] removed, LineData[] added)
+    private static IEnumerable<(ISegment RemovedLine, ISegment AddedLine)> FindLinePairs(LineData[] removed,
+        LineData[] added)
     {
-        (int removedIndex, int addedIndex) = FindBestMatch(removed, added);
+        (var removedIndex, var addedIndex) = FindBestMatch(removed, added);
 
         if (removedIndex > 0 && addedIndex > 0)
         {
-            foreach ((ISegment, ISegment) linePair in FindLinePairs(removed[0..removedIndex], added[0..addedIndex]))
+            foreach (var linePair in FindLinePairs(removed[..removedIndex],
+                         added[..addedIndex]))
             {
                 yield return linePair;
             }
@@ -55,7 +56,8 @@ internal static class LinesMatcher
         ++addedIndex;
         if (removedIndex < removed.Length && addedIndex < added.Length)
         {
-            foreach ((ISegment, ISegment) linePair in FindLinePairs(removed[removedIndex..], added[addedIndex..]))
+            foreach (var linePair in FindLinePairs(removed[removedIndex..],
+                         added[addedIndex..]))
             {
                 yield return linePair;
             }
@@ -65,21 +67,21 @@ internal static class LinesMatcher
     private static (int RemovedIndex, int AddedIndex) FindBestMatch(LineData[] removed, LineData[] added)
     {
         // first, search longest match of trimmed lines, i.e. detect indented lines
-        (LineData longestMatchingRemoved, int matchingAddedIndex)
+        (var longestMatchingRemoved, var matchingAddedIndex)
             = removed.Select(r => (r, addedIndex: added.IndexOf(a => a.Trimmed == r.Trimmed)))
-                     .MaxBy(pair => pair.addedIndex < 0 ? -1 : pair.r.Trimmed.Length);
+                .MaxBy(pair => pair.addedIndex < 0 ? -1 : pair.r.Trimmed.Length);
         if (matchingAddedIndex >= 0)
         {
             return (Array.IndexOf(removed, longestMatchingRemoved), matchingAddedIndex);
         }
 
         // then match lines whose common words have the maximum summed-up length
-        int removedMaxScoreIndex = 0;
-        int addedMaxScoreIndex = 0;
+        var removedMaxScoreIndex = 0;
+        var addedMaxScoreIndex = 0;
         float maxScore = -1;
-        foreach ((int removedIndex, int addedIndex) in GetAllCombinations(removed.Length, added.Length))
+        foreach ((var removedIndex, var addedIndex) in GetAllCombinations(removed.Length, added.Length))
         {
-            float score = GetWordMatchScore(removed[removedIndex], added[addedIndex]);
+            var score = GetWordMatchScore(removed[removedIndex], added[addedIndex]);
             if (maxScore < score)
             {
                 maxScore = score;
@@ -102,22 +104,25 @@ internal static class LinesMatcher
                 return -1;
             }
 
-            return (float)r.Words.Intersect(a.Words).Sum(w => w.Length) / Math.Max(r.WordsTotalLength, a.WordsTotalLength);
+            return (float)r.Words.Intersect(a.Words).Sum(w => w.Length) /
+                   Math.Max(r.WordsTotalLength, a.WordsTotalLength);
         }
     }
 
-    internal static (string? CommonWord, int StartIndexRemoved, int StartIndexAdded) FindBestMatch(string textRemoved, string textAdded)
+    internal static (string? CommonWord, int StartIndexRemoved, int StartIndexAdded) FindBestMatch(string textRemoved,
+        string textAdded)
     {
-        (string Word, int StartIndex) notFound = ("", -1);
+        var notFound = ("", -1);
         (string Word, int StartIndex)[] wordsRemoved = [.. GetWords(textRemoved)];
         (string Word, int StartIndex)[] wordsAdded = [.. GetWords(textAdded)];
-        (string? commonWord, int startIndexOfCommonWordAdded) = wordsAdded
+        (var commonWord, var startIndexOfCommonWordAdded) = wordsAdded
             .IntersectBy(wordsRemoved.Select(SelectWord), SelectWord)
             .Union([notFound])
             .MaxBy(pair => pair.Word.Length);
         if (startIndexOfCommonWordAdded != notFound.StartIndex)
         {
-            return (commonWord, wordsRemoved.First(pair => pair.Word == commonWord).StartIndex, startIndexOfCommonWordAdded);
+            return (commonWord, wordsRemoved.First(pair => pair.Word == commonWord).StartIndex,
+                startIndexOfCommonWordAdded);
         }
 
         (string Word, int StartIndex)[] subwordsRemoved = [.. GetSubwords(wordsRemoved)];
@@ -127,33 +132,34 @@ internal static class LinesMatcher
             .MaxBy(pair => pair.Word.Length);
         if (startIndexOfCommonWordAdded != notFound.StartIndex)
         {
-            return (commonWord, subwordsRemoved.First(pair => pair.Word == commonWord).StartIndex, startIndexOfCommonWordAdded);
+            return (commonWord, subwordsRemoved.First(pair => pair.Word == commonWord).StartIndex,
+                startIndexOfCommonWordAdded);
         }
 
         return (null, 0, 0);
     }
 
     /// <summary>
-    ///  Iterates all combinations of indices - starting with (0,0), (1,0), (0,1), (2,0), (1,1), ...
+    ///     Iterates all combinations of indices - starting with (0,0), (1,0), (0,1), (2,0), (1,1), ...
     /// </summary>
     /// <returns>an enumeration of the index pairs</returns>
     internal static IEnumerable<(int FirstIndex, int SecondIndex)> GetAllCombinations(int firstEnd, int secondEnd)
     {
         // upper left half including prinicipal diagonal
-        for (int diagonalIndex = 0; diagonalIndex < firstEnd; ++diagonalIndex)
+        for (var diagonalIndex = 0; diagonalIndex < firstEnd; ++diagonalIndex)
         {
-            int diagonalEnd = Math.Min(diagonalIndex + 1, secondEnd);
-            for (int secondIndex = 0; secondIndex < diagonalEnd; ++secondIndex)
+            var diagonalEnd = Math.Min(diagonalIndex + 1, secondEnd);
+            for (var secondIndex = 0; secondIndex < diagonalEnd; ++secondIndex)
             {
                 yield return (FirstIndex: diagonalIndex - secondIndex, secondIndex);
             }
         }
 
         // lower right half
-        for (int diagonalIndex = 1; diagonalIndex < secondEnd; ++diagonalIndex)
+        for (var diagonalIndex = 1; diagonalIndex < secondEnd; ++diagonalIndex)
         {
-            int diagonalEnd = Math.Min(firstEnd + diagonalIndex, secondEnd);
-            for (int secondIndex = diagonalIndex; secondIndex < diagonalEnd; ++secondIndex)
+            var diagonalEnd = Math.Min(firstEnd + diagonalIndex, secondEnd);
+            for (var secondIndex = diagonalIndex; secondIndex < diagonalEnd; ++secondIndex)
             {
                 yield return (FirstIndex: firstEnd - 1 + diagonalIndex - secondIndex, secondIndex);
             }
@@ -162,17 +168,17 @@ internal static class LinesMatcher
 
     internal static IEnumerable<(string Word, int StartIndex)> GetSubwords(string word)
     {
-        int endIndex = word.Length;
+        var endIndex = word.Length;
         if (endIndex == 0)
         {
             yield break;
         }
 
-        int startIndex = 0;
-        bool previousUpper = char.IsUpper(word[0]);
-        for (int index = 0; index < endIndex; ++index)
+        var startIndex = 0;
+        var previousUpper = char.IsUpper(word[0]);
+        for (var index = 0; index < endIndex; ++index)
         {
-            bool currentUpper = char.IsUpper(word[index]);
+            var currentUpper = char.IsUpper(word[index]);
             if (previousUpper != currentUpper)
             {
                 previousUpper = currentUpper;
@@ -207,26 +213,30 @@ internal static class LinesMatcher
         }
     }
 
-    internal static IEnumerable<(string Word, int StartIndex)> GetSubwords(IEnumerable<(string Word, int StartIndex)> words)
+    internal static IEnumerable<(string Word, int StartIndex)> GetSubwords(
+        IEnumerable<(string Word, int StartIndex)> words)
     {
-        foreach ((string Word, int StartIndex) word in words)
+        foreach (var word in words)
         {
-            foreach ((string Word, int StartIndex) subword in GetSubwords(word.Word))
+            foreach (var subword in GetSubwords(word.Word))
             {
                 yield return (subword.Word, subword.StartIndex + word.StartIndex);
             }
         }
     }
 
-    internal static IEnumerable<(string Word, int StartIndex)> GetWords(string text) => GetWords(text, IsWordChar);
+    internal static IEnumerable<(string Word, int StartIndex)> GetWords(string text)
+    {
+        return GetWords(text, IsWordChar);
+    }
 
     internal static IEnumerable<(string Word, int StartIndex)> GetWords(string text, Func<char, bool> isWordChar)
     {
-        int length = text.Length;
-        int start = 0;
+        var length = text.Length;
+        var start = 0;
         while (true)
         {
-            for (; ; ++start)
+            for (;; ++start)
             {
                 if (start >= length)
                 {
@@ -242,7 +252,7 @@ internal static class LinesMatcher
 
             // start of word found
 
-            for (int end = start + 1; ; ++end)
+            for (var end = start + 1;; ++end)
             {
                 if (end >= length || !isWordChar(text[end]))
                 {
@@ -255,11 +265,20 @@ internal static class LinesMatcher
         }
     }
 
-    internal static bool IsWordChar(char c) => TextUtilities.IsLetterDigitOrUnderscore(c);
+    internal static bool IsWordChar(char c)
+    {
+        return TextUtilities.IsLetterDigitOrUnderscore(c);
+    }
 
-    internal static string SelectWord((string Word, int StartIndex) pair) => pair.Word;
+    internal static string SelectWord((string Word, int StartIndex) pair)
+    {
+        return pair.Word;
+    }
 
-    internal static int SelectStartIndex((string Word, int StartIndex) pair) => pair.StartIndex;
+    internal static int SelectStartIndex((string Word, int StartIndex) pair)
+    {
+        return pair.StartIndex;
+    }
 
     [DebuggerDisplay("{Line.Offset}: {Trimmed}")]
     private readonly struct LineData

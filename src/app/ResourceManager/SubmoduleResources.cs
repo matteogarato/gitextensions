@@ -3,14 +3,16 @@ using System.Text.RegularExpressions;
 using GitCommands;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using ResourceManager.CommitDataRenders;
 
 namespace ResourceManager;
 
 public static partial class SubmoduleResources
 {
-    private static readonly ICommitDataHeaderRenderer PlainCommitDataHeaderRenderer = new CommitDataHeaderRenderer(new MonospacedHeaderLabelFormatter(), new DateFormatter(), new MonospacedHeaderRenderStyleProvider(), null);
+    private static readonly ICommitDataHeaderRenderer _plainCommitDataHeaderRenderer =
+        new CommitDataHeaderRenderer(new MonospacedHeaderLabelFormatter(), new DateFormatter(),
+            new MonospacedHeaderRenderStyleProvider(), null);
+
     [GeneratedRegex(@"^(?<prefix>\s*\S+)\s+", RegexOptions.Multiline | RegexOptions.ExplicitCapture)]
     private static partial Regex ReplaceTrailingSpacesWithTabRegex { get; }
 
@@ -21,13 +23,13 @@ public static partial class SubmoduleResources
         sb.AppendLine();
 
         // Submodule directory must exist to run commands, unknown otherwise
-        IGitModule module = superproject.GetSubmodule(name);
+        var module = superproject.GetSubmodule(name);
         if (module.IsValidGitWorkingDir()
-            && new CommitDataManager(() => module).GetCommitData(hash) is CommitData data)
+            && new CommitDataManager(() => module).GetCommitData(hash) is { } data)
         {
             // Get body without Notes, to cache the command
-            string header = PlainCommitDataHeaderRenderer.RenderPlain(data);
-            string body = data.Body.Trim();
+            var header = _plainCommitDataHeaderRenderer.RenderPlain(data);
+            var body = data.Body.Trim();
             sb.AppendLine(header);
             sb.AppendLine();
             sb.Append(body);
@@ -44,12 +46,13 @@ public static partial class SubmoduleResources
         return sb.ToString();
     }
 
-    public static string GetSubmoduleStatusText(IGitModule module, GitSubmoduleStatus status, bool moduleIsParent = true, bool limitOutput = false)
+    public static string GetSubmoduleStatusText(IGitModule module, GitSubmoduleStatus status,
+        bool moduleIsParent = true, bool limitOutput = false)
     {
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(status);
 
-        IGitModule gitModule = moduleIsParent ? module.GetSubmodule(status.Name) : module;
+        var gitModule = moduleIsParent ? module.GetSubmodule(status.Name) : module;
         StringBuilder sb = new();
         sb.AppendLine($"Submodule {status.Name}");
 
@@ -62,10 +65,13 @@ public static partial class SubmoduleResources
             // Submodule directory must exist to run commands, unknown otherwise
             if (status.OldCommitData is not null)
             {
-                sb.AppendLine("\t\t\t" + LocalizationHelpers.GetRelativeDateString(DateTime.UtcNow, status.OldCommitData.CommitDate.UtcDateTime) + " (" +
+                sb.AppendLine(
+                    "\t\t\t" + LocalizationHelpers.GetRelativeDateString(DateTime.UtcNow,
+                        status.OldCommitData.CommitDate.UtcDateTime) + " (" +
                     LocalizationHelpers.GetFullDateString(status.OldCommitData.CommitDate) + ")");
-                string[] lines = status.OldCommitData.Body.Trim(Delimiters.LineFeedAndCarriageReturn).Split(Delimiters.LineFeedAndCarriageReturn, StringSplitOptions.None);
-                foreach (string line in lines)
+                var lines = status.OldCommitData.Body.Trim(Delimiters.LineFeedAndCarriageReturn)
+                    .Split(Delimiters.LineFeedAndCarriageReturn, StringSplitOptions.None);
+                foreach (var line in lines)
                 {
                     sb.AppendLine("\t\t" + line);
                 }
@@ -75,18 +81,21 @@ public static partial class SubmoduleResources
         if (!status.Commit.IsZero)
         {
             sb.AppendLine();
-            string dirty = !status.IsDirty ? "" : " (dirty)";
+            var dirty = !status.IsDirty ? "" : " (dirty)";
 
             // Note: add spaces to get "To" aligned the same as From
             sb.Append(status.OldCommit != status.Commit ? "To:  \t" : "Commit:\t");
-            sb.AppendLine(status.Commit.ToString() + dirty);
+            sb.AppendLine(status.Commit + dirty);
 
             if (status.CommitData is not null)
             {
-                sb.AppendLine("\t\t\t" + LocalizationHelpers.GetRelativeDateString(DateTime.UtcNow, status.CommitData.CommitDate.UtcDateTime) + " (" +
-                              LocalizationHelpers.GetFullDateString(status.CommitData.CommitDate) + ")");
-                string[] lines = status.CommitData.Body.Trim(Delimiters.LineFeedAndCarriageReturn).Split(Delimiters.LineFeedAndCarriageReturn, StringSplitOptions.None);
-                foreach (string line in lines)
+                sb.AppendLine(
+                    "\t\t\t" + LocalizationHelpers.GetRelativeDateString(DateTime.UtcNow,
+                        status.CommitData.CommitDate.UtcDateTime) + " (" +
+                    LocalizationHelpers.GetFullDateString(status.CommitData.CommitDate) + ")");
+                var lines = status.CommitData.Body.Trim(Delimiters.LineFeedAndCarriageReturn)
+                    .Split(Delimiters.LineFeedAndCarriageReturn, StringSplitOptions.None);
+                foreach (var line in lines)
                 {
                     sb.AppendLine("\t\t" + line);
                 }
@@ -130,7 +139,7 @@ public static partial class SubmoduleResources
 
         sb.AppendLine(status.IsDirty ? " Dirty" : "");
 
-        if (AddedAndRemovedStringLong(status) is string addedRemoved
+        if (AddedAndRemovedStringLong(status) is { } addedRemoved
             && !string.IsNullOrWhiteSpace(addedRemoved))
         {
             sb.AppendLine();
@@ -142,18 +151,19 @@ public static partial class SubmoduleResources
             const int maxLimitedLines = 5;
             if (status.IsDirty)
             {
-                string statusText = gitModule.GetStatusText(untracked: false);
+                var statusText = gitModule.GetStatusText(false);
                 if (!string.IsNullOrEmpty(statusText))
                 {
                     sb.AppendLine();
                     sb.AppendLine("Status:");
                     if (limitOutput)
                     {
-                        string[] txt = statusText.Replace("\r\n", "\n").Split(Delimiters.LineFeed, StringSplitOptions.RemoveEmptyEntries);
+                        var txt = statusText.Replace("\r\n", "\n")
+                            .Split(Delimiters.LineFeed, StringSplitOptions.RemoveEmptyEntries);
                         if (txt.Length > maxLimitedLines)
                         {
                             statusText = new List<string>(txt).Take(maxLimitedLines).Join(Environment.NewLine) +
-                                $"{Environment.NewLine} {txt.Length - maxLimitedLines} more changes";
+                                         $"{Environment.NewLine} {txt.Length - maxLimitedLines} more changes";
                         }
                     }
 
@@ -162,21 +172,23 @@ public static partial class SubmoduleResources
                 }
             }
 
-            ExecutionResult exec = gitModule.GetDiffFiles(status.OldCommit.ToString(), status.Commit.ToString(), noCache: false, rawParsable: false, cancellationToken: default);
+            var exec = gitModule.GetDiffFiles(status.OldCommit.ToString(), status.Commit.ToString(), false,
+                false, default);
             if (exec.ExitedSuccessfully)
             {
-                string diffs = exec.StandardOutput;
+                var diffs = exec.StandardOutput;
                 if (!string.IsNullOrEmpty(diffs))
                 {
                     sb.AppendLine();
                     sb.AppendLine("Differences:");
                     if (limitOutput)
                     {
-                        string[] txt = diffs.Replace("\r\n", "\n").Split(Delimiters.LineFeed, StringSplitOptions.RemoveEmptyEntries);
+                        var txt = diffs.Replace("\r\n", "\n")
+                            .Split(Delimiters.LineFeed, StringSplitOptions.RemoveEmptyEntries);
                         if (txt.Length > maxLimitedLines)
                         {
                             diffs = new List<string>(txt).Take(maxLimitedLines).Join(Environment.NewLine) +
-                                $"{Environment.NewLine} {txt.Length - maxLimitedLines} more differences";
+                                    $"{Environment.NewLine} {txt.Length - maxLimitedLines} more differences";
                         }
                     }
 
@@ -199,6 +211,8 @@ public static partial class SubmoduleResources
         }
 
         static string ReplaceTrailingSpacesWithTab(string input)
-            => ReplaceTrailingSpacesWithTabRegex.Replace(input, "${prefix}\t");
+        {
+            return ReplaceTrailingSpacesWithTabRegex.Replace(input, "${prefix}\t");
+        }
     }
 }

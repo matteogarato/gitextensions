@@ -2,12 +2,8 @@
 
 namespace GitUI.LeftPanel;
 
-internal class BasePathNode : BaseRevisionNode
+internal class BasePathNode(Tree tree, string fullPath) : BaseRevisionNode(tree, fullPath, true)
 {
-    public BasePathNode(Tree tree, string fullPath) : base(tree, fullPath, visible: true)
-    {
-    }
-
     public override void ApplyStyle()
     {
         base.ApplyStyle();

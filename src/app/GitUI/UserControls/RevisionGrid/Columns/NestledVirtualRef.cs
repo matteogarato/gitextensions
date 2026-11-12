@@ -1,58 +1,127 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
 public sealed class NestledVirtualRef(IGitRef gitRef, string completeName, bool trackingBranchIsGone) : IGitRef
 {
-    public string Name { get; } = GitRef.ParseName(completeName);
+    public bool TrackingBranchIsGone
+    {
+        get => trackingBranchIsGone;
+    }
+
+    string INamedGitItem.Name { get; } = GitRef.ParseName(completeName);
 
     /// <summary>
-    ///  <see cref="ObjectId"/> of a nestled ref is always default/zero.
+    ///     <see cref="ObjectId" /> of a nestled ref is always default/zero.
     /// </summary>
-    public ObjectId ObjectId => default;
-    public string? Guid => null;
-    public string CompleteName => completeName;
-    public string LocalName => GitRef.ComputeLocalName(IsRemote, Remote, Name);
+    ObjectId IGitItem.ObjectId
+    {
+        get => default;
+    }
+
+    string? IGitItem.Guid
+    {
+        get => null;
+    }
+
+    string IGitRef.CompleteName
+    {
+        get => completeName;
+    }
+
+    string IGitRef.LocalName
+    {
+        get => GitRef.ComputeLocalName(IsRemote, Remote, Name);
+    }
 
     /// <summary>
-    ///  The tracked local branch name as on the remote for <see cref="IsHead"/>,
-    ///  or the tracking local branch for <see cref="IsRemote"/>.
+    ///     The tracked local branch name as on the remote for <see cref="IsHead" />,
+    ///     or the tracking local branch for <see cref="IsRemote" />.
     /// </summary>
-    public string MergeWith
+    string IGitRef.MergeWith
     {
         get => gitRef.LocalName;
         set => throw new NotSupportedException();
     }
 
-    public string Remote => gitRef.TrackingRemote;
-    public string TrackingRemote
+    string IGitRef.Remote
+    {
+        get => gitRef.TrackingRemote;
+    }
+
+    string IGitRef.TrackingRemote
     {
         get => gitRef.Remote;
         set => throw new NotSupportedException();
     }
 
-    public bool TrackingBranchIsGone => trackingBranchIsGone;
+    bool IGitRef.IsHead
+    {
+        get => gitRef.IsRemote;
+    }
 
-    public bool IsHead => gitRef.IsRemote;
-    public bool IsRemote => gitRef.IsHead;
-    public bool IsTag => false;
-    public bool IsStash => false;
-    public bool IsDereference => false;
-    public bool IsSelected { get; set; }
-    public bool IsSelectedHeadMergeSource { get; set; }
-    public bool IsBisect => false;
-    public bool IsBisectGood => false;
-    public bool IsBisectBad => false;
+    bool IGitRef.IsRemote
+    {
+        get => gitRef.IsHead;
+    }
 
-    public IGitModule Module => gitRef.Module;
-    public bool IsTrackingRemote(IGitRef? remote)
-    => remote is not null && IsHead && remote.IsRemote
-        && MergeWith == remote.LocalName && TrackingRemote == remote.Remote;
+    bool IGitRef.IsTag
+    {
+        get => false;
+    }
 
-    public override bool Equals(object? obj) => obj is NestledVirtualRef other && CompleteName == other.CompleteName;
+    bool IGitRef.IsStash
+    {
+        get => false;
+    }
 
-    public override int GetHashCode() => completeName.GetHashCode();
+    bool IGitRef.IsDereference
+    {
+        get => false;
+    }
 
-    public override string ToString() => $"NestledVirtualRef: {CompleteName}";
+    bool IGitRef.IsSelected { get; set; }
+    bool IGitRef.IsSelectedHeadMergeSource { get; set; }
+
+    bool IGitRef.IsBisect
+    {
+        get => false;
+    }
+
+    bool IGitRef.IsBisectGood
+    {
+        get => false;
+    }
+
+    bool IGitRef.IsBisectBad
+    {
+        get => false;
+    }
+
+    IGitModule IGitRef.Module
+    {
+        get => gitRef.Module;
+    }
+
+    bool IGitRef.IsTrackingRemote(IGitRef? remote)
+    {
+        return remote is not null && IsHead && remote.IsRemote
+               && MergeWith == remote.LocalName && TrackingRemote == remote.Remote;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is NestledVirtualRef other && CompleteName == other.CompleteName;
+    }
+
+    public override int GetHashCode()
+    {
+        return completeName.GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        return $"NestledVirtualRef: {CompleteName}";
+    }
 }

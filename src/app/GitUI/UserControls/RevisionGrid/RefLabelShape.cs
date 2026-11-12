@@ -1,7 +1,7 @@
 ﻿namespace GitUI.UserControls.RevisionGrid;
 
 /// <summary>
-///  Defines the shape of the left and right edges of a ref label capsule.
+///     Defines the shape of the left and right edges of a ref label capsule.
 /// </summary>
 internal enum RefLabelShape
 {
@@ -18,5 +18,5 @@ internal enum RefLabelShape
     PointRight,
 
     /// <summary>Rounded rectangle on both sides.</summary>
-    Rect,
+    Rect
 }

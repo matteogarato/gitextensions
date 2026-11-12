@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtUtils;
 using GitExtUtils.GitUI;
 
@@ -13,7 +13,10 @@ internal static class UserEnvironmentInformation
     private static bool _dirty;
     private static string? _sha;
 
-    public static void CopyInformation() => ClipboardUtil.TrySetText(GetInformation());
+    public static void CopyInformation()
+    {
+        ClipboardUtil.TrySetText(GetInformation());
+    }
 
     public static string GetInformation()
     {
@@ -32,7 +35,8 @@ internal static class UserEnvironmentInformation
             gitVer = null;
         }
 
-        string gitVersionInfo = GetGitVersionInfo(gitVer, GitVersion.LastSupportedVersion, GitVersion.LastRecommendedVersion);
+        var gitVersionInfo =
+            GetGitVersionInfo(gitVer, GitVersion.LastSupportedVersion, GitVersion.LastRecommendedVersion);
 
         // Build and open FormAbout design to make sure info still looks good if you change this code.
         StringBuilder sb = new();
@@ -42,12 +46,14 @@ internal static class UserEnvironmentInformation
         sb.AppendLine($"- Git {gitVersionInfo}");
         sb.AppendLine($"- {Environment.OSVersion}");
         sb.AppendLine($"- {RuntimeInformation.FrameworkDescription}");
-        sb.AppendLine($"- DPI {DpiUtil.DpiX}dpi ({(DpiUtil.ScaleX == 1 ? "no" : $"{Math.Round(DpiUtil.ScaleX * 100)}%")} scaling)");
+        sb.AppendLine(
+            $"- DPI {DpiUtil.DpiX}dpi ({(DpiUtil.ScaleX == 1 ? "no" : $"{Math.Round(DpiUtil.ScaleX * 100)}%")} scaling)");
 
         return sb.ToString();
     }
 
-    public static string GetGitVersionInfo(string? gitVersion, GitVersion lastSupportedVersion, GitVersion recommendedVersion)
+    public static string GetGitVersionInfo(string? gitVersion, GitVersion lastSupportedVersion,
+        GitVersion recommendedVersion)
     {
         if (string.IsNullOrWhiteSpace(gitVersion))
         {

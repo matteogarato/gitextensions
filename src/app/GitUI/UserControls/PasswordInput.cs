@@ -1,4 +1,5 @@
 ﻿using GitExtUtils.GitUI.Theming;
+using GitUI.Properties;
 using ResourceManager;
 
 namespace GitUI.UserControls;
@@ -24,7 +25,7 @@ public partial class PasswordInput : TranslatedControl
     private void ShowPassword_Click(object sender, EventArgs e)
     {
         Password.UseSystemPasswordChar = !Password.UseSystemPasswordChar;
-        ShowPassword.Image = (Password.UseSystemPasswordChar ? Properties.Images.EyeClosed : Properties.Images.EyeOpened).AdaptLightness();
+        ShowPassword.Image = (Password.UseSystemPasswordChar ? Images.EyeClosed : Images.EyeOpened).AdaptLightness();
         Password.Focus();
     }
 
@@ -44,17 +45,17 @@ public partial class PasswordInput : TranslatedControl
             Password.Focus();
 
             // Workaround for a bug in GetCharIndexFromPosition: It cannot return the position after the last character
-            string original = Password.Text;
+            var original = Password.Text;
             Password.Text = $"{original} ";
-            int pos = Password.GetCharIndexFromPosition(Password.PointToClient(new Point(e.X, e.Y)));
+            var pos = Password.GetCharIndexFromPosition(Password.PointToClient(new Point(e.X, e.Y)));
             Password.Text = original;
-            Password.Select(pos, length: 0);
+            Password.Select(pos, 0);
         }
     }
 
     private void Text_Enter(object sender, EventArgs e)
     {
-        if (FindForm() is Form parentForm)
+        if (FindForm() is { } parentForm)
         {
             _originalAcceptButton = parentForm.AcceptButton;
             parentForm.AcceptButton = SendInput;
@@ -63,7 +64,7 @@ public partial class PasswordInput : TranslatedControl
 
     private void Text_Leave(object sender, EventArgs e)
     {
-        if (FindForm() is Form parentForm && parentForm.AcceptButton == SendInput)
+        if (FindForm() is { } parentForm && parentForm.AcceptButton == SendInput)
         {
             parentForm.AcceptButton = _originalAcceptButton;
         }

@@ -1,22 +1,13 @@
 ﻿namespace GitExtensions.Extensibility.Settings;
 
-public class PasswordSetting : ISetting
+public class PasswordSetting(string name, string caption, string defaultValue) : ISetting
 {
     public PasswordSetting(string name, string defaultValue)
         : this(name, name, defaultValue)
     {
     }
 
-    public PasswordSetting(string name, string caption, string defaultValue)
-    {
-        Name = name;
-        Caption = caption;
-        DefaultValue = defaultValue;
-    }
-
-    public string Name { get; }
-    public string Caption { get; }
-    public string DefaultValue { get; }
+    public string DefaultValue { get; } = defaultValue;
     public TextBox? CustomControl { get; set; }
 
     public string? this[SettingsSource settings]
@@ -24,6 +15,9 @@ public class PasswordSetting : ISetting
         get => settings.GetString(Name, null);
         set => settings.SetString(Name, value);
     }
+
+    string ISetting.Name { get; } = name;
+    string ISetting.Caption { get; } = caption;
 
     public string ValueOrDefault(SettingsSource settings)
     {

@@ -1,58 +1,25 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
 using GitUI.HelperDialogs;
+using GitUI.UserControls;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormApplyPatch : GitModuleForm
 {
-    #region Mnemonics
-    // Available: CEGHJLMNPQTUVXYZ
-    // A add files
-    // B abort
-    // D directory
-    // F file
-    // I ignore whitespace
-    // K skip patch
-    // O sign-off
-    // R Browse file
-    // S solve conflicts
-    // W Browse dir
-    #endregion
+    private static readonly List<PatchFile> _skipped = [];
 
-    #region Translation
-
-    private readonly TranslationString _conflictResolvedText =
-        new("Conflicts resolved");
-    private readonly TranslationString _conflictMergetoolText =
-        new("&Solve conflicts");
-
-    private readonly TranslationString _selectPatchFileFilter =
-        new("Patch file (*.Patch)");
-    private readonly TranslationString _selectPatchFileCaption =
-        new("Select patch file");
-
-    private readonly TranslationString _noFileSelectedText =
-        new("Please select a patch to apply");
-
-    private readonly TranslationString _applyPatchMsgBox =
-        new("Apply patch");
-
-    #endregion
-
-    private static readonly List<PatchFile> Skipped = [];
-
-    public FormApplyPatch(IGitUICommands commands)
+    public FormApplyPatch(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
         InitializeComplete();
 
-        PatchGrid.SetSkipped(Skipped);
+        PatchGrid.SetSkipped(_skipped);
 
         SolveMergeConflicts.BackColor = OtherColors.MergeConflictsColor;
         SolveMergeConflicts.SetForeColorForBackColor();
@@ -158,7 +125,7 @@ public partial class FormApplyPatch : GitModuleForm
             InitialDirectory = initialDirectory,
             Title = _selectPatchFileCaption.Text
         };
-        return (dialog.ShowDialog(this) == DialogResult.OK) ? dialog.FileName : PatchFile.Text;
+        return dialog.ShowDialog(this) == DialogResult.OK ? dialog.FileName : PatchFile.Text;
     }
 
     private void BrowsePatch_Click(object sender, EventArgs e)
@@ -168,38 +135,39 @@ public partial class FormApplyPatch : GitModuleForm
 
     private void Apply_Click(object sender, EventArgs e)
     {
-        string patchFile = PatchFile.Text;
-        string dirText = PatchDir.Text;
-        bool ignoreWhiteSpace = IgnoreWhitespace.Checked;
-        bool signOff = SignOff.Checked;
+        var patchFile = PatchFile.Text;
+        var dirText = PatchDir.Text;
+        var ignoreWhiteSpace = IgnoreWhitespace.Checked;
+        var signOff = SignOff.Checked;
 
         if (string.IsNullOrEmpty(patchFile) && string.IsNullOrEmpty(dirText))
         {
-            MessageBoxes.Show(this, _noFileSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK,  MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _noFileSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 
         using (WaitCursorScope.Enter())
         {
-            Skipped.Clear();
+            _skipped.Clear();
 
             if (PatchFileMode.Checked)
             {
-                ArgumentString arguments = IsDiffFile(patchFile)
+                var arguments = IsDiffFile(patchFile)
                     ? Commands.ApplyDiffPatch(ignoreWhiteSpace, patchFile, Module.GetPathForGitExecution)
                     : Commands.ApplyMailboxPatch(signOff, ignoreWhiteSpace, patchFile, Module.GetPathForGitExecution);
 
-                FormProcess.ShowDialog(this, UICommands, arguments, Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(this, UiCommands, arguments, Module.WorkingDir, null, true);
             }
             else
             {
                 // No need for PathUtil.GetRepoPath(), file streamed
-                ArgumentString arguments = Commands.ApplyMailboxPatch(signOff, ignoreWhiteSpace);
+                var arguments = Commands.ApplyMailboxPatch(signOff, ignoreWhiteSpace);
 
                 Module.ApplyPatch(dirText, arguments);
             }
 
-            UICommands.RepoChangedNotifier.Notify();
+            UiCommands.RepoChangedNotifier.Notify();
 
             EnableButtons();
 
@@ -218,7 +186,7 @@ public partial class FormApplyPatch : GitModuleForm
         try
         {
             using StreamReader sr = new(path);
-            string? line = sr.ReadLine();
+            var line = sr.ReadLine();
 
             return line is not null && (line.StartsWith("diff ") || line.StartsWith("Index: "));
         }
@@ -230,7 +198,7 @@ public partial class FormApplyPatch : GitModuleForm
 
     private void Mergetool_Click(object sender, EventArgs e)
     {
-        UICommands.StartResolveConflictsDialog(this);
+        UiCommands.StartResolveConflictsDialog(this);
         EnableButtons();
     }
 
@@ -238,14 +206,14 @@ public partial class FormApplyPatch : GitModuleForm
     {
         using (WaitCursorScope.Enter())
         {
-            PatchFile? applyingPatch = PatchGrid.PatchFiles!.FirstOrDefault(p => p.IsNext);
+            var applyingPatch = PatchGrid.PatchFiles!.FirstOrDefault(p => p.IsNext);
             if (applyingPatch is not null)
             {
                 applyingPatch.IsSkipped = true;
-                Skipped.Add(applyingPatch);
+                _skipped.Add(applyingPatch);
             }
 
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Skip(), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.Skip(), Module.WorkingDir, null, true);
             EnableButtons();
         }
     }
@@ -254,7 +222,7 @@ public partial class FormApplyPatch : GitModuleForm
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Resolved(), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.Resolved(), Module.WorkingDir, null, true);
             EnableButtons();
         }
     }
@@ -263,15 +231,15 @@ public partial class FormApplyPatch : GitModuleForm
     {
         using (WaitCursorScope.Enter())
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Abort(), Module.WorkingDir, input: null, useDialogSettings: true);
-            Skipped.Clear();
+            FormProcess.ShowDialog(this, UiCommands, Commands.Abort(), Module.WorkingDir, null, true);
+            _skipped.Clear();
             EnableButtons();
         }
     }
 
     private void AddFiles_Click(object sender, EventArgs e)
     {
-        UICommands.StartAddFilesDialog(this);
+        UiCommands.StartAddFilesDialog(this);
     }
 
     private void MergePatch_Load(object sender, EventArgs e)
@@ -285,7 +253,7 @@ public partial class FormApplyPatch : GitModuleForm
 
     private void BrowseDir_Click(object sender, EventArgs e)
     {
-        string? userSelectedPath = OsShellUtil.PickFolder(this);
+        var userSelectedPath = OsShellUtil.PickFolder(this);
 
         if (userSelectedPath is not null)
         {
@@ -312,4 +280,42 @@ public partial class FormApplyPatch : GitModuleForm
     {
         AppSettings.ApplyPatchSignOff = SignOff.Checked;
     }
+
+    #region Mnemonics
+
+    // Available: CEGHJLMNPQTUVXYZ
+    // A add files
+    // B abort
+    // D directory
+    // F file
+    // I ignore whitespace
+    // K skip patch
+    // O sign-off
+    // R Browse file
+    // S solve conflicts
+    // W Browse dir
+
+    #endregion
+
+    #region Translation
+
+    private readonly TranslationString _conflictResolvedText =
+        new("Conflicts resolved");
+
+    private readonly TranslationString _conflictMergetoolText =
+        new("&Solve conflicts");
+
+    private readonly TranslationString _selectPatchFileFilter =
+        new("Patch file (*.Patch)");
+
+    private readonly TranslationString _selectPatchFileCaption =
+        new("Select patch file");
+
+    private readonly TranslationString _noFileSelectedText =
+        new("Please select a patch to apply");
+
+    private readonly TranslationString _applyPatchMsgBox =
+        new("Apply patch");
+
+    #endregion
 }

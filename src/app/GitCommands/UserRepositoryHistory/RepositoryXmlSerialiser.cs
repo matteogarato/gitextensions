@@ -5,17 +5,20 @@ using GitCommands.UserRepositoryHistory.Legacy;
 namespace GitCommands.UserRepositoryHistory;
 
 /// <summary>
-/// Serialises or deserialises user's git repositories into XML.
+///     Serialises or deserialises user's git repositories into XML.
 /// </summary>
 public sealed class RepositoryXmlSerialiser : IRepositorySerialiser<Repository>
 {
     /// <summary>
-    /// Restores a list of user's git repositories from the supplied string.
+    ///     Restores a list of user's git repositories from the supplied string.
     /// </summary>
     /// <param name="serialised">A serialised list of user's git repositories.</param>
-    /// <returns>A list of user's git repositories, if successfully deserialised; otherwise <see langword="null"/>.</returns>
-    /// <exception cref="ArgumentException"><paramref name="serialised"/> is <see langword="null"/> or <see cref="string.Empty"/>.</exception>
-    public IReadOnlyList<Repository>? Deserialize(string serialised)
+    /// <returns>A list of user's git repositories, if successfully deserialised; otherwise <see langword="null" />.</returns>
+    /// <exception cref="ArgumentException">
+    ///     <paramref name="serialised" /> is <see langword="null" /> or
+    ///     <see cref="string.Empty" />.
+    /// </exception>
+    IReadOnlyList<Repository>? IRepositorySerialiser<Repository>.Deserialize(string serialised)
     {
         ArgumentException.ThrowIfNullOrEmpty(serialised);
 
@@ -37,12 +40,12 @@ public sealed class RepositoryXmlSerialiser : IRepositorySerialiser<Repository>
     }
 
     /// <summary>
-    /// Serialises the given list of user's git repositories.
+    ///     Serialises the given list of user's git repositories.
     /// </summary>
     /// <param name="repositories">A list of user's git repositories.</param>
-    /// <returns>A serialised list of user's git repositories, if successful; otherwise <see langword="null"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="repositories"/> is <see langword="null"/>.</exception>
-    public string? Serialize(IEnumerable<Repository> repositories)
+    /// <returns>A serialised list of user's git repositories, if successful; otherwise <see langword="null" />.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repositories" /> is <see langword="null" />.</exception>
+    string? IRepositorySerialiser<Repository>.Serialize(IEnumerable<Repository> repositories)
     {
         ArgumentNullException.ThrowIfNull(repositories);
 

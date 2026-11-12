@@ -7,11 +7,31 @@ using GitUI.Properties;
 namespace GitUI.LeftPanel;
 
 [DebuggerDisplay("(Remote) FullPath = {FullPath}, Hash = {ObjectId}, Visible: {Visible}")]
-internal sealed class RemoteBranchNode : BaseBranchLeafNode, IGitRefActions, ICanDelete
+internal sealed class RemoteBranchNode(Tree tree, in ObjectId objectId, string fullPath, bool visible)
+    : BaseBranchLeafNode(tree, objectId, fullPath, visible, nameof(Images.BranchRemote),
+        nameof(Images.BranchRemoteMerged)), IGitRefActions, ICanDelete
 {
-    public RemoteBranchNode(Tree tree, in ObjectId objectId, string fullPath, bool visible)
-        : base(tree, objectId, fullPath, visible, nameof(Images.BranchRemote), nameof(Images.BranchRemoteMerged))
+    bool ICanDelete.Delete()
     {
+        var remoteBranchInfo = GetRemoteBranchInfo();
+        return UiCommands.StartDeleteRemoteBranchDialog(TreeViewNode.TreeView,
+            remoteBranchInfo.Remote + '/' + remoteBranchInfo.BranchName);
+    }
+
+    bool IGitRefActions.CreateBranch()
+    {
+        return UiCommands.StartCreateBranchDialog(TreeViewNode.TreeView, FullPath);
+    }
+
+    bool IGitRefActions.Checkout()
+    {
+        return MessageBoxes.ConfirmBranchCheckout(ParentWindow(), FullPath) &&
+               UiCommands.StartCheckoutRemoteBranch(TreeViewNode.TreeView, FullPath);
+    }
+
+    bool IGitRefActions.Merge()
+    {
+        return UiCommands.StartMergeBranchDialog(TreeViewNode.TreeView, FullPath);
     }
 
     internal override void OnSelected()
@@ -27,47 +47,26 @@ internal sealed class RemoteBranchNode : BaseBranchLeafNode, IGitRefActions, ICa
 
     public bool Fetch()
     {
-        RemoteBranchInfo remoteBranchInfo = GetRemoteBranchInfo();
-        UICommands.StartPullDialogAndPullImmediately(
-            out bool pullCompleted,
+        var remoteBranchInfo = GetRemoteBranchInfo();
+        UiCommands.StartPullDialogAndPullImmediately(
+            out var pullCompleted,
             TreeViewNode.TreeView,
-            remoteBranch: remoteBranchInfo.BranchName,
-            remote: remoteBranchInfo.Remote,
-            pullAction: GitPullAction.Fetch);
+            remoteBranchInfo.BranchName,
+            remoteBranchInfo.Remote,
+            GitPullAction.Fetch);
         return pullCompleted;
     }
 
     private RemoteBranchInfo GetRemoteBranchInfo()
     {
-        string remote = FullPath.LazySplit('/').First();
-        string branch = FullPath[(remote.Length + 1)..];
+        var remote = FullPath.LazySplit('/').First();
+        var branch = FullPath[(remote.Length + 1)..];
         return new RemoteBranchInfo(remote, branch);
     }
 
     internal override void OnDelete()
     {
         Delete();
-    }
-
-    public bool CreateBranch()
-    {
-        return UICommands.StartCreateBranchDialog(TreeViewNode.TreeView, FullPath);
-    }
-
-    public bool Delete()
-    {
-        RemoteBranchInfo remoteBranchInfo = GetRemoteBranchInfo();
-        return UICommands.StartDeleteRemoteBranchDialog(TreeViewNode.TreeView, remoteBranchInfo.Remote + '/' + remoteBranchInfo.BranchName);
-    }
-
-    public bool Checkout()
-    {
-        return MessageBoxes.ConfirmBranchCheckout(ParentWindow(), FullPath) && UICommands.StartCheckoutRemoteBranch(TreeViewNode.TreeView, FullPath);
-    }
-
-    public bool Merge()
-    {
-        return UICommands.StartMergeBranchDialog(TreeViewNode.TreeView, FullPath);
     }
 
     internal override void OnDoubleClick()
@@ -95,15 +94,9 @@ internal sealed class RemoteBranchNode : BaseBranchLeafNode, IGitRefActions, ICa
         return Fetch() && Rebase();
     }
 
-    private readonly struct RemoteBranchInfo
+    private readonly struct RemoteBranchInfo(string remote, string branchName)
     {
-        public string Remote { get; }
-        public string BranchName { get; }
-
-        public RemoteBranchInfo(string remote, string branchName)
-        {
-            Remote = remote;
-            BranchName = branchName;
-        }
+        public string Remote { get; } = remote;
+        public string BranchName { get; } = branchName;
     }
 }

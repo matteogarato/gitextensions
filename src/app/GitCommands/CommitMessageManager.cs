@@ -1,7 +1,8 @@
 ﻿using System.IO.Abstractions;
 using System.Text;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitCommands;
@@ -9,69 +10,62 @@ namespace GitCommands;
 public interface ICommitMessageManager
 {
     /// <summary>
-    ///  The path of .git/COMMITMESSAGE, where a prepared (non-merge) commit message is stored.
+    ///     The path of .git/COMMITMESSAGE, where a prepared (non-merge) commit message is stored.
     /// </summary>
     string CommitMessagePath { get; }
 
     /// <summary>
-    ///  Returns whether .git/MERGE_MSG exists.
+    ///     Returns whether .git/MERGE_MSG exists.
     /// </summary>
     bool IsMergeCommit { get; }
 
     /// <summary>
-    ///  The path of .git/MERGE_MSG, where a merge-commit message is stored.
+    ///     The path of .git/MERGE_MSG, where a merge-commit message is stored.
     /// </summary>
     string MergeMessagePath { get; }
 
     /// <summary>
-    ///  Reads the indicator whether the previous commit shall be amended (if <see cref="AppSettings.RememberAmendCommitState"/>).
+    ///     Reads the indicator whether the previous commit shall be amended (if
+    ///     <see cref="Settings.AppSettings.RememberAmendCommitState" />).
     /// </summary>
     Task<bool> GetAmendStateAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///  Reads/stores the prepared commit message from/in .git/MERGE_MSG if it exists or else in .git/COMMITMESSAGE.
+    ///     Reads/stores the prepared commit message from/in .git/MERGE_MSG if it exists or else in .git/COMMITMESSAGE.
     /// </summary>
     Task<string> GetMergeOrCommitMessageAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///  Deletes .git/COMMITMESSAGE and the file with the AmendState.
+    ///     Deletes .git/COMMITMESSAGE and the file with the AmendState.
     /// </summary>
     Task ResetCommitMessageAsync();
 
     /// <summary>
-    ///  Stores the indicator whether the previous commit shall be amended (if <see cref="AppSettings.RememberAmendCommitState"/>).
+    ///     Stores the indicator whether the previous commit shall be amended (if
+    ///     <see cref="Settings.AppSettings.RememberAmendCommitState" />).
     /// </summary>
     Task SetAmendStateAsync(bool amendState, CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///  Stores the prepared commit message from/in .git/MERGE_MSG if it exists or else in .git/COMMITMESSAGE.
+    ///     Stores the prepared commit message from/in .git/MERGE_MSG if it exists or else in .git/COMMITMESSAGE.
     /// </summary>
     Task SetMergeOrCommitMessageAsync(string? message, CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///  Writes the provided commit message to .git/COMMITMESSAGE.
-    ///  The message is formatted depending whether a commit template is used or whether the 2nd line must be empty.
+    ///     Writes the provided commit message to .git/COMMITMESSAGE.
+    ///     The message is formatted depending whether a commit template is used or whether the 2nd line must be empty.
     /// </summary>
     /// <param name="commitMessage">The commit message to write out.</param>
     /// <param name="messageType">The type of message to write out.</param>
     /// <param name="usingCommitTemplate">The indicator whether a commit template is used.</param>
     /// <param name="ensureCommitMessageSecondLineEmpty">The indicator whether empty second line is enforced.</param>
     Task WriteCommitMessageToFileAsync(string commitMessage, CommitMessageType messageType, bool usingCommitTemplate,
-                                       bool ensureCommitMessageSecondLineEmpty, CancellationToken cancellationToken = default);
+        bool ensureCommitMessageSecondLineEmpty, CancellationToken cancellationToken = default);
 }
 
 public sealed class CommitMessageManager : ICommitMessageManager
 {
-    private static string CannotReadCommitMessage => "Cannot read commit message";
-    private static string CannotSaveCommitMessage => "Cannot save commit message";
-    private static string CannotReadAmendState => "Cannot read amend state";
-    private static string CannotSaveAmendState => "Cannot save amend state";
-    private static string CannotAccessFile => "Exception: \"{0}\" when accessing {1}";
-
     private readonly string _amendSaveStatePath;
-
-    private readonly IFileSystem _fileSystem;
-    private readonly Control _owner;
 
     // Commit messages are UTF-8 by default unless otherwise in the config file.
     // The git manual states:
@@ -81,14 +75,19 @@ public sealed class CommitMessageManager : ICommitMessageManager
     //  this is to have i18n.commitencoding in .git/config file, like this:...
     private readonly Encoding _commitEncoding;
 
+    private readonly IFileSystem _fileSystem;
+    private readonly Control _owner;
+
     private string? _overriddenCommitMessage;
 
-    public CommitMessageManager(Control owner, string workingDirGitDir, Encoding commitEncoding, string? overriddenCommitMessage = null)
+    public CommitMessageManager(Control owner, string workingDirGitDir, Encoding commitEncoding,
+        string? overriddenCommitMessage = null)
         : this(owner, workingDirGitDir, commitEncoding, new FileSystem(), overriddenCommitMessage)
     {
     }
 
-    internal CommitMessageManager(Control owner, string workingDirGitDir, Encoding commitEncoding, IFileSystem fileSystem, string? overriddenCommitMessage = null)
+    internal CommitMessageManager(Control owner, string workingDirGitDir, Encoding commitEncoding,
+        IFileSystem fileSystem, string? overriddenCommitMessage = null)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(workingDirGitDir);
@@ -102,26 +101,53 @@ public sealed class CommitMessageManager : ICommitMessageManager
         _overriddenCommitMessage = overriddenCommitMessage;
     }
 
-    public async Task<bool> GetAmendStateAsync(CancellationToken cancellationToken = default)
+    private static string CannotReadCommitMessage
     {
-        bool amendState = false;
+        get => "Cannot read commit message";
+    }
+
+    private static string CannotSaveCommitMessage
+    {
+        get => "Cannot save commit message";
+    }
+
+    private static string CannotReadAmendState
+    {
+        get => "Cannot read amend state";
+    }
+
+    private static string CannotSaveAmendState
+    {
+        get => "Cannot save amend state";
+    }
+
+    private static string CannotAccessFile
+    {
+        get => "Exception: \"{0}\" when accessing {1}";
+    }
+
+    async Task<bool> ICommitMessageManager.GetAmendStateAsync(CancellationToken cancellationToken = default)
+    {
+        var amendState = false;
 
         if (AppSettings.RememberAmendCommitState)
         {
-            string amendStateRawValue = await ReadFileAsync(_amendSaveStatePath, CannotReadAmendState, cancellationToken: cancellationToken);
+            var amendStateRawValue = await ReadFileAsync(_amendSaveStatePath, CannotReadAmendState,
+                cancellationToken: cancellationToken);
             _ = bool.TryParse(amendStateRawValue, out amendState);
         }
 
         return amendState;
     }
 
-    public async Task SetAmendStateAsync(bool amendState, CancellationToken cancellationToken = default)
+    async Task ICommitMessageManager.SetAmendStateAsync(bool amendState, CancellationToken cancellationToken = default)
     {
         await TaskScheduler.Default;
 
         if (AppSettings.RememberAmendCommitState && amendState)
         {
-            await WriteFileAsync(_amendSaveStatePath, CannotSaveAmendState, true.ToString(), cancellationToken: cancellationToken);
+            await WriteFileAsync(_amendSaveStatePath, CannotSaveAmendState, true.ToString(),
+                cancellationToken: cancellationToken);
             return;
         }
 
@@ -131,23 +157,27 @@ public sealed class CommitMessageManager : ICommitMessageManager
         }
     }
 
-    public string CommitMessagePath { get; }
+    string ICommitMessageManager.CommitMessagePath { get; }
 
-    public bool IsMergeCommit => _fileSystem.File.Exists(MergeMessagePath);
+    bool ICommitMessageManager.IsMergeCommit
+    {
+        get => _fileSystem.File.Exists(MergeMessagePath);
+    }
 
-    public string MergeMessagePath { get; }
+    string ICommitMessageManager.MergeMessagePath { get; }
 
-    public async Task<string> GetMergeOrCommitMessageAsync(CancellationToken cancellationToken = default)
+    async Task<string> ICommitMessageManager.GetMergeOrCommitMessageAsync(CancellationToken cancellationToken = default)
     {
         if (_overriddenCommitMessage is not null)
         {
             return _overriddenCommitMessage;
         }
 
-        return await ReadFileAsync(GetMergeOrCommitMessagePath(), CannotReadCommitMessage, _commitEncoding, cancellationToken);
+        return await ReadFileAsync(GetMergeOrCommitMessagePath(), CannotReadCommitMessage, _commitEncoding,
+            cancellationToken);
     }
 
-    public async Task ResetCommitMessageAsync()
+    async Task ICommitMessageManager.ResetCommitMessageAsync()
     {
         await TaskScheduler.Default;
 
@@ -156,31 +186,36 @@ public sealed class CommitMessageManager : ICommitMessageManager
         _fileSystem.File.Delete(_amendSaveStatePath);
     }
 
-    public async Task SetMergeOrCommitMessageAsync(string? message, CancellationToken cancellationToken = default)
+    async Task ICommitMessageManager.SetMergeOrCommitMessageAsync(string? message,
+        CancellationToken cancellationToken = default)
     {
         await TaskScheduler.Default;
 
-        string content = message ?? string.Empty;
+        var content = message ?? string.Empty;
 
         // do not remember commit message when they have been specified by the command line
         if (content != _overriddenCommitMessage)
         {
-            await WriteFileAsync(GetMergeOrCommitMessagePath(), CannotSaveCommitMessage, content, _commitEncoding, cancellationToken);
+            await WriteFileAsync(GetMergeOrCommitMessagePath(), CannotSaveCommitMessage, content, _commitEncoding,
+                cancellationToken);
         }
     }
 
-    public async Task WriteCommitMessageToFileAsync(string commitMessage, CommitMessageType messageType, bool usingCommitTemplate,
-                                                    bool ensureCommitMessageSecondLineEmpty, CancellationToken cancellationToken = default)
+    async Task ICommitMessageManager.WriteCommitMessageToFileAsync(string commitMessage, CommitMessageType messageType,
+        bool usingCommitTemplate,
+        bool ensureCommitMessageSecondLineEmpty, CancellationToken cancellationToken = default)
     {
         await TaskScheduler.Default;
 
-        string formattedCommitMessage = FormatCommitMessage(commitMessage, usingCommitTemplate, ensureCommitMessageSecondLineEmpty);
+        var formattedCommitMessage =
+            FormatCommitMessage(commitMessage, usingCommitTemplate, ensureCommitMessageSecondLineEmpty);
 
-        string path = messageType == CommitMessageType.Normal ? CommitMessagePath : MergeMessagePath;
+        var path = messageType == CommitMessageType.Normal ? CommitMessagePath : MergeMessagePath;
         await WriteFileAsync(path, CannotSaveCommitMessage, formattedCommitMessage, _commitEncoding, cancellationToken);
     }
 
-    internal static string FormatCommitMessage(string commitMessage, bool usingCommitTemplate, bool ensureCommitMessageSecondLineEmpty)
+    internal static string FormatCommitMessage(string commitMessage, bool usingCommitTemplate,
+        bool ensureCommitMessageSecondLineEmpty)
     {
         if (string.IsNullOrEmpty(commitMessage))
         {
@@ -189,8 +224,8 @@ public sealed class CommitMessageManager : ICommitMessageManager
 
         StringBuilder formattedCommitMessage = new();
 
-        int lineNumber = 1;
-        foreach (string line in commitMessage.LazySplit('\n'))
+        var lineNumber = 1;
+        foreach (var line in commitMessage.LazySplit('\n'))
         {
             // When a committemplate is used, skip comments and do not count them as line.
             // otherwise: "#" is probably not used for comment but for issue number
@@ -212,11 +247,18 @@ public sealed class CommitMessageManager : ICommitMessageManager
         return formattedCommitMessage.ToString();
     }
 
-    private string GetFilePath(string workingDirGitDir, string fileName) => _fileSystem.Path.Join(workingDirGitDir, fileName);
+    private string GetFilePath(string workingDirGitDir, string fileName)
+    {
+        return _fileSystem.Path.Join(workingDirGitDir, fileName);
+    }
 
-    private string GetMergeOrCommitMessagePath() => IsMergeCommit ? MergeMessagePath : CommitMessagePath;
+    private string GetMergeOrCommitMessagePath()
+    {
+        return IsMergeCommit ? MergeMessagePath : CommitMessagePath;
+    }
 
-    private async Task<string> ReadFileAsync(string filePath, string errorTitle, Encoding? encoding = null, CancellationToken cancellationToken = default)
+    private async Task<string> ReadFileAsync(string filePath, string errorTitle, Encoding? encoding = null,
+        CancellationToken cancellationToken = default)
     {
         await TaskScheduler.Default;
 
@@ -231,13 +273,15 @@ public sealed class CommitMessageManager : ICommitMessageManager
         }
         catch (Exception ex) when (ex is not (OperationCanceledException or ObjectDisposedException))
         {
-            await _owner.SwitchToMainThreadAsync(cancellationToken: cancellationToken);
-            MessageBoxes.Show(_owner, string.Format(CannotAccessFile, ex.Message, filePath), errorTitle, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            await _owner.SwitchToMainThreadAsync(cancellationToken);
+            MessageBoxes.Show(_owner, string.Format(CannotAccessFile, ex.Message, filePath), errorTitle,
+                MessageBoxButtons.Ok, MessageBoxIcon.Exclamation);
             return string.Empty;
         }
     }
 
-    private async Task WriteFileAsync(string filePath, string errorTitle, string content, Encoding? encoding = null, CancellationToken cancellationToken = default)
+    private async Task WriteFileAsync(string filePath, string errorTitle, string content, Encoding? encoding = null,
+        CancellationToken cancellationToken = default)
     {
         await TaskScheduler.Default;
 
@@ -249,14 +293,16 @@ public sealed class CommitMessageManager : ICommitMessageManager
 
         try
         {
-            await _fileSystem.File.WriteAllTextAsync(filePath, content, encoding ?? Encoding.Default, cancellationToken);
+            await _fileSystem.File.WriteAllTextAsync(filePath, content, encoding ?? Encoding.Default,
+                cancellationToken);
         }
         catch (Exception ex) when (ex is not (OperationCanceledException or ObjectDisposedException))
         {
-            await _owner.SwitchToMainThreadAsync(cancellationToken: cancellationToken);
+            await _owner.SwitchToMainThreadAsync(cancellationToken);
 
             // No need to cancel the other operations in FormCommit - just let the user know that something went wrong
-            MessageBoxes.Show(_owner, string.Format(CannotAccessFile, ex.Message, filePath), errorTitle, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            MessageBoxes.Show(_owner, string.Format(CannotAccessFile, ex.Message, filePath), errorTitle,
+                MessageBoxButtons.Ok, MessageBoxIcon.Exclamation);
         }
     }
 }

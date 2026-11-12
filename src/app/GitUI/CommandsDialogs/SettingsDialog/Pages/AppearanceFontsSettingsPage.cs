@@ -1,13 +1,12 @@
-﻿using GitCommands;
-using Microsoft;
+﻿using GitCommands.Settings;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class AppearanceFontsSettingsPage : SettingsPageWithHeader
 {
-    private Font? _diffFont;
     private Font? _applicationFont;
     private Font? _commitFont;
+    private Font? _diffFont;
     private Font? _monospaceFont;
 
     public AppearanceFontsSettingsPage(IServiceProvider serviceProvider)
@@ -86,8 +85,8 @@ public partial class AppearanceFontsSettingsPage : SettingsPageWithHeader
     {
         try
         {
-            DialogResult result = fontDialog.ShowDialog(this);
-            if (result is (DialogResult.OK or DialogResult.Yes))
+            var result = fontDialog.ShowDialog(this);
+            if (result is DialogResult.OK or DialogResult.Yes)
             {
                 Validates.NotNull(fontDialog.Font);
                 return true;

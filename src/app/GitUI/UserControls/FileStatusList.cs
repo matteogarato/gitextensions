@@ -8,79 +8,58 @@ using System.Text.RegularExpressions;
 using System.Windows.Automation;
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.CommandsDialogs;
+using GitUI.Editor;
 using GitUI.Properties;
 using GitUI.Theming;
-using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 public sealed partial class FileStatusList : GitModuleControl
 {
-    private enum DrawFailureState
-    {
-        None,
-        IgnoringFollowUp,
-        ReportRepeated
-    }
+    public delegate void EnterEventHandler(object? sender, EnterEventArgs e);
 
     public static readonly TimeSpan SelectedIndexChangeThrottleDuration = TimeSpan.FromMilliseconds(50);
+    private static readonly StatusSorter _sorter = new();
+
+    private static readonly ImageListData _imageListData = CreateImageListData();
+    private readonly SolidBrush _backgroundBrush = new(AppColor.PanelBackground.GetThemeColor());
 
     private readonly FileStatusDiffCalculator _diffCalculator;
     private readonly IFullPathResolver _fullPathResolver;
     private readonly IGitRevisionTester _gitRevisionTester;
     private readonly FileAssociatedIconProvider _iconProvider = new();
+
+    private readonly SolidBrush _inactiveSelectionHighlightBrush =
+        new(AppColor.InactiveSelectionHighlight.GetThemeColor());
+
+    private readonly IReadOnlyList<GitItemStatus> _noItemStatuses;
+    private readonly ToolStripItem _noTranslateOpenSubmoduleMenuItem;
+    private readonly CancellationTokenSequence _reloadSequence = new();
     private readonly IRevisionDiffController _revisionDiffController;
     private readonly SortDiffListContextMenuItem _sortByContextMenu;
-    private static readonly StatusSorter _sorter = new();
-    private readonly IReadOnlyList<GitItemStatus> _noItemStatuses;
-    private readonly ToolStripItem _NO_TRANSLATE_openSubmoduleMenuItem;
-    private readonly CancellationTokenSequence _reloadSequence = new();
     private readonly ToolStripItem _sortBySeparator = new ToolStripSeparator();
-    private readonly SolidBrush _inactiveSelectionHighlightBrush = new(AppColor.InactiveSelectionHighlight.GetThemeColor());
-    private readonly SolidBrush _backgroundBrush = new(AppColor.PanelBackground.GetThemeColor());
-    private GitItemStatus? _nextItemToSelect = null;
-    private bool _enableSelectedIndexChangeEvent = true;
-    private bool _flatList = false;
-    private GroupBy? _groupBy = null;
-    private bool _isFileTreeMode = false;
-    private bool _mouseEntered;
-    private Rectangle _dragBoxFromMouseDown;
-    private IDisposable? _selectedIndexChangeSubscription;
     private IDisposable? _diffListSortSubscription;
+    private Rectangle _dragBoxFromMouseDown;
     private DrawFailureState _drawFailureState = DrawFailureState.None;
-    private FormFindInCommitFilesGitGrep? _formFindInCommitFilesGitGrep;
-    private bool _showDiffGroups = false;
 
     // Enable menu item to disable AppSettings.ShowDiffForAllParents in some forms
-    private bool _enableDisablingShowDiffForAllParents = false;
-
-    [GeneratedRegex(@"(^|\s)-e(\s|\s+['""])", RegexOptions.ExplicitCapture)]
-    private static partial Regex GrepStringRegex { get; }
-
-    public delegate void EnterEventHandler(object? sender, EnterEventArgs e);
-
-    public event EventHandler? SelectedIndexChanged;
-    public event EventHandler? DataSourceChanged;
-    public event EventHandler? FilterChanged;
-
-    public new event EventHandler? DoubleClick;
-    public new event EnterEventHandler? Enter;
-
-    [Description("Disable showing open submodule menu items as bold")]
-    [DefaultValue(false)]
-    public bool DisableSubmoduleMenuItemBold { get; set; }
-
-    private record ImageListData(ImageList ImageList, Dictionary<string, int> StateImageIndexMap, Image DefaultFileImage, int IconSize);
-
-    private static readonly ImageListData _imageListData = CreateImageListData();
+    private bool _enableDisablingShowDiffForAllParents;
+    private bool _enableSelectedIndexChangeEvent = true;
+    private bool _flatList;
+    private FormFindInCommitFilesGitGrep? _formFindInCommitFilesGitGrep;
+    private GroupBy? _groupBy;
+    private bool _isFileTreeMode;
+    private bool _mouseEntered;
+    private GitItemStatus? _nextItemToSelect;
+    private IDisposable? _selectedIndexChangeSubscription;
+    private bool _showDiffGroups;
 
     public FileStatusList()
     {
@@ -92,8 +71,8 @@ public sealed partial class FileStatusList : GitModuleControl
             _customDiffToolsSequence.Dispose();
         };
 
-        tsmiCopyPaths.Initialize(getUICommands: () => UICommands,
-            getSelectedFilePaths: () => SelectedFolder is RelativePath relativePath
+        tsmiCopyPaths.Initialize(() => UiCommands,
+            () => SelectedFolder is { } relativePath
                 ? [relativePath.Value]
                 : SelectedItems.Select(fsi => fsi.Item.Name));
         tsmiFilterFileInGrid.Text = TranslatedStrings.FilterFileInGrid;
@@ -101,13 +80,13 @@ public sealed partial class FileStatusList : GitModuleControl
         SetFindInCommitFilesGitGrepVisibility(AppSettings.ShowFindInCommitFilesGitGrep.Value);
 
         CreateTreeContextMenuItems();
-        _NO_TRANSLATE_openSubmoduleMenuItem = CreateOpenSubmoduleMenuItem();
+        _noTranslateOpenSubmoduleMenuItem = CreateOpenSubmoduleMenuItem();
         _sortByContextMenu = new SortDiffListContextMenuItem(DiffListSortService.Instance)
         {
             Name = "sortListByContextMenuItem"
         };
 
-        tsmiMove.Image = Properties.Images.FileStatusRenamed.AdaptLightness();
+        tsmiMove.Image = Images.FileStatusRenamed.AdaptLightness();
         FileStatusListView.BackColor = AppColor.PanelBackground.GetThemeColor();
         InitializeComplete();
 
@@ -135,17 +114,13 @@ public sealed partial class FileStatusList : GitModuleControl
         _revisionDiffController = new RevisionDiffController(() => Module, _fullPathResolver);
         _noItemStatuses =
         [
-            new GitItemStatus(name: $"- {NoFiles.Text} -")
-            {
-                IsStatusOnly = true,
-                ErrorMessage = string.Empty
-            }
+            new GitItemStatus($"- {NoFiles.Text} -") { IsStatusOnly = true, ErrorMessage = string.Empty }
         ];
 
         // Trigger initialisation of Search and Filter boxes
         NoFiles.Visible = true;
         CanUseFindInCommitFilesGitGrep = false;
-        SetFindInCommitFilesGitGrepVisibilityImpl(visible: false);
+        SetFindInCommitFilesGitGrepVisibilityImpl(false);
 
         tsmiDiffFirstToSelected.Font = new Font(tsmiDiffFirstToSelected.Font, FontStyle.Bold);
         tsmiResetFileToParent.Font = new Font(tsmiResetFileToParent.Font, FontStyle.Bold);
@@ -168,6 +143,248 @@ public sealed partial class FileStatusList : GitModuleControl
         }
     }
 
+    [GeneratedRegex(@"(^|\s)-e(\s|\s+['""])", RegexOptions.ExplicitCapture)]
+    private static partial Regex GrepStringRegex { get; }
+
+    [Description("Disable showing open submodule menu items as bold")]
+    [DefaultValue(false)]
+    public bool DisableSubmoduleMenuItemBold { get; set; }
+
+    private string? SelectedItemAbsolutePath
+    {
+        get => _fullPathResolver.Resolve(SelectedItem?.Item.Name)?.NormalizePath();
+    }
+
+    // Properties
+
+    [Browsable(false)]
+    public IEnumerable<FileStatusItem> AllItems
+    {
+        get => FileStatusListView.ItemTags<FileStatusItem>();
+    }
+
+    public int AllItemsCount
+    {
+        get => AllItems.Count();
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public Func<ObjectId, string>? DescribeRevision { get; set; }
+
+    public bool FilterFilesByNameRegexFocused
+    {
+        get => cboFilterComboBox.Focused;
+    }
+
+    public bool FindInCommitFilesGitGrepActive
+    {
+        get => !string.IsNullOrEmpty(cboFindInCommitFilesGitGrep.Text);
+    }
+
+    public bool FindInCommitFilesGitGrepFocused
+    {
+        get => cboFindInCommitFilesGitGrep.Focused;
+    }
+
+    public bool FindInCommitFilesGitGrepVisible
+    {
+        get => cboFindInCommitFilesGitGrep.Visible;
+    }
+
+    /// <summary>
+    ///     Indicates whether the git-grep search functionality is enabled for this control.
+    /// </summary>
+    [DefaultValue(false)]
+    public bool CanUseFindInCommitFilesGitGrep { get; set; }
+
+    public override bool Focused
+    {
+        get => FileStatusListView.Focused;
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public FileStatusItem? FocusedItem
+    {
+        get => FileStatusListView.FocusedNode?.Tag as FileStatusItem;
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public IReadOnlyList<GitItemStatus> GitItemFilteredStatuses
+    {
+        get => AllItems.Items().AsReadOnlyList();
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public IReadOnlyList<GitItemStatus> GitItemStatuses
+    {
+        get =>
+            GitItemStatusesWithDescription?.SelectMany(tuple => tuple.Statuses).AsReadOnlyList()
+            ?? [];
+    }
+
+    private IReadOnlyList<FileStatusWithDescription> GitItemStatusesWithDescription { get; set; } = [];
+
+    public bool GroupByRevision { get; set; }
+
+    [Browsable(false)]
+    [DefaultValue(true)]
+    public bool IsEmpty
+    {
+        get => GitItemStatuses is null || !GitItemStatuses.Any();
+    }
+
+    [Browsable(false)]
+    [DefaultValue(true)]
+    public bool HasSelection
+    {
+        get => FileStatusListView.SelectedNodes.Count > 0;
+    }
+
+    /// <summary>
+    ///     Gets the <see cref="RelativePath" /> of a single selected folder node.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public RelativePath? SelectedFolder
+    {
+        get
+        {
+            if (FileStatusListView.SelectedNodes.Count != 1)
+            {
+                return null;
+            }
+
+            var selectedNode = FileStatusListView.SelectedNodes.First();
+            if (selectedNode.Nodes.Count == 0)
+            {
+                return null;
+            }
+
+            return selectedNode.Tag is RelativePath relativePath ? relativePath : RelativePath.From("");
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public GitItemStatus? SelectedGitItem
+    {
+        get => SelectedItem?.Item;
+        set
+        {
+            var itemToBeSelected = GetItemByStatus(value);
+            FileStatusListView.SelectedNode = itemToBeSelected;
+            return;
+
+            TreeNode? GetItemByStatus(GitItemStatus? status)
+            {
+                if (status is null)
+                {
+                    return null;
+                }
+
+                TreeNode? newSelected = null;
+                foreach (var node in FileStatusListView.Items())
+                {
+                    if (node.Tag is not FileStatusItem gitItemStatus)
+                    {
+                        continue;
+                    }
+
+                    if (gitItemStatus.Item == status)
+                    {
+                        return node;
+                    }
+
+                    if (status.CompareName(gitItemStatus.Item) == 0 && newSelected is null)
+                    {
+                        newSelected = node;
+                    }
+                }
+
+                return newSelected;
+            }
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public IReadOnlyList<GitItemStatus> SelectedGitItems
+    {
+        set
+        {
+            if (value is null)
+            {
+                ClearSelected();
+                return;
+            }
+
+            SelectItems(node => node.Tag is FileStatusItem fileStatusItem && value.Contains(fileStatusItem.Item));
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public FileStatusItem? SelectedItem
+    {
+        get => FileStatusListView.SelectedNodes.Count != 1
+            ? null
+            : FileStatusListView.SelectedNodes.First().Tag as FileStatusItem;
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public IEnumerable<FileStatusItem> SelectedItems
+    {
+        get => FileStatusListView.SelectedNodes.Count == 1
+            ? FileStatusListView.SelectedNodes.First().ItemTags<FileStatusItem>()
+                .Where(item => item.Item != _noItemStatuses[0])
+            : FileStatusListView.SelectedItemTags<FileStatusItem>();
+        set
+        {
+            if (value is null)
+            {
+                ClearSelected();
+                return;
+            }
+
+            SelectItems(node => node.Tag is FileStatusItem fileStatusItem && value.Contains(fileStatusItem));
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public IEnumerable<FileStatusItem> FirstGroupItems
+    {
+        get => FileStatusListView.Nodes.Count == 0
+            ? []
+            : _showDiffGroups
+                ? FileStatusListView.Nodes[0].ItemTags<FileStatusItem>()
+                : FileStatusListView.ItemTags<FileStatusItem>();
+    }
+
+    [DefaultValue(true)] public bool SelectFirstItemOnSetItems { get; set; }
+
+    public int UnfilteredItemsCount
+    {
+        get => GitItemStatusesWithDescription?.Sum(tuple => tuple.Statuses.Count) ?? 0;
+    }
+
+    public bool IsFilterActive
+    {
+        get => !string.IsNullOrEmpty(cboFilterComboBox.Text);
+    }
+
+    public event EventHandler? SelectedIndexChanged;
+    public event EventHandler? DataSourceChanged;
+    public event EventHandler? FilterChanged;
+
+    public new event EventHandler? DoubleClick;
+    public new event EnterEventHandler? Enter;
+
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
@@ -181,15 +398,15 @@ public sealed partial class FileStatusList : GitModuleControl
         const int rowHeight = fixedIconSize + 2;
         const int imageWidth = rowHeight;
 
-        int iconSize = DpiUtil.Scale(fixedIconSize);
+        var iconSize = DpiUtil.Scale(fixedIconSize);
 
         ImageList list = new()
         {
             ColorDepth = ColorDepth.Depth32Bit,
-            ImageSize = DpiUtil.Scale(new Size(imageWidth, rowHeight)), // Scale ImageSize and images scale automatically
+            ImageSize = DpiUtil.Scale(new Size(imageWidth, rowHeight)) // Scale ImageSize and images scale automatically
         };
 
-        Bitmap defaultFileImage = Pad(Images.File);
+        var defaultFileImage = Pad(Images.File);
 
         // Note: The order of images also affects sorting by file status as second key after DiffBranchStatus
         (string imageKey, Bitmap icon)[] images =
@@ -239,11 +456,11 @@ public sealed partial class FileStatusList : GitModuleControl
             (nameof(Images.DiffR), Pad(Images.DiffR)),
             (nameof(Images.DiffB), Pad(Images.DiffB)),
             (nameof(Images.DiffA), Pad(Images.DiffA)),
-            (nameof(Images.DiffC), Pad(Images.DiffC)),
+            (nameof(Images.DiffC), Pad(Images.DiffC))
         ];
 
         Dictionary<string, int> stateImageIndexDict = [];
-        for (int i = 0; i < images.Length; i++)
+        for (var i = 0; i < images.Length; i++)
         {
             list.Images.Add(images[i].icon);
             stateImageIndexDict.Add(images[i].imageKey, i);
@@ -252,19 +469,21 @@ public sealed partial class FileStatusList : GitModuleControl
         return new ImageListData(list, stateImageIndexDict, defaultFileImage, iconSize);
 
         Bitmap Pad(Bitmap input, int offsetX = 0, int offsetY = 1)
-            => Scale(input, iconSize, list.ImageSize, offsetX, offsetY);
+        {
+            return Scale(input, iconSize, list.ImageSize, offsetX, offsetY);
+        }
     }
 
     private static Bitmap Scale(Bitmap input, int iconSize, Size paddedSize, int offsetX = 0, int offsetY = 1)
     {
-        int deltaWidth = paddedSize.Width - iconSize;
-        int deltaHeight = paddedSize.Height - iconSize;
+        var deltaWidth = paddedSize.Width - iconSize;
+        var deltaHeight = paddedSize.Height - iconSize;
         DebugHelpers.Assert(deltaWidth >= 0, "Can only increase image width");
         DebugHelpers.Assert(deltaHeight >= 0, "Can only increase image height");
         Bitmap scaled = new(paddedSize.Width, paddedSize.Height, input.PixelFormat);
-        using Graphics g = Graphics.FromImage(scaled);
-        int x = (deltaWidth / 2) + offsetX;
-        int y = (deltaHeight / 2) + offsetY;
+        using var g = Graphics.FromImage(scaled);
+        var x = (deltaWidth / 2) + offsetX;
+        var y = (deltaHeight / 2) + offsetY;
         if (input.Width == iconSize)
         {
             g.DrawImageUnscaled(input, x, y);
@@ -285,38 +504,41 @@ public sealed partial class FileStatusList : GitModuleControl
     }
 
     // Wire up events to respond to Settings changes
-    protected override void OnUICommandsSourceSet(IGitUICommandsSource source)
+    protected override void OnUICommandsSourceSet(IGitUiCommandsSource source)
     {
-        source.UICommandsChanged += OnUICommandsChanged;
-        OnUICommandsChanged(source, null);
+        source.UiCommandsChanged += OnUiCommandsChanged;
+        OnUiCommandsChanged(source, null);
         return;
 
-        void OnUICommandsChanged(object? sender, GitUICommandsChangedEventArgs? e)
+        void OnUiCommandsChanged(object? sender, GitUiCommandsChangedEventArgs? e)
         {
             if (e?.OldCommands is not null)
             {
-                e.OldCommands.PostSettings -= UICommands_PostSettings;
+                e.OldCommands.PostSettings -= UiCommandsPostSettings;
             }
 
-            IGitUICommandsSource? commandSource = sender as IGitUICommandsSource;
-            if (commandSource?.UICommands is not null)
+            var commandSource = sender as IGitUiCommandsSource;
+            if (commandSource?.UiCommands is not null)
             {
-                commandSource.UICommands.PostSettings += UICommands_PostSettings;
-                UICommands_PostSettings(commandSource.UICommands, null);
+                commandSource.UiCommands.PostSettings += UiCommandsPostSettings;
+                UiCommandsPostSettings(commandSource.UiCommands, null);
             }
         }
 
         // Show/hide the search box if settings are changed
-        void UICommands_PostSettings(object? sender, GitUIPostActionEventArgs? e)
+        void UiCommandsPostSettings(object? sender, GitUiPostActionEventArgs? e)
         {
             if (CanUseFindInCommitFilesGitGrep && Visible)
             {
-                BeginInvoke(() => SetFindInCommitFilesGitGrepVisibility(AppSettings.ShowFindInCommitFilesGitGrep.Value));
+                BeginInvoke(() =>
+                    SetFindInCommitFilesGitGrepVisibility(AppSettings.ShowFindInCommitFilesGitGrep.Value));
             }
         }
     }
 
-    public void Bind(Action refreshArtificial, bool canAutoRefresh = false, Func<ObjectId, string>? describeRevision = null, Func<GitRevision, GitRevision>? getActualRevision = null, bool isFileTreeMode = false)
+    public void Bind(Action refreshArtificial, bool canAutoRefresh = false,
+        Func<ObjectId, string>? describeRevision = null, Func<GitRevision, GitRevision>? getActualRevision = null,
+        bool isFileTreeMode = false)
     {
         btnRefresh.Click += (s, e) => refreshArtificial();
         btnRefresh.Visible = true;
@@ -332,7 +554,7 @@ public sealed partial class FileStatusList : GitModuleControl
             Toolbar.Visible = false;
             lblSplitter.Height = DpiUtil.Scale(1);
             SetFindInCommitFilesGitGrepVisibilityImpl(AppSettings.ShowFindInCommitFilesGitGrep.Value);
-            _diffCalculator.SetGrep("", fileTreeMode: true);
+            _diffCalculator.SetGrep("", true);
             GroupByRevision = false;
             FileStatusListView.ShowRootLines = true;
         }
@@ -345,7 +567,7 @@ public sealed partial class FileStatusList : GitModuleControl
     }
 
     /// <summary>
-    ///  Selects the tree node matching the passed relative path.
+    ///     Selects the tree node matching the passed relative path.
     /// </summary>
     /// <param name="relativePath">The relative POSIX path to the item or folder.</param>
     /// <returns><c>true</c> if a matching tree node was found.</returns>
@@ -356,14 +578,16 @@ public sealed partial class FileStatusList : GitModuleControl
             return false;
         }
 
-        foreach (TreeNode node in firstGroupOnly && _showDiffGroups ? FileStatusListView.Nodes[0].Items() : FileStatusListView.Items())
+        foreach (var node in firstGroupOnly && _showDiffGroups
+                     ? FileStatusListView.Nodes[0].Items()
+                     : FileStatusListView.Items())
         {
             if (node.Tag switch
-            {
-                RelativePath nodePath => nodePath == relativePath,
-                FileStatusItem fileStatusItem => fileStatusItem.Item.Name == relativePath.Value,
-                _ => false
-            })
+                {
+                    RelativePath nodePath => nodePath == relativePath,
+                    FileStatusItem fileStatusItem => fileStatusItem.Item.Name == relativePath.Value,
+                    _ => false
+                })
             {
                 SetSelectedItem(node, notify);
                 return true;
@@ -372,8 +596,6 @@ public sealed partial class FileStatusList : GitModuleControl
 
         return false;
     }
-
-    private string? SelectedItemAbsolutePath => _fullPathResolver.Resolve(SelectedItem?.Item.Name)?.NormalizePath();
 
     private void SetupUnifiedDiffListSorting()
     {
@@ -388,15 +610,16 @@ public sealed partial class FileStatusList : GitModuleControl
                     DiffListSortType.FilePath or DiffListSortType.FilePathFlat
                         => null,
                     DiffListSortType.FileExtension or DiffListSortType.FileExtensionFlat
-                        => new GroupBy(status => GroupKey.From(Path.GetExtension(status.Name)), GetImageKey: GetExtensionImageKey, GetLabel: group => group.Key.Value),
+                        => new GroupBy(status => GroupKey.From(Path.GetExtension(status.Name)), GetExtensionImageKey,
+                            group => group.Key.Value),
                     DiffListSortType.FileStatus or DiffListSortType.FileStatusFlat
-                        => new GroupBy(GetStatusKey, GetImageKey: group => GetItemImageKey(group.First()), GetLabel: _ => ""),
+                        => new GroupBy(GetStatusKey, group => GetItemImageKey(group.First()), _ => ""),
                     _ => throw new NotSupportedException($"{sortType} is not a supported sorting method.")
                 };
 
                 _flatList = sortType.ToString().EndsWith("Flat");
 
-                UpdateFileStatusListView(GitItemStatusesWithDescription, updateCausedByFilter: true);
+                UpdateFileStatusListView(GitItemStatusesWithDescription, true);
             })
             .Catch<DiffListSortType, Exception>(ex =>
             {
@@ -409,41 +632,21 @@ public sealed partial class FileStatusList : GitModuleControl
 
         static string GetExtensionImageKey(IGrouping<GroupKey, GitItemStatus> group)
         {
-            string extension = group.Key.Value;
-            return _imageListData.StateImageIndexMap.ContainsKey(extension) ? extension : nameof(ImageListData.DefaultFileImage);
+            var extension = group.Key.Value;
+            return _imageListData.StateImageIndexMap.ContainsKey(extension)
+                ? extension
+                : nameof(ImageListData.DefaultFileImage);
         }
 
         static GroupKey GetStatusKey(GitItemStatus status)
         {
-            char inverseDiffStatus = (char)((int)'Z' - (int)status.DiffStatus);
-            int imageIndex = _imageListData.StateImageIndexMap[GetItemImageKey(status)];
+            var inverseDiffStatus = (char)('Z' - (int)status.DiffStatus);
+            var imageIndex = _imageListData.StateImageIndexMap[GetItemImageKey(status)];
             DebugHelpers.Assert(inverseDiffStatus >= 0, $"offset of {nameof(inverseDiffStatus)} needs to be adapted");
             DebugHelpers.Assert(imageIndex < 100, $"width of {nameof(imageIndex)} needs to be adapted");
             return GroupKey.From($"{inverseDiffStatus}{imageIndex:D02}");
         }
     }
-
-    // Properties
-
-    [Browsable(false)]
-    public IEnumerable<FileStatusItem> AllItems => FileStatusListView.ItemTags<FileStatusItem>();
-
-    public int AllItemsCount => AllItems.Count();
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public Func<ObjectId, string>? DescribeRevision { get; set; }
-
-    public bool FilterFilesByNameRegexFocused => cboFilterComboBox.Focused;
-    public bool FindInCommitFilesGitGrepActive => !string.IsNullOrEmpty(cboFindInCommitFilesGitGrep.Text);
-    public bool FindInCommitFilesGitGrepFocused => cboFindInCommitFilesGitGrep.Focused;
-    public bool FindInCommitFilesGitGrepVisible => cboFindInCommitFilesGitGrep.Visible;
-
-    /// <summary>
-    ///  Indicates whether the git-grep search functionality is enabled for this control.
-    /// </summary>
-    [DefaultValue(false)]
-    public bool CanUseFindInCommitFilesGitGrep { get; set; }
 
     private void SetFindInCommitFilesGitGrepVisibility(bool visible)
     {
@@ -469,7 +672,7 @@ public sealed partial class FileStatusList : GitModuleControl
             }
 
             // Adjust sizes "automatically" changed by visibility
-            int findTop = lblSplitter.Bottom;
+            var findTop = lblSplitter.Bottom;
             cboFindInCommitFilesGitGrep.Top = findTop;
             DeleteSearchButton.Top = findTop;
             DeleteSearchButton.Height = cboFindInCommitFilesGitGrep.Height;
@@ -480,7 +683,7 @@ public sealed partial class FileStatusList : GitModuleControl
             FindInCommitFilesGitGrep();
         }
 
-        SetFileStatusListVisibility(showNoFiles: NoFiles.Visible);
+        SetFileStatusListVisibility(NoFiles.Visible);
     }
 
     private void SetFileStatusListVisibility(bool showNoFiles)
@@ -489,14 +692,16 @@ public sealed partial class FileStatusList : GitModuleControl
 
         // Adjust locations
         // Note that 'LoadingFiles' location depends on visibility of Filter box, must be set each time made visible
-        int top = !cboFindInCommitFilesGitGrep.Visible ? lblSplitter.Bottom : cboFindInCommitFilesGitGrep.Bottom + cboFindInCommitFilesGitGrep.Margin.Bottom;
+        var top = !cboFindInCommitFilesGitGrep.Visible
+            ? lblSplitter.Bottom
+            : cboFindInCommitFilesGitGrep.Bottom + cboFindInCommitFilesGitGrep.Margin.Bottom;
         cboFilterComboBox.Top = top;
         cboFilterComboBox.Width = FileStatusListView.Width;
         DeleteFilterButton.Top = top;
         DeleteFilterButton.Height = cboFilterComboBox.Height;
 
         // Use variable to prevent bad value retrieved from `Visible` property
-        bool showFilesFilter = !showNoFiles || FindInCommitFilesGitGrepActive;
+        var showFilesFilter = !showNoFiles || FindInCommitFilesGitGrepActive;
         cboFilterComboBox.Visible = showFilesFilter;
 
         NoFiles.Visible = showNoFiles;
@@ -511,169 +716,15 @@ public sealed partial class FileStatusList : GitModuleControl
         SetDeleteSearchButtonVisibility();
 
         top = GetFileStatusListTop(showFilesFilter);
-        int height = ClientRectangle.Height - top - FileStatusListView.Margin.Top - FileStatusListView.Margin.Bottom;
+        var height = ClientRectangle.Height - top - FileStatusListView.Margin.Top - FileStatusListView.Margin.Bottom;
         FileStatusListView.SetBounds(0, top, 0, height, BoundsSpecified.Y | BoundsSpecified.Height);
     }
-
-    public override bool Focused => FileStatusListView.Focused;
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public FileStatusItem? FocusedItem => FileStatusListView.FocusedNode?.Tag as FileStatusItem;
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public IReadOnlyList<GitItemStatus> GitItemFilteredStatuses => AllItems.Items().AsReadOnlyList();
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public IReadOnlyList<GitItemStatus> GitItemStatuses
-    {
-        get
-        {
-            return GitItemStatusesWithDescription?.SelectMany(tuple => tuple.Statuses).AsReadOnlyList()
-                   ?? [];
-        }
-    }
-
-    private IReadOnlyList<FileStatusWithDescription> GitItemStatusesWithDescription { get; set; } = [];
-
-    public bool GroupByRevision { get; set; } = false;
-
-    [Browsable(false)]
-    [DefaultValue(true)]
-    public bool IsEmpty => GitItemStatuses is null || !GitItemStatuses.Any();
-
-    [Browsable(false)]
-    [DefaultValue(true)]
-    public bool HasSelection => FileStatusListView.SelectedNodes.Count > 0;
-
-    /// <summary>
-    ///  Gets the <see cref="RelativePath"/> of a single selected folder node.
-    /// </summary>
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public RelativePath? SelectedFolder
-    {
-        get
-        {
-            if (FileStatusListView.SelectedNodes.Count != 1)
-            {
-                return null;
-            }
-
-            TreeNode selectedNode = FileStatusListView.SelectedNodes.First();
-            if (selectedNode.Nodes.Count == 0)
-            {
-                return null;
-            }
-
-            return selectedNode.Tag is RelativePath relativePath ? relativePath : RelativePath.From("");
-        }
-    }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public GitItemStatus? SelectedGitItem
-    {
-        get => SelectedItem?.Item;
-        set
-        {
-            TreeNode? itemToBeSelected = GetItemByStatus(value);
-            FileStatusListView.SelectedNode = itemToBeSelected;
-            return;
-
-            TreeNode? GetItemByStatus(GitItemStatus? status)
-            {
-                if (status is null)
-                {
-                    return null;
-                }
-
-                TreeNode? newSelected = null;
-                foreach (TreeNode node in FileStatusListView.Items())
-                {
-                    if (node.Tag is not FileStatusItem gitItemStatus)
-                    {
-                        continue;
-                    }
-
-                    if (gitItemStatus.Item == status)
-                    {
-                        return node;
-                    }
-
-                    if (status.CompareName(gitItemStatus.Item) == 0 && newSelected is null)
-                    {
-                        newSelected = node;
-                    }
-                }
-
-                return newSelected;
-            }
-        }
-    }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public IReadOnlyList<GitItemStatus> SelectedGitItems
-    {
-        set
-        {
-            if (value is null)
-            {
-                ClearSelected();
-                return;
-            }
-
-            SelectItems(node => node.Tag is FileStatusItem fileStatusItem && value.Contains(fileStatusItem.Item));
-        }
-    }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public FileStatusItem? SelectedItem => FileStatusListView.SelectedNodes.Count != 1 ? null : FileStatusListView.SelectedNodes.First().Tag as FileStatusItem;
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public IEnumerable<FileStatusItem> SelectedItems
-    {
-        get => FileStatusListView.SelectedNodes.Count == 1
-            ? FileStatusListView.SelectedNodes.First().ItemTags<FileStatusItem>().Where(item => item.Item != _noItemStatuses[0])
-            : FileStatusListView.SelectedItemTags<FileStatusItem>();
-        set
-        {
-            if (value is null)
-            {
-                ClearSelected();
-                return;
-            }
-
-            SelectItems(node => node.Tag is FileStatusItem fileStatusItem && value.Contains(fileStatusItem));
-        }
-    }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public IEnumerable<FileStatusItem> FirstGroupItems
-        => FileStatusListView.Nodes.Count == 0
-            ? []
-            : _showDiffGroups
-                ? FileStatusListView.Nodes[0].ItemTags<FileStatusItem>()
-                : FileStatusListView.ItemTags<FileStatusItem>();
-
-    [DefaultValue(true)]
-    public bool SelectFirstItemOnSetItems { get; set; }
-
-    public int UnfilteredItemsCount => GitItemStatusesWithDescription?.Sum(tuple => tuple.Statuses.Count) ?? 0;
-
-    public bool IsFilterActive => !string.IsNullOrEmpty(cboFilterComboBox.Text);
 
     // Public methods
 
     public void ClearSelected()
     {
-        FileStatusListView.SetSelectedNodes([], focusedNode: null);
+        FileStatusListView.SetSelectedNodes([], null);
     }
 
     public new void Focus()
@@ -686,23 +737,25 @@ public sealed partial class FileStatusList : GitModuleControl
         FileStatusListView.Focus();
     }
 
-    private static (string? prefix, string text, string? suffix) FormatListViewItem(TreeNode node, PathFormatter formatter, int itemWidth)
+    private static (string? prefix, string text, string? suffix) FormatListViewItem(TreeNode node,
+        PathFormatter formatter, int itemWidth)
     {
         if (node.Tag is not FileStatusItem fileStatusItem || fileStatusItem.Item.IsRangeDiff)
         {
             return (prefix: null, text: node.Text, suffix: null);
         }
 
-        GitItemStatus gitItemStatus = fileStatusItem.Item;
+        var gitItemStatus = fileStatusItem.Item;
 
-        string name = gitItemStatus.Name.TrimEnd('/');
-        string? parentPath = (node.Parent?.Tag as RelativePath)?.Value;
+        var name = gitItemStatus.Name.TrimEnd('/');
+        var parentPath = (node.Parent?.Tag as RelativePath)?.Value;
         if (!string.IsNullOrEmpty(parentPath) && name.StartsWith(parentPath))
         {
             name = name[(parentPath.Length + 1)..];
         }
 
-        (string? prefix, string? text, string? suffix) = formatter.FormatTextForDrawing(itemWidth, name, gitItemStatus.OldName);
+        (var prefix, var text, var suffix) =
+            formatter.FormatTextForDrawing(itemWidth, name, gitItemStatus.OldName);
         text = AppendItemSubmoduleStatus(text ?? "", gitItemStatus);
 
         return (prefix, text, suffix);
@@ -710,7 +763,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
     public FileStatusItem? SelectNextItem(bool backwards, bool loop, bool notify = true)
     {
-        TreeNode? currentItem = FileStatusListView.FocusedNode;
+        var currentItem = FileStatusListView.FocusedNode;
 
         if (currentItem is null)
         {
@@ -731,7 +784,7 @@ public sealed partial class FileStatusList : GitModuleControl
         TreeNode? FindPrevItem(TreeNode currentItem)
         {
             TreeNode? prevItem = null;
-            foreach (TreeNode item in FileStatusListView.Items())
+            foreach (var item in FileStatusListView.Items())
             {
                 if (item == currentItem)
                 {
@@ -744,13 +797,14 @@ public sealed partial class FileStatusList : GitModuleControl
                 }
             }
 
-            throw new ArgumentException(@$"{nameof(currentItem)} ""{currentItem}"" is no tree item of {nameof(FileStatusListView)} tree!");
+            throw new ArgumentException(
+                @$"{nameof(currentItem)} ""{currentItem}"" is no tree item of {nameof(FileStatusListView)} tree!");
         }
 
         TreeNode? FindNextItem(TreeNode currentItem)
         {
-            bool currentItemFound = false;
-            foreach (TreeNode item in FileStatusListView.Items())
+            var currentItemFound = false;
+            foreach (var item in FileStatusListView.Items())
             {
                 if (item == currentItem)
                 {
@@ -767,15 +821,21 @@ public sealed partial class FileStatusList : GitModuleControl
             return null;
         }
 
-        TreeNode? GetFirstItem() => FileStatusListView.Items().FirstOrDefault(IsSearchableItem);
+        TreeNode? GetFirstItem()
+        {
+            return FileStatusListView.Items().FirstOrDefault(IsSearchableItem);
+        }
 
-        TreeNode? GetLastItem() => FileStatusListView.Items().LastOrDefault(IsSearchableItem);
+        TreeNode? GetLastItem()
+        {
+            return FileStatusListView.Items().LastOrDefault(IsSearchableItem);
+        }
 
         static bool IsSearchableItem(TreeNode item)
         {
             return item.Tag is FileStatusItem fileStatusItem
-                && !fileStatusItem.Item.IsStatusOnly
-                && !fileStatusItem.Item.IsRangeDiff;
+                   && !fileStatusItem.Item.IsStatusOnly
+                   && !fileStatusItem.Item.IsRangeDiff;
         }
     }
 
@@ -804,14 +864,15 @@ public sealed partial class FileStatusList : GitModuleControl
         {
             // Skip collapsed or empty groups
             if ((_showDiffGroups && !rootNode.IsExpanded)
-                || (rootNode.Nodes.Count == 1 && rootNode.Nodes[0].Tag is FileStatusItem fileStatusItem && fileStatusItem.Item == _noItemStatuses[0])
+                || (rootNode.Nodes.Count == 1 && rootNode.Nodes[0].Tag is FileStatusItem fileStatusItem &&
+                    fileStatusItem.Item == _noItemStatuses[0])
                 || (_isFileTreeMode && _filter is null && !FindInCommitFilesGitGrepActive))
             {
                 continue;
             }
 
             // Descend
-            TreeNode node = rootNode;
+            var node = rootNode;
             while (node.Nodes.Count > 0)
             {
                 node.Expand();
@@ -837,22 +898,24 @@ public sealed partial class FileStatusList : GitModuleControl
 
     public void SetDiffs(IReadOnlyList<GitRevision> revisions)
     {
-        CancellationToken cancellationToken = _reloadSequence.Next();
+        var cancellationToken = _reloadSequence.Next();
         FileStatusListLoading();
         UpdateToolbar(revisions);
         _enableDisablingShowDiffForAllParents = true;
-        _diffCalculator.SetDiff(revisions, headId: default(ObjectId), allowMultiDiff: false);
-        UpdateFileStatusListView(_diffCalculator.Calculate(prevList: [], refreshDiff: true, refreshGrep: false, cancellationToken), cancellationToken: cancellationToken);
+        _diffCalculator.SetDiff(revisions, default, false);
+        UpdateFileStatusListView(_diffCalculator.Calculate([], true, false, cancellationToken),
+            cancellationToken: cancellationToken);
     }
 
-    public async Task SetDiffsAsync(IReadOnlyList<GitRevision> revisions, ObjectId headId, CancellationToken cancellationToken)
+    public async Task SetDiffsAsync(IReadOnlyList<GitRevision> revisions, ObjectId headId,
+        CancellationToken cancellationToken)
     {
         FileStatusListLoading();
         UpdateToolbar(revisions);
 
         if (_isFileTreeMode)
         {
-            _diffCalculator.SetDiff(revisions, headId, allowMultiDiff: false);
+            _diffCalculator.SetDiff(revisions, headId, false);
             GitItemStatusesWithDescription = [];
         }
         else
@@ -862,13 +925,17 @@ public sealed partial class FileStatusList : GitModuleControl
             await TaskScheduler.Default;
             cancellationToken.ThrowIfCancellationRequested();
 
-            _diffCalculator.SetDiff(revisions, headId, allowMultiDiff: true, tsmiShowSkipWorktreeFiles.Checked, tsmiShowUntrackedFiles.Checked);
-            IReadOnlyList<FileStatusWithDescription> gitItemStatusesWithDescription = _diffCalculator.Calculate(prevList: [], refreshDiff: true, refreshGrep: false, cancellationToken);
+            _diffCalculator.SetDiff(revisions, headId, true, tsmiShowSkipWorktreeFiles.Checked,
+                tsmiShowUntrackedFiles.Checked);
+            var gitItemStatusesWithDescription =
+                _diffCalculator.Calculate([], true, false, cancellationToken);
 
             await this.SwitchToMainThreadAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            bool withGitGrep = FindInCommitFilesGitGrepActive;
-            UpdateFileStatusListView(gitItemStatusesWithDescription, gitGrepState: withGitGrep ? GitGrepState.Preparing : GitGrepState.None, cancellationToken: cancellationToken);
+            var withGitGrep = FindInCommitFilesGitGrepActive;
+            UpdateFileStatusListView(gitItemStatusesWithDescription,
+                gitGrepState: withGitGrep ? GitGrepState.Preparing : GitGrepState.None,
+                cancellationToken: cancellationToken);
 
             // git grep, fetched as a separate step
             if (!withGitGrep)
@@ -879,15 +946,17 @@ public sealed partial class FileStatusList : GitModuleControl
 
         await TaskScheduler.Default;
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<FileStatusWithDescription> gitItemStatusesWithGitGrep = _diffCalculator.Calculate(prevList: GitItemStatusesWithDescription, refreshDiff: false, refreshGrep: true, cancellationToken);
+        var gitItemStatusesWithGitGrep =
+            _diffCalculator.Calculate(GitItemStatusesWithDescription, false, true, cancellationToken);
 
         await this.SwitchToMainThreadAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        UpdateFileStatusListView(gitItemStatusesWithGitGrep, gitGrepState: GitGrepState.Provided, cancellationToken: cancellationToken);
+        UpdateFileStatusListView(gitItemStatusesWithGitGrep, gitGrepState: GitGrepState.Provided,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
-    /// FormStash init for WorkTree and Index.
+    ///     FormStash init for WorkTree and Index.
     /// </summary>
     /// <param name="headRev">The GitRevision for HEAD.</param>
     /// <param name="indexRev">The GitRevision for Index.</param>
@@ -909,15 +978,15 @@ public sealed partial class FileStatusList : GitModuleControl
         UpdateFileStatusListView(new List<FileStatusWithDescription>
         {
             new(
-                firstRev: indexRev,
-                secondRev: workTreeRev,
-                summary: workTreeDesc,
-                statuses: workTreeItems),
+                indexRev,
+                workTreeRev,
+                workTreeDesc,
+                workTreeItems),
             new(
-                firstRev: headRev,
-                secondRev: indexRev,
-                summary: indexDesc,
-                statuses: indexItems)
+                headRev,
+                indexRev,
+                indexDesc,
+                indexItems)
         });
     }
 
@@ -928,10 +997,10 @@ public sealed partial class FileStatusList : GitModuleControl
         UpdateFileStatusListView(new List<FileStatusWithDescription>
         {
             new(
-                firstRev: firstRev,
-                secondRev: secondRev,
-                summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(firstRev?.ObjectId ?? default(ObjectId)),
-                statuses: items)
+                firstRev,
+                secondRev,
+                TranslatedStrings.DiffWithParent + GetDescriptionForRevision(firstRev?.ObjectId ?? default(ObjectId)),
+                items)
         });
     }
 
@@ -942,10 +1011,12 @@ public sealed partial class FileStatusList : GitModuleControl
     }
 
     private string? GetDescriptionForRevision(ObjectId objectId)
-        => DescribeRevision is not null ? DescribeRevision(objectId)
+    {
+        return DescribeRevision is not null ? DescribeRevision(objectId)
             : objectId == ObjectId.WorkTreeId ? ResourceManager.TranslatedStrings.Workspace
             : objectId == ObjectId.IndexId ? ResourceManager.TranslatedStrings.Index
             : objectId.ToShortString();
+    }
 
     public void SetNoFilesText(string text)
     {
@@ -967,7 +1038,9 @@ public sealed partial class FileStatusList : GitModuleControl
 
     public int SetSelectionFilter(string selectionFilter)
     {
-        SelectItems(item => string.IsNullOrEmpty(selectionFilter) || Regex.IsMatch(item.Name, selectionFilter, RegexOptions.IgnoreCase));
+        SelectItems(item =>
+            string.IsNullOrEmpty(selectionFilter) ||
+            Regex.IsMatch(item.Name, selectionFilter, RegexOptions.IgnoreCase));
         return FileStatusListView.SelectedNodes.Count;
     }
 
@@ -975,8 +1048,8 @@ public sealed partial class FileStatusList : GitModuleControl
     {
         if (FileStatusListView.SelectedNodes.Count > 0)
         {
-            bool found = false;
-            foreach (TreeNode node in FileStatusListView.Items())
+            var found = false;
+            foreach (var node in FileStatusListView.Items())
             {
                 if (FileStatusListView.SelectedNodes.Contains(node))
                 {
@@ -1016,7 +1089,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
     protected override void WndProc(ref Message m)
     {
-        if (m.Msg == NativeMethods.WM_MOUSEACTIVATE)
+        if (m.Msg == System.Windows.Forms.NativeMethods.WmMouseactivate)
         {
             _mouseEntered = !Focused;
         }
@@ -1027,7 +1100,7 @@ public sealed partial class FileStatusList : GitModuleControl
     private static string AppendItemSubmoduleStatus(string text, GitItemStatus item)
     {
         if (item.IsSubmodule
-            && item.GetSubmoduleStatusAsync() is Task<GitSubmoduleStatus> { IsCompleted: true } task
+            && item.GetSubmoduleStatusAsync() is { IsCompleted: true } task
             && task.CompletedResult() is not null)
         {
             text += task.CompletedResult()!.AddedAndRemovedString();
@@ -1037,34 +1110,34 @@ public sealed partial class FileStatusList : GitModuleControl
     }
 
     /// <summary>
-    /// Open the currently selected submodule (no checks done) in a new Browse instance
-    /// If the submodule is a diff, both first and currently selected commits are initially selected.
+    ///     Open the currently selected submodule (no checks done) in a new Browse instance
+    ///     If the submodule is a diff, both first and currently selected commits are initially selected.
     /// </summary>
     /// <returns>async Task.</returns>
     public async Task OpenSubmoduleAsync()
     {
         Validates.NotNull(SelectedItem);
 
-        string submoduleName = SelectedItem.Item.Name;
+        var submoduleName = SelectedItem.Item.Name;
 
-        Task<GitSubmoduleStatus?>? task = SelectedItem.Item.GetSubmoduleStatusAsync();
-        GitSubmoduleStatus? status = task is not null
+        var task = SelectedItem.Item.GetSubmoduleStatusAsync();
+        var status = task is not null
             ? await task.ConfigureAwait(false)
             : null;
 
-        ObjectId selectedId = SelectedItem.SecondRevision?.ObjectId == ObjectId.WorkTreeId
+        var selectedId = SelectedItem.SecondRevision?.ObjectId == ObjectId.WorkTreeId
             ? ObjectId.WorkTreeId
             : status?.Commit ?? default;
-        ObjectId firstId = status?.OldCommit ?? default;
+        var firstId = status?.OldCommit ?? default;
 
-        string path = _fullPathResolver.Resolve(submoduleName.EnsureTrailingPathSeparator()) ?? "";
+        var path = _fullPathResolver.Resolve(submoduleName.EnsureTrailingPathSeparator()) ?? "";
         if (!Directory.Exists(path))
         {
             MessageBoxes.SubmoduleDirectoryDoesNotExist(this, path, submoduleName);
             return;
         }
 
-        GitUICommands.LaunchBrowse(workingDir: path, selectedId, firstId);
+        GitUiCommands.LaunchBrowse(path, selectedId, firstId);
     }
 
     private void SelectItems(Func<TreeNode, bool> predicate)
@@ -1075,13 +1148,13 @@ public sealed partial class FileStatusList : GitModuleControl
 
             HashSet<TreeNode> selectedNodes = [];
             TreeNode? firstSelectedItem = null;
-            foreach (TreeNode item in FileStatusListView.Items().Where(item => predicate(item)))
+            foreach (var item in FileStatusListView.Items().Where(item => predicate(item)))
             {
                 firstSelectedItem ??= item;
                 selectedNodes.Add(item);
             }
 
-            FileStatusListView.SetSelectedNodes(selectedNodes, focusedNode: firstSelectedItem);
+            FileStatusListView.SetSelectedNodes(selectedNodes, firstSelectedItem);
         }
         finally
         {
@@ -1115,7 +1188,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
         if (_isFileTreeMode)
         {
-            SetFileStatusListVisibility(showNoFiles: false);
+            SetFileStatusListVisibility(false);
         }
         else if (_diffListSortSubscription is null)
         {
@@ -1123,7 +1196,7 @@ public sealed partial class FileStatusList : GitModuleControl
         }
 
         NoFiles.Visible = false;
-        int top = GetFileStatusListTop(cboFilterComboBox.Visible);
+        var top = GetFileStatusListTop(cboFilterComboBox.Visible);
         LoadingFiles.Top = top;
         LoadingFiles.Visible = true;
         LoadingFiles.BringToFront();
@@ -1137,11 +1210,18 @@ public sealed partial class FileStatusList : GitModuleControl
     }
 
     private int GetFileStatusListTop(bool isFilesFilterVisible)
-        => isFilesFilterVisible ? cboFilterComboBox.Bottom + cboFilterComboBox.Margin.Top + cboFilterComboBox.Margin.Bottom
-            : cboFindInCommitFilesGitGrep.Visible ? cboFindInCommitFilesGitGrep.Bottom + cboFindInCommitFilesGitGrep.Margin.Top + cboFindInCommitFilesGitGrep.Margin.Bottom
-            : lblSplitter.Bottom;
+    {
+        return isFilesFilterVisible
+            ? cboFilterComboBox.Bottom + cboFilterComboBox.Margin.Top + cboFilterComboBox.Margin.Bottom
+            : cboFindInCommitFilesGitGrep.Visible
+                ? cboFindInCommitFilesGitGrep.Bottom + cboFindInCommitFilesGitGrep.Margin.Top +
+                  cboFindInCommitFilesGitGrep.Margin.Bottom
+                : lblSplitter.Bottom;
+    }
 
-    private void UpdateFileStatusListView(IReadOnlyList<FileStatusWithDescription> items, bool updateCausedByFilter = false, GitGrepState gitGrepState = GitGrepState.Unknown, CancellationToken cancellationToken = default)
+    private void UpdateFileStatusListView(IReadOnlyList<FileStatusWithDescription> items,
+        bool updateCausedByFilter = false, GitGrepState gitGrepState = GitGrepState.Unknown,
+        CancellationToken cancellationToken = default)
     {
         HashSet<GitItemStatus>? previouslySelectedItems = null;
         if (updateCausedByFilter)
@@ -1149,8 +1229,10 @@ public sealed partial class FileStatusList : GitModuleControl
             previouslySelectedItems = [.. FileStatusListView.SelectedItemTags<FileStatusItem>().Select(i => i.Item)];
         }
 
-        bool expandIfFewFiles = !_isFileTreeMode || _filter is not null || !string.IsNullOrEmpty(cboFindInCommitFilesGitGrep.Text);
-        (List<TreeNodeInfo> nodes, _showDiffGroups, bool filesPresent) = GetNodes(items, GroupByRevision, IsFilterMatch, _groupBy, _flatList, expandIfFewFiles, gitGrepState, _noItemStatuses, cancellationToken);
+        var expandIfFewFiles = !_isFileTreeMode || _filter is not null ||
+                               !string.IsNullOrEmpty(cboFindInCommitFilesGitGrep.Text);
+        (var nodes, _showDiffGroups, var filesPresent) = GetNodes(items, GroupByRevision, IsFilterMatch,
+            _groupBy, _flatList, expandIfFewFiles, gitGrepState, _noItemStatuses, cancellationToken);
 
         GitItemStatusesWithDescription = items;
         if (nodes.Count > 0)
@@ -1158,7 +1240,7 @@ public sealed partial class FileStatusList : GitModuleControl
             EnsureSelectedIndexChangeSubscription();
         }
 
-        SetFileStatusListVisibility(showNoFiles: !filesPresent && items.Count <= 1 && !_isFileTreeMode);
+        SetFileStatusListVisibility(!filesPresent && items.Count <= 1 && !_isFileTreeMode);
 
         try
         {
@@ -1166,7 +1248,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
             FileStatusListView.Nodes.Clear();
 
-            foreach ((TreeNode node, ExpandCollapseState state) in nodes)
+            foreach ((var node, var state) in nodes)
             {
                 FileStatusListView.Nodes.Add(node);
 
@@ -1193,18 +1275,21 @@ public sealed partial class FileStatusList : GitModuleControl
             switch (FileStatusListView.Nodes.Count)
             {
                 case 0: FileStatusListView_SelectedIndexChanged(); break;
-                case 1 when FileStatusListView.Nodes[0].Nodes.Count == 0: FileStatusListView.SelectedNode = FileStatusListView.Nodes[0]; break;
+                case 1 when FileStatusListView.Nodes[0].Nodes.Count == 0:
+                    FileStatusListView.SelectedNode = FileStatusListView.Nodes[0]; break;
                 default:
                     FileStatusListView.TopNode = FileStatusListView.Nodes[0];
                     FileStatusListView.ScrollLeftMost();
 
-                    if (updateCausedByFilter == false && SelectFirstItemOnSetItems)
+                    if (!updateCausedByFilter && SelectFirstItemOnSetItems)
                     {
                         SelectFirstVisibleItem();
                     }
                     else if (previouslySelectedItems?.Count is > 0)
                     {
-                        SelectItems(node => node.Tag is FileStatusItem fileStatusItem && previouslySelectedItems.Contains(fileStatusItem.Item));
+                        SelectItems(node =>
+                            node.Tag is FileStatusItem fileStatusItem &&
+                            previouslySelectedItems.Contains(fileStatusItem.Item));
                     }
 
                     break;
@@ -1233,11 +1318,11 @@ public sealed partial class FileStatusList : GitModuleControl
                 .Where(x => _enableSelectedIndexChangeEvent)
                 .Throttle(SelectedIndexChangeThrottleDuration, MainThreadScheduler.Instance)
                 .ObserveOn(MainThreadScheduler.Instance)
-                .Subscribe(_ => TaskManager.HandleExceptions(FileStatusListView_SelectedIndexChanged, Application.OnThreadException));
+                .Subscribe(_ =>
+                    TaskManager.HandleExceptions(FileStatusListView_SelectedIndexChanged,
+                        Application.OnThreadException));
         }
     }
-
-    private record struct TreeNodeInfo(TreeNode Node, ExpandCollapseState State);
 
     private static (List<TreeNodeInfo> Nodes, bool ShowDiffGroups, bool FilesPresent) GetNodes(
         IReadOnlyList<FileStatusWithDescription> items,
@@ -1251,25 +1336,28 @@ public sealed partial class FileStatusList : GitModuleControl
         CancellationToken cancellationToken)
     {
         List<TreeNodeInfo> rootNodes = [];
-        bool showDiffGroups = items.Count > 1 || (groupByRevision && !(items.Count == 1 && items[0].Statuses.Count == 0));
-        bool filesPresent = items.Any(x => x.Statuses.Count > 0);
-        bool hasGrepGroup = gitGrepState != GitGrepState.None && (gitGrepState != GitGrepState.Unknown || items.Any(FileStatusDiffCalculator.IsGrepItemStatuses));
-        bool showGroupLabel = (filesPresent && (items.Count > 1 || groupByRevision)) || hasGrepGroup;
-        bool mergeSingleItemsWithFolder = AppSettings.FileStatusMergeSingleItemWithFolder.Value;
-        bool showGroupNodes = !flatList || AppSettings.FileStatusShowGroupNodesInFlatList.Value;
+        var showDiffGroups =
+            items.Count > 1 || (groupByRevision && !(items.Count == 1 && items[0].Statuses.Count == 0));
+        var filesPresent = items.Any(x => x.Statuses.Count > 0);
+        var hasGrepGroup = gitGrepState != GitGrepState.None && (gitGrepState != GitGrepState.Unknown ||
+                                                                 items.Any(FileStatusDiffCalculator
+                                                                     .IsGrepItemStatuses));
+        var showGroupLabel = (filesPresent && (items.Count > 1 || groupByRevision)) || hasGrepGroup;
+        var mergeSingleItemsWithFolder = AppSettings.FileStatusMergeSingleItemWithFolder.Value;
+        var showGroupNodes = !flatList || AppSettings.FileStatusShowGroupNodesInFlatList.Value;
 
-        foreach (FileStatusWithDescription i in items)
+        foreach (var i in items)
         {
-            bool emptyGroup = showGroupLabel && i.Statuses.Count == 0;
+            var emptyGroup = showGroupLabel && i.Statuses.Count == 0;
 
-            (TreeNode diffGroup, int shownCount)
+            (var diffGroup, var shownCount)
                 = i.Statuses.Count == 1 && i.Statuses[0].IsRangeDiff
                     ? (CreateNode(i.Statuses[0], i), 1)
                     : CreateGroup(emptyGroup ? noItemStatuses : i.Statuses.Where(isFilterMatch), i, cancellationToken);
 
             // Always expand grep results
             // Collapse some groups for diffs with common BASE
-            ExpandCollapseState state
+            var state
                 = emptyGroup
                     ? ExpandCollapseState.Collapsed
                     : hasGrepGroup
@@ -1278,7 +1366,8 @@ public sealed partial class FileStatusList : GitModuleControl
                                 ? ExpandCollapseState.Expanded
                                 : ExpandCollapseState.PartiallyExpanded
                             : ExpandCollapseState.Collapsed
-                        : ((i.Statuses.Count <= 7 && i.IconName == nameof(Images.Diff)) || items.Count < 3 || i == items[0]) && i.Statuses.Count > 0
+                        : ((i.Statuses.Count <= 7 && i.IconName == nameof(Images.Diff)) || items.Count < 3 ||
+                           i == items[0]) && i.Statuses.Count > 0
                             ? ExpandCollapseState.Expanded
                             : ExpandCollapseState.Collapsed;
 
@@ -1309,23 +1398,27 @@ public sealed partial class FileStatusList : GitModuleControl
 
         return (rootNodes, showDiffGroups, filesPresent);
 
-        (TreeNode, int ShownCount) CreateGroup(IEnumerable<GitItemStatus> itemStatuses, FileStatusWithDescription fileStatusWithDescription, CancellationToken cancellationToken)
+        (TreeNode, int ShownCount) CreateGroup(IEnumerable<GitItemStatus> itemStatuses,
+            FileStatusWithDescription fileStatusWithDescription, CancellationToken cancellationToken)
         {
             TreeNode diffGroup;
 
-            int shownCount = 0;
+            var shownCount = 0;
 
             if (groupBy is null)
             {
-                diffGroup = _sorter.CreateTreeSortedByPath(itemStatuses, flatList, mergeSingleItemsWithFolder, CreateCountedNode);
+                diffGroup = _sorter.CreateTreeSortedByPath(itemStatuses, flatList, mergeSingleItemsWithFolder,
+                    CreateCountedNode);
             }
             else
             {
                 diffGroup = new TreeNode();
-                IOrderedEnumerable<IGrouping<GroupKey, GitItemStatus>> grouped = itemStatuses.GroupBy(groupBy.GetGroupKey).OrderBy(group => group.Key);
-                foreach (IGrouping<GroupKey, GitItemStatus> group in grouped)
+                var grouped =
+                    itemStatuses.GroupBy(groupBy.GetGroupKey).OrderBy(group => group.Key);
+                foreach (var group in grouped)
                 {
-                    TreeNode groupNode = _sorter.CreateTreeSortedByPath(group, flatList, mergeSingleItemsWithFolder, CreateCountedNode);
+                    var groupNode = _sorter.CreateTreeSortedByPath(group, flatList, mergeSingleItemsWithFolder,
+                        CreateCountedNode);
                     if (showGroupNodes && groupNode.Nodes.Count == 1 && groupNode.Nodes[0].Nodes.Count == 0)
                     {
                         groupNode = groupNode.Nodes[0];
@@ -1373,17 +1466,17 @@ public sealed partial class FileStatusList : GitModuleControl
         TreeNode CreateNode(GitItemStatus item, FileStatusWithDescription fileStatusWithDescription)
         {
             // Also set .Text in order to provide accessibility information (needed for partial standard drawing by TreeView control, too)
-            string oldName = item.OldName is null ? "" : $" ({item.OldName})";
-            TreeNode listItem = new(text: $"{item.Name}{oldName}");
+            var oldName = item.OldName is null ? "" : $" ({item.OldName})";
+            TreeNode listItem = new($"{item.Name}{oldName}");
 
-            bool isGitGrep = FileStatusDiffCalculator.IsGrepItemStatuses(fileStatusWithDescription);
+            var isGitGrep = FileStatusDiffCalculator.IsGrepItemStatuses(fileStatusWithDescription);
             listItem.ImageIndex = GetItemImageIndex(item, isGitGrep);
             listItem.SelectedImageIndex = listItem.ImageIndex;
 
             if (item.IsSubmodule
-                && item.GetSubmoduleStatusAsync() is Task<GitSubmoduleStatus> task)
+                && item.GetSubmoduleStatusAsync() is { } task)
             {
-                GitItemStatus capturedItem = item;
+                var capturedItem = item;
 
                 ThreadHelper.FileAndForget(async () =>
                 {
@@ -1391,7 +1484,7 @@ public sealed partial class FileStatusList : GitModuleControl
                     await task;
 #pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
 
-                    if (Form.ActiveForm is not Form activeForm)
+                    if (Form.ActiveForm is not { } activeForm)
                     {
                         return;
                     }
@@ -1404,7 +1497,8 @@ public sealed partial class FileStatusList : GitModuleControl
                 });
             }
 
-            listItem.Tag = new FileStatusItem(fileStatusWithDescription.FirstRev, fileStatusWithDescription.SecondRev, item, fileStatusWithDescription.BaseA, fileStatusWithDescription.BaseB);
+            listItem.Tag = new FileStatusItem(fileStatusWithDescription.FirstRev, fileStatusWithDescription.SecondRev,
+                item, fileStatusWithDescription.BaseA, fileStatusWithDescription.BaseB);
 
             return listItem;
         }
@@ -1412,7 +1506,7 @@ public sealed partial class FileStatusList : GitModuleControl
         static string GetGroupName(FileStatusWithDescription i, int shownCount)
         {
             // Show shown and total number of files only if different; avoid showing "1/0" for "- No changes -"
-            string shownDisplay = shownCount >= i.Statuses.Count ? "" : $"{shownCount}/";
+            var shownDisplay = shownCount >= i.Statuses.Count ? "" : $"{shownCount}/";
             return $"({shownDisplay}{i.Statuses.Count}) {i.Summary}";
         }
 
@@ -1426,7 +1520,8 @@ public sealed partial class FileStatusList : GitModuleControl
                     // Image without evaluating added/removed etc
                     imageKey = GetSubmoduleItemImageKey(gitItemStatus);
                 }
-                else if (Path.GetExtension(gitItemStatus.Name) is string extension && _imageListData.StateImageIndexMap.TryGetValue(extension, out int imageIndex))
+                else if (Path.GetExtension(gitItemStatus.Name) is { } extension &&
+                         _imageListData.StateImageIndexMap.TryGetValue(extension, out var imageIndex))
                 {
                     // The extension is cached
                     return imageIndex;
@@ -1440,13 +1535,13 @@ public sealed partial class FileStatusList : GitModuleControl
             else
             {
                 imageKey = gitItemStatus.IsStatusOnly || !string.IsNullOrWhiteSpace(gitItemStatus.ErrorMessage)
-                            ? gitItemStatus == noItemStatuses[0]
-                                ? nameof(Images.FileStatusCopiedSame)
-                                : nameof(Images.FileStatusUnknown)
-                            : GetItemImageKey(gitItemStatus);
+                    ? gitItemStatus == noItemStatuses[0]
+                        ? nameof(Images.FileStatusCopiedSame)
+                        : nameof(Images.FileStatusUnknown)
+                    : GetItemImageKey(gitItemStatus);
             }
 
-            return _imageListData.StateImageIndexMap.TryGetValue(imageKey, out int value)
+            return _imageListData.StateImageIndexMap.TryGetValue(imageKey, out var value)
                 ? value
                 : _imageListData.StateImageIndexMap[nameof(Images.FileStatusUnknown)];
         }
@@ -1540,10 +1635,10 @@ public sealed partial class FileStatusList : GitModuleControl
 
     private static string GetSubmoduleItemImageKey(GitItemStatus gitItemStatus)
     {
-        if (gitItemStatus.GetSubmoduleStatusAsync() is not Task<GitSubmoduleStatus> task
+        if (gitItemStatus.GetSubmoduleStatusAsync() is not { } task
             || task is null
             || !task.IsCompleted
-            || task.CompletedResult() is not GitSubmoduleStatus status
+            || task.CompletedResult() is not { } status
             || status is null)
         {
             return gitItemStatus.IsDirty ? nameof(Images.SubmoduleDirty) : nameof(Images.SubmodulesManage);
@@ -1560,13 +1655,13 @@ public sealed partial class FileStatusList : GitModuleControl
             (SubmoduleStatus.OlderTime, true) => nameof(Images.SubmoduleRevisionSemiDownDirty),
             (SubmoduleStatus.OlderTime, false) => nameof(Images.SubmoduleRevisionSemiDown),
             (SubmoduleStatus.SameCommit, false) => nameof(Images.FolderSubmodule),
-            _ => nameof(Images.SubmoduleDirty),
+            _ => nameof(Images.SubmoduleDirty)
         };
     }
 
     public void SelectPreviousVisibleItem()
     {
-        if (SelectNextItem(backwards: true, loop: false) is null)
+        if (SelectNextItem(true, false) is null)
         {
             SelectFirstVisibleItem();
         }
@@ -1574,7 +1669,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
     public void SelectNextVisibleItem()
     {
-        if (SelectNextItem(backwards: false, loop: false) is null)
+        if (SelectNextItem(false, false) is null)
         {
             SelectFirstVisibleItem();
         }
@@ -1590,9 +1685,9 @@ public sealed partial class FileStatusList : GitModuleControl
             return;
         }
 
-        ContextMenuStrip cm = (ContextMenuStrip)sender;
+        var cm = (ContextMenuStrip)sender;
 
-        InsertTreeContextMenuItems(cm.Items, index: 0);
+        InsertTreeContextMenuItems(cm.Items, 0);
         UpdateStatusOfTreeContextMenuItems();
 
         UpdateStatusOfMenuItems();
@@ -1602,19 +1697,19 @@ public sealed partial class FileStatusList : GitModuleControl
         // The actual implementation of the default handling with doubleclick is in each form,
         // separate from this menu item
 
-        if (cm.Items.Find(_NO_TRANSLATE_openSubmoduleMenuItem.Name!, true).Length == 0)
+        if (cm.Items.Find(_noTranslateOpenSubmoduleMenuItem.Name!, true).Length == 0)
         {
-            cm.Items.Insert(0, _NO_TRANSLATE_openSubmoduleMenuItem);
+            cm.Items.Insert(0, _noTranslateOpenSubmoduleMenuItem);
         }
 
-        bool isSubmoduleSelected = SelectedItem?.Item.IsSubmodule ?? false;
+        var isSubmoduleSelected = SelectedItem?.Item.IsSubmodule ?? false;
 
-        _NO_TRANSLATE_openSubmoduleMenuItem.Visible = isSubmoduleSelected;
+        _noTranslateOpenSubmoduleMenuItem.Visible = isSubmoduleSelected;
         if (isSubmoduleSelected && !DisableSubmoduleMenuItemBold)
         {
-            _NO_TRANSLATE_openSubmoduleMenuItem.Font = AppSettings.OpenSubmoduleDiffInSeparateWindow
-                ? new Font(_NO_TRANSLATE_openSubmoduleMenuItem.Font, FontStyle.Bold)
-                : new Font(_NO_TRANSLATE_openSubmoduleMenuItem.Font, FontStyle.Regular);
+            _noTranslateOpenSubmoduleMenuItem.Font = AppSettings.OpenSubmoduleDiffInSeparateWindow
+                ? new Font(_noTranslateOpenSubmoduleMenuItem.Font, FontStyle.Bold)
+                : new Font(_noTranslateOpenSubmoduleMenuItem.Font, FontStyle.Regular);
         }
 
         if (!_isFileTreeMode && cm.Items.Find(_sortByContextMenu.Name!, true).Length == 0)
@@ -1637,23 +1732,22 @@ public sealed partial class FileStatusList : GitModuleControl
         }
 
         Validates.NotNull(TopLevelControl);
-        _formFindInCommitFilesGitGrep ??= new FormFindInCommitFilesGitGrep(UICommands)
+        _formFindInCommitFilesGitGrep ??= new FormFindInCommitFilesGitGrep(UiCommands)
         {
-            FilesGitGrepLocator = (text) =>
+            FilesGitGrepLocator = text =>
             {
                 FindInCommitFilesGitGrep(text);
                 cboFindInCommitFilesGitGrep.Text = text;
             },
-
             FindInCommitFilesGitGrepToggle = SetFindInCommitFilesGitGrepVisibility,
-
             Owner = (Form)TopLevelControl,
 
             // offset a few pixels compared to FindAndReplaceForm
             Location = new Point(TopLevelControl.Location.X + 90, TopLevelControl.Location.Y + 110)
         };
 
-        _formFindInCommitFilesGitGrep.GitGrepExpressionText = !string.IsNullOrEmpty(text) ? text : FindInCommitFilesGitGrepActive ? cboFindInCommitFilesGitGrep.Text : null;
+        _formFindInCommitFilesGitGrep.GitGrepExpressionText = !string.IsNullOrEmpty(text) ? text :
+            FindInCommitFilesGitGrepActive ? cboFindInCommitFilesGitGrep.Text : null;
         _formFindInCommitFilesGitGrep.SetSearchItems(cboFindInCommitFilesGitGrep.Items);
         _formFindInCommitFilesGitGrep.SetShowFindInCommitFilesGitGrep(cboFindInCommitFilesGitGrep.Visible);
         _formFindInCommitFilesGitGrep.Show();
@@ -1675,7 +1769,7 @@ public sealed partial class FileStatusList : GitModuleControl
             }
             else
             {
-                UICommands.StartFileHistoryDialog(this, SelectedItem.Item.Name, SelectedItem.SecondRevision);
+                UiCommands.StartFileHistoryDialog(this, SelectedItem.Item.Name, SelectedItem.SecondRevision);
             }
         }
         else
@@ -1686,7 +1780,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
     private void FileStatusListView_DrawNode(object? sender, DrawTreeNodeEventArgs e)
     {
-        TreeNode? item = e.Node;
+        var item = e.Node;
         Validates.NotNull(item);
         if (!item.IsVisible || sender is not MultiSelectTreeView treeView || treeView.UpdateSuspended)
         {
@@ -1705,7 +1799,7 @@ public sealed partial class FileStatusList : GitModuleControl
             Trace.WriteLine($"{nameof(FileStatusListView_DrawNode)} encountered {ex}");
             ThreadHelper.FileAndForget(async () =>
             {
-                await Task.Delay(millisecondsDelay: 5000);
+                await Task.Delay(5000);
                 await treeView.SwitchToMainThreadAsync();
                 _drawFailureState = DrawFailureState.ReportRepeated;
                 treeView.Invalidate();
@@ -1718,14 +1812,14 @@ public sealed partial class FileStatusList : GitModuleControl
 
     private void FileStatusListView_DrawNodeImpl(TreeNode item, MultiSelectTreeView treeView, DrawTreeNodeEventArgs e)
     {
-        bool selected = treeView.SelectedNodes.Contains(item);
+        var selected = treeView.SelectedNodes.Contains(item);
 
         PathFormatter formatter = new(e.Graphics, treeView.Font);
 
-        int maxWidth = treeView.ClientSize.Width - item.Bounds.X + 1;
-        (string? prefix, string text, string? suffix) = FormatListViewItem(item, formatter, maxWidth);
+        var maxWidth = treeView.ClientSize.Width - item.Bounds.X + 1;
+        (var prefix, var text, var suffix) = FormatListViewItem(item, formatter, maxWidth);
 
-        Brush backgroundBrush = selected
+        var backgroundBrush = selected
             ? Focused
                 ? SystemBrushes.Highlight
                 : _inactiveSelectionHighlightBrush
@@ -1739,20 +1833,20 @@ public sealed partial class FileStatusList : GitModuleControl
 
         Rectangle textRect = new(item.Bounds.X - 1, item.Bounds.Top - 1, item.Bounds.Width, item.Bounds.Height);
 
-        Color grayTextColor = selected && Focused && !Application.IsDarkModeEnabled
+        var grayTextColor = selected && Focused && !Application.IsDarkModeEnabled
             ? Color.FromArgb(192, 192, 192)
             : SystemColors.GrayText;
 
-        Color textColor = selected && Focused
-            ? (Application.IsDarkModeEnabled
+        var textColor = selected && Focused
+            ? Application.IsDarkModeEnabled
                 ? SystemColors.ControlText
-                : SystemColors.HighlightText)
+                : SystemColors.HighlightText
             : SystemColors.WindowText;
 
         if (!string.IsNullOrEmpty(prefix))
         {
             DrawString(textRect, prefix, grayTextColor);
-            Size prefixSize = formatter.MeasureString(prefix);
+            var prefixSize = formatter.MeasureString(prefix);
             textRect.Offset(prefixSize.Width, 0);
         }
 
@@ -1760,7 +1854,7 @@ public sealed partial class FileStatusList : GitModuleControl
 
         if (!string.IsNullOrEmpty(suffix))
         {
-            Size textSize = formatter.MeasureString(text);
+            var textSize = formatter.MeasureString(text);
             textRect.Offset(textSize.Width, 0);
             DrawString(textRect, suffix, grayTextColor);
         }
@@ -1798,7 +1892,7 @@ public sealed partial class FileStatusList : GitModuleControl
         // SELECT
         if (e.Button == MouseButtons.Right)
         {
-            TreeViewHitTestInfo hover = FileStatusListView.HitTest(e.Location);
+            var hover = FileStatusListView.HitTest(e.Location);
 
             if (hover.Node is not null)
             {
@@ -1821,7 +1915,7 @@ public sealed partial class FileStatusList : GitModuleControl
                 // Remember the point where the mouse down occurred.
                 // The DragSize indicates the size that the mouse can move
                 // before a drag event should be started.
-                Size dragSize = SystemInformation.DragSize;
+                var dragSize = SystemInformation.DragSize;
 
                 // Create a rectangle using the DragSize, with the mouse position being
                 // at the center of the rectangle.
@@ -1859,9 +1953,9 @@ public sealed partial class FileStatusList : GitModuleControl
             {
                 StringCollection fileList = [];
 
-                foreach (FileStatusItem item in SelectedItems)
+                foreach (var item in SelectedItems)
                 {
-                    string? fileName = _fullPathResolver.Resolve(item.Item.Name);
+                    var fileName = _fullPathResolver.Resolve(item.Item.Name);
 
                     if (!string.IsNullOrWhiteSpace(fileName))
                     {
@@ -1890,6 +1984,81 @@ public sealed partial class FileStatusList : GitModuleControl
         _mouseEntered = false;
     }
 
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
+
+    private enum DrawFailureState
+    {
+        None,
+        IgnoringFollowUp,
+        ReportRepeated
+    }
+
+    private record ImageListData(
+        ImageList ImageList,
+        Dictionary<string, int> StateImageIndexMap,
+        Image DefaultFileImage,
+        int IconSize);
+
+    private record struct TreeNodeInfo(TreeNode Node, ExpandCollapseState State);
+
+    internal readonly struct TestAccessor
+    {
+        private readonly FileStatusList _fileStatusList;
+
+        internal TestAccessor(FileStatusList fileStatusList)
+        {
+            _fileStatusList = fileStatusList;
+        }
+
+        internal Color ActiveInputColor
+        {
+            get => _fileStatusList._activeInputColor;
+        }
+
+        internal Color InvalidInputColor
+        {
+            get => _fileStatusList._invalidInputColor;
+        }
+
+        internal Label DeleteFilterButton
+        {
+            get => _fileStatusList.DeleteFilterButton;
+        }
+
+        internal MultiSelectTreeView FileStatusListView
+        {
+            get => _fileStatusList.FileStatusListView;
+        }
+
+        internal ComboBox FilterComboBox
+        {
+            get => _fileStatusList.cboFilterComboBox;
+        }
+
+        internal Regex? Filter
+        {
+            get => _fileStatusList._filter;
+        }
+
+        internal bool FilterWatermarkLabelVisible
+        {
+            get => _fileStatusList.cboFilterComboBox.IsWatermarkVisible;
+        }
+
+        internal void StoreFilter(string value)
+        {
+            _fileStatusList.StoreFilter(value);
+        }
+
+        internal void SetFileStatusListVisibility(bool showNoFiles)
+        {
+            _fileStatusList.SetFileStatusListVisibility(showNoFiles);
+        }
+    }
+
     #region Filtering
 
     private string _toolTipText = "";
@@ -1913,7 +2082,7 @@ public sealed partial class FileStatusList : GitModuleControl
         StoreFilter(value);
 
         // Feed back the current list of files
-        UpdateFileStatusListView(GitItemStatusesWithDescription, updateCausedByFilter: true);
+        UpdateFileStatusListView(GitItemStatusesWithDescription, true);
         FilterChanged?.Invoke(this, EventArgs.Empty);
         return AllItemsCount;
     }
@@ -1935,8 +2104,8 @@ public sealed partial class FileStatusList : GitModuleControl
             return true;
         }
 
-        string name = item.Name.TrimEnd(PathUtil.PosixDirectorySeparatorChar);
-        string? oldName = item.OldName;
+        var name = item.Name.TrimEnd(PathUtil.PosixDirectorySeparatorChar);
+        var oldName = item.OldName;
 
         if (AppSettings.TruncatePathMethod == TruncatePathMethod.FileNameOnly)
         {
@@ -1955,16 +2124,15 @@ public sealed partial class FileStatusList : GitModuleControl
     private void InitialiseFiltering()
     {
         // TODO this code is very similar to code in FormCommit
-        SynchronizationContext? synchronizationContext = SynchronizationContext.Current;
+        var synchronizationContext = SynchronizationContext.Current;
         Validates.NotNull(synchronizationContext);
         _filterSubscription = _filterSubject
             .Throttle(TimeSpan.FromMilliseconds(250))
             .ObserveOn(synchronizationContext)
-            .Subscribe(
-                filterText => TaskManager.HandleExceptions(() =>
+            .Subscribe(filterText => TaskManager.HandleExceptions(() =>
                 {
                     _toolTipText = "";
-                    int fileCount = 0;
+                    var fileCount = 0;
                     try
                     {
                         fileCount = FilterFiles(filterText);
@@ -1988,10 +2156,10 @@ public sealed partial class FileStatusList : GitModuleControl
                 return;
             }
 
-            const int SelectionFilterMaxLength = 10;
-            if (cboFilterComboBox.Items.Count == SelectionFilterMaxLength)
+            const int selectionFilterMaxLength = 10;
+            if (cboFilterComboBox.Items.Count == selectionFilterMaxLength)
             {
-                cboFilterComboBox.Items.RemoveAt(SelectionFilterMaxLength - 1);
+                cboFilterComboBox.Items.RemoveAt(selectionFilterMaxLength - 1);
             }
 
             cboFilterComboBox.Items.Insert(0, filter);
@@ -2003,15 +2171,16 @@ public sealed partial class FileStatusList : GitModuleControl
         // show DeleteFilterButton at once
         SetDeleteFilterButtonVisibility();
 
-        string filterText = cboFilterComboBox.Text;
+        var filterText = cboFilterComboBox.Text;
 
         if (filterText.Length > Module.WorkingDir.Length)
         {
-            string posixWorkingDir = PathUtil.ToPosixPath(Module.WorkingDir);
-            string posixFilterText = PathUtil.ToPosixPath(filterText);
+            var posixWorkingDir = Module.WorkingDir.ToPosixPath();
+            var posixFilterText = filterText.ToPosixPath();
             if (posixFilterText.StartsWith(posixWorkingDir, StringComparison.InvariantCultureIgnoreCase))
             {
-                filterText = posixFilterText.SubstringAfter(posixWorkingDir, StringComparison.InvariantCultureIgnoreCase);
+                filterText =
+                    posixFilterText.SubstringAfter(posixWorkingDir, StringComparison.InvariantCultureIgnoreCase);
 
                 cboFilterComboBox.Text = filterText;
                 cboFilterComboBox.SelectionStart = filterText.Length;
@@ -2045,7 +2214,9 @@ public sealed partial class FileStatusList : GitModuleControl
     }
 
     private void cboFindInCommitFilesGitGrep_TextUpdate(object? sender, EventArgs e)
-        => FindInCommitFilesGitGrep(cboFindInCommitFilesGitGrep.Text, delay: 200);
+    {
+        FindInCommitFilesGitGrep(cboFindInCommitFilesGitGrep.Text, 200);
+    }
 
     private void FindInCommitFilesGitGrep()
     {
@@ -2056,23 +2227,25 @@ public sealed partial class FileStatusList : GitModuleControl
     {
         SetDeleteSearchButtonVisibility();
 
-        CancellationToken cancellationToken = _reloadSequence.Next();
+        var cancellationToken = _reloadSequence.Next();
         ThreadHelper.FileAndForget(async () =>
         {
             // delay to handle keypresses
             await Task.Delay(delay, cancellationToken);
-            string searchArg = search;
+            var searchArg = search;
             if (!string.IsNullOrWhiteSpace(searchArg) && !GrepStringRegex.IsMatch(searchArg))
             {
                 searchArg = searchArg.Replace(@"\\", @"\\\\");
                 searchArg = $@"-e ""{searchArg}""";
             }
 
-            _diffCalculator.SetGrep(searchArg, fileTreeMode: _isFileTreeMode && string.IsNullOrWhiteSpace(searchArg));
-            IReadOnlyList<FileStatusWithDescription> gitItemStatusesWithDescription = _diffCalculator.Calculate(prevList: GitItemStatusesWithDescription, refreshDiff: false, refreshGrep: true, cancellationToken);
+            _diffCalculator.SetGrep(searchArg, _isFileTreeMode && string.IsNullOrWhiteSpace(searchArg));
+            var gitItemStatusesWithDescription =
+                _diffCalculator.Calculate(GitItemStatusesWithDescription, false, true, cancellationToken);
 
             await this.SwitchToMainThreadAsync(cancellationToken);
-            cboFindInCommitFilesGitGrep.BackColor = string.IsNullOrEmpty(search) ? SystemColors.Window : _activeInputColor;
+            cboFindInCommitFilesGitGrep.BackColor =
+                string.IsNullOrEmpty(search) ? SystemColors.Window : _activeInputColor;
             WorkaroundTooEarlyDrawing();
             UpdateFileStatusListView(gitItemStatusesWithDescription, cancellationToken: cancellationToken);
 
@@ -2093,7 +2266,8 @@ public sealed partial class FileStatusList : GitModuleControl
             {
                 try
                 {
-                    cboFindInCommitFilesGitGrep.SelectedIndexChanged -= cboFindInCommitFilesGitGrep_SelectedIndexChanged;
+                    cboFindInCommitFilesGitGrep.SelectedIndexChanged -=
+                        cboFindInCommitFilesGitGrep_SelectedIndexChanged;
                     cboFindInCommitFilesGitGrep.BeginUpdate();
                     if (cboFindInCommitFilesGitGrep.Items.IndexOf(search) is int index && index >= 0)
                     {
@@ -2110,10 +2284,10 @@ public sealed partial class FileStatusList : GitModuleControl
                     }
                     else
                     {
-                        const int SearchFilterMaxLength = 30;
-                        if (cboFindInCommitFilesGitGrep.Items.Count >= SearchFilterMaxLength)
+                        const int searchFilterMaxLength = 30;
+                        if (cboFindInCommitFilesGitGrep.Items.Count >= searchFilterMaxLength)
                         {
-                            cboFindInCommitFilesGitGrep.Items.RemoveAt(SearchFilterMaxLength - 1);
+                            cboFindInCommitFilesGitGrep.Items.RemoveAt(searchFilterMaxLength - 1);
                         }
 
                         cboFindInCommitFilesGitGrep.Items.Insert(0, search);
@@ -2131,7 +2305,8 @@ public sealed partial class FileStatusList : GitModuleControl
                 finally
                 {
                     cboFindInCommitFilesGitGrep.EndUpdate();
-                    cboFindInCommitFilesGitGrep.SelectedIndexChanged += cboFindInCommitFilesGitGrep_SelectedIndexChanged;
+                    cboFindInCommitFilesGitGrep.SelectedIndexChanged +=
+                        cboFindInCommitFilesGitGrep_SelectedIndexChanged;
                 }
             }
 
@@ -2183,30 +2358,10 @@ public sealed partial class FileStatusList : GitModuleControl
     #endregion
 
     #region private Color constants
+
     //// Do not declare the colors "static" because Color.FromArgb() will not work at their initialization.
     private readonly Color _activeInputColor = Color.FromArgb(0xC8, 0xFF, 0xC8).AdaptBackColor();
     private readonly Color _invalidInputColor = Color.FromArgb(0xFF, 0xC8, 0xC8).AdaptBackColor();
+
     #endregion
-
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
-    {
-        private readonly FileStatusList _fileStatusList;
-
-        internal TestAccessor(FileStatusList fileStatusList)
-        {
-            _fileStatusList = fileStatusList;
-        }
-
-        internal Color ActiveInputColor => _fileStatusList._activeInputColor;
-        internal Color InvalidInputColor => _fileStatusList._invalidInputColor;
-        internal Label DeleteFilterButton => _fileStatusList.DeleteFilterButton;
-        internal MultiSelectTreeView FileStatusListView => _fileStatusList.FileStatusListView;
-        internal ComboBox FilterComboBox => _fileStatusList.cboFilterComboBox;
-        internal Regex? Filter => _fileStatusList._filter;
-        internal bool FilterWatermarkLabelVisible => _fileStatusList.cboFilterComboBox.IsWatermarkVisible;
-        internal void StoreFilter(string value) => _fileStatusList.StoreFilter(value);
-        internal void SetFileStatusListVisibility(bool showNoFiles) => _fileStatusList.SetFileStatusListVisibility(showNoFiles);
-    }
 }

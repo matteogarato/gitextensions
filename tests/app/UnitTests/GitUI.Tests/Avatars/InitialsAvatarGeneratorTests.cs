@@ -1,6 +1,7 @@
 ﻿using GitUI.Avatars;
 
 namespace GitUITests.Avatars;
+
 public sealed class InitialsAvatarGeneratorTests
 {
     [Theory]
@@ -30,7 +31,7 @@ public sealed class InitialsAvatarGeneratorTests
     [InlineData(null, null, "?")]
     public void GetInitialsAndHashCode_return_initials_of_a_user(string? email, string? name, string expected)
     {
-        (string initials, int _) = new InitialsAvatarProvider().GetInitialsAndColorIndex(email!, name);
+        var (initials, _) = new InitialsAvatarProvider().GetInitialsAndColorIndex(email!, name);
 
         initials.Should().Be(expected);
     }

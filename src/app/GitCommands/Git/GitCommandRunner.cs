@@ -1,22 +1,13 @@
 using System.Text;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUI;
+using GitExtUtils.GitUI;
 
-namespace GitCommands;
+namespace GitCommands.Git;
 
-public sealed class GitCommandRunner : IGitCommandRunner
+public sealed class GitCommandRunner(IExecutable gitExecutable, Func<Encoding> defaultEncoding) : IGitCommandRunner
 {
-    private readonly IExecutable _gitExecutable;
-    private readonly Func<Encoding> _defaultEncoding;
-
-    public GitCommandRunner(IExecutable gitExecutable, Func<Encoding> defaultEncoding)
-    {
-        _gitExecutable = gitExecutable;
-        _defaultEncoding = defaultEncoding;
-    }
-
-    public IProcess RunDetached(
+    IProcess IGitCommandRunner.RunDetached(
         CancellationToken cancellationToken,
         ArgumentString arguments = default,
         bool createWindow = false,
@@ -27,13 +18,14 @@ public sealed class GitCommandRunner : IGitCommandRunner
     {
         if (outputEncoding is null && redirectOutput)
         {
-            outputEncoding = _defaultEncoding();
+            outputEncoding = defaultEncoding();
         }
 
-        return _gitExecutable.Start(arguments, createWindow, redirectInput, redirectOutput, outputEncoding, useShellExecute: false, throwOnErrorExit, cancellationToken);
+        return gitExecutable.Start(arguments, createWindow, redirectInput, redirectOutput, outputEncoding, false,
+            throwOnErrorExit, cancellationToken);
     }
 
-    public void RunDetached(
+    void IGitCommandRunner.RunDetached(
         ArgumentString arguments = default,
         bool createWindow = false,
         bool redirectInput = false,
@@ -41,9 +33,10 @@ public sealed class GitCommandRunner : IGitCommandRunner
         Encoding? outputEncoding = null)
     {
         ThreadHelper.FileAndForget(async () =>
-            {
-                using IProcess process = RunDetached(CancellationToken.None, arguments, createWindow, redirectInput, redirectOutput, outputEncoding);
-                await process.WaitForExitAsync();
-            });
+        {
+            using var process = RunDetached(CancellationToken.None, arguments, createWindow, redirectInput,
+                redirectOutput, outputEncoding);
+            await process.WaitForExitAsync();
+        });
     }
 }

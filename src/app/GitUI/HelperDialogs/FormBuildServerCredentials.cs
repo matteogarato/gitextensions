@@ -43,23 +43,26 @@ public partial class FormBuildServerCredentials : Form
     {
         if (BuildServerCredentials is not null)
         {
-            radioButtonGuestAccess.Checked = BuildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.Guest;
-            radioButtonAuthenticatedUser.Checked = BuildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.UsernameAndPassword;
-            radioButtonBearerToken.Checked = BuildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.BearerToken;
+            radioButtonGuestAccess.Checked =
+                BuildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.Guest;
+            radioButtonAuthenticatedUser.Checked = BuildServerCredentials.BuildServerCredentialsType ==
+                                                   BuildServerCredentialsType.UsernameAndPassword;
+            radioButtonBearerToken.Checked = BuildServerCredentials.BuildServerCredentialsType ==
+                                             BuildServerCredentialsType.BearerToken;
             textBoxUserName.Text = BuildServerCredentials.Username;
             textBoxPassword.Text = BuildServerCredentials.Password;
             textBoxBearerToken.Text = BuildServerCredentials.BearerToken;
         }
 
-        UpdateUI();
+        UpdateUi();
     }
 
-    private void authenticationMethodChanged(object sender, EventArgs e)
+    private void AuthenticationMethodChanged(object sender, EventArgs e)
     {
-        UpdateUI();
+        UpdateUi();
     }
 
-    private void UpdateUI()
+    private void UpdateUi()
     {
         textBoxUserName.Enabled = radioButtonAuthenticatedUser.Checked;
         textBoxPassword.Enabled = radioButtonAuthenticatedUser.Checked;

@@ -1,19 +1,19 @@
 ﻿namespace GitUI.UserControls.RevisionGrid;
 
 /// <summary>
-///  Specifies the icon drawn inside a ref label in the revision grid.
+///     Specifies the icon drawn inside a ref label in the revision grid.
 /// </summary>
 internal enum RefLabelIcon
 {
     None,
 
     /// <summary>
-    ///  Icon for the checked out branch.
+    ///     Icon for the checked out branch.
     /// </summary>
     Head,
 
     /// <summary>
-    ///  Icon for the remote-tracking branch of the checked out branch.
+    ///     Icon for the remote-tracking branch of the checked out branch.
     /// </summary>
     HeadMergeSource,
 
@@ -23,5 +23,5 @@ internal enum RefLabelIcon
     Tag,
     Stash,
     WorkingDirectory,
-    CommitIndex,
+    CommitIndex
 }

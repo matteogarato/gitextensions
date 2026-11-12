@@ -4,7 +4,7 @@ namespace GitUI.HelperDialogs;
 
 public sealed partial class FormCommitDiff : GitModuleForm
 {
-    public FormCommitDiff(IGitUICommands commands, ObjectId objectId)
+    public FormCommitDiff(IGitUiCommands commands, ObjectId objectId)
         : base(commands)
     {
         InitializeComponent();
@@ -12,6 +12,6 @@ public sealed partial class FormCommitDiff : GitModuleForm
 
         CommitDiff.TextChanged += (s, e) => Text = CommitDiff.Text;
 
-        CommitDiff.SetRevision(objectId, fileToSelect: null);
+        CommitDiff.SetRevision(objectId, null);
     }
 }

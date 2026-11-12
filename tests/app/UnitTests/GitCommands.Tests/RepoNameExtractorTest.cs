@@ -4,10 +4,11 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests;
+
 public class RepoNameExtractorTest
 {
-    private IGitModule _module = null!;
-    private IRepoNameExtractor _repoNameExtractor = null!;
+    private readonly IGitModule _module = null!;
+    private readonly IRepoNameExtractor _repoNameExtractor = null!;
 
     public RepoNameExtractorTest()
     {
@@ -25,13 +26,14 @@ public class RepoNameExtractorTest
     [InlineData(null, null, null, null)]
     [InlineData("remote", "https://github.com/project/", "project", "")]
     [InlineData("origin", "git@github.com/project/repo.git", "project", "repo")]
-    public void RepoNameExtractorTest_ValidCurrentRemote(string? remote, string? url, string? expProject, string? expRepo)
+    public void RepoNameExtractorTest_ValidCurrentRemote(string? remote, string? url, string? expProject,
+        string? expRepo)
     {
         _module.GetCurrentRemote().Returns(x => remote);
         _module.GetRemoteNames().Returns(x => new[] { remote!, "    ", "\t" });
         _module.GetSetting(string.Format(SettingKeyString.RemoteUrl, remote)).Returns(x => url);
 
-        (string project, string repo) = _repoNameExtractor.Get();
+        var (project, repo) = _repoNameExtractor.Get();
 
         project.Should().Be(expProject);
         repo.Should().Be(expRepo);
@@ -40,13 +42,14 @@ public class RepoNameExtractorTest
     [Theory]
     [InlineData("origin", "https://github.com/project/repo.git", "project", "repo")]
     [InlineData("origin", "git@github.com/project/repo.git", "project", "repo")]
-    public void RepoNameExtractorTest_NoValidCurrentRemote(string? remote, string? url, string? expProject, string? expRepo)
+    public void RepoNameExtractorTest_NoValidCurrentRemote(string? remote, string? url, string? expProject,
+        string? expRepo)
     {
         _module.GetCurrentRemote().Returns("");
         _module.GetRemoteNames().Returns(x => new[] { remote!, "    ", "\t" });
         _module.GetSetting(string.Format(SettingKeyString.RemoteUrl, remote)).Returns(x => url);
 
-        (string project, string repo) = _repoNameExtractor.Get();
+        var (project, repo) = _repoNameExtractor.Get();
 
         project.Should().Be(expProject);
         repo.Should().Be(expRepo);

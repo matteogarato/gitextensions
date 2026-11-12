@@ -1,14 +1,9 @@
 ﻿namespace GitExtUtils.GitUI.Theming;
 
-public class LightnessCorrection : BmpTransformation
+public class LightnessCorrection(Bitmap bmp) : BmpTransformation(bmp)
 {
-    private readonly HslColor _textColor = new(SystemColors.WindowText);
     private readonly HslColor _bgColor = new(SystemColors.Window);
-
-    public LightnessCorrection(Bitmap bmp)
-        : base(bmp)
-    {
-    }
+    private readonly HslColor _textColor = new(SystemColors.WindowText);
 
     protected override void ExecuteRaw()
     {
@@ -19,31 +14,35 @@ public class LightnessCorrection : BmpTransformation
 
         ImageChanged = true;
 
-        for (int i = Rect.Left; i < Rect.Right; i++)
+        for (var i = Rect.Left; i < Rect.Right; i++)
         {
-            for (int j = Rect.Top; j < Rect.Bottom; j++)
+            for (var j = Rect.Top; j < Rect.Bottom; j++)
             {
                 Transform(BgraValues, GetLocation(i, j));
             }
         }
     }
 
-    private HslColor Transform(HslColor hsl) =>
-        new(hsl.H, TransformS(hsl), TransformL(hsl.L));
+    private HslColor Transform(HslColor hsl)
+    {
+        return new HslColor(hsl.H, TransformS(hsl), TransformL(hsl.L));
+    }
 
     private void Transform(byte[] bgraValues, int location)
     {
-        Color rgb = Color.FromArgb(
+        var rgb = Color.FromArgb(
             bgraValues[location + R],
             bgraValues[location + G],
             bgraValues[location + B]);
-        HslColor hsl = rgb.ToPerceptedHsl();
-        HslColor hslTransformed = Transform(hsl);
+        var hsl = rgb.ToPerceptedHsl();
+        var hslTransformed = Transform(hsl);
         ToBgra(hslTransformed.ToActualHsl(rgb), bgraValues, location);
     }
 
-    private double TransformL(double l) =>
-        _textColor.L + (l * (_bgColor.L - _textColor.L));
+    private double TransformL(double l)
+    {
+        return _textColor.L + (l * (_bgColor.L - _textColor.L));
+    }
 
     private static double TransformS(HslColor hsl)
     {
@@ -57,7 +56,7 @@ public class LightnessCorrection : BmpTransformation
 
     private static void ToBgra(HslColor c, byte[] rgbArr, int location)
     {
-        Color rgb = c.ToColor();
+        var rgb = c.ToColor();
         rgbArr[location + B] = rgb.B;
         rgbArr[location + G] = rgb.G;
         rgbArr[location + R] = rgb.R;

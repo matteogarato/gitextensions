@@ -5,14 +5,18 @@ using IShimClipboard = GitExtensions.Shims.WinForms.IClipboard;
 namespace GitUI.Compat;
 
 /// <summary>
-///  Implements the shim <see cref="IShimClipboard"/> over the main window's Avalonia clipboard.
+///     Implements the shim <see cref="IShimClipboard" /> over the main window's Avalonia clipboard.
 /// </summary>
 public sealed class AvaloniaClipboard(IClassicDesktopStyleApplicationLifetime desktop) : IShimClipboard
 {
-    private IClipboard? PlatformClipboard => desktop.MainWindow?.Clipboard;
+    private IClipboard? PlatformClipboard
+    {
+        get => desktop.MainWindow?.Clipboard;
+    }
 
-    public void SetText(string text)
-        => DispatcherPump.Wait(async () =>
+    void IShimClipboard.SetText(string text)
+    {
+        DispatcherPump.Wait(async () =>
         {
             if (PlatformClipboard is { } clipboard)
             {
@@ -21,9 +25,11 @@ public sealed class AvaloniaClipboard(IClassicDesktopStyleApplicationLifetime de
 
             return true;
         });
+    }
 
-    public string GetText()
-        => DispatcherPump.Wait(async () =>
+    string IShimClipboard.GetText()
+    {
+        return DispatcherPump.Wait(async () =>
         {
             if (PlatformClipboard is { } clipboard)
             {
@@ -32,7 +38,10 @@ public sealed class AvaloniaClipboard(IClassicDesktopStyleApplicationLifetime de
 
             return string.Empty;
         });
+    }
 
-    public bool ContainsText()
-        => GetText().Length > 0;
+    bool IShimClipboard.ContainsText()
+    {
+        return GetText().Length > 0;
+    }
 }

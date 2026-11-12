@@ -9,7 +9,7 @@ internal static class MenuUtil
     private static Font? _disabledFont;
 
     /// <summary>
-    /// set the menu item disabled.
+    ///     set the menu item disabled.
     /// </summary>
     public static void SetAsCaptionMenuItem(ToolStripMenuItem menuItem)
     {
@@ -22,7 +22,7 @@ internal static class MenuUtil
     }
 
     /// <summary>
-    /// set the menu item disabled and remove mouse hover effect.
+    ///     set the menu item disabled and remove mouse hover effect.
     /// </summary>
     public static void SetAsCaptionMenuItem(ToolStripMenuItem menuItem, ToolStrip menu)
     {
@@ -31,11 +31,11 @@ internal static class MenuUtil
     }
 
     /// <summary>
-    /// no mouse over effect for disabled menu items, if the Tag is "caption".
+    ///     no mouse over effect for disabled menu items, if the Tag is "caption".
     /// </summary>
     private sealed class MenuItemBackgroundFilter : IMenuItemBackgroundFilter
     {
-        public bool ShouldRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        bool IMenuItemBackgroundFilter.ShouldRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
         {
             // Only render the background for non-caption menu items
             return !ReferenceEquals(e.Item.Tag, _captionTag);

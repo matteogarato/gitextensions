@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ControlThreadingExtensions
 {
@@ -17,56 +17,6 @@ public static class ControlThreadingExtensions
 
         _controlDisposed = [];
     }
-
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
-    public static ControlMainThreadAwaitable SwitchToMainThreadAsync(this ToolStripItem control, CancellationToken cancellationToken = default)
-    {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken), disposable: null);
-        }
-
-        if (control.IsDisposed)
-        {
-            return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_preCancelledToken), disposable: null);
-        }
-
-        CancellationToken disposedCancellationToken = ToolStripItemDisposedCancellationFactory.Instance.GetOrCreateCancellationToken(control);
-        CancellationTokenSource? cancellationTokenSource = null;
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(disposedCancellationToken, cancellationToken);
-            disposedCancellationToken = cancellationTokenSource.Token;
-        }
-
-        JoinableTaskFactory.MainThreadAwaitable mainThreadAwaiter = ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(disposedCancellationToken);
-        return new ControlMainThreadAwaitable(mainThreadAwaiter, cancellationTokenSource);
-    }
-
-    public static ControlMainThreadAwaitable SwitchToMainThreadAsync(this Control control, CancellationToken cancellationToken = default)
-    {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken), disposable: null);
-        }
-
-        if (control.IsDisposed)
-        {
-            return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_preCancelledToken), disposable: null);
-        }
-
-        CancellationToken disposedCancellationToken = ControlIsDisposedCancellationFactory.Instance.GetOrCreateCancellationToken(control);
-        CancellationTokenSource? cancellationTokenSource = null;
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(disposedCancellationToken, cancellationToken);
-            disposedCancellationToken = cancellationTokenSource.Token;
-        }
-
-        JoinableTaskFactory.MainThreadAwaitable mainThreadAwaiter = ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(disposedCancellationToken);
-        return new ControlMainThreadAwaitable(mainThreadAwaiter, cancellationTokenSource);
-    }
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
 
     public readonly struct ControlMainThreadAwaitable
     {
@@ -96,9 +46,15 @@ public static class ControlThreadingExtensions
             _disposable = disposable;
         }
 
-        public bool IsCompleted => _awaiter.IsCompleted;
+        public bool IsCompleted
+        {
+            get => _awaiter.IsCompleted;
+        }
 
-        public void OnCompleted(Action continuation) => _awaiter.OnCompleted(continuation);
+        void INotifyCompletion.OnCompleted(Action continuation)
+        {
+            _awaiter.OnCompleted(continuation);
+        }
 
         public void GetResult()
         {
@@ -117,20 +73,27 @@ public static class ControlThreadingExtensions
     {
         public static readonly ControlIsDisposedCancellationFactory Instance = new();
 
-        protected override bool IsDisposed(Control component) => component.IsDisposed;
+        protected override bool IsDisposed(Control component)
+        {
+            return component.IsDisposed;
+        }
     }
 
     private sealed class ToolStripItemDisposedCancellationFactory : IsDisposedCancellationFactory<ToolStripItem>
     {
         public static readonly ToolStripItemDisposedCancellationFactory Instance = new();
 
-        protected override bool IsDisposed(ToolStripItem component) => component.IsDisposed;
+        protected override bool IsDisposed(ToolStripItem component)
+        {
+            return component.IsDisposed;
+        }
     }
 
     private abstract class IsDisposedCancellationFactory<T>
         where T : class, IComponent
     {
-        private readonly ConditionalWeakTable<IComponent, StrongBox<CancellationToken>>.CreateValueCallback _disposedCancellationTokenFactory;
+        private readonly ConditionalWeakTable<IComponent, StrongBox<CancellationToken>>.CreateValueCallback
+            _disposedCancellationTokenFactory;
 
         protected IsDisposedCancellationFactory()
         {
@@ -146,7 +109,7 @@ public static class ControlThreadingExtensions
                 // Get a copy of the CancellationToken before the source can be disposed. After the source is cancelled
                 // and disposed, the CancellationToken will continue to behave properly, but
                 // CancellationTokenSource.Token will start to throw an ObjectDisposedException.
-                CancellationToken token = cts.Token;
+                var token = cts.Token;
 
                 control.Disposed += delegate
                 {
@@ -184,4 +147,66 @@ public static class ControlThreadingExtensions
             cancellationTokenSource.Dispose();
         }
     }
+
+#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
+    public static ControlMainThreadAwaitable SwitchToMainThreadAsync(this ToolStripItem control,
+        CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new ControlMainThreadAwaitable(
+                ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken), null);
+        }
+
+        if (control.IsDisposed)
+        {
+            return new ControlMainThreadAwaitable(
+                ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_preCancelledToken), null);
+        }
+
+        var disposedCancellationToken =
+            ToolStripItemDisposedCancellationFactory.Instance.GetOrCreateCancellationToken(control);
+        CancellationTokenSource? cancellationTokenSource = null;
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(disposedCancellationToken, cancellationToken);
+            disposedCancellationToken = cancellationTokenSource.Token;
+        }
+
+        var mainThreadAwaiter =
+            ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(disposedCancellationToken);
+        return new ControlMainThreadAwaitable(mainThreadAwaiter, cancellationTokenSource);
+    }
+
+    public static ControlMainThreadAwaitable SwitchToMainThreadAsync(this Control control,
+        CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new ControlMainThreadAwaitable(
+                ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken), null);
+        }
+
+        if (control.IsDisposed)
+        {
+            return new ControlMainThreadAwaitable(
+                ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_preCancelledToken), null);
+        }
+
+        var disposedCancellationToken =
+            ControlIsDisposedCancellationFactory.Instance.GetOrCreateCancellationToken(control);
+        CancellationTokenSource? cancellationTokenSource = null;
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(disposedCancellationToken, cancellationToken);
+            disposedCancellationToken = cancellationTokenSource.Token;
+        }
+
+        var mainThreadAwaiter =
+            ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(disposedCancellationToken);
+        return new ControlMainThreadAwaitable(mainThreadAwaiter, cancellationTokenSource);
+    }
+#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
 }

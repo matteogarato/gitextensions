@@ -2,8 +2,8 @@
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
+using GitUI.Plugin;
 using GitUI.SettingControlBindings;
-using Microsoft;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Plugins;
 
@@ -13,9 +13,19 @@ public partial class PluginSettingsPage : AutoLayoutSettingsPage
     private GitPluginSettingsContainer? _settingsContainer;
 
     public PluginSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
         InitializeComponent();
+    }
+
+    public override SettingsPageReference PageReference
+    {
+        get
+        {
+            Validates.NotNull(_gitPlugin);
+
+            return new SettingsPageReferenceByType(_gitPlugin.GetType());
+        }
     }
 
     private void CreateSettingsControls()
@@ -26,7 +36,7 @@ public partial class PluginSettingsPage : AutoLayoutSettingsPage
         {
             state.Append(_gitPlugin is null ? "null" : $"{(_gitPlugin.HasSettings ? "" : "not ")}having settings");
 
-            IEnumerable<ISetting> settings = GetSettings();
+            var settings = GetSettings();
 
             state.Append(", enumerable");
 
@@ -34,7 +44,7 @@ public partial class PluginSettingsPage : AutoLayoutSettingsPage
 
             state.Append($" with {settingsArray.Length} setting(s)");
 
-            foreach (ISetting setting in settingsArray)
+            foreach (var setting in settingsArray)
             {
                 AddSettingControl(SettingControlBindingsProvider.CreateControlBinding(setting));
                 state.Append('.');
@@ -42,7 +52,8 @@ public partial class PluginSettingsPage : AutoLayoutSettingsPage
         }
         catch (Exception ex)
         {
-            throw new ExternalOperationException(command: $"Cannot load settings for plugin {_gitPlugin?.Name ?? "unknown"}: {state}", innerException: ex);
+            throw new ExternalOperationException(
+                $"Cannot load settings for plugin {_gitPlugin?.Name ?? "unknown"}: {state}", innerException: ex);
         }
     }
 
@@ -58,9 +69,10 @@ public partial class PluginSettingsPage : AutoLayoutSettingsPage
         InitializeComplete();
     }
 
-    public static PluginSettingsPage CreateSettingsPageFromPlugin(ISettingsPageHost pageHost, IGitPlugin gitPlugin, IServiceProvider serviceProvider)
+    public static PluginSettingsPage CreateSettingsPageFromPlugin(ISettingsPageHost pageHost, IGitPlugin gitPlugin,
+        IServiceProvider serviceProvider)
     {
-        PluginSettingsPage result = Create<PluginSettingsPage>(pageHost, serviceProvider);
+        var result = Create<PluginSettingsPage>(pageHost, serviceProvider);
         result.Init(gitPlugin);
         return result;
     }
@@ -88,23 +100,13 @@ public partial class PluginSettingsPage : AutoLayoutSettingsPage
         return _gitPlugin.HasSettings ? _gitPlugin.GetSettings() : [];
     }
 
-    public override SettingsPageReference PageReference
-    {
-        get
-        {
-            Validates.NotNull(_gitPlugin);
-
-            return new SettingsPageReferenceByType(_gitPlugin.GetType());
-        }
-    }
-
     protected override ISettingsLayout CreateSettingsLayout()
     {
         Validates.NotNull(_gitPlugin);
 
         labelNoSettings.Visible = !_gitPlugin.HasSettings;
 
-        ISettingsLayout layout = base.CreateSettingsLayout();
+        var layout = base.CreateSettingsLayout();
 
         tableLayoutPanel1.Controls.Add(layout.GetControl(), 0, 1);
 

@@ -1,31 +1,29 @@
 using System.ComponentModel.Design;
-using GitCommands;
 using GitCommands.Config;
 using GitCommands.Git;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
 using GitUI.ScriptsEngine;
-using GitUIPluginInterfaces;
 using NSubstitute;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitUITests.Script;
 
 [Culture("en-US")]
 public class ScriptOptionsParserTests
 {
-    private IGitUICommands _commands = null!;
-    private IGitModule _module = null!;
-    private IScriptOptionsProvider _scriptOptionsProvider = null!;
+    private readonly IGitModule _module = null!;
+    private readonly IScriptOptionsProvider _scriptOptionsProvider = null!;
+    private IGitUiCommands _commands = null!;
 
     public ScriptOptionsParserTests()
     {
         _module = Substitute.For<IGitModule>();
         _scriptOptionsProvider = Substitute.For<IScriptOptionsProvider>();
 
-        _commands = Substitute.For<IGitUICommands>();
+        _commands = Substitute.For<IGitUiCommands>();
         _commands.Module.Returns(_module);
     }
 
@@ -105,8 +103,8 @@ public class ScriptOptionsParserTests
         // bare repo has no current checkout, empty repo has no commits
         _module.GetRevision(shortFormat: true, loadRefs: true).Returns(x => null!);
 
-        GitRevision? result = ScriptOptionsParser.GetTestAccessor()
-            .GetCurrentRevision(module: _module, currentTags: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentBranches: null!, loadBody: false);
+        var result = ScriptOptionsParser.GetTestAccessor()
+            .GetCurrentRevision(_module, null!, null!, null!, null!, false);
 
         result.Should().Be(null);
     }
@@ -117,8 +115,8 @@ public class ScriptOptionsParserTests
         GitRevision revision = new(ObjectId.IndexId);
         _module.GetRevision(shortFormat: true, loadRefs: true).Returns(x => revision);
 
-        GitRevision? result = ScriptOptionsParser.GetTestAccessor()
-            .GetCurrentRevision(module: _module, currentTags: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentBranches: null!, loadBody: false);
+        var result = ScriptOptionsParser.GetTestAccessor()
+            .GetCurrentRevision(_module, null!, null!, null!, null!, false);
 
         result.Should().Be(revision);
     }
@@ -126,7 +124,7 @@ public class ScriptOptionsParserTests
     [Fact]
     public void Parse_should_throw_if_module_null()
     {
-        ((Action)(() => ScriptOptionsParser.Parse(arguments: "bla", uiCommands: null!, owner: null!, _scriptOptionsProvider))).Should()
+        ((Action)(() => ScriptOptionsParser.Parse("bla", null!, null!, _scriptOptionsProvider))).Should()
             .Throw<ArgumentNullException>()
             .WithMessage("Value cannot be null. (Parameter 'uiCommands')");
     }
@@ -138,7 +136,8 @@ public class ScriptOptionsParserTests
     [InlineData("\t")]
     public void Parse_should_return_without_process_if_arguments_unset(string? arguments)
     {
-        (string? arguments, bool abort) result = ScriptOptionsParser.Parse(arguments, uiCommands: null!, owner: null!, _scriptOptionsProvider);
+        var result =
+            ScriptOptionsParser.Parse(arguments, null!, null!, _scriptOptionsProvider);
 
         result.arguments.Should().Be(arguments);
         result.abort.Should().Be(false);
@@ -149,7 +148,8 @@ public class ScriptOptionsParserTests
     {
         const string arguments = "{openUrl} https://gitlab.com{zeDefaultRemotePathFromUrl}/tree/{zeBranch}";
 
-        (string? arguments, bool abort) result = ScriptOptionsParser.Parse(arguments: arguments, _commands, owner: null!, _scriptOptionsProvider);
+        var result =
+            ScriptOptionsParser.Parse(arguments, _commands, null!, _scriptOptionsProvider);
 
         result.arguments.Should().Be(arguments);
         result.abort.Should().Be(false);
@@ -158,17 +158,14 @@ public class ScriptOptionsParserTests
     [Fact]
     public void Parse_should_parse_c_arguments()
     {
-        const string Subject = "line1";
-        GitRevision revision = new(ObjectId.IndexId)
-        {
-            Subject = Subject,
-            Body = $"{Subject}\n\nline3"
-        };
+        const string subject = "line1";
+        GitRevision revision = new(ObjectId.IndexId) { Subject = subject, Body = $"{subject}\n\nline3" };
         _module.GetRevision(shortFormat: false, loadRefs: true).Returns(x => revision);
 
-        string expectedMessage = $"{Subject}\\n\\nline3";
+        var expectedMessage = $"{subject}\\n\\nline3";
 
-        (string? arguments, bool abort) result = ScriptOptionsParser.Parse("echo {{cSubject}} {{cMessage}}", _commands, owner: null!, _scriptOptionsProvider);
+        var result = ScriptOptionsParser.Parse("echo {{cSubject}} {{cMessage}}", _commands,
+            null!, _scriptOptionsProvider);
 
         result.arguments.Should().Be($"echo \"{revision.Subject}\" \"{expectedMessage}\"");
         result.abort.Should().Be(false);
@@ -177,19 +174,16 @@ public class ScriptOptionsParserTests
     [Fact]
     public void Parse_should_parse_s_arguments()
     {
-        const string Subject = "line1";
-        GitRevision revision = new(ObjectId.IndexId)
-        {
-            Subject = Subject,
-            Body = $"{Subject}\n\nline3"
-        };
-        IBrowseRepo browseRepo = Substitute.For<IBrowseRepo>();
+        const string subject = "line1";
+        GitRevision revision = new(ObjectId.IndexId) { Subject = subject, Body = $"{subject}\n\nline3" };
+        var browseRepo = Substitute.For<IBrowseRepo>();
         browseRepo.GetLatestSelectedRevision().Returns(x => revision);
         _commands.BrowseRepo.Returns(browseRepo);
 
-        string expectedMessage = $"{Subject}\\n\\nline3";
+        var expectedMessage = $"{subject}\\n\\nline3";
 
-        (string? arguments, bool abort) result = ScriptOptionsParser.Parse("echo {{sSubject}} {{sMessage}}", _commands, owner: null!, _scriptOptionsProvider);
+        var result = ScriptOptionsParser.Parse("echo {{sSubject}} {{sMessage}}", _commands,
+            null!, _scriptOptionsProvider);
 
         result.arguments.Should().Be($"echo \"{revision.Subject}\" \"{expectedMessage}\"");
         result.abort.Should().Be(false);
@@ -198,12 +192,12 @@ public class ScriptOptionsParserTests
     [Fact]
     public void ParseScriptArguments_resolves_cDefaultRemotePathFromUrl_currentRemote_unset()
     {
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", option: "cDefaultRemotePathFromUrl",
-            owner: null!, _scriptOptionsProvider, uiCommands: null!, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", "cDefaultRemotePathFromUrl",
+            null!, _scriptOptionsProvider, null!, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be("{openUrl} https://gitlab.com/tree/{sBranch}");
     }
@@ -211,15 +205,16 @@ public class ScriptOptionsParserTests
     [Fact]
     public void ParseScriptArguments_resolve_cDefaultRemotePathFromUrl_currentRemote_set()
     {
-        string currentRemote = "myRemote";
-        _module.GetSetting(string.Format(SettingKeyString.RemoteUrl, currentRemote)).Returns("https://gitlab.com/gitlabhq/gitlabhq.git");
+        var currentRemote = "myRemote";
+        _module.GetSetting(string.Format(SettingKeyString.RemoteUrl, currentRemote))
+            .Returns("https://gitlab.com/gitlabhq/gitlabhq.git");
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", option: "cDefaultRemotePathFromUrl",
-            owner: null!, _scriptOptionsProvider, _commands, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{openUrl} https://gitlab.com{cDefaultRemotePathFromUrl}/tree/{sBranch}", "cDefaultRemotePathFromUrl",
+            null!, _scriptOptionsProvider, _commands, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!,
+            null!, null!, null!, null!, currentRemote);
 
         result.Should().Be("{openUrl} https://gitlab.com/gitlabhq/gitlabhq/tree/{sBranch}");
     }
@@ -229,12 +224,12 @@ public class ScriptOptionsParserTests
     {
         List<string> noSelectedRemotes = [];
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{openUrl} https://gitlab.com{sRemotePathFromUrl}/tree/{sBranch}", option: "sRemotePathFromUrl",
-            owner: null!, _scriptOptionsProvider, uiCommands: null!, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, noSelectedRemotes, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{openUrl} https://gitlab.com{sRemotePathFromUrl}/tree/{sBranch}", "sRemotePathFromUrl",
+            null!, _scriptOptionsProvider, null!, null!, null!,
+            null!, null!, null!, noSelectedRemotes, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be("{openUrl} https://gitlab.com/tree/{sBranch}");
     }
@@ -242,16 +237,17 @@ public class ScriptOptionsParserTests
     [Fact]
     public void ParseScriptArguments_resolve_sRemotePathFromUrl_currentRemote_set()
     {
-        string currentRemote = "myRemote";
+        var currentRemote = "myRemote";
         List<string> selectedRemotes = [currentRemote];
-        _module.GetSetting(string.Format(SettingKeyString.RemoteUrl, currentRemote)).Returns("https://gitlab.com/gitlabhq/gitlabhq.git");
+        _module.GetSetting(string.Format(SettingKeyString.RemoteUrl, currentRemote))
+            .Returns("https://gitlab.com/gitlabhq/gitlabhq.git");
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{openUrl} https://gitlab.com{sRemotePathFromUrl}/tree/{sBranch}", option: "sRemotePathFromUrl",
-            owner: null!, _scriptOptionsProvider, _commands, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{openUrl} https://gitlab.com{sRemotePathFromUrl}/tree/{sBranch}", "sRemotePathFromUrl",
+            null!, _scriptOptionsProvider, _commands, null!, null!,
+            null!, null!, null!, selectedRemotes, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be("{openUrl} https://gitlab.com/gitlabhq/gitlabhq/tree/{sBranch}");
     }
@@ -269,19 +265,18 @@ public class ScriptOptionsParserTests
     [InlineData("remote", "")]
     [InlineData("remote", "branch")]
     [InlineData("remote", "feature/branch")]
-
     public void ParseScriptArguments_resolve_sRemoteBranch(string remoteName, string branchName)
     {
-        string option = "sRemoteBranch";
-        string branch = remoteName + '/' + branchName;
+        var option = "sRemoteBranch";
+        var branch = remoteName + '/' + branchName;
         List<IGitRef> remoteBranches = [new GitRef(null!, default, branch)];
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, uiCommands: null!, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: remoteBranches, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, null!, null!, null!,
+            null!, null!, remoteBranches, null!, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be(branch);
     }
@@ -299,19 +294,18 @@ public class ScriptOptionsParserTests
     [InlineData("remote", "")]
     [InlineData("remote", "branch")]
     [InlineData("remote", "feature/branch")]
-
     public void ParseScriptArguments_resolve_sRemoteBranchName(string remoteName, string branchName)
     {
-        string option = "sRemoteBranchName";
-        string branch = remoteName + '/' + branchName;
+        var option = "sRemoteBranchName";
+        var branch = remoteName + '/' + branchName;
         List<IGitRef> remoteBranches = [new GitRef(null!, default, branch)];
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, uiCommands: null!, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: remoteBranches, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, null!, null!, null!,
+            null!, null!, remoteBranches, null!, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be(branchName);
     }
@@ -329,19 +323,18 @@ public class ScriptOptionsParserTests
     [InlineData("remote", "")]
     [InlineData("remote", "branch")]
     [InlineData("remote", "feature/branch")]
-
     public void ParseScriptArguments_resolve_cRemoteBranch(string remoteName, string branchName)
     {
-        string option = "cRemoteBranch";
-        string branch = remoteName + '/' + branchName;
+        var option = "cRemoteBranch";
+        var branch = remoteName + '/' + branchName;
         List<IGitRef> remoteBranches = [new GitRef(null!, default, branch)];
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, uiCommands: null!, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: remoteBranches, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, null!, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!,
+            null!, null!, remoteBranches, null!, null!);
 
         result.Should().Be(branch);
     }
@@ -359,19 +352,18 @@ public class ScriptOptionsParserTests
     [InlineData("remote", "")]
     [InlineData("remote", "branch")]
     [InlineData("remote", "feature/branch")]
-
     public void ParseScriptArguments_resolve_cRemoteBranchName(string remoteName, string branchName)
     {
-        string option = "cRemoteBranchName";
-        string branch = remoteName + '/' + branchName;
+        var option = "cRemoteBranchName";
+        var branch = remoteName + '/' + branchName;
         List<IGitRef> remoteBranches = [new GitRef(null!, default, branch)];
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, uiCommands: null!, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: remoteBranches, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, null!, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!,
+            null!, null!, remoteBranches, null!, null!);
 
         result.Should().Be(branchName);
     }
@@ -382,20 +374,21 @@ public class ScriptOptionsParserTests
         const string option = "RepoName";
         const string dirName = "Windows"; // chose one which will never contain a repo
 
-        IRepositoryDescriptionProvider repositoryDescriptionProvider = Substitute.For<IRepositoryDescriptionProvider>();
+        var repositoryDescriptionProvider = Substitute.For<IRepositoryDescriptionProvider>();
         repositoryDescriptionProvider.Get(Arg.Any<string>()).Returns(dirName);
 
         ServiceContainer serviceContainer = new();
         serviceContainer.AddService(repositoryDescriptionProvider);
 
-        _commands = new GitUICommands(serviceContainer, new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""));
+        _commands = new GitUICommands(serviceContainer,
+            new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), ""));
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, _commands, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, _commands, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be(dirName);
     }
@@ -403,16 +396,16 @@ public class ScriptOptionsParserTests
     [Fact]
     public void ParseScriptArguments_resolve_HEAD_with_checkedout_branch_name()
     {
-        string option = "HEAD";
-        string branchName = "this_is_my_branch_name";
-        _module.GetSelectedBranch(emptyIfDetached: true).Returns(branchName);
+        var option = "HEAD";
+        var branchName = "this_is_my_branch_name";
+        _module.GetSelectedBranch(true).Returns(branchName);
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, uiCommands: _commands, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!,
-            currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!, currentRevision: null!, currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, _commands, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!,
+            null!, null!, null!, null!, null!);
 
         result.Should().Be(branchName);
     }
@@ -420,16 +413,16 @@ public class ScriptOptionsParserTests
     [Fact]
     public void ParseScriptArguments_resolve_HEAD_with_detached_head_hash()
     {
-        string option = "HEAD";
-        string detachedHeadHash = "d54e5cf78a403d5ace3299549be0f6cabee50a63";
-        _module.GetSelectedBranch(emptyIfDetached: true).Returns(string.Empty);
+        var option = "HEAD";
+        var detachedHeadHash = "d54e5cf78a403d5ace3299549be0f6cabee50a63";
+        _module.GetSelectedBranch(true).Returns(string.Empty);
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
-            arguments: "{" + option + "}", option,
-            owner: null!, _scriptOptionsProvider, uiCommands: _commands, allSelectedRevisions: null!, selectedTags: null!,
-            selectedBranches: null!, selectedLocalBranches: null!, selectedRemoteBranches: null!, selectedRemotes: null!, selectedRevision: null!,
-            currentTags: null!, currentBranches: null!, currentLocalBranches: null!, currentRemoteBranches: null!,
-            currentRevision: new GitRevision(ObjectId.Parse(detachedHeadHash)), currentRemote: null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments(
+            "{" + option + "}", option,
+            null!, _scriptOptionsProvider, _commands, null!, null!,
+            null!, null!, null!, null!, null!,
+            null!, null!, null!, null!,
+            new GitRevision(ObjectId.Parse(detachedHeadHash)), null!);
 
         result.Should().Be(detachedHeadHash);
     }
@@ -439,7 +432,9 @@ public class ScriptOptionsParserTests
     {
         _module.WorkingDir.Returns("C:\\test path with whitespaces\\");
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments("{{WorkingDir}} \"{WorkingDir}\"", "WorkingDir", null!, null!, _commands, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments("{{WorkingDir}} \"{WorkingDir}\"",
+            "WorkingDir", null!, null!, _commands, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
+            null!, null!, null!);
 
         result.Should().Be("\"C:\\test path with whitespaces\\\\\" \"C:\\test path with whitespaces\\\"");
     }
@@ -452,10 +447,13 @@ public class ScriptOptionsParserTests
             Subject = "test string with \"double quotes\" and escaped \\\"double quotes\\\""
         };
 
-        string? result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments("{{sMessage}}", "sMessage", null!, null!, null!, null!, null!, null!, null!, null!, null!, gitRevision, null!, null!, null!, null!, null!, null!);
+        var result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments("{{sMessage}}", "sMessage", null!,
+            null!, null!, null!, null!, null!, null!, null!, null!, gitRevision, null!, null!, null!, null!, null!,
+            null!);
         result.Should().Be("\"test string with \\\"double quotes\\\" and escaped \\\"double quotes\\\"\"");
 
-        result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments("{sMessage}", "sMessage", null!, null!, null!, null!, null!, null!, null!, null!, null!, gitRevision, null!, null!, null!, null!, null!, null!);
+        result = ScriptOptionsParser.GetTestAccessor().ParseScriptArguments("{sMessage}", "sMessage", null!, null!,
+            null!, null!, null!, null!, null!, null!, null!, gitRevision, null!, null!, null!, null!, null!, null!);
         result.Should().Be("test string with \"double quotes\" and escaped \\\"double quotes\\\"");
     }
 
@@ -464,16 +462,17 @@ public class ScriptOptionsParserTests
     {
         const string option1 = nameof(option1);
         const string option2 = nameof(option2);
-        const string value1a = nameof(value1a);
-        const string value1b = nameof(value1b);
+        const string value1A = nameof(value1A);
+        const string value1B = nameof(value1B);
         const string value2 = nameof(value2);
-        _scriptOptionsProvider.Options.Returns(new string[] { option1, option2 });
-        _scriptOptionsProvider.GetValues(option1).Returns([value1a, value1b]);
+        _scriptOptionsProvider.Options.Returns(new[] { option1, option2 });
+        _scriptOptionsProvider.GetValues(option1).Returns([value1A, value1B]);
         _scriptOptionsProvider.GetValues(option2).Returns([value2]);
 
-        (string? arguments, bool abort) = ScriptOptionsParser.Parse("foo {{" + option1 + "}} bar {" + option2 + "}", Substitute.For<IGitUICommands>(), owner: null!, _scriptOptionsProvider);
+        (var arguments, var abort) = ScriptOptionsParser.Parse("foo {{" + option1 + "}} bar {" + option2 + "}",
+            Substitute.For<IGitUiCommands>(), null!, _scriptOptionsProvider);
 
-        arguments.Should().Be($"foo \"{value1a}\" \"{value1b}\" bar {value2}");
+        arguments.Should().Be($"foo \"{value1A}\" \"{value1B}\" bar {value2}");
         abort.Should().BeFalse();
     }
 }

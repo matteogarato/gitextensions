@@ -5,7 +5,7 @@ namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormAddFiles : GitModuleForm
 {
-    public FormAddFiles(IGitUICommands commands, string? addFile = null)
+    public FormAddFiles(IGitUiCommands commands, string? addFile = null)
         : base(commands)
     {
         InitializeComponent();
@@ -15,14 +15,14 @@ public sealed partial class FormAddFiles : GitModuleForm
 
     private void ShowFilesClick(object sender, EventArgs e)
     {
-        string arguments = string.Format("add --dry-run{0} {1}", force.Checked ? " -f" : "", Filter.Text);
-        FormProcess.ShowDialog(this, UICommands, arguments, Module.WorkingDir, input: null, useDialogSettings: false);
+        var arguments = string.Format("add --dry-run{0} {1}", force.Checked ? " -f" : "", Filter.Text);
+        FormProcess.ShowDialog(this, UiCommands, arguments, Module.WorkingDir, null, false);
     }
 
     private void AddFilesClick(object sender, EventArgs e)
     {
-        string arguments = string.Format("add{0} {1}", force.Checked ? " -f" : "", Filter.Text);
-        if (FormProcess.ShowDialog(this, UICommands, arguments, Module.WorkingDir, input: null, useDialogSettings: false))
+        var arguments = string.Format("add{0} {1}", force.Checked ? " -f" : "", Filter.Text);
+        if (FormProcess.ShowDialog(this, UiCommands, arguments, Module.WorkingDir, null, false))
         {
             Close();
         }

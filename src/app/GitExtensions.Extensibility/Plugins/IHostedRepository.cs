@@ -19,20 +19,24 @@ public interface IHostedRepository
 
     string CloneUrl { get; }
 
+    GitProtocol CloneProtocol { get; set; }
+
+    IReadOnlyList<GitProtocol> SupportedCloneProtocols { get; set; }
+
     /// <summary>
-    /// Requests details of branches from the GitHub remote repository.
+    ///     Requests details of branches from the GitHub remote repository.
     /// </summary>
     /// <returns>A list of branches, ordered by name.</returns>
     IReadOnlyList<IHostedBranch> GetBranches();
 
     /// <summary>
-    /// Returns the default branch of the repository.
+    ///     Returns the default branch of the repository.
     /// </summary>
     /// <returns>The default branch of the repository.</returns>
     string GetDefaultBranch();
 
     /// <summary>
-    /// Forks the repo owned by somebody else to "my" repos.
+    ///     Forks the repo owned by somebody else to "my" repos.
     /// </summary>
     /// <returns>The new repo, owned by me.</returns>
     IHostedRepository Fork();
@@ -41,10 +45,6 @@ public interface IHostedRepository
 
     /// <returns>Pull request number</returns>
     int CreatePullRequest(string myBranch, string remoteBranch, string title, string body);
-
-    GitProtocol CloneProtocol { get; set; }
-
-    IReadOnlyList<GitProtocol> SupportedCloneProtocols { get; set; }
 }
 
 public interface IHostedBranch

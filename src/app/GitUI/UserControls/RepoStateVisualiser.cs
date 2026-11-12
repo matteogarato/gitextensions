@@ -20,18 +20,18 @@ internal sealed class RepoStateVisualiser : IRepoStateVisualiser
     internal static readonly (Bitmap, Brush) Unknown = (Images.RepoStateUnknown, Brushes.Gray);
     internal static readonly (Bitmap, Brush) UntrackedOnly = (Images.RepoStateUntrackedOnly, Brushes.BlueViolet);
 
-    public (Image image, Brush brush) Invoke(IReadOnlyList<GitItemStatus>? allChangedFiles)
+    (Image image, Brush brush) IRepoStateVisualiser.Invoke(IReadOnlyList<GitItemStatus>? allChangedFiles)
     {
         if (allChangedFiles is null)
         {
             return Unknown;
         }
 
-        int indexCount = 0;
-        int workTreeSubmodulesCount = 0;
-        int notTrackedCount = 0;
+        var indexCount = 0;
+        var workTreeSubmodulesCount = 0;
+        var notTrackedCount = 0;
 
-        foreach (GitItemStatus status in allChangedFiles)
+        foreach (var status in allChangedFiles)
         {
             if (status.Staged == StagedStatus.Index)
             {
@@ -49,7 +49,7 @@ internal sealed class RepoStateVisualiser : IRepoStateVisualiser
             }
         }
 
-        int workTreeCount = allChangedFiles.Count - indexCount;
+        var workTreeCount = allChangedFiles.Count - indexCount;
 
         return (indexCount, workTreeCount) switch
         {

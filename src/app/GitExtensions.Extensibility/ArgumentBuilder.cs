@@ -5,24 +5,26 @@ using System.Text;
 namespace GitExtensions.Extensibility;
 
 /// <summary>
-/// Builds a command line argument string from zero or more arguments.
+///     Builds a command line argument string from zero or more arguments.
 /// </summary>
 /// <remarks>
-/// <para>To retrieve the constructed argument list string, call <see cref="ToString"/>.</para>
-///
-/// <para>Arguments are separated by a single space character.</para>
-///
-/// <para>Adding <c>null</c> or white-space strings has no effect on the output, which can be
-/// useful in some calling constructions.</para>
-///
-/// <para>This class has been designed to work with C# collection initialiser syntax which makes
-/// its use quite ergonomic. See the example for more information.</para>
-///
-/// <para>The type accepts strings, however conversion from other types is achieved via extension
-/// methods by adding a method named <c>Add</c> that accepts the required type.</para>
+///     <para>To retrieve the constructed argument list string, call <see cref="ToString" />.</para>
+///     <para>Arguments are separated by a single space character.</para>
+///     <para>
+///         Adding <c>null</c> or white-space strings has no effect on the output, which can be
+///         useful in some calling constructions.
+///     </para>
+///     <para>
+///         This class has been designed to work with C# collection initialiser syntax which makes
+///         its use quite ergonomic. See the example for more information.
+///     </para>
+///     <para>
+///         The type accepts strings, however conversion from other types is achieved via extension
+///         methods by adding a method named <c>Add</c> that accepts the required type.
+///     </para>
 /// </remarks>
 /// <example>
-/// <code>
+///     <code>
 /// ArgumentBuilder args = new
 /// {
 ///     "commit",                   // adds the string unconditionally
@@ -33,16 +35,31 @@ namespace GitExtensions.Extensibility;
 /// </example>
 public class ArgumentBuilder : IEnumerable
 {
-    private readonly StringBuilder _arguments = new(capacity: 16);
+    private readonly StringBuilder _arguments = new(16);
 
-    public bool IsEmpty => _arguments.Length == 0;
+    public bool IsEmpty
+    {
+        get => _arguments.Length == 0;
+    }
 
     /// <summary>
-    /// Adds <paramref name="s"/> to the argument list.
+    ///     This method is only implemented to support collection initialiser syntax, and always
+    ///     throws if called.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Always thrown.</exception>
+    [DoesNotReturn]
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        throw new InvalidOperationException(
+            $"{nameof(IEnumerable)} only implemented to support collection initialiser syntax.");
+    }
+
+    /// <summary>
+    ///     Adds <paramref name="s" /> to the argument list.
     /// </summary>
     /// <remarks>
-    /// If <paramref name="s"/> is <c>null</c> or white-space, then no change is made
-    /// to the argument list.
+    ///     If <paramref name="s" /> is <c>null</c> or white-space, then no change is made
+    ///     to the argument list.
     /// </remarks>
     /// <param name="s">The string to add.</param>
     public void Add(string? s)
@@ -61,11 +78,11 @@ public class ArgumentBuilder : IEnumerable
     }
 
     /// <summary>
-    /// Adds the characters in <paramref name="value"/> to the argument list.
+    ///     Adds the characters in <paramref name="value" /> to the argument list.
     /// </summary>
     /// <remarks>
-    /// If <paramref name="value"/> is empty or white-space, then no change is made
-    /// to the argument list.
+    ///     If <paramref name="value" /> is empty or white-space, then no change is made
+    ///     to the argument list.
     /// </remarks>
     /// <param name="value">The span of characters to add.</param>
     public void Add(ReadOnlySpan<char> value)
@@ -84,49 +101,36 @@ public class ArgumentBuilder : IEnumerable
     }
 
     /// <summary>
-    /// Adds a range of arguments.
+    ///     Adds a range of arguments.
     /// </summary>
     /// <param name="args">The arguments to add to this builder.</param>
     public void AddRange(IEnumerable<string> args)
     {
         args = args.Where(a => !string.IsNullOrEmpty(a));
-        foreach (string s in args)
+        foreach (var s in args)
         {
             Add(s);
         }
     }
 
     /// <summary>
-    /// Returns the composed argument list as a string.
+    ///     Returns the composed argument list as a string.
     /// </summary>
     public override string ToString()
     {
         return _arguments.ToString();
     }
 
-    /// <summary>
-    /// This method is only implemented to support collection initialiser syntax, and always
-    /// throws if called.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Always thrown.</exception>
-    [DoesNotReturn]
-    IEnumerator IEnumerable.GetEnumerator()
+    internal TestAccessor GetTestAccessor()
     {
-        throw new InvalidOperationException($"{nameof(IEnumerable)} only implemented to support collection initialiser syntax.");
+        return new TestAccessor(this);
     }
 
-    internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
+    internal readonly struct TestAccessor(ArgumentBuilder builder)
     {
-        private readonly ArgumentBuilder _builder;
-
-        public TestAccessor(ArgumentBuilder builder)
+        public StringBuilder Arguments
         {
-            _builder = builder;
+            get => builder._arguments;
         }
-
-        public StringBuilder Arguments => _builder._arguments;
     }
 }

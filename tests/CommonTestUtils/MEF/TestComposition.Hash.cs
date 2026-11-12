@@ -12,7 +12,7 @@ public sealed partial class TestComposition
     internal static class Hash
     {
         /// <summary>
-        /// This is how VB Anonymous Types combine hash values for fields.
+        ///     This is how VB Anonymous Types combine hash values for fields.
         /// </summary>
         internal static int Combine(int newKey, int currentKey)
         {
@@ -26,9 +26,9 @@ public sealed partial class TestComposition
                 return 0;
             }
 
-            int hashCode = 0;
-            int count = 0;
-            foreach (T value in values)
+            var hashCode = 0;
+            var count = 0;
+            foreach (var value in values)
             {
                 if (count++ >= maxItemsToHash)
                 {

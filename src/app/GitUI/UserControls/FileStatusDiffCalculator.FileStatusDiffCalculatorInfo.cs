@@ -1,7 +1,6 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusDiffCalculator
 {

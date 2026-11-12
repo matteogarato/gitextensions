@@ -1,24 +1,25 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using GitExtensions.Shims.WinForms;
 using GitUI.Hotkey;
-using ResourceManager;
+using TextBox = Avalonia.Controls.TextBox;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Edits keyboard shortcuts supported by the Avalonia browse window.
+///     Edits keyboard shortcuts supported by the Avalonia browse window.
 /// </summary>
 public sealed class HotkeySettingsWindow : Window
 {
-    private readonly AvaloniaHotkeySettingsManager _settingsManager;
-    private readonly HotkeyCommand[] _hotkeys;
     private readonly TextBlock _error = new();
+    private readonly HotkeyCommand[] _hotkeys;
+    private readonly AvaloniaHotkeySettingsManager _settingsManager;
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="HotkeySettingsWindow"/> class.
+    ///     Initializes a new instance of the <see cref="HotkeySettingsWindow" /> class.
     /// </summary>
     /// <param name="settingsManager">The settings manager used to load and save shortcuts.</param>
     public HotkeySettingsWindow(AvaloniaHotkeySettingsManager settingsManager)
@@ -35,19 +36,19 @@ public sealed class HotkeySettingsWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
         StackPanel rows = new() { Spacing = 8 };
-        foreach (HotkeyCommand hotkey in _hotkeys)
+        foreach (var hotkey in _hotkeys)
         {
             rows.Children.Add(CreateHotkeyRow(hotkey));
         }
 
         Button save = new() { Content = ResourceManager.TranslatedStrings.Save, IsDefault = true };
         save.Click += (_, _) => SaveHotkeys();
-        Button cancel = new() { Content = GitUI.TranslatedStrings.Cancel, IsCancel = true };
+        Button cancel = new() { Content = TranslatedStrings.Cancel, IsCancel = true };
         cancel.Click += (_, _) => Close(false);
 
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 10,
             Children =
             {
@@ -59,9 +60,9 @@ public sealed class HotkeySettingsWindow : Window
                     Orientation = Orientation.Horizontal,
                     HorizontalAlignment = HorizontalAlignment.Right,
                     Spacing = 8,
-                    Children = { save, cancel },
-                },
-            },
+                    Children = { save, cancel }
+                }
+            }
         };
     }
 
@@ -74,7 +75,8 @@ public sealed class HotkeySettingsWindow : Window
             AvaloniaBrowseHotkeyCommand.Refresh => ResourceManager.TranslatedStrings.RefreshShortcut,
             AvaloniaBrowseHotkeyCommand.Pull => ResourceManager.TranslatedStrings.PullShortcut,
             AvaloniaBrowseHotkeyCommand.Push => ResourceManager.TranslatedStrings.PushShortcut,
-            _ => throw new ArgumentOutOfRangeException(nameof(commandCode), commandCode, "Unknown Avalonia browse hotkey."),
+            _ => throw new ArgumentOutOfRangeException(nameof(commandCode), commandCode,
+                "Unknown Avalonia browse hotkey.")
         };
     }
 
@@ -87,12 +89,7 @@ public sealed class HotkeySettingsWindow : Window
 
     private StackPanel CreateHotkeyRow(HotkeyCommand hotkey)
     {
-        Avalonia.Controls.TextBox keyField = new()
-        {
-            Text = GetDisplayString(hotkey.KeyData),
-            IsReadOnly = true,
-            MinWidth = 180,
-        };
+        TextBox keyField = new() { Text = GetDisplayString(hotkey.KeyData), IsReadOnly = true, MinWidth = 180 };
         keyField.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Tab && e.KeyModifiers == KeyModifiers.None)
@@ -100,7 +97,7 @@ public sealed class HotkeySettingsWindow : Window
                 return;
             }
 
-            if (!AvaloniaHotkeyKeyConverter.TryCreateKeyData(e.Key, e.KeyModifiers, out Keys keyData))
+            if (!AvaloniaHotkeyKeyConverter.TryCreateKeyData(e.Key, e.KeyModifiers, out var keyData))
             {
                 _error.Text = ResourceManager.TranslatedStrings.UnsupportedShortcutKey;
                 return;
@@ -130,17 +127,17 @@ public sealed class HotkeySettingsWindow : Window
                 {
                     Text = GetCommandLabel(hotkey.CommandCode),
                     Width = 190,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 },
                 keyField,
-                clear,
-            },
+                clear
+            }
         };
     }
 
     private void SaveHotkeys()
     {
-        Keys[] assignedKeys = _hotkeys
+        var assignedKeys = _hotkeys
             .Where(hotkey => hotkey.KeyData != Keys.None)
             .Select(hotkey => hotkey.KeyData)
             .ToArray();

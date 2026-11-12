@@ -4,26 +4,23 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
 using GitUI.HelperDialogs;
-using GitUIPluginInterfaces;
 using Microsoft.VisualStudio.Threading;
 using ResourceManager;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormRevertCommit : GitExtensionsDialog
 {
+    private const int _parentsListItemHeight = 18;
     private readonly TranslationString _noneParentSelectedText = new("None parent is selected!");
 
     private bool _isMerge;
-    private int _parentsLabelControlHeight;
     private int _lvParentsListControlHeight;
+    private int _parentsLabelControlHeight;
 
-    private const int _parentsListItemHeight = 18;
-
-    public GitRevision Revision { get; }
-
-    public FormRevertCommit(IGitUICommands commands, GitRevision revision)
-        : base(commands, enablePositionRestore: false)
+    public FormRevertCommit(IGitUiCommands commands, GitRevision revision)
+        : base(commands, false)
     {
         Revision = revision;
 
@@ -36,6 +33,8 @@ public partial class FormRevertCommit : GitExtensionsDialog
 
         InitializeComplete();
     }
+
+    public GitRevision Revision { get; }
 
     private void Form_Load(object sender, EventArgs e)
     {
@@ -75,36 +74,36 @@ public partial class FormRevertCommit : GitExtensionsDialog
 
             if (_isMerge)
             {
-                MinimumSize = new Size(MinimumSize.Width, PreferredMinimumHeight + _parentsLabelControlHeight + _lvParentsListControlHeight);
+                MinimumSize = new Size(MinimumSize.Width,
+                    PreferredMinimumHeight + _parentsLabelControlHeight + _lvParentsListControlHeight);
                 Size = MinimumSize;
                 ParentsLabel.Visible = true;
                 lvParentsList.Visible = true;
             }
             else
             {
-                MinimumSize = new Size(MinimumSize.Width, PreferredMinimumHeight - _parentsLabelControlHeight - _lvParentsListControlHeight);
+                MinimumSize = new Size(MinimumSize.Width,
+                    PreferredMinimumHeight - _parentsLabelControlHeight - _lvParentsListControlHeight);
                 Size = MinimumSize;
             }
 
             if (_isMerge)
             {
-                IReadOnlyList<GitRevision> parents = Module.GetParentRevisions(Revision.ObjectId);
+                var parents = Module.GetParentRevisions(Revision.ObjectId);
 
-                for (int i = 0; i < parents.Count; i++)
+                for (var i = 0; i < parents.Count; i++)
                 {
                     lvParentsList.Items.Add(new ListViewItem((i + 1).ToString())
                     {
                         SubItems =
                         {
-                            parents[i].Subject,
-                            parents[i].Author,
-                            parents[i].CommitDate.ToShortDateString()
+                            parents[i].Subject, parents[i].Author, parents[i].CommitDate.ToShortDateString()
                         }
                     });
                 }
 
                 lvParentsList.TopItem!.Selected = true;
-                Size size = MinimumSize;
+                var size = MinimumSize;
                 size.Height += DpiUtil.Scale(_parentsListItemHeight * parents.Count);
                 Size = size;
                 MinimumSize = size;
@@ -112,35 +111,35 @@ public partial class FormRevertCommit : GitExtensionsDialog
         }
         finally
         {
-            ResumeLayout(performLayout: true);
+            ResumeLayout(true);
         }
     }
 
     private void Revert_Click(object sender, EventArgs e)
     {
-        int parentIndex = 0;
+        var parentIndex = 0;
         if (_isMerge)
         {
             if (lvParentsList.SelectedItems.Count != 1)
             {
-                MessageBoxes.Show(this, _noneParentSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _noneParentSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 return;
             }
-            else
-            {
-                parentIndex = lvParentsList.SelectedItems[0].Index + 1;
-            }
+
+            parentIndex = lvParentsList.SelectedItems[0].Index + 1;
         }
 
         CommitMessageManager commitMessageManager = new(this, Module.WorkingDirGitDir, Module.CommitEncoding);
 
-        string existingCommitMessage = ThreadHelper.JoinableTaskFactory.Run(() => commitMessageManager.GetMergeOrCommitMessageAsync());
+        var existingCommitMessage =
+            ThreadHelper.JoinableTaskFactory.Run(() => commitMessageManager.GetMergeOrCommitMessageAsync());
 
-        ArgumentString command = Commands.Revert(Revision.ObjectId, AutoCommit.Checked, parentIndex);
+        var command = Commands.Revert(Revision.ObjectId, AutoCommit.Checked, parentIndex);
 
         // Don't verify whether the command is successful.
         // If it fails, likely there is a conflict that needs to be resolved.
-        FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+        FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
 
         if (!string.IsNullOrWhiteSpace(existingCommitMessage))
         {
@@ -150,10 +149,11 @@ public partial class FormRevertCommit : GitExtensionsDialog
                 {
                     await TaskScheduler.Default;
 
-                    string message = await commitMessageManager.GetMergeOrCommitMessageAsync();
-                    string newCommitMessageContent = $"{existingCommitMessage}\n\n{message}";
-                    await commitMessageManager.WriteCommitMessageToFileAsync(newCommitMessageContent, CommitMessageType.Merge,
-                                                                             usingCommitTemplate: false, ensureCommitMessageSecondLineEmpty: false);
+                    var message = await commitMessageManager.GetMergeOrCommitMessageAsync();
+                    var newCommitMessageContent = $"{existingCommitMessage}\n\n{message}";
+                    await commitMessageManager.WriteCommitMessageToFileAsync(newCommitMessageContent,
+                        CommitMessageType.Merge,
+                        usingCommitTemplate: false, ensureCommitMessageSecondLineEmpty: false);
                 }
                 catch (Exception)
                 {
@@ -161,14 +161,15 @@ public partial class FormRevertCommit : GitExtensionsDialog
             });
         }
 
-        MergeConflictHandler.HandleMergeConflicts(UICommands, this, AutoCommit.Checked);
+        MergeConflictHandler.HandleMergeConflicts(UiCommands, this, AutoCommit.Checked);
         DialogResult = DialogResult.OK;
         Close();
     }
 
     private void lvParentsList_Resize(object sender, EventArgs e)
     {
-        lvParentsList.Columns[1].Width = lvParentsList.ClientSize.Width - lvParentsList.Columns[0].Width - lvParentsList.Columns[2].Width - lvParentsList.Columns[3].Width;
+        lvParentsList.Columns[1].Width = lvParentsList.ClientSize.Width - lvParentsList.Columns[0].Width -
+                                         lvParentsList.Columns[2].Width - lvParentsList.Columns[3].Width;
     }
 
     private void btnAbort_Click(object sender, EventArgs e)

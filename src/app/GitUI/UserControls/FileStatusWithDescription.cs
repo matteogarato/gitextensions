@@ -1,27 +1,25 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.Properties;
-using GitUIPluginInterfaces;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
-public class FileStatusWithDescription
+public class FileStatusWithDescription(
+    GitRevision? firstRev,
+    GitRevision secondRev,
+    string summary,
+    IReadOnlyList<GitItemStatus> statuses,
+    ObjectId baseA = default,
+    ObjectId baseB = default,
+    string iconName = nameof(Images.Diff))
 {
-    public FileStatusWithDescription(GitRevision? firstRev, GitRevision secondRev, string summary, IReadOnlyList<GitItemStatus> statuses, ObjectId baseA = default, ObjectId baseB = default, string iconName = nameof(Images.Diff))
-    {
-        FirstRev = firstRev;
-        SecondRev = secondRev ?? throw new ArgumentNullException(nameof(secondRev));
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        Statuses = statuses ?? throw new ArgumentNullException(nameof(statuses));
-        BaseA = baseA;
-        BaseB = baseB;
-        IconName = iconName ?? throw new ArgumentNullException(nameof(iconName));
-    }
+    public GitRevision? FirstRev { get; } = firstRev;
+    public GitRevision SecondRev { get; } = secondRev ?? throw new ArgumentNullException(nameof(secondRev));
+    public string Summary { get; } = summary ?? throw new ArgumentNullException(nameof(summary));
 
-    public GitRevision? FirstRev { get; }
-    public GitRevision SecondRev { get; }
-    public string Summary { get; }
-    public IReadOnlyList<GitItemStatus> Statuses { get; }
-    public ObjectId BaseA { get; }
-    public ObjectId BaseB { get; }
-    public string IconName { get; }
+    public IReadOnlyList<GitItemStatus> Statuses { get; } =
+        statuses ?? throw new ArgumentNullException(nameof(statuses));
+
+    public ObjectId BaseA { get; } = baseA;
+    public ObjectId BaseB { get; } = baseB;
+    public string IconName { get; } = iconName ?? throw new ArgumentNullException(nameof(iconName));
 }

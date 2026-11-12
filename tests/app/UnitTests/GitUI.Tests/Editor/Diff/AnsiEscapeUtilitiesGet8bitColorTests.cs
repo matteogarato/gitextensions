@@ -1,28 +1,30 @@
 ﻿using GitUI.Editor.Diff;
 
 namespace GitUITests.Editor.Diff;
-public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
+
+public class AnsiEscapeUtilitiesGet8BitColorTests : AnsiEscapeUtilitiesTestBase
 {
     [Fact]
     public void Get8bitColor_ShouldReturnBuiltinThemeColors()
     {
-        for (int colorId = 0; colorId < 8; ++colorId)
+        for (var colorId = 0; colorId < 8; ++colorId)
         {
-            foreach (bool fore in new List<bool>() { true, false })
+            foreach (var fore in new List<bool> { true, false })
             {
-                foreach (bool bold in new List<bool>() { true, false })
+                foreach (var bold in new List<bool> { true, false })
                 {
-                    foreach (bool dim in new List<bool>() { false, true })
+                    foreach (var dim in new List<bool> { false, true })
                     {
                         // Only check the result for red, the other should just get a value
                         // (No need to maintain all ANSI theme colors in parallel)
-                        Color result = AnsiEscapeUtilities.TestAccessor.Get8bitColor(colorId, fore, bold, dim);
+                        var result = AnsiEscapeUtilities.TestAccessor.Get8BitColor(colorId, fore, bold, dim);
                         if (colorId != RedId)
                         {
                             continue;
                         }
 
-                        result.Should().Be(GetAnsiColor(RedId, fore, bold, dim), $"Failed for fore:{fore}, bold:{bold}, dim:{dim}");
+                        result.Should().Be(GetAnsiColor(RedId, fore, bold, dim),
+                            $"Failed for fore:{fore}, bold:{bold}, dim:{dim}");
                     }
                 }
             }
@@ -32,9 +34,9 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
     [Fact]
     public void Get8bitColor_ShouldReturnCorrect6bitColor()
     {
-        for (int i = 16; i < 232; ++i)
+        for (var i = 16; i < 232; ++i)
         {
-            Color result = AnsiEscapeUtilities.TestAccessor.Get8bitColor(i, fore: true, bold: false, dim: false);
+            var result = AnsiEscapeUtilities.TestAccessor.Get8BitColor(i, true, false, false);
             result.Should().Be(GetExpectedColor(i));
 
             // sample specific colors only
@@ -52,24 +54,26 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
 
         static Color GetExpectedColor(int level)
         {
-            int i = level - 16;
-            int blue = Get8bitFrom6over3bit(i % 6);
-            int green = Get8bitFrom6over3bit((i % 36) / 6);
-            int red = Get8bitFrom6over3bit(i / 36);
+            var i = level - 16;
+            var blue = Get8BitFrom6Over3Bit(i % 6);
+            var green = Get8BitFrom6Over3Bit(i % 36 / 6);
+            var red = Get8BitFrom6Over3Bit(i / 36);
 
             return Color.FromArgb(red, green, blue);
 
-            static int Get8bitFrom6over3bit(int color)
-                => color * 51;
+            static int Get8BitFrom6Over3Bit(int color)
+            {
+                return color * 51;
+            }
         }
     }
 
     [Fact]
     public void Get8bitColor_ShouldReturnCorrect4bitGrey()
     {
-        for (int i = 232; i <= 255; ++i)
+        for (var i = 232; i <= 255; ++i)
         {
-            Color result = AnsiEscapeUtilities.TestAccessor.Get8bitColor(i, fore: true, bold: false, dim: false);
+            var result = AnsiEscapeUtilities.TestAccessor.Get8BitColor(i, true, false, false);
             result.Should().Be(Get24StepGray(i));
 
             // border
@@ -87,7 +91,7 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
 
         static Color Get24StepGray(int level)
         {
-            int i = (level - 232) * 11;
+            var i = (level - 232) * 11;
             return Color.FromArgb(i, i, i);
         }
     }
@@ -95,8 +99,9 @@ public class AnsiEscapeUtilitiesGet8bitColorTests : AnsiEscapeUtilitiesTestBase
     [Fact]
     public void Get8bitColor_ShouldThrowException_WhenColorCodeIsOutOfRange()
     {
-        int colorCode = 256;
+        var colorCode = 256;
 
-        ((Action)(() => AnsiEscapeUtilities.TestAccessor.Get8bitColor(colorCode, fore: true, bold: false, dim: false))).Should().Throw<ArgumentOutOfRangeException>();
+        ((Action)(() => AnsiEscapeUtilities.TestAccessor.Get8BitColor(colorCode, true, false, false))).Should()
+            .Throw<ArgumentOutOfRangeException>();
     }
 }

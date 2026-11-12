@@ -1,17 +1,18 @@
 ﻿using System.Text;
-using GitCommands;
 using GitCommands.Patches;
 using GitExtensions.Extensibility.Git;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitCommandsTests.Patches;
+
 public sealed class PatchProcessorTest
 {
-    private readonly string _bigPatch;
     private readonly string _bigBinPatch;
-    private readonly string _rebaseDiff;
-    private readonly string _colorDiff;
+    private readonly string _bigPatch;
     private readonly string _colorBinDiff;
+    private readonly string _colorDiff;
     private readonly string _colorPrefixDiff;
+    private readonly string _rebaseDiff;
 
     public PatchProcessorTest()
     {
@@ -24,8 +25,8 @@ public sealed class PatchProcessorTest
 
         static string LoadPatch(string fileName)
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "Patches/testdata", fileName);
-            byte[] bytes = File.ReadAllBytes(path);
+            var path = Path.Combine(AppContext.BaseDirectory, "Patches/testdata", fileName);
+            var bytes = File.ReadAllBytes(path);
             return GitModule.LosslessEncoding.GetString(bytes);
         }
     }
@@ -33,11 +34,12 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadPatch()
     {
-        TestPatch expectedPatch = CreateSmallPatchExample();
+        var expectedPatch = CreateSmallPatchExample();
 
-        IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(expectedPatch.PatchOutput, new Lazy<Encoding>(() => Encoding.UTF8));
+        var patches =
+            PatchProcessor.CreatePatchesFromString(expectedPatch.PatchOutput, new Lazy<Encoding>(() => Encoding.UTF8));
 
-        Patch createdPatch = patches.First();
+        var createdPatch = patches.First();
 
         createdPatch.Header.Should().Be(expectedPatch.Patch.Header);
         createdPatch.FileNameA.Should().Be(expectedPatch.Patch.FileNameA);
@@ -49,11 +51,12 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadReversePatch()
     {
-        TestPatch expectedPatch = CreateSmallPatchExample(reverse: true);
+        var expectedPatch = CreateSmallPatchExample(true);
 
-        IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(expectedPatch.PatchOutput, new Lazy<Encoding>(() => Encoding.UTF8));
+        var patches =
+            PatchProcessor.CreatePatchesFromString(expectedPatch.PatchOutput, new Lazy<Encoding>(() => Encoding.UTF8));
 
-        Patch createdPatch = patches.First();
+        var createdPatch = patches.First();
 
         createdPatch.Header.Should().Be(expectedPatch.Patch.Header, "header");
         createdPatch.FileNameA.Should().Be(expectedPatch.Patch.FileNameB, "fileA");
@@ -65,7 +68,8 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadsTheRightNumberOfDiffsInAPatchFile()
     {
-        IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
+        var patches =
+            PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
 
         patches.Count().Should().Be(17);
     }
@@ -73,7 +77,8 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadsTheRightFileNamesInAPatchFile()
     {
-        List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8))];
+        List<Patch> patches =
+            [.. PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8))];
 
         patches.Select(p => p.FileNameA).Distinct().Count().Should().Be(17);
         patches.Select(p => p.FileNameB).Distinct().Count().Should().Be(17);
@@ -82,7 +87,8 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadsBinaryPatch()
     {
-        IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigBinPatch, new Lazy<Encoding>(() => Encoding.UTF8));
+        var patches =
+            PatchProcessor.CreatePatchesFromString(_bigBinPatch, new Lazy<Encoding>(() => Encoding.UTF8));
 
         patches.Count(p => p.FileType == PatchFileType.Binary).Should().Be(248);
     }
@@ -90,7 +96,8 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadsOneNewFile()
     {
-        IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
+        var patches =
+            PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
 
         patches.Count(p => p.ChangeType == PatchChangeType.NewFile).Should().Be(1);
     }
@@ -98,7 +105,8 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadsOneDeleteFile()
     {
-        IEnumerable<Patch> patches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
+        var patches =
+            PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
 
         patches.Count(p => p.ChangeType == PatchChangeType.DeleteFile).Should().Be(1);
     }
@@ -106,17 +114,20 @@ public sealed class PatchProcessorTest
     [Fact]
     public void TestCorrectlyLoadsChangeFiles()
     {
-        IEnumerable<Patch> bigPatches = PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
+        var bigPatches =
+            PatchProcessor.CreatePatchesFromString(_bigPatch, new Lazy<Encoding>(() => Encoding.UTF8));
         bigPatches.Count(p => p.ChangeType == PatchChangeType.ChangeFile).Should().Be(15);
 
-        IEnumerable<Patch> smallPatches = PatchProcessor.CreatePatchesFromString(CreateSmallPatchExample().PatchOutput, new Lazy<Encoding>(() => Encoding.UTF8));
+        var smallPatches = PatchProcessor.CreatePatchesFromString(CreateSmallPatchExample().PatchOutput,
+            new Lazy<Encoding>(() => Encoding.UTF8));
         smallPatches.Count(p => p.ChangeType == PatchChangeType.ChangeFile).Should().Be(1);
     }
 
     [Fact]
     public void TestCorrectlyLoadsRebaseDiff()
     {
-        List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_rebaseDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
+        List<Patch> patches =
+            [.. PatchProcessor.CreatePatchesFromString(_rebaseDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
 
         patches.Count.Should().Be(13);
     }
@@ -134,7 +145,8 @@ index cdf8bebba,55ff37bb9..000000000
 +++ b/UnitTests/GitCommandsTests/Patches/PatchProcessorTest.cs
 ";
 
-        List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(diff, new Lazy<Encoding>(() => Encoding.UTF8))];
+        List<Patch> patches =
+            [.. PatchProcessor.CreatePatchesFromString(diff, new Lazy<Encoding>(() => Encoding.UTF8))];
 
         patches.Count.Should().Be(2);
     }
@@ -142,12 +154,15 @@ index cdf8bebba,55ff37bb9..000000000
     [Fact]
     public void ColorDiff()
     {
-        List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_colorDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
+        List<Patch> patches =
+            [.. PatchProcessor.CreatePatchesFromString(_colorDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
 
         patches.Count.Should().Be(1);
-        Patch createdPatch = patches.First();
+        var createdPatch = patches.First();
 
-        createdPatch.Header.Should().Be(@"diff --git a/GitCommands/Patches/PatchProcessor.cs b/GitCommands/Patches/PatchProcessor.cs", "header");
+        createdPatch.Header.Should()
+            .Be(@"diff --git a/GitCommands/Patches/PatchProcessor.cs b/GitCommands/Patches/PatchProcessor.cs",
+                "header");
         createdPatch.FileNameA.Should().Be("GitCommands/Patches/PatchProcessor.cs", "fileA");
         createdPatch.FileNameB.Should().Be("GitCommands/Patches/PatchProcessor.cs", "fileB");
         createdPatch.Index.Should().Be("index 70b40..c1e6c 100644");
@@ -162,13 +177,18 @@ index cdf8bebba,55ff37bb9..000000000
     [InlineData("./", "./")]
     public void ColorPrefixDiff(string prefixSrc, string prefixDst)
     {
-        string diffWithCutomPrefixes = _colorPrefixDiff.Replace("[PLACEHOLDER_PREFIX_SRC]", prefixSrc).Replace("[PLACEHOLDER_PREFIX_DST]", prefixDst);
-        List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(diffWithCutomPrefixes, new Lazy<Encoding>(() => Encoding.UTF8))];
+        var diffWithCutomPrefixes = _colorPrefixDiff.Replace("[PLACEHOLDER_PREFIX_SRC]", prefixSrc)
+            .Replace("[PLACEHOLDER_PREFIX_DST]", prefixDst);
+        List<Patch> patches =
+            [.. PatchProcessor.CreatePatchesFromString(diffWithCutomPrefixes, new Lazy<Encoding>(() => Encoding.UTF8))];
 
         patches.Count.Should().Be(1);
-        Patch createdPatch = patches.First();
+        var createdPatch = patches.First();
 
-        createdPatch.Header.Should().Be(@$"diff --git {prefixSrc}GitCommands/Patches/PatchProcessor.cs {prefixDst}GitCommands/Patches/PatchProcessor.cs", "header");
+        createdPatch.Header.Should()
+            .Be(
+                @$"diff --git {prefixSrc}GitCommands/Patches/PatchProcessor.cs {prefixDst}GitCommands/Patches/PatchProcessor.cs",
+                "header");
         createdPatch.FileNameA.Should().Be("GitCommands/Patches/PatchProcessor.cs", "fileA");
         createdPatch.FileNameB.Should().Be("GitCommands/Patches/PatchProcessor.cs", "fileB");
         createdPatch.Index.Should().Be("index 70b40..c1e6c 100644");
@@ -179,10 +199,11 @@ index cdf8bebba,55ff37bb9..000000000
     [Fact]
     public void ColorBinDiff()
     {
-        List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(_colorBinDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
+        List<Patch> patches =
+            [.. PatchProcessor.CreatePatchesFromString(_colorBinDiff, new Lazy<Encoding>(() => Encoding.UTF8))];
 
         patches.Count.Should().Be(1);
-        Patch createdPatch = patches.First();
+        var createdPatch = patches.First();
 
         createdPatch.Header.Should().Be(@"diff --git a/syscolor 3 gray.7z b/syscolor 3 gray.7z", "header");
         createdPatch.FileNameA.Should().Be("syscolor 3 gray.7z", "fileA");
@@ -194,7 +215,7 @@ index cdf8bebba,55ff37bb9..000000000
 
     private static TestPatch CreateSmallPatchExample(bool reverse = false)
     {
-        string header = reverse
+        var header = reverse
             ? "diff --git a/thisisatestb.txt b/thisisatesta.txt"
             : "diff --git b/thisisatesta.txt a/thisisatestb.txt";
         const string index = "index 5e4dce2..5eb1e6f 100644";
@@ -223,7 +244,8 @@ index cdf8bebba,55ff37bb9..000000000
         AppendDiffLine("-ąśdkjaldskjlaksd");
         AppendDiffLine("+changed again€");
 
-        Patch patch = new(header, index, PatchFileType.Text, fileNameA, fileNameB, PatchChangeType.ChangeFile, patchText.ToString());
+        Patch patch = new(header, index, PatchFileType.Text, fileNameA, fileNameB, PatchChangeType.ChangeFile,
+            patchText.ToString());
 
         return new TestPatch(patch, patchOutput.ToString());
 
@@ -245,15 +267,15 @@ index cdf8bebba,55ff37bb9..000000000
     [Fact]
     public async Task CreatePatchFromString_with_spaces()
     {
-        string patchText = """
-            diff --git a/sub modules/test submodule b/sub modules/test submodule
-            --- a/sub modules/test submodule    
-            +++ b/sub modules/test submodule    
-            @@ -1 +1 @@
-            -Subproject commit 4c54fbefd8032acb59aa33ade3fb4bdff32bdde7
-            +Subproject commit 4c54fbefd8032acb59aa33ade3fb4bdff32bdde7-dirty
-            """;
-        await Verifier.Verify(PatchProcessor.CreatePatchesFromString(patchText, new Lazy<Encoding>(Encoding.UTF8)));
+        var patchText = """
+                        diff --git a/sub modules/test submodule b/sub modules/test submodule
+                        --- a/sub modules/test submodule    
+                        +++ b/sub modules/test submodule    
+                        @@ -1 +1 @@
+                        -Subproject commit 4c54fbefd8032acb59aa33ade3fb4bdff32bdde7
+                        +Subproject commit 4c54fbefd8032acb59aa33ade3fb4bdff32bdde7-dirty
+                        """;
+        await Verify(PatchProcessor.CreatePatchesFromString(patchText, new Lazy<Encoding>(Encoding.UTF8)));
     }
 
     [Theory]
@@ -261,22 +283,22 @@ index cdf8bebba,55ff37bb9..000000000
     public async Task CreatePatchFromString_Text_ChangeFile(Encoding filesContentEncoding)
     {
         const char escape = '\u001b';
-        string patchText = $"""
-            From 42a3043eafe08409c55b48c36661cf6cf3055c68 Mon Sep 17 00:00:00 2001
-            From: Some One <else@mail.net>
-            Date: Mon, 2 Sep 2024 17:42:00 +0200
-            Subject: Patch for test
+        var patchText = $"""
+                         From 42a3043eafe08409c55b48c36661cf6cf3055c68 Mon Sep 17 00:00:00 2001
+                         From: Some One <else@mail.net>
+                         Date: Mon, 2 Sep 2024 17:42:00 +0200
+                         Subject: Patch for test
 
-            ---
-            {escape}[1mdiff --git a/old.txt b/new.txt{escape}[m
-            {escape}[1mindex cb36533..5550a88 100644{escape}[m
-            {escape}[1m--- a/old.txt{escape}[m
-            {escape}[1m+++ b/new.txt{escape}[m
-            {escape}[7;37m@@ -1 +1 @@{escape}[m
-            {escape}[7;31m-Ð ÐÐÐÐ{escape}[m
-            {escape}[7;32m+{escape}[m{escape}[7;32mA ÐÐÐÐ{escape}[m
-            """.Replace("\r\n", "\n");
-        await Verifier.Verify(PatchProcessor.CreatePatchesFromString(patchText, new Lazy<Encoding>(filesContentEncoding)));
+                         ---
+                         {escape}[1mdiff --git a/old.txt b/new.txt{escape}[m
+                         {escape}[1mindex cb36533..5550a88 100644{escape}[m
+                         {escape}[1m--- a/old.txt{escape}[m
+                         {escape}[1m+++ b/new.txt{escape}[m
+                         {escape}[7;37m@@ -1 +1 @@{escape}[m
+                         {escape}[7;31m-Ð ÐÐÐÐ{escape}[m
+                         {escape}[7;32m+{escape}[m{escape}[7;32mA ÐÐÐÐ{escape}[m
+                         """.Replace("\r\n", "\n");
+        await Verify(PatchProcessor.CreatePatchesFromString(patchText, new Lazy<Encoding>(filesContentEncoding)));
     }
 
     public class CreatePatchFromStringTestData
@@ -292,15 +314,9 @@ index cdf8bebba,55ff37bb9..000000000
         }
     }
 
-    private sealed class TestPatch
+    private sealed class TestPatch(Patch patch, string patchOutput)
     {
-        public Patch Patch { get; }
-        public string PatchOutput { get; }
-
-        public TestPatch(Patch patch, string patchOutput)
-        {
-            Patch = patch;
-            PatchOutput = patchOutput;
-        }
+        public Patch Patch { get; } = patch;
+        public string PatchOutput { get; } = patchOutput;
     }
 }

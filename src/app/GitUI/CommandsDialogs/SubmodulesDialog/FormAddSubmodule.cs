@@ -5,6 +5,7 @@ using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.HelperDialogs;
 using ResourceManager;
 
@@ -15,7 +16,7 @@ public partial class FormAddSubmodule : GitModuleForm
     private readonly TranslationString _remoteAndLocalPathRequired
         = new("A remote path and local path are required");
 
-    public FormAddSubmodule(IGitUICommands commands)
+    public FormAddSubmodule(IGitUiCommands commands)
         : base(commands)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -23,7 +24,8 @@ public partial class FormAddSubmodule : GitModuleForm
         InitializeComponent();
         InitializeComplete();
 
-        IList<Repository> repositoryHistory = ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Remotes.LoadRecentHistoryAsync);
+        var repositoryHistory =
+            ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Remotes.LoadRecentHistoryAsync);
         Directory.DataSource = repositoryHistory;
         Directory.DisplayMember = nameof(Repository.Path);
         Directory.Text = "";
@@ -32,7 +34,7 @@ public partial class FormAddSubmodule : GitModuleForm
 
     private void BrowseClick(object sender, EventArgs e)
     {
-        string? userSelectedPath = OsShellUtil.PickFolder(this, Directory.Text);
+        var userSelectedPath = OsShellUtil.PickFolder(this, Directory.Text);
 
         if (userSelectedPath is not null)
         {
@@ -50,8 +52,9 @@ public partial class FormAddSubmodule : GitModuleForm
 
         using (WaitCursorScope.Enter())
         {
-            ArgumentString command = Commands.AddSubmodule(Directory.Text, LocalPath.Text, Branch.Text, chkForce.Checked);
-            FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+            var command =
+                Commands.AddSubmodule(Directory.Text, LocalPath.Text, Branch.Text, chkForce.Checked);
+            FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
             Close();
         }
     }
@@ -63,12 +66,12 @@ public partial class FormAddSubmodule : GitModuleForm
 
     private void BranchDropDown(object sender, EventArgs e)
     {
-        Branch.DataSource = LoadRemoteRepoBranches(Module.GitExecutable, url: Directory.Text);
+        Branch.DataSource = LoadRemoteRepoBranches(Module.GitExecutable, Directory.Text);
     }
 
     private void DirectoryTextUpdate(object sender, EventArgs e)
     {
-        string path = PathUtil.GetRepositoryName(Directory.Text);
+        var path = PathUtil.GetRepositoryName(Directory.Text);
 
         if (path != "")
         {
@@ -77,7 +80,7 @@ public partial class FormAddSubmodule : GitModuleForm
     }
 
     /// <summary>
-    /// Returns the branches of a remote repository as strings; ignores git errors and warnings.
+    ///     Returns the branches of a remote repository as strings; ignores git errors and warnings.
     /// </summary>
     /// 'git ls-remotes --heads "URL"' is completely independent from a local repo clone.
     /// Hence there is no need for a GitModule.
@@ -91,20 +94,22 @@ public partial class FormAddSubmodule : GitModuleForm
         }
 
         GitArgumentBuilder gitArguments = new("ls-remote") { "--heads", url.ToPosixPath().Quote() };
-        string heads = gitExecutable.GetOutput(gitArguments);
+        var heads = gitExecutable.GetOutput(gitArguments);
         return heads.LazySplit('\n', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(head =>
-                    {
-                        int branchIndex = head.IndexOf(GitRefName.RefsHeadsPrefix);
-                        return branchIndex == -1 ? null : head[(branchIndex + GitRefName.RefsHeadsPrefix.Length)..];
-                    })
-                    .WhereNotNull()
-                    .ToImmutableList();
+            .Select(head =>
+            {
+                var branchIndex = head.IndexOf(GitRefName.RefsHeadsPrefix);
+                return branchIndex == -1 ? null : head[(branchIndex + GitRefName.RefsHeadsPrefix.Length)..];
+            })
+            .WhereNotNull()
+            .ToImmutableList();
     }
 
     internal readonly struct TestAccessor
     {
         public static IEnumerable<string> LoadRemoteRepoBranches(IExecutable gitExecutable, string url)
-            => FormAddSubmodule.LoadRemoteRepoBranches(gitExecutable, url);
+        {
+            return FormAddSubmodule.LoadRemoteRepoBranches(gitExecutable, url);
+        }
     }
 }

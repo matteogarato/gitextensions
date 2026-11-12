@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-/// Subclass of <see cref="TabControl"/> whose tab items have no gaps with the border.
+///     Subclass of <see cref="TabControl" /> whose tab items have no gaps with the border.
 /// </summary>
 public sealed class FullBleedTabControl : TabControl
 {
@@ -11,7 +11,7 @@ public sealed class FullBleedTabControl : TabControl
     {
         if (m.Msg == 0x1300 + 40)
         {
-            RECT rc = (RECT)m.GetLParam(typeof(RECT))!;
+            var rc = (Rect)m.GetLParam(typeof(Rect))!;
             rc.Left -= 3;
             rc.Right += 3;
             rc.Top -= 1;
@@ -22,7 +22,7 @@ public sealed class FullBleedTabControl : TabControl
         base.WndProc(ref m);
     }
 
-    private struct RECT
+    private struct Rect
     {
         public int Left;
         public int Top;

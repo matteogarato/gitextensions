@@ -11,7 +11,7 @@ public static class EnvUtils
             return false;
         }
 
-        using Process currentProcess = Process.GetCurrentProcess();
+        using var currentProcess = Process.GetCurrentProcess();
         return currentProcess.MainWindowHandle != IntPtr.Zero;
     }
 

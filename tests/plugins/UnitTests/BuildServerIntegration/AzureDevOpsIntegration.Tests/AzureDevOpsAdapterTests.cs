@@ -1,10 +1,10 @@
-﻿using AzureDevOpsIntegration;
-using Xunit;
+﻿using GitExtensions.Plugins.AzureDevOpsIntegration;
 
 namespace AzureDevOpsIntegrationTests;
+
 public class AzureDevOpsAdapterTests
 {
-    private AzureDevOpsAdapter.TestAccessor _sut;
+    private readonly AzureDevOpsAdapter.TestAccessor _sut;
 
     public AzureDevOpsAdapterTests()
     {
@@ -18,7 +18,7 @@ public class AzureDevOpsAdapterTests
         Build myBuild = new() { SourceVersion = "ACommitHash" };
         IList<Build> runningBuilds = [myBuild];
 
-        IEnumerable<Build> filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
+        var filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
 
         filteredRunningBuilds.Should().ContainSingle().And.Contain(myBuild);
     }
@@ -30,7 +30,7 @@ public class AzureDevOpsAdapterTests
         Build buildOnAnotherCommit = new() { SourceVersion = "another_commit_Hash" };
         IList<Build> runningBuilds = [buildOnOneCommit, buildOnAnotherCommit];
 
-        IEnumerable<Build> filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
+        var filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
 
         filteredRunningBuilds.Should().ContainInOrder(buildOnOneCommit, buildOnAnotherCommit);
     }
@@ -38,12 +38,18 @@ public class AzureDevOpsAdapterTests
     [Fact]
     public void Should_take_only_the_first_started_running_builds_When_multiple_builds_on_same_commit()
     {
-        Build firstBuildStartedOnACommit = new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 1) };
-        Build buildAlsoStartedOnSameCommitButAfter = new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 2) };
-        Build buildAlsoStartedOnSameCommitButAfterAlso = new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 3) };
-        IList<Build> runningBuilds = [firstBuildStartedOnACommit, buildAlsoStartedOnSameCommitButAfter, buildAlsoStartedOnSameCommitButAfterAlso];
+        Build firstBuildStartedOnACommit =
+            new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 1) };
+        Build buildAlsoStartedOnSameCommitButAfter =
+            new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 2) };
+        Build buildAlsoStartedOnSameCommitButAfterAlso =
+            new() { SourceVersion = "a_commit_Hash", StartTime = new DateTime(2010, 1, 3) };
+        IList<Build> runningBuilds =
+        [
+            firstBuildStartedOnACommit, buildAlsoStartedOnSameCommitButAfter, buildAlsoStartedOnSameCommitButAfterAlso
+        ];
 
-        IEnumerable<Build> filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
+        var filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
 
         filteredRunningBuilds.Should().ContainSingle().And.ContainInOrder(firstBuildStartedOnACommit);
     }
@@ -54,9 +60,12 @@ public class AzureDevOpsAdapterTests
         Build firstBuildStartedOnACommit = new() { SourceVersion = "a_commit_Hash" };
         Build buildAlsoStartedOnSameCommitButAfter = new() { SourceVersion = "a_commit_Hash" };
         Build buildAlsoStartedOnSameCommitButAfterAlso = new() { SourceVersion = "a_commit_Hash" };
-        IList<Build> runningBuilds = [firstBuildStartedOnACommit, buildAlsoStartedOnSameCommitButAfter, buildAlsoStartedOnSameCommitButAfterAlso];
+        IList<Build> runningBuilds =
+        [
+            firstBuildStartedOnACommit, buildAlsoStartedOnSameCommitButAfter, buildAlsoStartedOnSameCommitButAfterAlso
+        ];
 
-        IEnumerable<Build> filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
+        var filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
 
         filteredRunningBuilds.Should().ContainSingle();
     }
@@ -69,7 +78,7 @@ public class AzureDevOpsAdapterTests
         Build anotherNotStartedBuildOnACommit = new() { SourceVersion = "a_commit_Hash" };
         IList<Build> runningBuilds = [notStartedBuildOnACommit, startedBuild, anotherNotStartedBuildOnACommit];
 
-        IEnumerable<Build> filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
+        var filteredRunningBuilds = _sut.FilterRunningBuilds(runningBuilds);
 
         filteredRunningBuilds.Should().ContainSingle().And.ContainInOrder(startedBuild);
     }

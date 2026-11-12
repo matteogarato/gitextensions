@@ -4,39 +4,33 @@ namespace GitUI.CommandsDialogs.SettingsDialog;
 
 public interface ISettingsPageHost
 {
+    CheckSettingsLogic CheckSettingsLogic { get; }
     void GotoPage(SettingsPageReference settingsPageReference);
 
     /// <summary>
-    /// needed by ChecklistSettingsPage (TODO: needed here?).
+    ///     needed by ChecklistSettingsPage (TODO: needed here?).
     /// </summary>
     void SaveAll();
 
     /// <summary>
-    /// needed by ChecklistSettingsPage (TODO: needed here?).
+    ///     needed by ChecklistSettingsPage (TODO: needed here?).
     /// </summary>
     void LoadAll();
-
-    CheckSettingsLogic CheckSettingsLogic { get; }
 }
 
-public class SettingsPageHostMock : ISettingsPageHost
+public class SettingsPageHostMock(CheckSettingsLogic checkSettingsLogic) : ISettingsPageHost
 {
-    public SettingsPageHostMock(CheckSettingsLogic checkSettingsLogic)
-    {
-        CheckSettingsLogic = checkSettingsLogic;
-    }
-
-    public void GotoPage(SettingsPageReference settingsPageReference)
+    void ISettingsPageHost.GotoPage(SettingsPageReference settingsPageReference)
     {
     }
 
-    public void SaveAll()
+    void ISettingsPageHost.SaveAll()
     {
     }
 
-    public void LoadAll()
+    void ISettingsPageHost.LoadAll()
     {
     }
 
-    public CheckSettingsLogic CheckSettingsLogic { get; }
+    CheckSettingsLogic ISettingsPageHost.CheckSettingsLogic { get; } = checkSettingsLogic;
 }

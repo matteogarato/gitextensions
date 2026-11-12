@@ -1,6 +1,7 @@
 ﻿using GitCommands.Remotes;
 
 namespace GitCommandsTests.Remote;
+
 public class GitHostingRemoteParserTests
 {
     [Theory]
@@ -18,7 +19,9 @@ public class GitHostingRemoteParserTests
     [InlineData("git@gitlab.freedesktop.org:owner/repo.git", "gitlab.freedesktop.org")]
     public void TryExtractGitHubDataFromRemoteUrl(string url, string expectedGitHosting)
     {
-        new GitHostingRemoteParser().TryExtractGitHostingDataFromRemoteUrl(url, out string? gitHosting, out string? owner, out string? repository).Should().BeTrue();
+        new GitHostingRemoteParser()
+            .TryExtractGitHostingDataFromRemoteUrl(url, out var gitHosting, out var owner,
+                out var repository).Should().BeTrue();
         gitHosting.Should().Be(expectedGitHosting);
         owner.Should().Be("owner");
         repository.Should().Be("repo");
@@ -28,8 +31,10 @@ public class GitHostingRemoteParserTests
     public void Should_fail_in_parsing_invalid_url()
     {
         GitHostingRemoteParser gitHubRemoteParser = new();
-        string url = "https://owner@dev.bad.com/owner/project/_git/repo";
-        gitHubRemoteParser.TryExtractGitHostingDataFromRemoteUrl(url, out string? gitHosting, out string? owner, out string? repository).Should().BeFalse();
+        var url = "https://owner@dev.bad.com/owner/project/_git/repo";
+        gitHubRemoteParser
+            .TryExtractGitHostingDataFromRemoteUrl(url, out var gitHosting, out var owner,
+                out var repository).Should().BeFalse();
         gitHosting.Should().BeNull();
         owner.Should().BeNull();
         repository.Should().BeNull();

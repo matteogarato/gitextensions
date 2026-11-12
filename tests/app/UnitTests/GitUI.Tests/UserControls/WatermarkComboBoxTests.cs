@@ -2,21 +2,22 @@
 using GitUI.UserControls;
 
 namespace GitUITests.UserControls;
+
 public class WatermarkComboBoxTests : IDisposable
 {
-    private const string Watermark = "Enter text here...";
-    private Form _form = null!;
+    private const string _watermark = "Enter text here...";
+    private readonly WatermarkComboBox _comboBox1 = null!;
+    private readonly Form _form = null!;
+    private readonly Font _originalFont = null!;
+    private readonly Color _originalForeColor;
+    private readonly TabPage _tab1 = null!;
+    private readonly TabPage _tab2 = null!;
 
     // Child controls are disposed transitively via _form.Dispose()
-    private TabControl _tabControl = null!;
-    private TabPage _tab1 = null!;
-    private TabPage _tab2 = null!;
-    private WatermarkComboBox _comboBox1 = null!;
-    private TextBox _textBox = null!;
-    private Font _originalFont = null!;
-    private Color _originalForeColor;
-    private Font _watermarkFont = null!;
-    private Color _watermarkColor;
+    private readonly TabControl _tabControl = null!;
+    private readonly TextBox _textBox = null!;
+    private readonly Color _watermarkColor;
+    private readonly Font _watermarkFont = null!;
 
     public WatermarkComboBoxTests()
     {
@@ -25,7 +26,13 @@ public class WatermarkComboBoxTests : IDisposable
         _tab1 = new TabPage("Tab 1") { Parent = _tabControl };
         _tab2 = new TabPage("Tab 2") { Parent = _tabControl };
         _tabControl.SelectedTab = _tab1;
-        _comboBox1 = new WatermarkComboBox { Parent = _tab1, Name = "ComboBox1", Watermark = Watermark, Font = new Font(Control.DefaultFont, FontStyle.Bold) };
+        _comboBox1 = new WatermarkComboBox
+        {
+            Parent = _tab1,
+            Name = "ComboBox1",
+            Watermark = _watermark,
+            Font = new Font(Control.DefaultFont, FontStyle.Bold)
+        };
         _textBox = new TextBox { Parent = _tab1, Name = "TextBox", Top = _comboBox1.Bottom + 10 };
 
         _originalFont = (Font)_comboBox1.Font.Clone();
@@ -40,7 +47,7 @@ public class WatermarkComboBoxTests : IDisposable
         Application.DoEvents();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _form.Close();
         _form.Dispose();
@@ -51,7 +58,7 @@ public class WatermarkComboBoxTests : IDisposable
     [StaFact]
     public void Initialized_empty_should_show_watermark()
     {
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
     }
 
     [StaFact]
@@ -68,7 +75,7 @@ public class WatermarkComboBoxTests : IDisposable
     [StaFact]
     public void Got_focus_should_hide_watermark()
     {
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
 
         _comboBox1.Focus();
 
@@ -78,9 +85,9 @@ public class WatermarkComboBoxTests : IDisposable
     [StaFact]
     public void Focus_and_blur_should_not_produce_events()
     {
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
 
-        int eventOccurred = 0;
+        var eventOccurred = 0;
         _comboBox1.TextChanged += (sender, e) => eventOccurred++;
 
         _comboBox1.Focus();
@@ -88,16 +95,16 @@ public class WatermarkComboBoxTests : IDisposable
         _comboBox1.Focus();
         FocusAway();
 
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
         eventOccurred.Should().Be(0);
     }
 
     [StaFact]
     public void Change_of_text_should_produce_text_change_events()
     {
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
 
-        int textEventOccurred = 0;
+        var textEventOccurred = 0;
         _comboBox1.TextChanged += (sender, e) => textEventOccurred++;
 
         _comboBox1.Text = "New Text";
@@ -112,12 +119,12 @@ public class WatermarkComboBoxTests : IDisposable
         _comboBox1.Text = "User text";
         AssertWatermarkHidden(_comboBox1, "User text");
 
-        int textEventOccurred = 0;
+        var textEventOccurred = 0;
         _comboBox1.TextChanged += (sender, e) => textEventOccurred++;
 
         _comboBox1.Text = "";
 
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
         textEventOccurred.Should().Be(1);
     }
 
@@ -129,7 +136,7 @@ public class WatermarkComboBoxTests : IDisposable
 
         FocusAway();
 
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
     }
 
     [StaFact]
@@ -159,13 +166,13 @@ public class WatermarkComboBoxTests : IDisposable
 
         _comboBox1.Text = emptyValue;
 
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
     }
 
     [StaFact]
     public void Text_changed_to_non_empty_should_hide_watermark_when_watermark_active_and_not_focused()
     {
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
 
         _comboBox1.Text = "Programmatic Text";
 
@@ -178,7 +185,13 @@ public class WatermarkComboBoxTests : IDisposable
     public void Typing_into_initially_active_control_with_watermark_should_hide_it(bool focusBeforeShow)
     {
         using Form form = new();
-        WatermarkComboBox comboBox = new() { Parent = form, Name = "ComboBox1", Watermark = Watermark, Font = new Font(Control.DefaultFont, FontStyle.Bold) };
+        WatermarkComboBox comboBox = new()
+        {
+            Parent = form,
+            Name = "ComboBox1",
+            Watermark = _watermark,
+            Font = new Font(Control.DefaultFont, FontStyle.Bold)
+        };
 
         if (focusBeforeShow)
         {
@@ -204,7 +217,7 @@ public class WatermarkComboBoxTests : IDisposable
     [StaFact]
     public void Watermark_property_should_update_displayed_watermark()
     {
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
 
         const string newWatermark = "New watermark text";
         _comboBox1.Watermark = newWatermark;
@@ -217,12 +230,12 @@ public class WatermarkComboBoxTests : IDisposable
     {
         _comboBox1.Focus();
         Application.DoEvents();
-        _comboBox1.Text = Watermark;
+        _comboBox1.Text = _watermark;
         Application.DoEvents();
 
         FocusAway();
 
-        AssertWatermarkHidden(_comboBox1, Watermark);
+        AssertWatermarkHidden(_comboBox1, _watermark);
     }
 
     [StaFact]
@@ -237,7 +250,7 @@ public class WatermarkComboBoxTests : IDisposable
 
         FocusAway();
         Font expectedWatermarkFont = new(newFont, FontStyle.Italic);
-        AssertWatermarkVisible(_comboBox1, Watermark, expectedWatermarkFont);
+        AssertWatermarkVisible(_comboBox1, _watermark, expectedWatermarkFont);
 
         _comboBox1.Focus();
         AssertWatermarkHidden(_comboBox1, string.Empty, newFont);
@@ -249,12 +262,12 @@ public class WatermarkComboBoxTests : IDisposable
         _comboBox1.Focus();
         AssertWatermarkHidden(_comboBox1, string.Empty);
 
-        Color newColor = Color.Blue;
+        var newColor = Color.Blue;
         _comboBox1.ForeColor = newColor;
         Application.DoEvents();
 
         FocusAway();
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
 
         _comboBox1.Text = "Some Text";
         AssertWatermarkHidden(_comboBox1, "Some Text", foreColor: newColor);
@@ -276,7 +289,7 @@ public class WatermarkComboBoxTests : IDisposable
         _tabControl.SelectedTab = _tab2;
         Application.DoEvents();
 
-        AssertWatermarkVisible(_comboBox1, Watermark);
+        AssertWatermarkVisible(_comboBox1, _watermark);
     }
 
     private void AssertWatermarkVisible(WatermarkComboBox comboBox, string expectedWatermark, Font? font = null)
@@ -289,7 +302,8 @@ public class WatermarkComboBoxTests : IDisposable
         comboBox.GetTestAccessor().BaseText.Should().Be(expectedWatermark);
     }
 
-    private void AssertWatermarkHidden(WatermarkComboBox comboBox, string expectedText, Font? font = null, Color? foreColor = null)
+    private void AssertWatermarkHidden(WatermarkComboBox comboBox, string expectedText, Font? font = null,
+        Color? foreColor = null)
     {
         Application.DoEvents();
         comboBox.IsWatermarkVisible.Should().BeFalse();
@@ -298,5 +312,8 @@ public class WatermarkComboBoxTests : IDisposable
         comboBox.ForeColor.Should().Be(foreColor ?? _originalForeColor);
     }
 
-    private void FocusAway() => _textBox.Focus();
+    private void FocusAway()
+    {
+        _textBox.Focus();
+    }
 }

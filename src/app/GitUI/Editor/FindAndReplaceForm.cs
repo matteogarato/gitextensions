@@ -1,44 +1,56 @@
 ﻿using GitExtensions.Extensibility;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.UserControls;
-using ICSharpCode.TextEditor;
 using ICSharpCode.TextEditor.Document;
-using Microsoft;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
+using ICSharpCode.TextEditor.Document.Selection;
+using ICSharpCode.TextEditor.Gui;
 using ResourceManager;
 
-namespace GitUI;
+namespace GitUI.Editor;
 
-public delegate bool GetNextFileFnc(bool seekBackward, bool loop, out FileStatusItem? fileStatusItem, out Task loadFileContent);
+public delegate bool GetNextFileFnc(bool seekBackward, bool loop, out FileStatusItem? fileStatusItem,
+    out Task loadFileContent);
 
 public partial class FindAndReplaceForm : GitExtensionsForm
 {
     private readonly TranslationString _findAndReplaceString =
         new("Find & replace");
+
     private readonly TranslationString _findString =
         new("Find");
-    private readonly TranslationString _selectionOnlyString =
-        new("selection only");
-    private readonly TranslationString _textNotFoundString =
-        new("Text not found");
-    private readonly TranslationString _noSearchString =
-        new("No string specified to look for!");
-    private readonly TranslationString _textNotFoundString2 =
-        new("Search text not found.");
-    private readonly TranslationString _notFoundString =
-        new("Not found");
-    private readonly TranslationString _noOccurrencesFoundString =
-        new("No occurrences found.");
-    private readonly TranslationString _replacedOccurrencesString =
-        new("Replaced {0} occurrences.");
 
     private readonly Dictionary<TextEditorControl, HighlightGroup> _highlightGroups =
         [];
 
+    private readonly TranslationString _noOccurrencesFoundString =
+        new("No occurrences found.");
+
+    private readonly TranslationString _noSearchString =
+        new("No string specified to look for!");
+
+    private readonly TranslationString _notFoundString =
+        new("Not found");
+
+    private readonly TranslationString _replacedOccurrencesString =
+        new("Replaced {0} occurrences.");
+
     private readonly TextEditorSearcher _search;
+
+    private readonly TranslationString _selectionOnlyString =
+        new("selection only");
+
+    private readonly TranslationString _textNotFoundString =
+        new("Text not found");
+
+    private readonly TranslationString _textNotFoundString2 =
+        new("Search text not found.");
+
     private TextEditorControl? _editor;
+    private GetNextFileFnc? _fileLoader;
     private bool _lastSearchLoopedAround;
     private bool _lastSearchWasBackward;
-    private GetNextFileFnc? _fileLoader;
 
     public FindAndReplaceForm()
     {
@@ -52,7 +64,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
 
     public bool ReplaceMode
     {
-        get { return txtReplaceWith.Visible; }
+        get => txtReplaceWith.Visible;
         set
         {
             btnReplace.Visible = btnReplaceAll.Visible = value;
@@ -63,11 +75,14 @@ public partial class FindAndReplaceForm : GitExtensionsForm
         }
     }
 
-    public string LookFor => txtLookFor.Text;
+    public string LookFor
+    {
+        get => txtLookFor.Text;
+    }
 
     private void UpdateTitleBar()
     {
-        string text = ReplaceMode ? _findAndReplaceString.Text : _findString.Text;
+        var text = ReplaceMode ? _findAndReplaceString.Text : _findString.Text;
 
         if (_editor?.FileName is not null)
         {
@@ -87,10 +102,10 @@ public partial class FindAndReplaceForm : GitExtensionsForm
         SetEditor(editor);
 
         _search.ClearScanRegion();
-        SelectionManager sm = editor.ActiveTextAreaControl.SelectionManager;
+        var sm = editor.ActiveTextAreaControl.SelectionManager;
         if (sm.HasSomethingSelected && sm.SelectionCollection.Count == 1)
         {
-            ISelection sel = sm.SelectionCollection[0];
+            var sel = sm.SelectionCollection[0];
             if (sel.StartPosition.Line == sel.EndPosition.Line)
             {
                 txtLookFor.Text = sm.SelectedText;
@@ -103,9 +118,9 @@ public partial class FindAndReplaceForm : GitExtensionsForm
         else
         {
             // Get the current word that the caret is on
-            Caret caret = editor.ActiveTextAreaControl.Caret;
-            int start = TextUtilities.FindWordStart(editor.Document, caret.Offset);
-            int endAt = TextUtilities.FindWordEnd(editor.Document, caret.Offset);
+            var caret = editor.ActiveTextAreaControl.Caret;
+            var start = TextUtilities.FindWordStart(editor.Document, caret.Offset);
+            var endAt = TextUtilities.FindWordEnd(editor.Document, caret.Offset);
             txtLookFor.Text = editor.Document.GetText(start, endAt - start);
         }
 
@@ -122,13 +137,13 @@ public partial class FindAndReplaceForm : GitExtensionsForm
     private void btnFindPrevious_Click(object sender, EventArgs e)
     {
         Validates.NotNull(_editor);
-        _editor.InvokeAndForget(() => FindNextAsync(viaF3: false, searchBackward: true, _textNotFoundString.Text));
+        _editor.InvokeAndForget(() => FindNextAsync(false, true, _textNotFoundString.Text));
     }
 
     private void btnFindNext_Click(object sender, EventArgs e)
     {
         Validates.NotNull(_editor);
-        _editor.InvokeAndForget(() => FindNextAsync(viaF3: false, searchBackward: false, _textNotFoundString.Text));
+        _editor.InvokeAndForget(() => FindNextAsync(false, false, _textNotFoundString.Text));
     }
 
     public async Task<TextRange?> FindNextAsync(bool viaF3, bool searchBackward, string? messageIfNotFound)
@@ -136,7 +151,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
         if (string.IsNullOrEmpty(txtLookFor.Text))
         {
             MessageBoxes.Show(this, _noSearchString.Text, Text, MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
+                MessageBoxIcon.Information);
             return null;
         }
 
@@ -152,7 +167,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
         TextRange? range;
         do
         {
-            Caret caret = _editor.ActiveTextAreaControl.Caret;
+            var caret = _editor.ActiveTextAreaControl.Caret;
             if (viaF3 && _search.HasScanRegion &&
                 !Globals.IsInRange(caret.Offset, _search.BeginOffset, _search.EndOffset))
             {
@@ -160,13 +175,13 @@ public partial class FindAndReplaceForm : GitExtensionsForm
                 _search.ClearScanRegion();
             }
 
-            int startFrom = caret.Offset - (searchBackward ? 1 : 0);
+            var startFrom = caret.Offset - (searchBackward ? 1 : 0);
             if (startFrom == -1)
             {
                 startFrom = _search.EndOffset;
             }
 
-            bool isMultiFileSearch = _fileLoader is not null && !_search.HasScanRegion;
+            var isMultiFileSearch = _fileLoader is not null && !_search.HasScanRegion;
 
             range = _search.FindNext(startFrom, searchBackward, out _lastSearchLoopedAround);
             if (range is not null && (!_lastSearchLoopedAround || !isMultiFileSearch))
@@ -187,7 +202,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
                 }
 
                 Validates.NotNull(_fileLoader);
-                if (_fileLoader(searchBackward, true, out FileStatusItem? selectedItem, out Task loadFileContent))
+                if (_fileLoader(searchBackward, true, out var selectedItem, out var loadFileContent))
                 {
                     currentItem = selectedItem;
                     try
@@ -204,8 +219,8 @@ public partial class FindAndReplaceForm : GitExtensionsForm
                     break;
                 }
             }
-        }
-        while (range is null && startItem != currentItem && currentItem is not null);
+        } while (range is null && startItem != currentItem && currentItem is not null);
+
         if (range is null && messageIfNotFound is not null)
         {
             MessageBoxes.Show(this, messageIfNotFound, " ", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -218,8 +233,8 @@ public partial class FindAndReplaceForm : GitExtensionsForm
     {
         Validates.NotNull(_editor);
 
-        TextLocation p1 = _editor.Document.OffsetToPosition(range.Offset);
-        TextLocation p2 = _editor.Document.OffsetToPosition(range.Offset + range.Length);
+        var p1 = _editor.Document.OffsetToPosition(range.Offset);
+        var p2 = _editor.Document.OffsetToPosition(range.Offset + range.Length);
         _editor.ActiveTextAreaControl.SelectionManager.SetSelection(p1, p2);
         _editor.ActiveTextAreaControl.ScrollTo(p1.Line, p1.Column);
 
@@ -237,7 +252,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
     {
         Validates.NotNull(_editor);
 
-        if (!_highlightGroups.TryGetValue(_editor, out HighlightGroup? group))
+        if (!_highlightGroups.TryGetValue(_editor, out var group))
         {
             group = new HighlightGroup(_editor);
             _highlightGroups[_editor] = group;
@@ -256,9 +271,9 @@ public partial class FindAndReplaceForm : GitExtensionsForm
             _search.MatchWholeWordOnly = chkMatchWholeWord.Checked;
 
             int offset = 0, count = 0;
-            for (; ;)
+            for (;;)
             {
-                TextRange? range = _search.FindNext(offset, false, out bool looped);
+                var range = _search.FindNext(offset, false, out var looped);
                 if (range is null || looped)
                 {
                     break;
@@ -268,14 +283,14 @@ public partial class FindAndReplaceForm : GitExtensionsForm
                 count++;
 
                 TextMarker m = new(range.Offset, range.Length,
-                                       TextMarkerType.SolidBlock, Color.Yellow.AdaptBackColor());
+                    TextMarkerType.SolidBlock, Color.Yellow.AdaptBackColor());
                 group.AddMarker(m);
             }
 
             if (count == 0)
             {
                 MessageBoxes.Show(this, _textNotFoundString2.Text, _notFoundString.Text, MessageBoxButtons.OK,
-                                MessageBoxIcon.Information);
+                    MessageBoxIcon.Information);
             }
             else
             {
@@ -311,7 +326,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
 
         _editor.InvokeAndForget(async () =>
         {
-            SelectionManager sm = _editor.ActiveTextAreaControl.SelectionManager;
+            var sm = _editor.ActiveTextAreaControl.SelectionManager;
             if (string.Equals(sm.SelectedText, txtLookFor.Text, StringComparison.OrdinalIgnoreCase))
             {
                 InsertText(txtReplaceWith.Text);
@@ -325,7 +340,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
     {
         Validates.NotNull(_editor);
 
-        int count = 0;
+        var count = 0;
 
         // BUG FIX: if the replacement string contains the original search string
         // (e.g. replace "red" with "very red") we must avoid looping around and
@@ -356,11 +371,13 @@ public partial class FindAndReplaceForm : GitExtensionsForm
 
         if (count == 0)
         {
-            MessageBoxes.Show(this, _noOccurrencesFoundString.Text, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBoxes.Show(this, _noOccurrencesFoundString.Text, "Information", MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
         else
         {
-            MessageBoxes.Show(this, string.Format(_replacedOccurrencesString.Text, count), "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBoxes.Show(this, string.Format(_replacedOccurrencesString.Text, count), "Information",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
             Close();
         }
     }
@@ -369,11 +386,11 @@ public partial class FindAndReplaceForm : GitExtensionsForm
     {
         Validates.NotNull(_editor);
 
-        TextArea textArea = _editor.ActiveTextAreaControl.TextArea;
+        var textArea = _editor.ActiveTextAreaControl.TextArea;
         textArea.Document.UndoStack.StartUndoGroup();
         try
         {
-            int removedLength = 0;
+            var removedLength = 0;
             if (textArea.SelectionManager.HasSomethingSelected)
             {
                 removedLength = textArea.SelectionManager.SelectionCollection[0].Length;
@@ -385,7 +402,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
             if (_search.HasScanRegion)
             {
                 // EndOffset actually is a LastOffset
-                int selectionLength = _search.EndOffset + 1 - _search.BeginOffset;
+                var selectionLength = _search.EndOffset + 1 - _search.BeginOffset;
                 _search.SetScanRegion(_search.BeginOffset, selectionLength + text.Length - removedLength);
             }
         }
@@ -408,7 +425,7 @@ public partial class FindAndReplaceForm : GitExtensionsForm
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -422,25 +439,36 @@ public partial class FindAndReplaceForm : GitExtensionsForm
         base.Dispose(disposing);
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly FindAndReplaceForm _control;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(FindAndReplaceForm control)
+    internal readonly struct TestAccessor(FindAndReplaceForm control)
+    {
+        public TextEditorSearcher Search
         {
-            _control = control;
+            get => control._search;
         }
 
-        public TextEditorSearcher Search => _control._search;
-        public TextBox TxtLookFor => _control.txtLookFor;
-        public CheckBox ChkMatchCase => _control.chkMatchCase;
-        public CheckBox ChkMatchWholeWord => _control.chkMatchWholeWord;
+        public TextBox TxtLookFor
+        {
+            get => control.txtLookFor;
+        }
+
+        public CheckBox ChkMatchCase
+        {
+            get => control.chkMatchCase;
+        }
+
+        public CheckBox ChkMatchWholeWord
+        {
+            get => control.chkMatchWholeWord;
+        }
 
         public void SetEditor(TextEditorControl editor)
         {
-            _control.SetEditor(editor);
+            control.SetEditor(editor);
         }
     }
 }
@@ -454,11 +482,12 @@ public class TextRange : AbstractSegment
     }
 }
 
-/// <summary>This class finds occurrences of a search string in a text
-/// editor's IDocument... it's like Find box without a GUI.</summary>
+/// <summary>
+///     This class finds occurrences of a search string in a text
+///     editor's IDocument... it's like Find box without a GUI.
+/// </summary>
 public sealed class TextEditorSearcher : IDisposable
 {
-    public event EventHandler? ScanRegionChanged;
     public bool MatchCase;
     public bool MatchWholeWordOnly;
     private IDocument? _document;
@@ -477,7 +506,7 @@ public sealed class TextEditorSearcher : IDisposable
 
     public IDocument? Document
     {
-        get { return _document; }
+        get => _document;
         set
         {
             if (_document != value)
@@ -488,7 +517,10 @@ public sealed class TextEditorSearcher : IDisposable
         }
     }
 
-    public bool HasScanRegion => _region is not null;
+    public bool HasScanRegion
+    {
+        get => _region is not null;
+    }
 
     /// <summary>Begins the start offset for searching.</summary>
     public int BeginOffset
@@ -523,7 +555,7 @@ public sealed class TextEditorSearcher : IDisposable
 
     #region IDisposable Members
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         ClearScanRegion();
         GC.SuppressFinalize(this);
@@ -531,20 +563,26 @@ public sealed class TextEditorSearcher : IDisposable
 
     #endregion
 
-    /// <summary>Sets the region to search. The region is updated
-    /// automatically as the document changes.</summary>
+    public event EventHandler? ScanRegionChanged;
+
+    /// <summary>
+    ///     Sets the region to search. The region is updated
+    ///     automatically as the document changes.
+    /// </summary>
     public void SetScanRegion(ISelection sel)
     {
         SetScanRegion(sel.Offset, sel.Length);
     }
 
-    /// <summary>Sets the region to search. The region is updated
-    /// automatically as the document changes.</summary>
+    /// <summary>
+    ///     Sets the region to search. The region is updated
+    ///     automatically as the document changes.
+    /// </summary>
     public void SetScanRegion(int offset, int length)
     {
         Validates.NotNull(_document);
         _region = new TextMarker(offset, length, TextMarkerType.SolidBlock,
-                                 Color.FromArgb(160, 160, 160).AdaptBackColor().DimColor());
+            Color.FromArgb(160, 160, 160).AdaptBackColor().DimColor());
         _document.MarkerStrategy.AddMarker(_region);
         _document.TextContentChanged += DocumentOnTextContentChanged;
         ScanRegionChanged?.Invoke(this, EventArgs.Empty);
@@ -567,8 +605,10 @@ public sealed class TextEditorSearcher : IDisposable
         Dispose();
     }
 
-    /// <summary>Finds next instance of LookFor, according to the search rules
-    /// (MatchCase, MatchWholeWordOnly).</summary>
+    /// <summary>
+    ///     Finds next instance of LookFor, according to the search rules
+    ///     (MatchCase, MatchWholeWordOnly).
+    /// </summary>
     /// <param name="beginAtOffset">Offset in Document at which to begin the search.</param>
     /// <remarks>If there is a match at beginAtOffset precisely, it will be returned.</remarks>
     /// <returns>Region of document that matches the search string.</returns>
@@ -578,7 +618,7 @@ public sealed class TextEditorSearcher : IDisposable
         loopedAround = false;
 
         int startAt = BeginOffset, endAt = EndOffset;
-        int curOffs = Globals.InRange(beginAtOffset, startAt, endAt);
+        var curOffs = Globals.InRange(beginAtOffset, startAt, endAt);
 
         _lookFor2 = MatchCase ? LookFor : LookFor.ToUpperInvariant();
 
@@ -630,10 +670,10 @@ public sealed class TextEditorSearcher : IDisposable
         offset2 -= LookFor.Length;
 
         // Search
-        char lookForCh = _lookFor2[0];
+        var lookForCh = _lookFor2[0];
         if (searchBackward)
         {
-            for (int offset = offset2; offset >= offset1; offset--)
+            for (var offset = offset2; offset >= offset1; offset--)
             {
                 if (MatchFirstCh(lookForCh, _document.GetCharAt(offset), MatchCase)
                     &&
@@ -646,7 +686,7 @@ public sealed class TextEditorSearcher : IDisposable
         }
         else
         {
-            for (int offset = offset1; offset <= offset2; offset++)
+            for (var offset = offset1; offset <= offset2; offset++)
             {
                 if (MatchFirstCh(lookForCh, _document.GetCharAt(offset), MatchCase)
                     &&
@@ -683,7 +723,7 @@ public sealed class TextEditorSearcher : IDisposable
     {
         Validates.NotNull(_document);
 
-        char c = _document.GetCharAt(offset);
+        var c = _document.GetCharAt(offset);
         return char.IsLetterOrDigit(c) || c == '_';
     }
 
@@ -692,7 +732,7 @@ public sealed class TextEditorSearcher : IDisposable
         Validates.NotNull(_document);
         Validates.NotNull(LookFor);
 
-        string substr = _document.GetText(offset, LookFor.Length);
+        var substr = _document.GetText(offset, LookFor.Length);
         if (!MatchCase)
         {
             substr = substr.ToUpperInvariant();
@@ -707,23 +747,18 @@ public sealed class TextEditorSearcher : IDisposable
     }
 }
 
-/// <summary>Bundles a group of markers together so that they can be cleared
-/// together.</summary>
-public sealed class HighlightGroup : IDisposable
+/// <summary>
+///     Bundles a group of markers together so that they can be cleared
+///     together.
+/// </summary>
+public sealed class HighlightGroup(TextEditorControl editor) : IDisposable
 {
-    private readonly IDocument _document;
-    private readonly TextEditorControl _editor;
+    private readonly IDocument _document = editor.Document;
     private readonly List<TextMarker> _markers = [];
-
-    public HighlightGroup(TextEditorControl editor)
-    {
-        _editor = editor;
-        _document = editor.Document;
-    }
 
     #region IDisposable Members
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         ClearMarkers();
         GC.SuppressFinalize(this);
@@ -739,13 +774,13 @@ public sealed class HighlightGroup : IDisposable
 
     public void ClearMarkers()
     {
-        foreach (TextMarker m in _markers)
+        foreach (var m in _markers)
         {
             _document.MarkerStrategy.RemoveMarker(m);
         }
 
         _markers.Clear();
-        _editor.Refresh();
+        editor.Refresh();
     }
 
     ~HighlightGroup()
@@ -759,7 +794,7 @@ public static class Globals
     public static int InRange(int x, int lo, int hi)
     {
         DebugHelpers.Assert(lo <= hi, "lo <= hi");
-        return x < lo ? lo : (x > hi ? hi : x);
+        return x < lo ? lo : x > hi ? hi : x;
     }
 
     public static bool IsInRange(int x, int lo, int hi)

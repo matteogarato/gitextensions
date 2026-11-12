@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Security;
 using System.Text;
 using BugReporter.Serialization;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
@@ -11,44 +11,46 @@ using GitExtensions.Extensibility.Settings;
 namespace GitUI.NBugReports;
 
 /// <summary>
-///  Provides methods for reporting unhandled exceptions to the user
-///  via UI dialogs or by launching the external bug reporter process.
+///     Provides methods for reporting unhandled exceptions to the user
+///     via UI dialogs or by launching the external bug reporter process.
 /// </summary>
 public static class BugReportInvoker
 {
     /// <summary>
-    ///  The git config command fragment used to detect dubious ownership security errors.
+    ///     The git config command fragment used to detect dubious ownership security errors.
     /// </summary>
     public const string DubiousOwnershipSecurityConfigString = "config --global --add safe.directory";
 
-    private static readonly IBugReporter _bugReporter = new UIReporter();
+    private static readonly IBugReporter _bugReporter = new UiReporter();
     private static bool _isReportingDubiousOwnershipSecurity;
 
     /// <summary>
-    ///  Gets or sets the <see cref="IGitExecutorProvider"/> used to create git executors
-    ///  that respect WSL routing for dubious ownership trust commands.
+    ///     Gets or sets the <see cref="IGitExecutorProvider" /> used to create git executors
+    ///     that respect WSL routing for dubious ownership trust commands.
     /// </summary>
     public static IGitExecutorProvider? ExecutorProvider { get; set; }
 
     /// <summary>
-    ///  Set to <see langword="true" /> on application exit
-    ///  in order to suppress the popup to restart the app on missing runtime assembly.
+    ///     Set to <see langword="true" /> on application exit
+    ///     in order to suppress the popup to restart the app on missing runtime assembly.
     /// </summary>
     public static bool IgnoreFailedToLoadAnAssembly
     {
-        get => UIReporter.IgnoreFailedToLoadAnAssembly;
-        set => UIReporter.IgnoreFailedToLoadAnAssembly = value;
+        get => UiReporter.IgnoreFailedToLoadAnAssembly;
+        set => UiReporter.IgnoreFailedToLoadAnAssembly = value;
     }
 
     /// <summary>
-    ///  Gets the root error.
+    ///     Gets the root error.
     /// </summary>
     /// <param name="exception">An Exception to describe.</param>
     /// <returns>The inner-most exception message.</returns>
     internal static string GetRootError(Exception exception)
     {
-        string rootError = exception.Message;
-        for (Exception? innerException = exception.InnerException; innerException is not null; innerException = innerException.InnerException)
+        var rootError = exception.Message;
+        for (var innerException = exception.InnerException;
+             innerException is not null;
+             innerException = innerException.InnerException)
         {
             if (!string.IsNullOrEmpty(innerException.Message))
             {
@@ -60,29 +62,31 @@ public static class BugReportInvoker
     }
 
     /// <summary>
-    ///  Logs the exception details to a temporary file.
+    ///     Logs the exception details to a temporary file.
     /// </summary>
     /// <param name="exception">The exception to log.</param>
     /// <param name="isTerminating">Indicates whether the exception is terminating the application.</param>
     public static void LogError(Exception exception, bool isTerminating = false)
     {
-        string tempFolder = Path.GetTempPath();
-        string tempFileName = $"{AppSettings.ApplicationId}.{AppSettings.AppVersion}.{DateTime.Now:yyyyMMdd.HHmmssfff}.log";
-        string tempFile = Path.Join(tempFolder, tempFileName);
+        var tempFolder = Path.GetTempPath();
+        var tempFileName =
+            $"{AppSettings.ApplicationId}.{AppSettings.AppVersion}.{DateTime.Now:yyyyMMdd.HHmmssfff}.log";
+        var tempFile = Path.Join(tempFolder, tempFileName);
 
         try
         {
-            string content = $"Is fatal: {isTerminating}\r\n{exception}";
+            var content = $"Is fatal: {isTerminating}\r\n{exception}";
             File.WriteAllText(tempFile, content);
         }
         catch (Exception ex)
         {
-            MessageBoxes.Show($"Failed to log error to {tempFile}\r\n{ex.Message}", "Error writing log", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show($"Failed to log error to {tempFile}\r\n{ex.Message}", "Error writing log",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     /// <summary>
-    ///  Reports the specified exception to the user via the appropriate UI dialog.
+    ///     Reports the specified exception to the user via the appropriate UI dialog.
     /// </summary>
     /// <param name="exception">The exception to report.</param>
     /// <param name="isTerminating">Indicates whether the exception is terminating the application.</param>
@@ -99,7 +103,8 @@ public static class BugReportInvoker
         }
 
         // Ignore accessibility-specific exception (refer to https://github.com/gitextensions/gitextensions/issues/11385)
-        if (exception is InvalidOperationException && exception.StackTrace?.Contains("ListViewGroup.get_AccessibilityObject") is true)
+        if (exception is InvalidOperationException &&
+            exception.StackTrace?.Contains("ListViewGroup.get_AccessibilityObject") is true)
         {
             Trace.WriteLine(exception);
             return;
@@ -112,7 +117,7 @@ public static class BugReportInvoker
             return;
         }
 
-        ExternalOperationException? externalOperationException = exception as ExternalOperationException;
+        var externalOperationException = exception as ExternalOperationException;
 
         if (externalOperationException?.InnerException?.Message?.Contains(DubiousOwnershipSecurityConfigString) is true)
         {
@@ -125,43 +130,42 @@ public static class BugReportInvoker
             // TODO: this is not very efficient
             // GetExceptionInfo() info is lost
             SerializableException serializableException = new(exception);
-            string xml = serializableException.ToXmlString();
-            string encoded = Base64Encode(xml);
+            var xml = serializableException.ToXmlString();
+            var encoded = Base64Encode(xml);
             Process.Start("BugReporter.exe", encoded);
 
             return;
         }
 
-        bool isUserExternalOperation
+        var isUserExternalOperation
             = exception is UserExternalOperationException
-                        or GitConfigFormatException
+                  or GitConfigFormatException
 
-            // Treat all git errors as user issues
-            || string.Equals(AppSettings.GitCommand, externalOperationException?.Command, StringComparison.InvariantCultureIgnoreCase)
-            || string.Equals(AppSettings.WslCommand, externalOperationException?.Command, StringComparison.InvariantCultureIgnoreCase);
-        bool isExternalOperation = isUserExternalOperation
-            || exception is ExternalOperationException
-                         or IOException
-                         or SecurityException
-                         or FileNotFoundException
-                         or DirectoryNotFoundException
-                         or PathTooLongException
-                         or Win32Exception;
+              // Treat all git errors as user issues
+              || string.Equals(AppSettings.GitCommand, externalOperationException?.Command,
+                  StringComparison.InvariantCultureIgnoreCase)
+              || string.Equals(AppSettings.WslCommand, externalOperationException?.Command,
+                  StringComparison.InvariantCultureIgnoreCase);
+        var isExternalOperation = isUserExternalOperation
+                                  || exception is ExternalOperationException
+                                      or IOException
+                                      or SecurityException
+                                      or FileNotFoundException
+                                      or DirectoryNotFoundException
+                                      or PathTooLongException
+                                      or Win32Exception;
 
-        StringBuilder text = exception.GetExceptionInfo();
-        string rootError = GetRootError(exception);
+        var text = exception.GetExceptionInfo();
+        var rootError = GetRootError(exception);
 
         _bugReporter.ReportError(
             exception,
             rootError,
             text,
-            new OperationInfo()
+            new OperationInfo
             {
-                IsExternalOperation = isExternalOperation,
-                IsUserExternalOperation = isUserExternalOperation,
+                IsExternalOperation = isExternalOperation, IsUserExternalOperation = isUserExternalOperation
             });
-
-        return;
     }
 
     private static void ReportDubiousOwnership(ExternalOperationException exception)
@@ -184,7 +188,7 @@ public static class BugReportInvoker
 
     private static string Base64Encode(string plainText)
     {
-        byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+        var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
         return Convert.ToBase64String(plainTextBytes);
     }
 }

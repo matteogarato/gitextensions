@@ -1,35 +1,38 @@
 ﻿namespace GitUI;
 
 /// <summary>
-///  Combines <see cref="WaitCursorScope"/> with disabling a <see cref="Form"/> for the duration of the scope.
+///     Combines <see cref="WaitCursorScope" /> with disabling a <see cref="Form" /> for the duration of the scope.
 /// </summary>
 /// <remarks>
-///  Usage is:
-///  <code>
+///     Usage is:
+///     <code>
 ///  using (FormBusyScope.Enter(form))
 ///  {
 ///      // perform UI activity
 ///  }
 ///  </code>
-///  This pattern ensures:
-///  <list type="bullet">
-///  <item>The form is always re-enabled when the block exits, whether by fall-through, return or exception,
-///  unless the form was already disposed.</item>
-///  <item>The wait cursor behavior of <see cref="WaitCursorScope"/> is preserved, including nested-scope handling.</item>
-///  </list>
+///     This pattern ensures:
+///     <list type="bullet">
+///         <item>
+///             The form is always re-enabled when the block exits, whether by fall-through, return or exception,
+///             unless the form was already disposed.
+///         </item>
+///         <item>The wait cursor behavior of <see cref="WaitCursorScope" /> is preserved, including nested-scope handling.</item>
+///     </list>
 /// </remarks>
 public readonly struct FormBusyScope : IDisposable
 {
     /// <summary>
-    ///  Starts a new scope, disabling <paramref name="form"/> and setting the mouse cursor to <see cref="Cursors.WaitCursor"/>.
+    ///     Starts a new scope, disabling <paramref name="form" /> and setting the mouse cursor to
+    ///     <see cref="Cursors.WaitCursor" />.
     /// </summary>
     /// <param name="form">The form to disable for the duration of the scope.</param>
-    /// <param name="cursor">The cursor to display; defaults to <see cref="Cursors.WaitCursor"/>.</param>
+    /// <param name="cursor">The cursor to display; defaults to <see cref="Cursors.WaitCursor" />.</param>
     public static FormBusyScope Enter(Form form, Cursor? cursor = null)
     {
-        bool wasEnabled = form.Enabled;
+        var wasEnabled = form.Enabled;
         form.Enabled = false;
-        WaitCursorScope waitCursor = WaitCursorScope.Enter(cursor);
+        var waitCursor = WaitCursorScope.Enter(cursor);
         return new FormBusyScope(form, wasEnabled, waitCursor);
     }
 
@@ -45,9 +48,9 @@ public readonly struct FormBusyScope : IDisposable
     }
 
     /// <summary>
-    /// Restores the cursor and re-enables <see cref="_form"/> if it has not been disposed.
+    ///     Restores the cursor and re-enables <see cref="_form" /> if it has not been disposed.
     /// </summary>
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _waitCursor.Dispose();
 

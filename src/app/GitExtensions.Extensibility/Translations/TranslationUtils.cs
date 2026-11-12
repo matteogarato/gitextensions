@@ -22,7 +22,8 @@ public static class TranslationUtils
         }
     }
 
-    public static void AddTranslationItemsFromList(string category, ITranslation translation, IEnumerable<(string Name, object Item)> items)
+    public static void AddTranslationItemsFromList(string category, ITranslation translation,
+        IEnumerable<(string Name, object Item)> items)
     {
         TranslationUtil.AddTranslationItemsFromList(category, translation, items);
     }
@@ -32,7 +33,8 @@ public static class TranslationUtils
         TranslationUtil.TranslateProperty(category, obj, property, translation);
     }
 
-    public static void TranslateItemsFromList(string category, ITranslation translation, IEnumerable<(string Name, object Item)> items)
+    public static void TranslateItemsFromList(string category, ITranslation translation,
+        IEnumerable<(string Name, object Item)> items)
     {
         TranslationUtil.TranslateItemsFromList(category, translation, items);
     }

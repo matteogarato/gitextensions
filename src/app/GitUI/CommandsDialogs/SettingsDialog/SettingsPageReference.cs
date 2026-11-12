@@ -4,16 +4,11 @@ using GitExtensions.Extensibility.Settings;
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
 /// <summary>
-/// Type may be a SettingsPage type or a IGitPlugin subclass type.
+///     Type may be a SettingsPage type or a IGitPlugin subclass type.
 /// </summary>
-public class SettingsPageReferenceByType : SettingsPageReference
+public class SettingsPageReferenceByType(Type settingsPageType) : SettingsPageReference
 {
-    public SettingsPageReferenceByType(Type settingsPageType)
-    {
-        SettingsPageType = settingsPageType;
-    }
-
-    public Type SettingsPageType { get; }
+    public Type SettingsPageType { get; } = settingsPageType;
 
     public override bool Equals(object? obj)
     {
@@ -31,10 +26,4 @@ public class SettingsPageReferenceByType : SettingsPageReference
     }
 }
 
-public class SettingsPageReferenceByPlugin : SettingsPageReferenceByType
-{
-    public SettingsPageReferenceByPlugin(IGitPlugin gitPlugin)
-        : base(gitPlugin.GetType())
-    {
-    }
-}
+public class SettingsPageReferenceByPlugin(IGitPlugin gitPlugin) : SettingsPageReferenceByType(gitPlugin.GetType());

@@ -1,22 +1,23 @@
 ﻿using System.Runtime.CompilerServices;
-using GitExtUtils.GitUI;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ToolStripExtensions
 {
-    private static readonly ConditionalWeakTable<ToolStrip, IMenuItemBackgroundFilter> MenuItemBackgroundFilters = [];
-    private static readonly ConditionalWeakTable<ToolStrip, ToolStripExSystemRenderer> ExtendedSystemRenderers = [];
-    private static readonly ConditionalWeakTable<ToolStrip, ToolStripExProfessionalRenderer> ExtendedProfessionalRenderers = [];
+    private static readonly ConditionalWeakTable<ToolStrip, IMenuItemBackgroundFilter> _menuItemBackgroundFilters = [];
+    private static readonly ConditionalWeakTable<ToolStrip, ToolStripExSystemRenderer> _extendedSystemRenderers = [];
+
+    private static readonly ConditionalWeakTable<ToolStrip, ToolStripExProfessionalRenderer>
+        _extendedProfessionalRenderers = [];
 
     public static void AttachMenuItemBackgroundFilter(this ToolStrip toolStrip, IMenuItemBackgroundFilter? value)
     {
         toolStrip.UseExtendedRenderer();
-        MenuItemBackgroundFilters.Remove(toolStrip);
+        _menuItemBackgroundFilters.Remove(toolStrip);
 
         if (value is not null)
         {
-            MenuItemBackgroundFilters.Add(toolStrip, value);
+            _menuItemBackgroundFilters.Add(toolStrip, value);
         }
     }
 
@@ -24,17 +25,17 @@ public static class ToolStripExtensions
     {
         if (toolStrip.Renderer is ToolStripSystemRenderer and not ToolStripExSystemRenderer)
         {
-            toolStrip.Renderer = ExtendedSystemRenderers.GetOrCreateValue(toolStrip);
+            toolStrip.Renderer = _extendedSystemRenderers.GetOrCreateValue(toolStrip);
         }
         else if (toolStrip.Renderer is ToolStripProfessionalRenderer and not ToolStripExProfessionalRenderer)
         {
-            toolStrip.Renderer = ExtendedProfessionalRenderers.GetOrCreateValue(toolStrip);
+            toolStrip.Renderer = _extendedProfessionalRenderers.GetOrCreateValue(toolStrip);
         }
     }
 
     internal static IMenuItemBackgroundFilter? GetMenuItemBackgroundFilter(this ToolStrip toolStrip)
     {
-        if (MenuItemBackgroundFilters.TryGetValue(toolStrip, out IMenuItemBackgroundFilter? filter))
+        if (_menuItemBackgroundFilters.TryGetValue(toolStrip, out var filter))
         {
             return filter;
         }

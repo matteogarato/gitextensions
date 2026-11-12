@@ -1,29 +1,36 @@
 ﻿using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.CommandsDialogs.BrowseDialog;
-using ResourceManager;
 using ResourceManager.Hotkey;
 
 namespace GitUI.CommandsDialogs.Menus;
 
 internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
 {
-    private IRepositoryHistoryUIService? _repositoryHistoryUIService;
-
-    public event EventHandler<GitModuleEventArgs>? GitModuleChanged;
-    public event EventHandler? RecentRepositoriesCleared;
+    private IRepositoryHistoryUiService? _repositoryHistoryUiService;
 
     public StartToolStripMenuItem()
     {
         InitializeComponent();
     }
 
-    internal ToolStripMenuItem OpenRepositoryMenuItem => openToolStripMenuItem;
-    internal ToolStripMenuItem FavouriteRepositoriesMenuItem => tsmiFavouriteRepositories;
+    internal ToolStripMenuItem OpenRepositoryMenuItem
+    {
+        get => openToolStripMenuItem;
+    }
+
+    internal ToolStripMenuItem FavouriteRepositoriesMenuItem
+    {
+        get => tsmiFavouriteRepositories;
+    }
+
+    public event EventHandler<GitModuleEventArgs>? GitModuleChanged;
+    public event EventHandler? RecentRepositoriesCleared;
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -32,7 +39,7 @@ internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
         {
             components?.Dispose();
 
-            _repositoryHistoryUIService?.GitModuleChanged -= repositoryHistoryUIService_GitModuleChanged;
+            _repositoryHistoryUiService?.GitModuleChanged -= repositoryHistoryUIService_GitModuleChanged;
         }
 
         base.Dispose(disposing);
@@ -42,8 +49,8 @@ internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
     {
         base.OnInitialized();
 
-        _repositoryHistoryUIService = UICommands.GetRequiredService<IRepositoryHistoryUIService>();
-        _repositoryHistoryUIService.GitModuleChanged += repositoryHistoryUIService_GitModuleChanged;
+        _repositoryHistoryUiService = UiCommands.GetRequiredService<IRepositoryHistoryUiService>();
+        _repositoryHistoryUiService.GitModuleChanged += repositoryHistoryUIService_GitModuleChanged;
     }
 
     public override void RefreshShortcutKeys(IEnumerable<HotkeyCommand>? hotkeys)
@@ -55,7 +62,7 @@ internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
 
     private void CloneToolStripMenuItemClick(object sender, EventArgs e)
     {
-        UICommands.StartCloneDialog(OwnerForm, string.Empty, false, GitModuleChanged);
+        UiCommands.StartCloneDialog(OwnerForm, string.Empty, false, GitModuleChanged);
     }
 
     private void ExitToolStripMenuItemClick(object sender, EventArgs e)
@@ -65,12 +72,13 @@ internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
 
     private void InitNewRepositoryToolStripMenuItemClick(object sender, EventArgs e)
     {
-        UICommands.StartInitializeDialog(OwnerForm, gitModuleChanged: GitModuleChanged);
+        UiCommands.StartInitializeDialog(OwnerForm, gitModuleChanged: GitModuleChanged);
     }
 
     private void OpenToolStripMenuItemClick(object sender, EventArgs e)
     {
-        IGitModule? module = FormOpenDirectory.OpenModule(OwnerForm!, UICommands.GetRequiredService<IGitExecutorProvider>(), UICommands.Module);
+        var module = FormOpenDirectory.OpenModule(OwnerForm!,
+            UiCommands.GetRequiredService<IGitExecutorProvider>(), UiCommands.Module);
         if (module is not null)
         {
             GitModuleChanged?.Invoke(OwnerForm, new GitModuleEventArgs(module));
@@ -86,7 +94,7 @@ internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
     {
         tsmiFavouriteRepositories.DropDown.SuspendLayout();
         tsmiFavouriteRepositories.DropDownItems.Clear();
-        _repositoryHistoryUIService!.PopulateFavouriteRepositoriesMenu(tsmiFavouriteRepositories);
+        _repositoryHistoryUiService!.PopulateFavouriteRepositoriesMenu(tsmiFavouriteRepositories);
         tsmiFavouriteRepositories.DropDown.ResumeLayout();
     }
 
@@ -95,7 +103,7 @@ internal partial class StartToolStripMenuItem : ToolStripMenuItemEx
         // Note: repo-branch name cache is shared with the dashboard, no update needed
         tsmiRecentRepositories.DropDown.SuspendLayout();
         tsmiRecentRepositories.DropDownItems.Clear();
-        _repositoryHistoryUIService!.PopulateRecentRepositoriesMenu(tsmiRecentRepositories);
+        _repositoryHistoryUiService!.PopulateRecentRepositoriesMenu(tsmiRecentRepositories);
         if (tsmiRecentRepositories.DropDownItems.Count < 1)
         {
             return;

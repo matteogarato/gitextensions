@@ -6,11 +6,11 @@ public static class BitmapExtensions
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
-        IntPtr handle = IntPtr.Zero;
+        var handle = IntPtr.Zero;
         try
         {
             handle = bitmap.GetHicon();
-            Icon icon = Icon.FromHandle(handle);
+            var icon = Icon.FromHandle(handle);
 
             return (Icon)icon.Clone();
         }

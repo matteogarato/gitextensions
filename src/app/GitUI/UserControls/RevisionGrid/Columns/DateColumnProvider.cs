@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI;
-using GitUIPluginInterfaces;
 using ResourceManager;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
@@ -15,7 +15,9 @@ internal sealed class DateColumnProvider : ColumnProvider
     {
         _grid = grid;
 
-        int initialWidth = AppSettings.RelativeDate ? DpiUtil.Scale(130) : TextRenderer.MeasureText(DateTime.Now.ToString("G"), AppSettings.Font).Width;
+        var initialWidth = AppSettings.RelativeDate
+            ? DpiUtil.Scale(130)
+            : TextRenderer.MeasureText(DateTime.Now.ToString("G"), AppSettings.Font).Width;
 
         Column = new DataGridViewTextBoxColumn
         {
@@ -33,14 +35,15 @@ internal sealed class DateColumnProvider : ColumnProvider
         Column.Visible = AppSettings.ShowDateColumn;
     }
 
-    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
+    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight,
+        in CellStyle style)
     {
         _grid.DrawColumnText(e, e.FormattedValue?.ToString()!, style.NormalFont, style.ForeColor, e.CellBounds);
     }
 
     public override void OnCellFormatting(DataGridViewCellFormattingEventArgs e, GitRevision revision)
     {
-        DateTime dateTime = AppSettings.ShowAuthorDate
+        var dateTime = AppSettings.ShowAuthorDate
             ? revision.AuthorDate
             : revision.CommitDate;
 
@@ -56,14 +59,15 @@ internal sealed class DateColumnProvider : ColumnProvider
 
             if (AppSettings.RelativeDate)
             {
-                return LocalizationHelpers.GetRelativeDateString(DateTime.Now, dt, displayWeeks: false);
+                return LocalizationHelpers.GetRelativeDateString(DateTime.Now, dt, false);
             }
 
             return dt.ToString("G");
         }
     }
 
-    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
+    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision,
+        [NotNullWhen(true)] out string? toolTip)
     {
         if (revision.ObjectId.IsArtificial)
         {

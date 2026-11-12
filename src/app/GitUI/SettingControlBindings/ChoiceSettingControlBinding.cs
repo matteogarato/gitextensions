@@ -2,13 +2,9 @@
 
 namespace GitUI.SettingControlBindings;
 
-internal sealed class ChoiceSettingControlBinding : SettingControlBinding<ChoiceSetting, ComboBox>
+internal sealed class ChoiceSettingControlBinding(ChoiceSetting setting, ComboBox? customControl)
+    : SettingControlBinding<ChoiceSetting, ComboBox>(setting, customControl)
 {
-    public ChoiceSettingControlBinding(ChoiceSetting setting, ComboBox? customControl)
-        : base(setting, customControl)
-    {
-    }
-
     public override ComboBox CreateControl()
     {
         Setting.CustomControl = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -18,7 +14,7 @@ internal sealed class ChoiceSettingControlBinding : SettingControlBinding<Choice
 
     public override void LoadSetting(SettingsSource settings, ComboBox control)
     {
-        string? settingVal = settings.SettingLevel == SettingLevel.Effective
+        var settingVal = settings.SettingLevel == SettingLevel.Effective
             ? Setting.ValueOrDefault(settings)
             : Setting[settings];
 
@@ -32,7 +28,7 @@ internal sealed class ChoiceSettingControlBinding : SettingControlBinding<Choice
 
     public override void SaveSetting(SettingsSource settings, ComboBox control)
     {
-        string? controlValue = control.SelectedItem?.ToString();
+        var controlValue = control.SelectedItem?.ToString();
         if (settings.SettingLevel == SettingLevel.Effective)
         {
             if (Setting.ValueOrDefault(settings) == controlValue)

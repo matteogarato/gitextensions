@@ -4,18 +4,27 @@ namespace GitUI.ConsoleEmulation.ConEmu;
 
 internal sealed class ConEmuConsoleEmulator(IShellProvider shellProvider) : IConsoleEmulator
 {
-    private const string DarkThemeFallback = "<Tomorrow Night>";
-    private const string LightThemeFallback = "<Tomorrow>";
+    private const string _darkThemeFallback = "<Tomorrow Night>";
+    private const string _lightThemeFallback = "<Tomorrow>";
 
-    private static readonly Font DefaultFont = new("Consolas", 12);
+    private static readonly Font _defaultFont = new("Consolas", 12);
 
-    public string Name => "conemu";
+    string IConsoleEmulator.Name
+    {
+        get => "conemu";
+    }
 
-    public string DisplayName => "ConEmu";
+    string IConsoleEmulator.DisplayName
+    {
+        get => "ConEmu";
+    }
 
-    public bool IsSupportedInCurrentEnvironment => OperatingSystem.IsWindows();
+    bool IConsoleEmulator.IsSupportedInCurrentEnvironment
+    {
+        get => OperatingSystem.IsWindows();
+    }
 
-    public IReadOnlyCollection<string> AvailableThemes { get; } =
+    IReadOnlyCollection<string> IConsoleEmulator.AvailableThemes { get; } =
     [
         "<Default Windows scheme>",
         "<Base16>",
@@ -42,33 +51,32 @@ internal sealed class ConEmuConsoleEmulator(IShellProvider shellProvider) : ICon
         "<Twilight>",
         "<Ubuntu>",
         "<xterm>",
-        "<Zenburn>",
+        "<Zenburn>"
     ];
 
-    public string? DefaultTheme => null;
+    string? IConsoleEmulator.DefaultTheme
+    {
+        get => null;
+    }
 
-    public IConsoleCommandRunner CreateCommandRunner(ConsoleEmulatorSettings settings)
+    IConsoleCommandRunner IConsoleEmulator.CreateCommandRunner(ConsoleEmulatorSettings settings)
     {
         return new ConEmuConsoleCommandRunner(settings with
         {
-            Theme = ResolveTheme(settings.Theme),
-            Font = settings.Font ?? DefaultFont,
+            Theme = ResolveTheme(settings.Theme), Font = settings.Font ?? _defaultFont
         });
     }
 
-    public IConsoleShellRunner CreateShellRunner(ConsoleEmulatorSettings settings)
+    IConsoleShellRunner IConsoleEmulator.CreateShellRunner(ConsoleEmulatorSettings settings)
     {
-        return new ConEmuConsoleShellRunner(shellProvider, settings with
-        {
-            Theme = ResolveTheme(settings.Theme),
-            Font = settings.Font ?? DefaultFont,
-        });
+        return new ConEmuConsoleShellRunner(shellProvider,
+            settings with { Theme = ResolveTheme(settings.Theme), Font = settings.Font ?? _defaultFont });
     }
 
     internal static string ResolveTheme(string? configuredTheme)
     {
         return string.IsNullOrEmpty(configuredTheme)
-            ? Application.IsDarkModeEnabled ? DarkThemeFallback : LightThemeFallback
+            ? Application.IsDarkModeEnabled ? _darkThemeFallback : _lightThemeFallback
             : configuredTheme;
     }
 }

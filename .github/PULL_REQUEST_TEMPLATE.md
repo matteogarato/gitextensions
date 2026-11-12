@@ -24,7 +24,7 @@ Fixes #
 -
 -
 
-## Test environment(s) <!-- Remove any that don't apply -->
+## Test environment (s) <!-- Remove any that don't apply -->
 
 - GIT <!-- Add version 2.11 or above -->
 - Windows <!-- Add version 7 SP1 or above -->

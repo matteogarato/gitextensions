@@ -1,7 +1,8 @@
 ﻿using GitCommands.Git.Extensions;
-using GitUIPluginInterfaces;
+using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Git.Extensions;
+
 public class GitRevisionExtensionsTests
 {
     [Theory]

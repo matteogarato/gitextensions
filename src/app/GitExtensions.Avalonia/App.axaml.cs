@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
-using GitCommands;
 using GitCommands.Git;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility;
@@ -16,7 +15,7 @@ using Microsoft.VisualStudio.Threading;
 
 namespace GitExtensions;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {
@@ -34,19 +33,20 @@ public partial class App : Application
 
             ShimServices.Install(desktop);
             Shims.WinForms.Application.ThreadException += (_, e)
-                => MessageBoxes.ShowError(owner: null, e.Exception.ToString());
+                => MessageBoxes.ShowError(null, e.Exception.ToString());
 
             AppSettings.LoadSettings();
             ManagedExtensibility.Initialise(userPluginsPath: AppSettings.UserPluginsPath);
             ThemePreference.Apply(AppSettings.ThemeId);
 
-            string[] args = Environment.GetCommandLineArgs();
-            GitModule module = new(Program.ServiceContainer.GetRequiredService<IGitExecutorProvider>(), GetWorkingDir(args));
+            var args = Environment.GetCommandLineArgs();
+            GitModule module = new(Program.ServiceContainer.GetRequiredService<IGitExecutorProvider>(),
+                GetWorkingDir(args));
             if (module.IsValidGitWorkingDir())
             {
                 AppSettings.RecentWorkingDir = module.WorkingDir;
-                ThreadHelper.JoinableTaskFactory.Run(
-                    () => RepositoryHistoryManager.Locals.AddAsMostRecentAsync(module.WorkingDir));
+                ThreadHelper.JoinableTaskFactory.Run(() =>
+                    RepositoryHistoryManager.Locals.AddAsMostRecentAsync(module.WorkingDir));
             }
 
             desktop.MainWindow = new FormBrowse(Program.ServiceContainer, module);
@@ -65,7 +65,7 @@ public partial class App : Application
             // there is bug in .net
             // while parsing command line arguments, it unescapes " incorrectly
             // https://github.com/gitextensions/gitextensions/issues/3489
-            string dirArg = args[2].TrimEnd('"');
+            var dirArg = args[2].TrimEnd('"');
             if (!string.IsNullOrWhiteSpace(dirArg))
             {
                 if (!Directory.Exists(dirArg))

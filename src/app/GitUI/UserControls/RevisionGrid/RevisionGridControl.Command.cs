@@ -1,4 +1,4 @@
-﻿namespace GitUI;
+﻿namespace GitUI.UserControls.RevisionGrid;
 
 public sealed partial class RevisionGridControl
 {
@@ -12,6 +12,7 @@ public sealed partial class RevisionGridControl
         ToggleDrawNonRelativesGray = 5,
         ToggleShowGitNotes = 6,
         ToggleShowGitNotesColumn = 47,
+
         //// <snip>
         ToggleHideMergeCommits = 8,
         ShowAllBranches = 9,
@@ -46,11 +47,11 @@ public sealed partial class RevisionGridControl
         ResetRevisionFilter = 36,
         ResetRevisionPathFilter = 37,
         SelectNextForkPointAsDiffBase = 38,
-        NavigateBackward_AlternativeHotkey = 39,
-        NavigateForward_AlternativeHotkey = 40,
+        NavigateBackwardAlternativeHotkey = 39,
+        NavigateForwardAlternativeHotkey = 40,
         DeleteRef = 41,
         RenameRef = 42,
         CreateSquashCommit = 43,
-        CreateAmendCommit = 44,
+        CreateAmendCommit = 44
     }
 }

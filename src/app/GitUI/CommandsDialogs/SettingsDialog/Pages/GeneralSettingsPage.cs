@@ -1,20 +1,22 @@
 ﻿using System.ComponentModel;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
+using GitExtUtils.GitUI;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class GeneralSettingsPage : SettingsPageWithHeader
 {
-    private readonly TranslationString _openPullDialog = new("Open pull dialog");
-    private readonly TranslationString _pullMerge = new("Pull - merge");
-    private readonly TranslationString _pullRebase = new("Pull - rebase");
     private readonly TranslationString _fetch = new("Fetch");
     private readonly TranslationString _fetchAll = new("Fetch all");
     private readonly TranslationString _fetchAndPruneAll = new("Fetch and prune all");
+    private readonly TranslationString _openPullDialog = new("Open pull dialog");
+    private readonly TranslationString _pullMerge = new("Pull - merge");
+    private readonly TranslationString _pullRebase = new("Pull - rebase");
 
     public GeneralSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)
@@ -29,10 +31,14 @@ public partial class GeneralSettingsPage : SettingsPageWithHeader
             return;
         }
 
-        IList<Repository> repositoryHistory = ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync);
-        string[] historicPaths = [.. repositoryHistory.Select(x => x.GetParentPath())
-                                                  .Where(x => !string.IsNullOrEmpty(x))
-                                                  .Distinct(StringComparer.CurrentCultureIgnoreCase)];
+        var repositoryHistory =
+            ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync);
+        string[] historicPaths =
+        [
+            .. repositoryHistory.Select(x => x.GetParentPath())
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+        ];
         cbDefaultCloneDestination.Items.AddRange(historicPaths);
 
         var pullActions = new[]
@@ -42,7 +48,7 @@ public partial class GeneralSettingsPage : SettingsPageWithHeader
             new { Key = _pullRebase, Value = GitPullAction.Rebase },
             new { Key = _fetch, Value = GitPullAction.Fetch },
             new { Key = _fetchAll, Value = GitPullAction.FetchAll },
-            new { Key = _fetchAndPruneAll, Value = GitPullAction.FetchPruneAll },
+            new { Key = _fetchAndPruneAll, Value = GitPullAction.FetchPruneAll }
         };
         cboDefaultPullAction.DisplayMember = "Key";
         cboDefaultPullAction.ValueMember = "Value";
@@ -66,8 +72,10 @@ public partial class GeneralSettingsPage : SettingsPageWithHeader
 
     private void SetSubmoduleStatus()
     {
-        chkShowSubmoduleStatusInBrowse.Enabled = chkShowGitStatusInToolbar.Checked || chkShowGitStatusForArtificialCommits.Checked;
-        chkShowSubmoduleStatusInBrowse.Checked = chkShowSubmoduleStatusInBrowse.Enabled && chkShowSubmoduleStatusInBrowse.Checked;
+        chkShowSubmoduleStatusInBrowse.Enabled =
+            chkShowGitStatusInToolbar.Checked || chkShowGitStatusForArtificialCommits.Checked;
+        chkShowSubmoduleStatusInBrowse.Checked =
+            chkShowSubmoduleStatusInBrowse.Enabled && chkShowSubmoduleStatusInBrowse.Checked;
     }
 
     protected override void SettingsToPage()
@@ -91,8 +99,9 @@ public partial class GeneralSettingsPage : SettingsPageWithHeader
         chkShowGitCommandLine.Checked = AppSettings.ShowGitCommandLine;
         cbDefaultCloneDestination.Text = AppSettings.DefaultCloneDestinationPath;
         cboDefaultPullAction.SelectedValue
-            = AppSettings.DefaultPullAction != GitPullAction.Default ?
-              AppSettings.DefaultPullAction : GitPullAction.None;
+            = AppSettings.DefaultPullAction != GitPullAction.Default
+                ? AppSettings.DefaultPullAction
+                : GitPullAction.None;
         chkFollowRenamesInFileHistoryExact.Checked = AppSettings.FollowRenamesInFileHistoryExactOnly;
         SetSubmoduleStatus();
 
@@ -150,7 +159,7 @@ public partial class GeneralSettingsPage : SettingsPageWithHeader
 
     private void DefaultCloneDestinationBrowseClick(object sender, EventArgs e)
     {
-        string? userSelectedPath = OsShellUtil.PickFolder(this, cbDefaultCloneDestination.Text);
+        var userSelectedPath = OsShellUtil.PickFolder(this, cbDefaultCloneDestination.Text);
 
         if (userSelectedPath is not null)
         {
@@ -165,7 +174,8 @@ public partial class GeneralSettingsPage : SettingsPageWithHeader
 
     private void LlblTelemetryPrivacyLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
-        OsShellUtil.OpenUrlInDefaultBrowser(@"https://github.com/gitextensions/gitextensions/blob/master/setup/assets/PrivacyPolicy.md");
+        OsShellUtil.OpenUrlInDefaultBrowser(
+            @"https://github.com/gitextensions/gitextensions/blob/master/setup/assets/PrivacyPolicy.md");
     }
 
     private void lblCommitsLimit_CheckedChanged(object sender, EventArgs e)

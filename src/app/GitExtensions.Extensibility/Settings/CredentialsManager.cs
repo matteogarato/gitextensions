@@ -12,7 +12,6 @@ public interface ICredentialsManager
 
 internal class CredentialsManager : ICredentialsManager
 {
-    private static ConcurrentDictionary<string, NetworkCredential?> Credentials { get; } = new ConcurrentDictionary<string, NetworkCredential?>();
     private readonly Func<string?>? _getWorkingDir;
 
     public CredentialsManager()
@@ -24,7 +23,9 @@ internal class CredentialsManager : ICredentialsManager
         _getWorkingDir = getWorkingDir;
     }
 
-    public void Save()
+    private static ConcurrentDictionary<string, NetworkCredential?> Credentials { get; } = new();
+
+    void ICredentialsManager.Save()
     {
         List<KeyValuePair<string, NetworkCredential?>> credentials = [.. Credentials];
         if (credentials.Count < 1)
@@ -34,7 +35,7 @@ internal class CredentialsManager : ICredentialsManager
 
         Credentials.Clear();
 
-        foreach (KeyValuePair<string, NetworkCredential?> networkCredentials in credentials)
+        foreach (var networkCredentials in credentials)
         {
             if (networkCredentials.Value is null)
             {
@@ -47,15 +48,17 @@ internal class CredentialsManager : ICredentialsManager
         }
     }
 
-    protected internal NetworkCredential GetCredentialOrDefault(SettingLevel settingLevel, string name, NetworkCredential defaultValue)
+    protected internal NetworkCredential GetCredentialOrDefault(SettingLevel settingLevel, string name,
+        NetworkCredential defaultValue)
     {
-        string? targetName = GetWindowsCredentialsTarget(name, settingLevel);
+        var targetName = GetWindowsCredentialsTarget(name, settingLevel);
         if (string.IsNullOrWhiteSpace(targetName))
         {
             return defaultValue;
         }
 
-        if (Credentials.TryGetValue(targetName, out NetworkCredential? result) || AdysTechCredentialManagerWrapper.TryGetCredentials(targetName, out result))
+        if (Credentials.TryGetValue(targetName, out var result) ||
+            AdysTechCredentialManagerWrapper.TryGetCredentials(targetName, out result))
         {
             return result ?? defaultValue;
         }
@@ -65,7 +68,7 @@ internal class CredentialsManager : ICredentialsManager
 
     protected internal void SetCredentials(SettingLevel settingLevel, string name, NetworkCredential? value)
     {
-        string? targetName = GetWindowsCredentialsTarget(name, settingLevel);
+        var targetName = GetWindowsCredentialsTarget(name, settingLevel);
         ArgumentNullException.ThrowIfNull(targetName);
         Credentials.AddOrUpdate(targetName, value, (s, credential) => value);
     }
@@ -78,13 +81,13 @@ internal class CredentialsManager : ICredentialsManager
         }
 
         ArgumentNullException.ThrowIfNull(_getWorkingDir);
-        string? suffix = _getWorkingDir();
+        var suffix = _getWorkingDir();
         return string.IsNullOrWhiteSpace(suffix) ? null : $"{name}_{suffix}";
     }
 
     private static class AdysTechCredentialManagerWrapper
     {
-        private const string TargetPrefix = "GitExtensions_";
+        private const string _targetPrefix = "GitExtensions_";
 
         private static string GetTarget(string rawTarget)
         {
@@ -93,7 +96,7 @@ internal class CredentialsManager : ICredentialsManager
                 throw new ArgumentNullException(nameof(rawTarget));
             }
 
-            return $"{TargetPrefix}{rawTarget}";
+            return $"{_targetPrefix}{rawTarget}";
         }
 
         public static bool TryGetCredentials(string target, [NotNullWhen(true)] out NetworkCredential? credentials)
@@ -109,7 +112,8 @@ internal class CredentialsManager : ICredentialsManager
                 return false;
             }
 
-            return CredentialManager.SaveCredentials(GetTarget(target), new NetworkCredential(userName.Trim(), password)) != null;
+            return CredentialManager.SaveCredentials(GetTarget(target),
+                new NetworkCredential(userName.Trim(), password)) != null;
         }
 
         private static bool RemoveCredentials(string target)

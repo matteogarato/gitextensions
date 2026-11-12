@@ -1,4 +1,4 @@
-﻿namespace GitUI;
+﻿namespace GitUI.Editor;
 
 	partial class FindAndReplaceForm
 	{

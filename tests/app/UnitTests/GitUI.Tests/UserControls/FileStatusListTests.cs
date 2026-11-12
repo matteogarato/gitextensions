@@ -1,16 +1,15 @@
 ﻿using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUI;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
 using NSubstitute;
+using FileStatusList = GitUI.UserControls.FileStatusList;
 
 namespace GitUITests.UserControls;
 
 public class FileStatusListTests : IDisposable
 {
-    private string _workingDir;
-    private IFullPathResolver _fullPathResolver;
+    private readonly IFullPathResolver _fullPathResolver;
+    private readonly string _workingDir;
 
     public FileStatusListTests()
     {
@@ -18,14 +17,15 @@ public class FileStatusListTests : IDisposable
         Directory.CreateDirectory(_workingDir);
 
         _fullPathResolver = Substitute.For<IFullPathResolver>();
-        _fullPathResolver.Resolve(Arg.Any<string>()).Returns(callInfo => Path.Combine(_workingDir, callInfo.Arg<string>()));
+        _fullPathResolver.Resolve(Arg.Any<string>())
+            .Returns(callInfo => Path.Combine(_workingDir, callInfo.Arg<string>()));
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         if (Directory.Exists(_workingDir))
         {
-            Directory.Delete(_workingDir, recursive: true);
+            Directory.Delete(_workingDir, true);
         }
     }
 
@@ -84,5 +84,7 @@ public class FileStatusListTests : IDisposable
     }
 
     private static FileStatusItem Item(GitItemStatus status)
-        => new(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status);
+    {
+        return new FileStatusItem(null, new GitRevision(ObjectId.WorkTreeId), status);
+    }
 }

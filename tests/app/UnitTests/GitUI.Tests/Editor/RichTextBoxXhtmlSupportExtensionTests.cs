@@ -1,9 +1,10 @@
 ﻿using System.Net;
 using System.Text;
-using GitUI.Editor.RichTextBoxExtension;
+using GitUI.Editor;
 using ResourceManager;
 
 namespace GitUITests.Editor;
+
 public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
 {
     private const string _defaultLinkText = "link";
@@ -11,9 +12,9 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     private const string _defaultPrefix = "pre ";
     private const string _defaultSuffix = " suf";
     private const string _linkSeparator = "|||";
+    private readonly ILinkFactory _linkFactory = null!;
 
-    private RichTextBox _rtb = null!;
-    private ILinkFactory _linkFactory = null!;
+    private readonly RichTextBox _rtb = null!;
 
     public RichTextBoxXhtmlSupportExtensionTests()
     {
@@ -21,7 +22,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
         _linkFactory = new LinkFactory();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _rtb.Dispose();
     }
@@ -52,7 +53,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
             text.Append(suffix);
         }
 
-        _rtb.SetXHTMLText(text.ToString());
+        _rtb.SetXhtmlText(text.ToString());
     }
 
     private void SetupDefaultLink()
@@ -63,7 +64,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     [Fact]
     public void GetLink_should_return_null_if_index_is_invalid()
     {
-        SetupLink(prefix: "", linkText: null!, uri: null!, suffix: "");
+        SetupLink("", null!, null!, "");
         _rtb.GetLink(-1).Should().BeNull();
         _rtb.GetLink(0).Should().BeNull();
 
@@ -76,7 +77,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     public void GetLink_should_return_null_if_left_of_link()
     {
         SetupDefaultLink();
-        for (int index = 0; index < _defaultPrefix.Length; ++index)
+        for (var index = 0; index < _defaultPrefix.Length; ++index)
         {
             _rtb.GetLink(index).Should().BeNull();
         }
@@ -86,7 +87,10 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     public void GetLink_should_return_null_if_right_of_link()
     {
         SetupDefaultLink();
-        for (int index = _defaultPrefix.Length + _defaultLinkText.Length + _defaultLinkUri.Length + _linkSeparator.Length; index < _rtb.Text.Length; ++index)
+        for (var index = _defaultPrefix.Length + _defaultLinkText.Length + _defaultLinkUri.Length +
+                         _linkSeparator.Length;
+             index < _rtb.Text.Length;
+             ++index)
         {
             _rtb.GetLink(index).Should().BeNull();
         }
@@ -95,23 +99,23 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     [Fact]
     public void GetLink_should_return_uri_if_text_contains_hash()
     {
-        SetupLink(prefix: string.Empty, linkText: "#hash", uri: _defaultLinkUri, suffix: string.Empty);
+        SetupLink(string.Empty, "#hash", _defaultLinkUri, string.Empty);
         _rtb.GetLink(0).Should().Be(_defaultLinkUri);
     }
 
     [Fact]
     public void GetLink_should_return_uri_if_uri_contains_hash()
     {
-        string uri = _defaultLinkUri + "#hash";
-        SetupLink(prefix: string.Empty, linkText: _defaultLinkText, uri: uri, suffix: string.Empty);
+        var uri = _defaultLinkUri + "#hash";
+        SetupLink(string.Empty, _defaultLinkText, uri, string.Empty);
         _rtb.GetLink(0).Should().Be(uri);
     }
 
     [Fact]
     public void GetLink_should_return_uri_if_text_and_uri_contain_hash()
     {
-        string uri = _defaultLinkUri + "#hash";
-        SetupLink(prefix: string.Empty, linkText: "#text", uri: uri, suffix: string.Empty);
+        var uri = _defaultLinkUri + "#hash";
+        SetupLink(string.Empty, "#text", uri, string.Empty);
         _rtb.GetLink(0).Should().Be(uri);
     }
 
@@ -119,7 +123,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     public void GetLink_should_return_uri_if_at_link()
     {
         SetupDefaultLink();
-        for (int index = _defaultPrefix.Length; index < _defaultPrefix.Length + _defaultLinkText.Length; ++index)
+        for (var index = _defaultPrefix.Length; index < _defaultPrefix.Length + _defaultLinkText.Length; ++index)
         {
             _rtb.GetLink(index).Should().Be(_defaultLinkUri);
         }
@@ -128,7 +132,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     [Fact]
     public void GetLink_should_return_uri_if_begins_with_link()
     {
-        SetupLink(prefix: null!, _defaultLinkText, _defaultLinkUri, _defaultSuffix);
+        SetupLink(null!, _defaultLinkText, _defaultLinkUri, _defaultSuffix);
         _rtb.GetLink(0).Should().Be(_defaultLinkUri);
     }
 
@@ -142,7 +146,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     [Fact]
     public void GetLink_should_return_uri_if_ends_with_link()
     {
-        SetupLink(_defaultPrefix, _defaultLinkText, _defaultLinkUri, suffix: null!);
+        SetupLink(_defaultPrefix, _defaultLinkText, _defaultLinkUri, null!);
         _rtb.GetLink(_defaultPrefix.Length).Should().Be(_defaultLinkUri);
     }
 
@@ -170,7 +174,7 @@ public class RichTextBoxXhtmlSupportExtensionTests : IDisposable
     [Fact]
     public void GetLink_should_return_uri_if_ends_with_link_without_link_text()
     {
-        SetupLink(_defaultPrefix, null!, _defaultLinkUri, suffix: null!);
+        SetupLink(_defaultPrefix, null!, _defaultLinkUri, null!);
         _rtb.GetLink(_defaultPrefix.Length).Should().Be(null);
     }
 }

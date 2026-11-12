@@ -1,31 +1,37 @@
 ﻿using System.Runtime.CompilerServices;
 using CommonTestUtils;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
+using GitUI.UserControls;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTestsFixture>
+public class FormBrowseTests : IDisposable, IClassFixture<FormBrowseTestsFixture>
 {
+    // Created once for each test
+    private GitUiCommands _commands = null!;
+
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
-
-    // Created once for each test
-    private GitUICommands _commands = null!;
 
     public FormBrowseTests(FormBrowseTestsFixture fixture)
     {
         InitializeTest();
     }
 
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
+    }
+
     private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
     }
 
     private void DisposeTest()
@@ -48,84 +54,83 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
         bool reflogEnabled = AppSettings.ShowReflogReferences;
         bool branchFilterEnabled = AppSettings.BranchFilterEnabled;
         bool showCurrentBranchOnly = AppSettings.ShowCurrentBranchOnly;
-        bool revisionGraphShowArtificialCommits = AppSettings.RevisionGraphShowArtificialCommits;
+        var revisionGraphShowArtificialCommits = AppSettings.RevisionGraphShowArtificialCommits;
         AppSettings.ShowReflogReferences.Value = false;
         AppSettings.BranchFilterEnabled.Value = false;
         AppSettings.ShowCurrentBranchOnly.Value = false;
         AppSettings.RevisionGraphShowArtificialCommits = false;
 
-        RunFormTest(
-            form =>
+        RunFormTest(form =>
+        {
+            try
             {
-                try
-                {
-                    // 1. Cycle between "Show all branches" > "Show current branch" > "Show filterd branches"
-                    // ------------------------------------------------------------------------------------------------
+                // 1. Cycle between "Show all branches" > "Show current branch" > "Show filterd branches"
+                // ------------------------------------------------------------------------------------------------
 
-                    Console.WriteLine("Scenario 1: set 'Show all branches'");
-                    WaitForRevisionsToBeLoaded(form);
-                    // Assert
-                    form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(4);
-                    AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
-                    AppSettings.ShowCurrentBranchOnly.Value.Should().BeFalse();
+                Console.WriteLine("Scenario 1: set 'Show all branches'");
+                WaitForRevisionsToBeLoaded(form);
+                // Assert
+                form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(4);
+                AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
+                AppSettings.ShowCurrentBranchOnly.Value.Should().BeFalse();
 
-                    Console.WriteLine("Scenario 1: set 'Show current branch'");
-                    form.GetTestAccessor().ToolStripFilters.GetTestAccessor().tsmiShowBranchesCurrent.PerformClick();
-                    WaitForRevisionsToBeLoaded(form);
-                    // Assert
-                    AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
-                    AppSettings.ShowCurrentBranchOnly.Value.Should().BeTrue();
-                    form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(2);
+                Console.WriteLine("Scenario 1: set 'Show current branch'");
+                form.GetTestAccessor().ToolStripFilters.GetTestAccessor().TsmiShowBranchesCurrent.PerformClick();
+                WaitForRevisionsToBeLoaded(form);
+                // Assert
+                AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
+                AppSettings.ShowCurrentBranchOnly.Value.Should().BeTrue();
+                form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(2);
 
-                    Console.WriteLine("Scenario 1: set 'Show filtered branches'");
-                    form.GetTestAccessor().ToolStripFilters.GetTestAccessor().tsmiShowBranchesFiltered.PerformClick();
-                    WaitForRevisionsToBeLoaded(form);
-                    // Assert
-                    AppSettings.BranchFilterEnabled.Value.Should().BeTrue();
-                    AppSettings.ShowCurrentBranchOnly.Value.Should().BeFalse();
-                    form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(4);
+                Console.WriteLine("Scenario 1: set 'Show filtered branches'");
+                form.GetTestAccessor().ToolStripFilters.GetTestAccessor().TsmiShowBranchesFiltered.PerformClick();
+                WaitForRevisionsToBeLoaded(form);
+                // Assert
+                AppSettings.BranchFilterEnabled.Value.Should().BeTrue();
+                AppSettings.ShowCurrentBranchOnly.Value.Should().BeFalse();
+                form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(4);
 
-                    // 2. Apply a branch filter
-                    // ------------------------------------------------------------------------------------------------
+                // 2. Apply a branch filter
+                // ------------------------------------------------------------------------------------------------
 
-                    Console.WriteLine("Scenario 2: apply branch filter 'Branch2'");
-                    form.GetTestAccessor().ToolStripFilters.SetBranchFilter("Branch2");
-                    WaitForRevisionsToBeLoaded(form);
-                    // Assert
-                    AppSettings.BranchFilterEnabled.Value.Should().BeTrue();
-                    AppSettings.ShowCurrentBranchOnly.Value.Should().BeFalse();
-                    form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(3);
+                Console.WriteLine("Scenario 2: apply branch filter 'Branch2'");
+                form.GetTestAccessor().ToolStripFilters.SetBranchFilter("Branch2");
+                WaitForRevisionsToBeLoaded(form);
+                // Assert
+                AppSettings.BranchFilterEnabled.Value.Should().BeTrue();
+                AppSettings.ShowCurrentBranchOnly.Value.Should().BeFalse();
+                form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(3);
 
-                    Console.WriteLine("Scenario 2: set 'Show current branch'");
-                    form.GetTestAccessor().ToolStripFilters.GetTestAccessor().tsmiShowBranchesCurrent.PerformClick();
-                    WaitForRevisionsToBeLoaded(form);
-                    // Assert
-                    AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
-                    AppSettings.ShowCurrentBranchOnly.Value.Should().BeTrue();
-                    form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(2);
-                    // The filter text is still present
-                    form.GetTestAccessor().ToolStripFilters.GetTestAccessor().tscboBranchFilter.Text.Should().Be("Branch2");
+                Console.WriteLine("Scenario 2: set 'Show current branch'");
+                form.GetTestAccessor().ToolStripFilters.GetTestAccessor().TsmiShowBranchesCurrent.PerformClick();
+                WaitForRevisionsToBeLoaded(form);
+                // Assert
+                AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
+                AppSettings.ShowCurrentBranchOnly.Value.Should().BeTrue();
+                form.GetTestAccessor().RevisionGrid.GetTestAccessor().VisibleRevisionCount.Should().Be(2);
+                // The filter text is still present
+                form.GetTestAccessor().ToolStripFilters.GetTestAccessor().TscboBranchFilter.Text.Should().Be("Branch2");
 
-                    // 3. Switch to another repo - "Show current branch" must remain, filter text must be erased
-                    // ------------------------------------------------------------------------------------------------
+                // 3. Switch to another repo - "Show current branch" must remain, filter text must be erased
+                // ------------------------------------------------------------------------------------------------
 
-                    Console.WriteLine("Scenario 3: switch repo");
-                    using ReferenceRepository repository = new();
-                    form.SetWorkingDir(repository.Module.WorkingDir);
-                    WaitForRevisionsToBeLoaded(form);
-                    // Assert
-                    AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
-                    AppSettings.ShowCurrentBranchOnly.Value.Should().BeTrue();
-                    form.GetTestAccessor().ToolStripFilters.GetTestAccessor().tscboBranchFilter.Text.Should().BeEmpty();
-                }
-                finally
-                {
-                    AppSettings.ShowReflogReferences.Value = reflogEnabled;
-                    AppSettings.BranchFilterEnabled.Value = branchFilterEnabled;
-                    AppSettings.ShowCurrentBranchOnly.Value = showCurrentBranchOnly;
-                    AppSettings.RevisionGraphShowArtificialCommits = revisionGraphShowArtificialCommits;
-                }
-            });
+                Console.WriteLine("Scenario 3: switch repo");
+                using ReferenceRepository repository = new();
+                form.SetWorkingDir(repository.Module.WorkingDir);
+                WaitForRevisionsToBeLoaded(form);
+                // Assert
+                AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
+                AppSettings.ShowCurrentBranchOnly.Value.Should().BeTrue();
+                form.GetTestAccessor().ToolStripFilters.GetTestAccessor().TscboBranchFilter.Text.Should().BeEmpty();
+            }
+            finally
+            {
+                AppSettings.ShowReflogReferences.Value = reflogEnabled;
+                AppSettings.BranchFilterEnabled.Value = branchFilterEnabled;
+                AppSettings.ShowCurrentBranchOnly.Value = showCurrentBranchOnly;
+                AppSettings.RevisionGraphShowArtificialCommits = revisionGraphShowArtificialCommits;
+            }
+        });
     }
 
     [WinFormsTheory]
@@ -136,18 +141,22 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
     public void File_history_should_behave_as_expected(string fileRelativePath, string fileName)
     {
         using ReferenceRepository referenceRepository = new();
-        GitUICommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(), referenceRepository.Module);
+        GitUiCommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            referenceRepository.Module);
 
-        string revision1 = referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Create '{fileName}' in directory '{fileRelativePath}'");
-        string revision2 = referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Update '{fileName}' in directory '{fileRelativePath}'");
-        string revision3 = referenceRepository.CreateCommitRelative(fileRelativePath, fileName, $"Update '{fileName}' in directory '{fileRelativePath}' again");
+        var revision1 = referenceRepository.CreateCommitRelative(fileRelativePath, fileName,
+            $"Create '{fileName}' in directory '{fileRelativePath}'");
+        var revision2 = referenceRepository.CreateCommitRelative(fileRelativePath, fileName,
+            $"Update '{fileName}' in directory '{fileRelativePath}'");
+        var revision3 = referenceRepository.CreateCommitRelative(fileRelativePath, fileName,
+            $"Update '{fileName}' in directory '{fileRelativePath}' again");
 
-        bool useBrowseForFileHistory = AppSettings.UseBrowseForFileHistory.Value;
+        var useBrowseForFileHistory = AppSettings.UseBrowseForFileHistory.Value;
 
         AppSettings.UseBrowseForFileHistory.Value = true;
 
-        UITest.RunForm(
-            showForm: () => commands.GetTestAccessor().ShowFileHistoryDialog(Path.Combine(fileRelativePath, fileName)),
+        UiTest.RunForm(
+            () => commands.GetTestAccessor().ShowFileHistoryDialog(Path.Combine(fileRelativePath, fileName)),
             (FormBrowse form) =>
             {
                 try
@@ -177,7 +186,8 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
         const string contentB = nameof(contentB);
 
         using ReferenceRepository referenceRepository = new();
-        GitUICommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(), referenceRepository.Module);
+        GitUiCommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            referenceRepository.Module);
         referenceRepository.CreateCommit("multiple files",
             $"{contentA}\n{new string('A', 20000)}", fileA,
             $"{contentB}\n{new string('B', 20000)}", fileB);
@@ -186,24 +196,25 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
         RunFormTest(
             async form =>
             {
-                FormBrowse.TestAccessor ta = form.GetTestAccessor();
+                var ta = form.GetTestAccessor();
                 ((TabControl)ta.DiffTabPage.Parent!).SelectedTab = ta.DiffTabPage;
 
-                RevisionDiffControl.TestAccessor tadiff = ta.RevisionDiffControl.GetTestAccessor();
-                FileStatusList fileStatusList = tadiff.DiffFiles;
+                var tadiff = ta.RevisionDiffControl.GetTestAccessor();
+                var fileStatusList = tadiff.DiffFiles;
 
                 WaitForRevisionsToBeLoaded(form);
 
                 IReadOnlyList<GitItemStatus> files = [];
-                UITest.ProcessUntil("waiting for files", () => { return (files = fileStatusList.GitItemStatuses).Count == 2; }, maxMilliseconds);
-                GitItemStatus fileToSelect = files[1];
+                UiTest.ProcessUntil("waiting for files",
+                    () => { return (files = fileStatusList.GitItemStatuses).Count == 2; }, maxMilliseconds);
+                var fileToSelect = files[1];
                 fileStatusList.SelectedGitItems = [fileToSelect];
                 await VerifySelectionAsync();
                 const int expectedLine = 2;
                 tadiff.DiffText.GoToLine(expectedLine);
 
                 // repeat: refresh and check selection
-                for (int i = 0; i < 15; ++i)
+                for (var i = 0; i < 15; ++i)
                 {
                     ta.RefreshRevisions();
                     WaitForRevisionsToBeLoaded(form);
@@ -215,10 +226,10 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
                 async Task VerifySelectionAsync(int expectedLine = 1)
                 {
                     await Task.Delay(FileStatusList.SelectedIndexChangeThrottleDuration);
-                    UITest.ProcessUntil("waiting for selection",
+                    UiTest.ProcessUntil("waiting for selection",
                         () => fileStatusList.SelectedGitItem?.Name == fileB
-                                && tadiff.DiffText.GetText().StartsWith(contentB)
-                                && tadiff.DiffText.CurrentFileLine == expectedLine,
+                              && tadiff.DiffText.GetText().StartsWith(contentB)
+                              && tadiff.DiffText.CurrentFileLine == expectedLine,
                         maxMilliseconds);
                 }
             },
@@ -229,7 +240,8 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
     public void ShowStashes_starting_disabled_should_filter_as_expected()
     {
         using ReferenceRepository referenceRepository = new();
-        GitUICommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(), referenceRepository.Module);
+        GitUiCommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            referenceRepository.Module);
 
         referenceRepository.CreateCommit("Commit1");
         referenceRepository.Stash("Stash1");
@@ -237,8 +249,8 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
         referenceRepository.Stash("Stash2");
         referenceRepository.CreateCommit("Commit3");
 
-        bool showStashes = AppSettings.ShowStashes;
-        bool revisionGraphShowArtificialCommits = AppSettings.RevisionGraphShowArtificialCommits;
+        var showStashes = AppSettings.ShowStashes;
+        var revisionGraphShowArtificialCommits = AppSettings.RevisionGraphShowArtificialCommits;
 
         AppSettings.ShowStashes = false;
         AppSettings.RevisionGraphShowArtificialCommits = false;
@@ -276,7 +288,8 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
     public void ShowStashes_starting_enabled_should_filter_as_expected()
     {
         using ReferenceRepository referenceRepository = new();
-        GitUICommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(), referenceRepository.Module);
+        GitUiCommands commands = new(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            referenceRepository.Module);
 
         referenceRepository.CreateCommit("Commit1");
         referenceRepository.Stash("Stash1");
@@ -284,8 +297,8 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
         referenceRepository.Stash("Stash2");
         referenceRepository.CreateCommit("Commit3");
 
-        bool showStashes = AppSettings.ShowStashes;
-        bool revisionGraphShowArtificialCommits = AppSettings.RevisionGraphShowArtificialCommits;
+        var showStashes = AppSettings.ShowStashes;
+        var revisionGraphShowArtificialCommits = AppSettings.RevisionGraphShowArtificialCommits;
 
         AppSettings.ShowStashes = true;
         AppSettings.RevisionGraphShowArtificialCommits = false;
@@ -320,10 +333,10 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
             commands);
     }
 
-    private static void RunFormTest(Action<FormBrowse> testDriver, GitUICommands commands)
+    private static void RunFormTest(Action<FormBrowse> testDriver, GitUiCommands commands)
     {
-        UITest.RunForm(
-            showForm: () => commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+        UiTest.RunForm(
+            () => commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             (FormBrowse form) =>
             {
                 testDriver(form);
@@ -333,37 +346,32 @@ public class FormBrowseTests : System.IDisposable, IClassFixture<FormBrowseTests
 
     private void RunFormTest(Action<FormBrowse> testDriver)
     {
-        RunFormTest(
-            form =>
-            {
-                testDriver(form);
-                return Task.CompletedTask;
-            });
+        RunFormTest(form =>
+        {
+            testDriver(form);
+            return Task.CompletedTask;
+        });
     }
 
-    private void RunFormTest(Func<FormBrowse, Task> testDriverAsync, GitUICommands? commands = null)
+    private void RunFormTest(Func<FormBrowse, Task> testDriverAsync, GitUiCommands? commands = null)
     {
-        UITest.RunForm(
-            showForm: () => (commands ?? _commands).StartBrowseDialog(owner: null).Should().BeTrue(),
+        UiTest.RunForm(
+            () => (commands ?? _commands).StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
     }
 
     private static void WaitForRevisionsToBeLoaded(FormBrowse form, [CallerMemberName] string caller = "")
     {
-        UITest.ProcessUntil($"{caller} loading revisions", () => form.GetTestAccessor().RevisionGrid.GetTestAccessor().IsDataLoadComplete, maxMilliseconds: 10_000);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
+        UiTest.ProcessUntil($"{caller} loading revisions",
+            () => form.GetTestAccessor().RevisionGrid.GetTestAccessor().IsDataLoadComplete, 10_000);
     }
 }
 
-public sealed class FormBrowseTestsFixture : System.IDisposable
+public sealed class FormBrowseTestsFixture : IDisposable
 {
     // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
+    private readonly bool _originalShowAuthorAvatarColumn;
+    private readonly bool _showAvailableDiffTools;
 
     public FormBrowseTestsFixture()
     {
@@ -378,7 +386,7 @@ public sealed class FormBrowseTestsFixture : System.IDisposable
         AppSettings.ShowAuthorAvatarColumn = false;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
         AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;

@@ -2,15 +2,15 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace GitCommands;
+namespace GitCommands.Settings;
 
 [DebuggerDisplay("{" + nameof(_byNameMap) + ".Count}")]
 public abstract class SettingsCache : IDisposable
 {
-    private readonly Lock _byNameMapLock = new();
     private readonly ConcurrentDictionary<string, string?> _byNameMap = new();
+    private readonly Lock _byNameMapLock = new();
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
@@ -61,26 +61,26 @@ public abstract class SettingsCache : IDisposable
     public void Load()
     {
         LockedAction(() =>
-            {
-                Clear();
-                LoadImpl();
-            });
+        {
+            Clear();
+            LoadImpl();
+        });
     }
 
     public void Import(IEnumerable<(string name, string? value)> keyValuePairs)
     {
         LockedAction(() =>
+        {
+            foreach (var (key, value) in keyValuePairs)
             {
-                foreach ((string key, string? value) in keyValuePairs)
+                if (value is not null)
                 {
-                    if (value is not null)
-                    {
-                        SetValueImpl(key, value);
-                    }
+                    SetValueImpl(key, value);
                 }
+            }
 
-                Save();
-            });
+            Save();
+        });
     }
 
     protected void EnsureSettingsAreUpToDate()
@@ -113,7 +113,7 @@ public abstract class SettingsCache : IDisposable
     {
         return LockedAction(() =>
         {
-            string? inMemValue = GetValue(name);
+            var inMemValue = GetValue(name);
             return inMemValue is not null && !string.Equals(inMemValue, value);
         });
     }
@@ -123,7 +123,7 @@ public abstract class SettingsCache : IDisposable
         LockedAction(() =>
         {
             // will refresh EncodedNameMap if needed
-            string? inMemValue = GetValue(name);
+            var inMemValue = GetValue(name);
 
             if (string.Equals(inMemValue, value))
             {
@@ -154,7 +154,7 @@ public abstract class SettingsCache : IDisposable
 
         EnsureSettingsAreUpToDate();
 
-        if (_byNameMap.TryGetValue(name, out string? o))
+        if (_byNameMap.TryGetValue(name, out var o))
         {
             switch (o)
             {
@@ -166,7 +166,7 @@ public abstract class SettingsCache : IDisposable
             }
         }
 
-        string? s = GetValue(name);
+        var s = GetValue(name);
 
         if (s is null)
         {

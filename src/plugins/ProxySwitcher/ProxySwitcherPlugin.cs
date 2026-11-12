@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
@@ -10,10 +10,10 @@ namespace GitExtensions.Plugins.ProxySwitcher;
 [Export(typeof(IGitPlugin))]
 public class ProxySwitcherPlugin : GitPluginBase
 {
-    public readonly StringSetting Username = new("Username", string.Empty);
-    public readonly StringSetting Password = new("Password", string.Empty);
     public readonly StringSetting HttpProxy = new("HTTP proxy", string.Empty);
     public readonly StringSetting HttpProxyPort = new("HTTP proxy port", "8080");
+    public readonly StringSetting Password = new("Password", string.Empty);
+    public readonly StringSetting Username = new("Username", string.Empty);
 
     public ProxySwitcherPlugin() : base(true)
     {
@@ -31,7 +31,7 @@ public class ProxySwitcherPlugin : GitPluginBase
         yield return HttpProxyPort;
     }
 
-    public override bool Execute(GitUIEventArgs args)
+    public override bool Execute(GitUiEventArgs args)
     {
         using ProxySwitcherForm form = new(this, Settings, args);
         form.ShowDialog(args.OwnerForm);

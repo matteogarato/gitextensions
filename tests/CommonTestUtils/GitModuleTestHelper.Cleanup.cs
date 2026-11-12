@@ -1,4 +1,4 @@
-﻿using GitUI;
+﻿using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace CommonTestUtils;
@@ -25,7 +25,7 @@ public partial class GitModuleTestHelper : IDisposable
     {
         Console.WriteLine("GitModuleTestHelper: Will perform clean-up in background tasks");
 
-        Epilogue.RegisterAfterSuiteAction(order: 2, WaitForCleanUpCompletion);
+        Epilogue.RegisterAfterSuiteAction(2, WaitForCleanUpCompletion);
     }
 
     private static void CleanUp(string path)
@@ -33,7 +33,7 @@ public partial class GitModuleTestHelper : IDisposable
         try
         {
             // Directory.Delete seems to intermittently fail, so delete the files first before deleting folders
-            foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
             {
                 if (File.GetAttributes(file).HasFlag(FileAttributes.ReparsePoint))
                 {
@@ -47,7 +47,7 @@ public partial class GitModuleTestHelper : IDisposable
             // Delete tends to fail on the first try, so give it a few tries as a best effort.
             // By this point, all files have been deleted anyway, so this is mainly about removing
             // empty directories.
-            for (int tries = 0; tries < 10; ++tries)
+            for (var tries = 0; tries < 10; ++tries)
             {
                 try
                 {

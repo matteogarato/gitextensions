@@ -1,11 +1,11 @@
 ﻿namespace GitExtensions.Shims.WinForms;
 
 /// <summary>
-///  Stand-in for <c>System.Windows.Forms.Keys</c>; values match WinForms (virtual-key codes
-///  plus modifier flags) so persisted hotkey settings remain compatible.
+///     Stand-in for <c>System.Windows.Forms.Keys</c>; values match WinForms (virtual-key codes
+///     plus modifier flags) so persisted hotkey settings remain compatible.
 /// </summary>
 /// <remarks>
-///  Consumed by: <c>ResourceManager/Hotkey/*</c> (hotkey commands, display strings).
+///     Consumed by: <c>ResourceManager/Hotkey/*</c> (hotkey commands, display strings).
 /// </remarks>
 [Flags]
 public enum Keys
@@ -37,11 +37,11 @@ public enum Keys
     HanjaMode = 0x19,
     KanjiMode = 0x19,
     Escape = 0x1B,
-    IMEConvert = 0x1C,
-    IMENonconvert = 0x1D,
-    IMEAccept = 0x1E,
-    IMEAceept = 0x1E,
-    IMEModeChange = 0x1F,
+    ImeConvert = 0x1C,
+    ImeNonconvert = 0x1D,
+    ImeAccept = 0x1E,
+    ImeAceept = 0x1E,
+    ImeModeChange = 0x1F,
     Space = 0x20,
     Prior = 0x21,
     PageUp = 0x21,
@@ -203,5 +203,5 @@ public enum Keys
     Shift = 0x10000,
     Control = 0x20000,
     Alt = 0x40000,
-    Modifiers = unchecked((int)0xFFFF0000),
+    Modifiers = unchecked((int)0xFFFF0000)
 }

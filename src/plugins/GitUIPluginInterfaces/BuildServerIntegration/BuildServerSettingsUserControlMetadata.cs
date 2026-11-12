@@ -4,10 +4,5 @@ namespace GitUIPluginInterfaces.BuildServerIntegration;
 
 [MetadataAttribute]
 [AttributeUsage(AttributeTargets.Class)]
-public class BuildServerSettingsUserControlMetadata : BuildServerAdapterMetadataAttribute
-{
-    public BuildServerSettingsUserControlMetadata(string buildServerType)
-        : base(buildServerType)
-    {
-    }
-}
+public class BuildServerSettingsUserControlMetadata(string buildServerType)
+    : BuildServerAdapterMetadataAttribute(buildServerType);

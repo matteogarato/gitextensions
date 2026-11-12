@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommandsDialogs;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommandsDialogs;
 
 partial class FormDeleteBranch
 {
@@ -30,7 +32,7 @@ partial class FormDeleteBranch
     {
         Delete = new Button();
         labelSelectBranches = new Label();
-        Branches = new GitUI.BranchComboBox();
+        Branches = new BranchComboBox();
         tlpnlMain = new TableLayoutPanel();
         MainPanel.SuspendLayout();
         ControlsPanel.SuspendLayout();

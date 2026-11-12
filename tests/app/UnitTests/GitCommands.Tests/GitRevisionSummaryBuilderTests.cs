@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using CommonTestUtils;
-using GitCommands;
+using GitCommands.Git;
 
 namespace GitCommandsTests;
 
@@ -30,8 +30,9 @@ public sealed class GitRevisionSummaryBuilderTests
     [InlineData("Too_long_lines")]
     public async Task Should_do_ellipsis(string testName)
     {
-        string content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.{testName}.txt");
+        var content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.{testName}.txt");
 
-        await Verifier.Verify(new GitRevisionSummaryBuilder().BuildSummary(content));
+        await Verify(new GitRevisionSummaryBuilder().BuildSummary(content));
     }
 }

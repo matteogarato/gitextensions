@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace CommonTestUtils;
 
@@ -28,7 +28,7 @@ public class MemorySettingsCache : SettingsCache
 
     protected override string? GetValueImpl(string key)
     {
-        if (_stringSettings.TryGetValue(key, out string? value))
+        if (_stringSettings.TryGetValue(key, out var value))
         {
             return value;
         }

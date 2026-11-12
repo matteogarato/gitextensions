@@ -1,29 +1,27 @@
 using GitCommands.Git;
-using Microsoft;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class GitConfigAdvancedSettingsPage : GitConfigBaseSettingsPage
 {
-    private record GitSettingUiMapping(string GitSettingKey, CheckBox MappedCheckbox);
     private readonly List<GitSettingUiMapping> _gitSettings;
 
     public GitConfigAdvancedSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
         InitializeComponent();
         InitializeComplete();
 
         _gitSettings =
         [
-            new("pull.rebase", checkBoxPullRebase),
-            new("fetch.prune", checkBoxFetchPrune),
-            new("merge.autostash", checkboxMergeAutoStash),
-            new("rebase.autostash", checkBoxRebaseAutostash),
-            new("rebase.autosquash", checkBoxRebaseAutosquash),
-            new("rebase.updaterefs", checkBoxUpdateRefs),
-            new("rerere.enabled", checkBoxReReReEnabled),
-            new("rerere.autoupdate", checkBoxReReReAutoUpdate),
+            new GitSettingUiMapping("pull.rebase", checkBoxPullRebase),
+            new GitSettingUiMapping("fetch.prune", checkBoxFetchPrune),
+            new GitSettingUiMapping("merge.autostash", checkboxMergeAutoStash),
+            new GitSettingUiMapping("rebase.autostash", checkBoxRebaseAutostash),
+            new GitSettingUiMapping("rebase.autosquash", checkBoxRebaseAutosquash),
+            new GitSettingUiMapping("rebase.updaterefs", checkBoxUpdateRefs),
+            new GitSettingUiMapping("rerere.enabled", checkBoxReReReEnabled),
+            new GitSettingUiMapping("rerere.autoupdate", checkBoxReReReAutoUpdate)
         ];
 
         checkBoxUpdateRefs.Visible = GitVersion.Current.SupportUpdateRefs;
@@ -33,7 +31,7 @@ public partial class GitConfigAdvancedSettingsPage : GitConfigBaseSettingsPage
 
     private void GitConfigAdvancedSettingsPage_Load(object? sender, EventArgs e)
     {
-        foreach (GitSettingUiMapping gitSetting in _gitSettings)
+        foreach (var gitSetting in _gitSettings)
         {
             gitSetting.MappedCheckbox.Text += $" [{gitSetting.GitSettingKey}]";
         }
@@ -42,14 +40,14 @@ public partial class GitConfigAdvancedSettingsPage : GitConfigBaseSettingsPage
     protected override void SettingsToPage()
     {
         Validates.NotNull(CurrentSettings);
-        foreach (GitSettingUiMapping gitSetting in _gitSettings)
+        foreach (var gitSetting in _gitSettings)
         {
             gitSetting.MappedCheckbox.CheckState = CurrentSettings.GetValue(gitSetting.GitSettingKey) switch
-                {
-                    "true" or "yes" or "on" or "1" => CheckState.Checked,
-                    "false" or "no" or "off" or "0" or "" => CheckState.Unchecked,
-                    _ => CheckState.Indeterminate
-                };
+            {
+                "true" or "yes" or "on" or "1" => CheckState.Checked,
+                "false" or "no" or "off" or "0" or "" => CheckState.Unchecked,
+                _ => CheckState.Indeterminate
+            };
         }
 
         base.SettingsToPage();
@@ -58,11 +56,17 @@ public partial class GitConfigAdvancedSettingsPage : GitConfigBaseSettingsPage
     protected override void PageToSettings()
     {
         Validates.NotNull(CurrentSettings);
-        foreach (GitSettingUiMapping gitSetting in _gitSettings)
+        foreach (var gitSetting in _gitSettings)
         {
-            CurrentSettings.SetValue(gitSetting.GitSettingKey, gitSetting.MappedCheckbox.CheckState switch { CheckState.Checked => "true", CheckState.Unchecked => "false", _ => null });
+            CurrentSettings.SetValue(gitSetting.GitSettingKey,
+                gitSetting.MappedCheckbox.CheckState switch
+                {
+                    CheckState.Checked => "true", CheckState.Unchecked => "false", _ => null
+                });
         }
 
         base.PageToSettings();
     }
+
+    private record GitSettingUiMapping(string GitSettingKey, CheckBox MappedCheckbox);
 }

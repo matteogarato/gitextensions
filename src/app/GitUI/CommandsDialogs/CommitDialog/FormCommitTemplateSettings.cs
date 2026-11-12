@@ -1,23 +1,23 @@
 ﻿using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.CommitDialog;
 
 public sealed partial class FormCommitTemplateSettings : GitExtensionsDialog
 {
+    private const int _maxCommitTemplates = 10;
+    private const int _maxShownCharsForName = 50;
+    private const int _maxUsedCharsForName = 80;
+
     private readonly TranslationString _emptyTemplate =
         new("empty");
 
     private CommitTemplateItem[]? _commitTemplates;
 
-    private const int _maxCommitTemplates = 10;
-    private const int _maxShownCharsForName = 50;
-    private const int _maxUsedCharsForName = 80;
-
-    public FormCommitTemplateSettings(IGitUICommands commands)
-        : base(commands, enablePositionRestore: false)
+    public FormCommitTemplateSettings(IGitUiCommands commands)
+        : base(commands, false)
     {
         InitializeComponent();
         InitializeComplete();
@@ -40,7 +40,7 @@ public sealed partial class FormCommitTemplateSettings : GitExtensionsDialog
         if (_commitTemplates is null)
         {
             _commitTemplates = new CommitTemplateItem[_maxCommitTemplates];
-            for (int i = 0; i < _commitTemplates.Length; i++)
+            for (var i = 0; i < _commitTemplates.Length; i++)
             {
                 _commitTemplates[i] = new CommitTemplateItem();
             }
@@ -48,17 +48,19 @@ public sealed partial class FormCommitTemplateSettings : GitExtensionsDialog
         else if (_commitTemplates.Length < _maxCommitTemplates)
         {
             // Migration: keep the one configured and complete with empty ones
-            CommitTemplateItem[] previousCommitTemplates = _commitTemplates;
+            var previousCommitTemplates = _commitTemplates;
             _commitTemplates = new CommitTemplateItem[_maxCommitTemplates];
-            for (int i = 0; i < _commitTemplates.Length; i++)
+            for (var i = 0; i < _commitTemplates.Length; i++)
             {
-                _commitTemplates[i] = i < previousCommitTemplates.Length ? previousCommitTemplates[i] : new CommitTemplateItem();
+                _commitTemplates[i] = i < previousCommitTemplates.Length
+                    ? previousCommitTemplates[i]
+                    : new CommitTemplateItem();
             }
         }
 
         _NO_TRANSLATE_comboBoxCommitTemplates.Items.Clear();
 
-        for (int i = 0; i < _commitTemplates.Length; i++)
+        for (var i = 0; i < _commitTemplates.Length; i++)
         {
             _NO_TRANSLATE_comboBoxCommitTemplates.Items.Add(string.Empty);
             RefreshLineInListBox(i);
@@ -70,7 +72,8 @@ public sealed partial class FormCommitTemplateSettings : GitExtensionsDialog
 
     private void SaveSettings()
     {
-        AppSettings.CommitValidationMaxCntCharsFirstLine = Convert.ToInt32(_NO_TRANSLATE_numericMaxFirstLineLength.Value);
+        AppSettings.CommitValidationMaxCntCharsFirstLine =
+            Convert.ToInt32(_NO_TRANSLATE_numericMaxFirstLineLength.Value);
         AppSettings.CommitValidationMaxCntCharsPerLine = Convert.ToInt32(_NO_TRANSLATE_numericMaxLineLength.Value);
         AppSettings.CommitValidationSecondLineMustBeEmpty = checkBoxSecondLineEmpty.Checked;
         AppSettings.CommitValidationIndentAfterFirstLine = checkBoxUseIndent.Checked;
@@ -94,21 +97,25 @@ public sealed partial class FormCommitTemplateSettings : GitExtensionsDialog
     private void textCommitTemplateText_TextChanged(object sender, EventArgs e)
     {
         Validates.NotNull(_commitTemplates);
-        _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Text = _NO_TRANSLATE_textCommitTemplateText.Text;
+        _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Text =
+            _NO_TRANSLATE_textCommitTemplateText.Text;
     }
 
     private void textBoxCommitTemplateName_TextChanged(object sender, EventArgs e)
     {
         Validates.NotNull(_commitTemplates);
-        _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Name = _NO_TRANSLATE_textBoxCommitTemplateName.Text;
+        _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Name =
+            _NO_TRANSLATE_textBoxCommitTemplateName.Text;
         RefreshLineInListBox(_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex);
     }
 
     private void comboBoxCommitTemplates_SelectedIndexChanged(object sender, EventArgs e)
     {
         Validates.NotNull(_commitTemplates);
-        _NO_TRANSLATE_textCommitTemplateText.Text = _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Text;
-        _NO_TRANSLATE_textBoxCommitTemplateName.Text = _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Name;
+        _NO_TRANSLATE_textCommitTemplateText.Text =
+            _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Text;
+        _NO_TRANSLATE_textBoxCommitTemplateName.Text =
+            _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].Name;
         checkBoxRegexEnabled.Checked = _commitTemplates[_NO_TRANSLATE_comboBoxCommitTemplates.SelectedIndex].IsRegex;
     }
 

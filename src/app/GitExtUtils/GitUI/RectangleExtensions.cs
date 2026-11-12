@@ -1,15 +1,15 @@
 ﻿using System.Diagnostics.Contracts;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 /// <summary>
-///  Extension methods for <see cref="Rectangle"/>.
+///     Extension methods for <see cref="Rectangle" />.
 /// </summary>
 public static class RectangleExtensions
 {
     /// <summary>
-    ///  Returns a new rectangle with its left edge moved right by <paramref name="offset"/>,
-    ///  reducing the width accordingly.
+    ///     Returns a new rectangle with its left edge moved right by <paramref name="offset" />,
+    ///     reducing the width accordingly.
     /// </summary>
     [Pure]
     public static Rectangle ReduceLeft(this Rectangle rect, int offset)
@@ -22,7 +22,7 @@ public static class RectangleExtensions
     }
 
     /// <summary>
-    ///  Returns a new rectangle with its width reduced from the right by <paramref name="offset"/>.
+    ///     Returns a new rectangle with its width reduced from the right by <paramref name="offset" />.
     /// </summary>
     [Pure]
     public static Rectangle ReduceRight(this Rectangle rect, int offset)

@@ -1,19 +1,17 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 
 namespace GitUI.UserControls;
 
 public partial class BranchSelector : GitModuleControl
 {
-    public event EventHandler? SelectedIndexChanged;
-
     private readonly bool _isLoading;
+    public ObjectId CommitToCompare;
     private IReadOnlyList<ObjectId>? _containObjectIds;
     private string[]? _localBranches;
     private string[]? _remoteBranches;
-    public ObjectId CommitToCompare;
 
     public BranchSelector()
     {
@@ -30,9 +28,22 @@ public partial class BranchSelector : GitModuleControl
         }
     }
 
-    public bool IsRemoteBranchChecked => Remotebranch.Checked;
-    public string SelectedBranchName => Branches.Text;
-    public override string Text => Branches.Text;
+    public bool IsRemoteBranchChecked
+    {
+        get => Remotebranch.Checked;
+    }
+
+    public string SelectedBranchName
+    {
+        get => Branches.Text;
+    }
+
+    public override string Text
+    {
+        get => Branches.Text;
+    }
+
+    public event EventHandler? SelectedIndexChanged;
 
     public void Initialize(bool remote, IReadOnlyList<ObjectId>? containObjectIds)
     {
@@ -76,24 +87,24 @@ public partial class BranchSelector : GitModuleControl
 
             if (_containObjectIds.Count > 0)
             {
-                IEnumerable<string> branches =
+                var branches =
                     Module.GetAllBranchesWhichContainGivenCommit(_containObjectIds[0],
-                                                                 getLocal: LocalBranch.Checked,
-                                                                 getRemote: !LocalBranch.Checked,
-                                                                 cancellationToken: default)
+                            LocalBranch.Checked,
+                            !LocalBranch.Checked,
+                            default)
                         .Where(a => !DetachedHeadParser.IsDetachedHead(a) &&
                                     !a.EndsWith("/HEAD"));
                 result.UnionWith(branches);
             }
 
-            for (int index = 1; index < _containObjectIds.Count; index++)
+            for (var index = 1; index < _containObjectIds.Count; index++)
             {
-                ObjectId containObjectId = _containObjectIds[index];
-                IEnumerable<string> branches =
+                var containObjectId = _containObjectIds[index];
+                var branches =
                     Module.GetAllBranchesWhichContainGivenCommit(containObjectId,
-                                                                 getLocal: LocalBranch.Checked,
-                                                                 getRemote: !LocalBranch.Checked,
-                                                                 cancellationToken: default)
+                            LocalBranch.Checked,
+                            !LocalBranch.Checked,
+                            default)
                         .Where(a => !DetachedHeadParser.IsDetachedHead(a) &&
                                     !a.EndsWith("/HEAD"));
                 result.IntersectWith(branches);
@@ -114,8 +125,8 @@ public partial class BranchSelector : GitModuleControl
         }
         else
         {
-            string branchName = SelectedBranchName;
-            ObjectId currentCheckout = CommitToCompare.IsZero ? Module.GetCurrentCheckout() : CommitToCompare;
+            var branchName = SelectedBranchName;
+            var currentCheckout = CommitToCompare.IsZero ? Module.GetCurrentCheckout() : CommitToCompare;
 
             if (currentCheckout.IsZero)
             {
@@ -125,7 +136,7 @@ public partial class BranchSelector : GitModuleControl
 
             ThreadHelper.FileAndForget(async () =>
             {
-                string text = Module.GetCommitCountString(currentCheckout, branchName);
+                var text = Module.GetCommitCountString(currentCheckout, branchName);
                 await this.SwitchToMainThreadAsync();
                 lbChanges.Text = text;
             });

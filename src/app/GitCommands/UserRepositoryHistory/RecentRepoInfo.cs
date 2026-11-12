@@ -1,17 +1,9 @@
-﻿using Microsoft;
+﻿using GitCommands.Settings;
 
 namespace GitCommands.UserRepositoryHistory;
 
 public class RecentRepoInfo
 {
-    public Repository Repo { get; }
-    public string? Caption { get; set; }
-    public bool TopRepo { get; set; }
-    public bool Anchored { get; set; }
-    public DirectoryInfo? DirInfo { get; set; }
-    public string? ShortName { get; }
-    public string DirName { get; }
-
     public RecentRepoInfo(Repository repo, bool topRepo, bool anchored)
     {
         Repo = repo;
@@ -36,50 +28,60 @@ public class RecentRepoInfo
         DirName = DirInfo?.FullName ?? "";
     }
 
-    public bool FullPath => DirInfo is null;
+    public Repository Repo { get; }
+    public string? Caption { get; set; }
+    public bool TopRepo { get; set; }
+    public bool Anchored { get; set; }
+    public DirectoryInfo? DirInfo { get; set; }
+    public string? ShortName { get; }
+    public string DirName { get; }
 
-    public override string ToString() => Repo.ToString();
+    public bool FullPath
+    {
+        get => DirInfo is null;
+    }
+
+    public override string ToString()
+    {
+        return Repo.ToString();
+    }
 }
 
 public class RecentRepoSplitter
 {
-    public int MaxTopRepositories { get; set; }
-    public bool HideTopRepositoriesFromRecentList { get; set; }
-    public ShorteningRecentRepoPathStrategy ShorteningStrategy { get; set; }
-    public bool SortTopRepos { get; set; }
-    public bool SortRecentRepos { get; set; }
-    public int RecentReposComboMinWidth { get; set; }
+    public int MaxTopRepositories { get; set; } = AppSettings.MaxTopRepositories;
+    public bool HideTopRepositoriesFromRecentList { get; set; } = AppSettings.HideTopRepositoriesFromRecentList.Value;
+
+    public ShorteningRecentRepoPathStrategy ShorteningStrategy { get; set; } =
+        AppSettings.ShorteningRecentRepoPathStrategy;
+
+    public bool SortTopRepos { get; set; } = AppSettings.SortTopRepos;
+    public bool SortRecentRepos { get; set; } = AppSettings.SortRecentRepos;
+    public int RecentReposComboMinWidth { get; set; } = AppSettings.RecentReposComboMinWidth;
 
     public Font? MeasureFont { get; set; }
 
-    public RecentRepoSplitter()
-    {
-        MaxTopRepositories = AppSettings.MaxTopRepositories;
-        HideTopRepositoriesFromRecentList = AppSettings.HideTopRepositoriesFromRecentList.Value;
-        ShorteningStrategy = AppSettings.ShorteningRecentRepoPathStrategy;
-        SortTopRepos = AppSettings.SortTopRepos;
-        SortRecentRepos = AppSettings.SortRecentRepos;
-        RecentReposComboMinWidth = AppSettings.RecentReposComboMinWidth;
-    }
-
-    public void SplitRecentRepos(IList<Repository> repositories, List<RecentRepoInfo> topRepoList, List<RecentRepoInfo> recentRepoList)
+    public void SplitRecentRepos(IList<Repository> repositories, List<RecentRepoInfo> topRepoList,
+        List<RecentRepoInfo> recentRepoList)
     {
         SortedList<string, List<RecentRepoInfo>> orderedRepos = [];
         List<RecentRepoInfo> topRepos = [];
         List<RecentRepoInfo> recentRepos = [];
 
-        bool middleDot = ShorteningStrategy == ShorteningRecentRepoPathStrategy.MiddleDots;
-        bool signDir = ShorteningStrategy == ShorteningRecentRepoPathStrategy.MostSignDir;
+        var middleDot = ShorteningStrategy == ShorteningRecentRepoPathStrategy.MiddleDots;
+        var signDir = ShorteningStrategy == ShorteningRecentRepoPathStrategy.MostSignDir;
 
-        int n = Math.Min(MaxTopRepositories, repositories.Count);
+        var n = Math.Min(MaxTopRepositories, repositories.Count);
 
         // the topRepositories repositories will be added at beginning
         // rest will be added in alphabetical order
-        foreach (Repository repository in repositories)
+        foreach (var repository in repositories)
         {
-            bool topRepo = (topRepos.Count < n && repository.Anchor == Repository.RepositoryAnchor.None) ||
-                repository.Anchor == Repository.RepositoryAnchor.AnchoredInTop;
-            RecentRepoInfo ri = new(repository, topRepo, repository.Anchor is Repository.RepositoryAnchor.AnchoredInTop or Repository.RepositoryAnchor.AnchoredInRecent);
+            var topRepo = (topRepos.Count < n && repository.Anchor == Repository.RepositoryAnchor.None) ||
+                          repository.Anchor == Repository.RepositoryAnchor.AnchoredInTop;
+            RecentRepoInfo ri = new(repository, topRepo,
+                repository.Anchor is Repository.RepositoryAnchor.AnchoredInTop
+                    or Repository.RepositoryAnchor.AnchoredInRecent);
             if (ri.TopRepo)
             {
                 topRepos.Add(ri);
@@ -105,12 +107,12 @@ public class RecentRepoSplitter
             }
         }
 
-        int r = topRepos.Count - 1;
+        var r = topRepos.Count - 1;
 
         // remove not anchored repos if there is more than maxRecentRepositories repos
         while (topRepos.Count > n && r >= 0)
         {
-            RecentRepoInfo repo = topRepos[r];
+            var repo = topRepos[r];
             if (repo.Repo.Anchor == Repository.RepositoryAnchor.AnchoredInTop)
             {
                 r--;
@@ -155,12 +157,13 @@ public class RecentRepoSplitter
         }
     }
 
-    private static void AddToOrderedSignDir(SortedList<string, List<RecentRepoInfo>> orderedRepos, RecentRepoInfo repoInfo, bool shortenPath)
+    private static void AddToOrderedSignDir(SortedList<string, List<RecentRepoInfo>> orderedRepos,
+        RecentRepoInfo repoInfo, bool shortenPath)
     {
         // if there is no short name for a repo, then try to find unique caption extending short directory path
         if (shortenPath && repoInfo.DirInfo is not null)
         {
-            string s = repoInfo.DirName[repoInfo.DirInfo.FullName.Length..];
+            var s = repoInfo.DirName[repoInfo.DirInfo.FullName.Length..];
             if (!string.IsNullOrEmpty(s))
             {
                 s = s.Trim(Path.DirectorySeparatorChar);
@@ -182,7 +185,7 @@ public class RecentRepoSplitter
 
         Validates.NotNull(repoInfo.Caption);
 
-        bool existsShortName = orderedRepos.TryGetValue(repoInfo.Caption, out List<RecentRepoInfo>? list);
+        var existsShortName = orderedRepos.TryGetValue(repoInfo.Caption, out var list);
         if (!existsShortName)
         {
             list = [];
@@ -192,9 +195,9 @@ public class RecentRepoSplitter
         List<RecentRepoInfo> tmpList = [];
         if (existsShortName)
         {
-            for (int i = list!.Count - 1; i >= 0; i--)
+            for (var i = list!.Count - 1; i >= 0; i--)
             {
-                RecentRepoInfo r = list[i];
+                var r = list[i];
                 if (!r.FullPath)
                 {
                     tmpList.Add(r);
@@ -213,7 +216,7 @@ public class RecentRepoSplitter
         }
 
         // find unique caption for repos with no title
-        foreach (RecentRepoInfo r in tmpList)
+        foreach (var r in tmpList)
         {
             AddToOrderedSignDir(orderedRepos, r, shortenPath);
         }
@@ -256,7 +259,7 @@ public class RecentRepoSplitter
             string? root = null;
             string? company = null;
             string? repository = null;
-            string workingDir = dirInfo.Name;
+            var workingDir = dirInfo.Name;
             dirInfo = dirInfo.Parent;
 
             if (dirInfo is not null)
@@ -265,15 +268,16 @@ public class RecentRepoSplitter
                 dirInfo = dirInfo.Parent;
             }
 
-            bool addDots = false;
+            var addDots = false;
 
-            bool isInUserProfile = PathUtil.IsInUserProfile(repoInfo.Repo.Path);
+            var isInUserProfile = PathUtil.IsInUserProfile(repoInfo.Repo.Path);
 
             if (dirInfo is not null)
             {
                 if (dirInfo.FullName != PathUtil.UserProfilePath)
                 {
-                    while (dirInfo!.Parent?.Parent is not null && (isInUserProfile && dirInfo.Parent?.FullName != PathUtil.UserProfilePath))
+                    while (dirInfo!.Parent?.Parent is not null && isInUserProfile &&
+                           dirInfo.Parent?.FullName != PathUtil.UserProfilePath)
                     {
                         dirInfo = dirInfo.Parent;
                         addDots = true;
@@ -323,14 +327,14 @@ public class RecentRepoSplitter
 
             bool ShortenPath(int skipCount)
             {
-                string path = repoInfo.Repo.Path;
-                string? fistDir = (root ?? company) ?? repository;
-                string lastDir = workingDir;
+                var path = repoInfo.Repo.Path;
+                var fistDir = (root ?? company) ?? repository;
+                var lastDir = workingDir;
                 if (fistDir is not null && path.Length - lastDir.Length - fistDir.Length - skipCount > 0)
                 {
-                    int middle = ((path.Length - lastDir.Length) / 2) + ((path.Length - lastDir.Length) % 2);
-                    int leftEnd = middle - (skipCount / 2);
-                    int rightStart = middle + (skipCount / 2) + (skipCount % 2);
+                    var middle = ((path.Length - lastDir.Length) / 2) + ((path.Length - lastDir.Length) % 2);
+                    var leftEnd = middle - (skipCount / 2);
+                    var rightStart = middle + (skipCount / 2) + (skipCount % 2);
 
                     if (leftEnd == rightStart)
                     {
@@ -361,20 +365,19 @@ public class RecentRepoSplitter
             {
                 SizeF captionSize;
                 bool canShorten;
-                int skipCount = 0;
+                var skipCount = 0;
                 do
                 {
                     canShorten = ShortenPath(skipCount);
                     skipCount++;
                     captionSize = TextRenderer.MeasureText(repoInfo.Caption, MeasureFont);
-                }
-                while (captionSize.Width > RecentReposComboMinWidth - 10 && canShorten);
+                } while (captionSize.Width > RecentReposComboMinWidth - 10 && canShorten);
             }
         }
 
         Validates.NotNull(repoInfo.Caption);
 
-        if (!orderedRepos.TryGetValue(repoInfo.Caption, out List<RecentRepoInfo>? list))
+        if (!orderedRepos.TryGetValue(repoInfo.Caption, out var list))
         {
             list = [];
             orderedRepos.Add(repoInfo.Caption, list);

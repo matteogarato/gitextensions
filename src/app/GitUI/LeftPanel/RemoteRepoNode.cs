@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Remotes;
 using GitExtensions.Extensibility.Git;
 using GitUI.Properties;
@@ -8,20 +8,22 @@ using GitUIPluginInterfaces.RepositoryHosts;
 namespace GitUI.LeftPanel;
 
 [DebuggerDisplay("Remote = {_remote.Name}, FullPath = {FullPath}")]
-internal sealed class RemoteRepoNode : BaseRevisionNode
+internal sealed class RemoteRepoNode(
+    Tree tree,
+    string fullPath,
+    IConfigFileRemoteSettingsManager remotesManager,
+    Remote remote,
+    bool isEnabled)
+    : BaseRevisionNode(tree, fullPath, true)
 {
-    private readonly Remote _remote;
-    private readonly IConfigFileRemoteSettingsManager _remotesManager;
+    private readonly Remote _remote = remote;
 
-    public RemoteRepoNode(Tree tree, string fullPath, IConfigFileRemoteSettingsManager remotesManager, Remote remote, bool isEnabled)
-        : base(tree, fullPath, visible: true)
+    public bool Enabled { get; } = isEnabled;
+
+    public bool IsRemoteUrlUsingHttp
     {
-        _remote = remote;
-        Enabled = isEnabled;
-        _remotesManager = remotesManager;
+        get => _remote.FetchUrl.IsUrlUsingHttp();
     }
-
-    public bool Enabled { get; }
 
     public bool Fetch()
     {
@@ -45,12 +47,10 @@ internal sealed class RemoteRepoNode : BaseRevisionNode
         OsShellUtil.OpenUrlInDefaultBrowser(_remote.FetchUrl);
     }
 
-    public bool IsRemoteUrlUsingHttp => _remote.FetchUrl.IsUrlUsingHttp();
-
     public void Enable(bool fetch)
     {
         Trace.Assert(!Enabled);
-        _remotesManager.ToggleRemoteState(Name, disabled: false);
+        remotesManager.ToggleRemoteState(Name, false);
         if (fetch)
         {
             // DoFetch invokes UICommands.RepoChangedNotifier.Notify
@@ -58,15 +58,15 @@ internal sealed class RemoteRepoNode : BaseRevisionNode
         }
         else
         {
-            UICommands.RepoChangedNotifier.Notify();
+            UiCommands.RepoChangedNotifier.Notify();
         }
     }
 
     public void Disable()
     {
         Trace.Assert(Enabled);
-        _remotesManager.ToggleRemoteState(Name, disabled: true);
-        UICommands.RepoChangedNotifier.Notify();
+        remotesManager.ToggleRemoteState(Name, true);
+        UiCommands.RepoChangedNotifier.Notify();
     }
 
     public override void ApplyStyle()
@@ -110,8 +110,8 @@ internal sealed class RemoteRepoNode : BaseRevisionNode
 
     private bool DoFetch()
     {
-        UICommands.StartPullDialogAndPullImmediately(
-            out bool pullCompleted,
+        UiCommands.StartPullDialogAndPullImmediately(
+            out var pullCompleted,
             TreeViewNode.TreeView,
             remote: FullPath,
             pullAction: GitPullAction.Fetch);
@@ -120,8 +120,8 @@ internal sealed class RemoteRepoNode : BaseRevisionNode
 
     private bool DoPrune()
     {
-        UICommands.StartPullDialogAndPullImmediately(
-            out bool pullCompleted,
+        UiCommands.StartPullDialogAndPullImmediately(
+            out var pullCompleted,
             TreeViewNode.TreeView,
             remote: FullPath,
             pullAction: GitPullAction.FetchPruneAll);

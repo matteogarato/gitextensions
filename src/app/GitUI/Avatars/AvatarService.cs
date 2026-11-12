@@ -1,21 +1,21 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitUI.Properties;
 
 namespace GitUI.Avatars;
 
 public static class AvatarService
 {
-    private static readonly InitialsAvatarProvider InitialsAvatarProvider;
-    private static readonly StaticImageAvatarProvider UserImageAvatarProvider;
+    private static readonly InitialsAvatarProvider _initialsAvatarProvider;
+    private static readonly StaticImageAvatarProvider _userImageAvatarProvider;
 
-    private static readonly HotSwapAvatarProvider HotSwapProvider;
+    private static readonly HotSwapAvatarProvider _hotSwapProvider;
 
     static AvatarService()
     {
-        InitialsAvatarProvider = new();
-        UserImageAvatarProvider = new(Images.User80);
+        _initialsAvatarProvider = new InitialsAvatarProvider();
+        _userImageAvatarProvider = new StaticImageAvatarProvider(Images.User80);
 
-        HotSwapProvider = new();
+        _hotSwapProvider = new HotSwapAvatarProvider();
         (DefaultProvider, CacheCleaner) = SetupCachingAndFallback();
 
         UpdateAvatarProvider();
@@ -25,17 +25,17 @@ public static class AvatarService
     public static IAvatarCacheCleaner CacheCleaner { get; }
 
     /// <summary>
-    /// Updates the internal avatar provider chain to
-    /// reflect the current active (according to <see cref="AppSettings"/> provider.
+    ///     Updates the internal avatar provider chain to
+    ///     reflect the current active (according to <see cref="AppSettings" /> provider.
     /// </summary>
     public static void UpdateAvatarProvider()
     {
-        HotSwapProvider.Provider = CreateAvatarProvider(AppSettings.AvatarProvider, AppSettings.AvatarFallbackType);
+        _hotSwapProvider.Provider = CreateAvatarProvider(AppSettings.AvatarProvider, AppSettings.AvatarFallbackType);
     }
 
     /// <summary>
-    /// Creates an <see cref="IAvatarProvider"/> based on the given
-    /// <see cref="AvatarProvider"/> and <see cref="AvatarFallbackType"/> enum options.
+    ///     Creates an <see cref="IAvatarProvider" /> based on the given
+    ///     <see cref="AvatarProvider" /> and <see cref="AvatarFallbackType" /> enum options.
     /// </summary>
     /// <returns>Returns an avatar provider that can be used to resolve user avatars.</returns>
     public static IAvatarProvider? CreateAvatarProvider(
@@ -48,19 +48,18 @@ public static class AvatarService
         Lazy<IAvatarDownloader> lazyDownloader = new(() => downloader ?? new AvatarDownloader());
 
         // build collection of (non-null) providers
-        IAvatarProvider[] providers = [.. new[]
-        {
-            BuildMainProvider(),
-            BuildFallbackProvider()
-        }
-        .WhereNotNull()];
+        IAvatarProvider[] providers =
+        [
+            .. new[] { BuildMainProvider(), BuildFallbackProvider() }
+                .WhereNotNull()
+        ];
 
         // only create chained avatar overhead if really needed
         return providers.Length switch
         {
             0 => null,
             1 => providers[0],
-            _ => new ChainedAvatarProvider(providers),
+            _ => new ChainedAvatarProvider(providers)
         };
 
         // Local methods to build requested main and fallback providers:
@@ -70,8 +69,9 @@ public static class AvatarService
             return provider switch
             {
                 AvatarProvider.Default => BuildDefaultMainProvider(),
-                AvatarProvider.Custom => CustomAvatarProvider.ParseTemplateString(AppSettings.CustomAvatarTemplate, lazyDownloader.Value),
-                _ => null,
+                AvatarProvider.Custom => CustomAvatarProvider.ParseTemplateString(AppSettings.CustomAvatarTemplate,
+                    lazyDownloader.Value),
+                _ => null
             };
         }
 
@@ -93,22 +93,23 @@ public static class AvatarService
             return fallbackType switch
             {
                 // Local fallback provider
-                AvatarFallbackType.AuthorInitials => InitialsAvatarProvider,
+                AvatarFallbackType.AuthorInitials => _initialsAvatarProvider,
 
-                null => InitialsAvatarProvider,
+                null => _initialsAvatarProvider,
 
                 // Use Gravatar as fallback provider
-                AvatarFallbackType type when GravatarProvider.IsFallbackSupportedByGravatar(fallbackType.Value) => new GravatarProvider(lazyDownloader.Value, type, true),
+                { } type when GravatarProvider.IsFallbackSupportedByGravatar(fallbackType.Value) =>
+                    new GravatarProvider(lazyDownloader.Value, type, true),
 
                 // Use author initials for unknown types
-                _ => InitialsAvatarProvider,
+                _ => _initialsAvatarProvider
             };
         }
     }
 
     private static (IAvatarProvider provider, IAvatarCacheCleaner cacheCleaner) SetupCachingAndFallback()
     {
-        FileSystemAvatarCache persistentCacheProvider = new(HotSwapProvider);
+        FileSystemAvatarCache persistentCacheProvider = new(_hotSwapProvider);
         AvatarMemoryCache memoryCachedProvider = new(persistentCacheProvider, AppSettings.AvatarCacheSize);
 
         MultiCacheCleaner cacheCleaner = new(memoryCachedProvider, persistentCacheProvider);
@@ -117,13 +118,13 @@ public static class AvatarService
             = new(
                 new ChainedAvatarProvider(
                     memoryCachedProvider,
-                    UserImageAvatarProvider));
+                    _userImageAvatarProvider));
 
         return (mainProvider, cacheCleaner);
     }
 
     public static void UpdateAvatarInitialFontsSettings()
     {
-        InitialsAvatarProvider.UpdateFontsSettings();
+        _initialsAvatarProvider.UpdateFontsSettings();
     }
 }

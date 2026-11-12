@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using GitCommands.Git;
 
 namespace GitUI.CommandsDialogs;
 
@@ -163,7 +164,7 @@ partial class FormSubmodules
         // 
         // gitSubmoduleBindingSource
         // 
-        gitSubmoduleBindingSource.DataSource = typeof(GitCommands.GitSubmoduleInfo);
+        gitSubmoduleBindingSource.DataSource = typeof(GitSubmoduleInfo);
         // 
         // tableLayoutPanel3
         // 

@@ -34,7 +34,7 @@ public partial class RevisionGpgInfoControl : GitModuleControl
         else
         {
             DisplayCommitSignatureStatus(info.CommitStatus);
-            string? message = EnvUtils.ReplaceLinuxNewLinesDependingOnPlatform(info.CommitVerificationMessage);
+            var message = EnvUtils.ReplaceLinuxNewLinesDependingOnPlatform(info.CommitVerificationMessage);
             txtCommitGpgInfo.Text = info.CommitStatus != CommitStatus.NoSignature ? message : _commitNotSigned.Text;
 
             DisplayTagSignatureStatus(info.TagStatus);
@@ -117,8 +117,8 @@ public partial class RevisionGpgInfoControl : GitModuleControl
     }
 
     /// <summary>
-    ///  Indicates that the signature is still being verified, so that neither the result for the
-    ///  previously displayed revision nor the default "not signed" is presented as verified.
+    ///     Indicates that the signature is still being verified, so that neither the result for the
+    ///     previously displayed revision nor the default "not signed" is presented as verified.
     /// </summary>
     public void DisplayVerificationPending()
     {
@@ -156,11 +156,20 @@ public partial class RevisionGpgInfoControl : GitModuleControl
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor(RevisionGpgInfoControl control)
     {
-        public string CommitGpgInfoText => control.txtCommitGpgInfo.Text;
-        public bool CommitSignPictureVisible => control.commitSignPicture.Visible;
+        public string CommitGpgInfoText
+        {
+            get => control.txtCommitGpgInfo.Text;
+        }
+
+        public bool CommitSignPictureVisible
+        {
+            get => control.commitSignPicture.Visible;
+        }
     }
 }

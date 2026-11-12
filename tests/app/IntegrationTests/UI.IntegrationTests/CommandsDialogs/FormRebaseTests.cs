@@ -1,18 +1,24 @@
 ﻿using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormRebaseTests : System.IDisposable
+public class FormRebaseTests : IDisposable
 {
-    private ReferenceRepository _referenceRepository = null!;
-    private GitUICommands _commands = null!;
+    private readonly GitUiCommands _commands = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
+
     public FormRebaseTests()
     {
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -26,13 +32,13 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
-                accessor.chkInteractive.Checked = true;
+                accessor.ChkInteractive.Checked = true;
 
-                accessor.chkAutosquash.Enabled.Should().BeTrue();
+                accessor.ChkAutosquash.Enabled.Should().BeTrue();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -41,14 +47,14 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
-                accessor.chkInteractive.Checked = true;
+                var accessor = form.GetTestAccessor();
+                accessor.ChkInteractive.Checked = true;
 
-                accessor.chkInteractive.Checked = false;
+                accessor.ChkInteractive.Checked = false;
 
-                accessor.chkAutosquash.Enabled.Should().BeFalse();
+                accessor.ChkAutosquash.Enabled.Should().BeFalse();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -57,16 +63,16 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
-                accessor.chkIgnoreDate.Checked = true;
+                accessor.ChkIgnoreDate.Checked = true;
 
-                accessor.chkInteractive.Enabled.Should().BeFalse();
-                accessor.chkPreserveMerges.Enabled.Should().BeFalse();
-                accessor.chkAutosquash.Enabled.Should().BeFalse();
-                accessor.chkCommitterDateIsAuthorDate.Enabled.Should().BeFalse();
+                accessor.ChkInteractive.Enabled.Should().BeFalse();
+                accessor.ChkPreserveMerges.Enabled.Should().BeFalse();
+                accessor.ChkAutosquash.Enabled.Should().BeFalse();
+                accessor.ChkCommitterDateIsAuthorDate.Enabled.Should().BeFalse();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -75,18 +81,18 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
-                accessor.chkInteractive.Checked = true;
-                accessor.chkIgnoreDate.Checked = true;
+                var accessor = form.GetTestAccessor();
+                accessor.ChkInteractive.Checked = true;
+                accessor.ChkIgnoreDate.Checked = true;
 
-                accessor.chkIgnoreDate.Checked = false;
+                accessor.ChkIgnoreDate.Checked = false;
 
-                accessor.chkInteractive.Enabled.Should().BeTrue();
-                accessor.chkPreserveMerges.Enabled.Should().BeTrue();
-                accessor.chkAutosquash.Enabled.Should().BeTrue();
-                accessor.chkCommitterDateIsAuthorDate.Enabled.Should().BeTrue();
+                accessor.ChkInteractive.Enabled.Should().BeTrue();
+                accessor.ChkPreserveMerges.Enabled.Should().BeTrue();
+                accessor.ChkAutosquash.Enabled.Should().BeTrue();
+                accessor.ChkCommitterDateIsAuthorDate.Enabled.Should().BeTrue();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -95,17 +101,17 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
-                accessor.chkIgnoreDate.Checked = true;
+                var accessor = form.GetTestAccessor();
+                accessor.ChkIgnoreDate.Checked = true;
 
-                accessor.chkIgnoreDate.Checked = false;
+                accessor.ChkIgnoreDate.Checked = false;
 
-                accessor.chkInteractive.Enabled.Should().BeTrue();
-                accessor.chkPreserveMerges.Enabled.Should().BeTrue();
-                accessor.chkAutosquash.Enabled.Should().BeFalse();
-                accessor.chkCommitterDateIsAuthorDate.Enabled.Should().BeTrue();
+                accessor.ChkInteractive.Enabled.Should().BeTrue();
+                accessor.ChkPreserveMerges.Enabled.Should().BeTrue();
+                accessor.ChkAutosquash.Enabled.Should().BeFalse();
+                accessor.ChkCommitterDateIsAuthorDate.Enabled.Should().BeTrue();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -114,16 +120,16 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
-                accessor.chkCommitterDateIsAuthorDate.Checked = true;
+                accessor.ChkCommitterDateIsAuthorDate.Checked = true;
 
-                accessor.chkInteractive.Enabled.Should().BeFalse();
-                accessor.chkPreserveMerges.Enabled.Should().BeFalse();
-                accessor.chkAutosquash.Enabled.Should().BeFalse();
-                accessor.chkIgnoreDate.Enabled.Should().BeFalse();
+                accessor.ChkInteractive.Enabled.Should().BeFalse();
+                accessor.ChkPreserveMerges.Enabled.Should().BeFalse();
+                accessor.ChkAutosquash.Enabled.Should().BeFalse();
+                accessor.ChkIgnoreDate.Enabled.Should().BeFalse();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -132,18 +138,18 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
-                accessor.chkInteractive.Checked = true;
-                accessor.chkCommitterDateIsAuthorDate.Checked = true;
+                var accessor = form.GetTestAccessor();
+                accessor.ChkInteractive.Checked = true;
+                accessor.ChkCommitterDateIsAuthorDate.Checked = true;
 
-                accessor.chkCommitterDateIsAuthorDate.Checked = false;
+                accessor.ChkCommitterDateIsAuthorDate.Checked = false;
 
-                accessor.chkInteractive.Enabled.Should().BeTrue();
-                accessor.chkPreserveMerges.Enabled.Should().BeTrue();
-                accessor.chkAutosquash.Enabled.Should().BeTrue();
-                accessor.chkIgnoreDate.Enabled.Should().BeTrue();
+                accessor.ChkInteractive.Enabled.Should().BeTrue();
+                accessor.ChkPreserveMerges.Enabled.Should().BeTrue();
+                accessor.ChkAutosquash.Enabled.Should().BeTrue();
+                accessor.ChkIgnoreDate.Enabled.Should().BeTrue();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     [WinFormsFact]
@@ -152,17 +158,17 @@ public class FormRebaseTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormRebase.TestAccessor accessor = form.GetTestAccessor();
-                accessor.chkCommitterDateIsAuthorDate.Checked = true;
+                var accessor = form.GetTestAccessor();
+                accessor.ChkCommitterDateIsAuthorDate.Checked = true;
 
-                accessor.chkCommitterDateIsAuthorDate.Checked = false;
+                accessor.ChkCommitterDateIsAuthorDate.Checked = false;
 
-                accessor.chkInteractive.Enabled.Should().BeTrue();
-                accessor.chkPreserveMerges.Enabled.Should().BeTrue();
-                accessor.chkAutosquash.Enabled.Should().BeFalse();
-                accessor.chkIgnoreDate.Enabled.Should().BeTrue();
+                accessor.ChkInteractive.Enabled.Should().BeTrue();
+                accessor.ChkPreserveMerges.Enabled.Should().BeTrue();
+                accessor.ChkAutosquash.Enabled.Should().BeFalse();
+                accessor.ChkIgnoreDate.Enabled.Should().BeTrue();
             },
-            from: "", to: null!, onto: null!, interactive: false, startRebaseImmediately: false);
+            "", null!, null!, false, false);
     }
 
     private void RunFormTest(Action<FormRebase> testDriver, string from, string? to, string? onto,
@@ -180,16 +186,11 @@ public class FormRebaseTests : System.IDisposable
     private void RunFormTest(Func<FormRebase, Task> testDriverAsync, string from, string? to,
         string? onto, bool interactive, bool startRebaseImmediately)
     {
-        UITest.RunForm(
+        UiTest.RunForm(
             () =>
             {
                 _commands.StartRebaseDialog(owner: null, from, to, onto, interactive, startRebaseImmediately);
             },
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

@@ -2,36 +2,37 @@
 using GitCommands.UserRepositoryHistory;
 using NSubstitute;
 
-namespace GitCommandsTests.UserRepositoryHistory;
+namespace GitCommandsTests;
+
 public class RepositoryDescriptionProviderTests : IDisposable
 {
-    private string _tempDir = null!;
+    private readonly string _tempDir = null!;
 
     public RepositoryDescriptionProviderTests()
     {
         _tempDir = Directory.CreateTempSubdirectory().FullName;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
-        Directory.Delete(_tempDir, recursive: true);
+        Directory.Delete(_tempDir, true);
     }
 
     [Fact]
     public void RepositoryDescriptionProvider_should_handle_subrepos()
     {
-        IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
+        var gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);
 
-        string repo = @$"{_tempDir}\test_repo";
-        string submodule = @$"{repo}\submodule";
-        string nested = @$"{submodule}\nested";
-        string subsubmodule = @$"{nested}\subsubmodule";
-        string leafsubmodule = @$"{nested}\leafsubmodule";
+        var repo = @$"{_tempDir}\test_repo";
+        var submodule = @$"{repo}\submodule";
+        var nested = @$"{submodule}\nested";
+        var subsubmodule = @$"{nested}\subsubmodule";
+        var leafsubmodule = @$"{nested}\leafsubmodule";
         Directory.CreateDirectory(leafsubmodule);
 
         repositoryDescriptionProvider.Get(repo, IsValidGitWorkingDir)
-            .Should().Be($"test_repo");
+            .Should().Be("test_repo");
 
         repositoryDescriptionProvider.Get(submodule, IsValidGitWorkingDir)
             .Should().Be("submodule < test_repo");
@@ -49,12 +50,12 @@ public class RepositoryDescriptionProviderTests : IDisposable
     [InlineData("repository")]
     public void RepositoryDescriptionProvider_should_skip_uninformative_submodule_name(string uninformative)
     {
-        IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
+        var gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);
 
         string rootrepo = nameof(rootrepo);
         string parent = nameof(parent);
-        string repo = @$"{_tempDir}\{rootrepo}\{parent}\{uninformative}";
+        var repo = @$"{_tempDir}\{rootrepo}\{parent}\{uninformative}";
         Directory.CreateDirectory(repo);
 
         repositoryDescriptionProvider.Get(repo, IsValidGitWorkingDir)
@@ -65,13 +66,14 @@ public class RepositoryDescriptionProviderTests : IDisposable
     [InlineData("app")]
     [InlineData("repo")]
     [InlineData("repository")]
-    public void RepositoryDescriptionProvider_should_not_skip_uninformative_submodule_name_to_parent_repo(string uninformative)
+    public void RepositoryDescriptionProvider_should_not_skip_uninformative_submodule_name_to_parent_repo(
+        string uninformative)
     {
-        IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
+        var gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);
 
         string parentrepo = nameof(parentrepo);
-        string repo = @$"{_tempDir}\{parentrepo}\{uninformative}";
+        var repo = @$"{_tempDir}\{parentrepo}\{uninformative}";
         Directory.CreateDirectory(repo);
 
         repositoryDescriptionProvider.Get(repo, IsValidGitWorkingDir)
@@ -84,11 +86,11 @@ public class RepositoryDescriptionProviderTests : IDisposable
     [InlineData("repository")]
     public void RepositoryDescriptionProvider_should_not_skip_uninformative_root_repo_name(string uninformative)
     {
-        IGitDirectoryResolver gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
+        var gitDirectoryResolver = Substitute.For<IGitDirectoryResolver>();
         RepositoryDescriptionProvider repositoryDescriptionProvider = new(gitDirectoryResolver);
 
         string parent = nameof(parent);
-        string repo = @$"{_tempDir}\{parent}\{uninformative}";
+        var repo = @$"{_tempDir}\{parent}\{uninformative}";
         Directory.CreateDirectory(repo);
 
         repositoryDescriptionProvider.Get(repo, IsValidGitWorkingDir)
@@ -96,5 +98,7 @@ public class RepositoryDescriptionProviderTests : IDisposable
     }
 
     private static bool IsValidGitWorkingDir(string path)
-        => path.EndsWith("submodule") || path.EndsWith("repo");
+    {
+        return path.EndsWith("submodule") || path.EndsWith("repo");
+    }
 }

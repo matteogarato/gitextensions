@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using ResourceManager;
 
 namespace GitUI.UserControls;

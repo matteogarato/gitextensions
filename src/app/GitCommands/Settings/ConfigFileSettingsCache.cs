@@ -17,8 +17,8 @@ public class ConfigFileSettingsCache : FileSettingsCache
 
     public static ConfigFileSettingsCache FromCache(string settingsFilePath)
     {
-        Lazy<ConfigFileSettingsCache> createSettingsCache = new(
-            () => new ConfigFileSettingsCache(settingsFilePath, autoSave: true));
+        Lazy<ConfigFileSettingsCache> createSettingsCache =
+            new(() => new ConfigFileSettingsCache(settingsFilePath, true));
 
         return FromCache(settingsFilePath, createSettingsCache);
     }
@@ -29,10 +29,8 @@ public class ConfigFileSettingsCache : FileSettingsCache
         {
             return FromCache(settingsFilePath);
         }
-        else
-        {
-            return new ConfigFileSettingsCache(settingsFilePath, autoSave: false);
-        }
+
+        return new ConfigFileSettingsCache(settingsFilePath, false);
     }
 
     protected override void WriteSettings(string fileName)
@@ -66,7 +64,7 @@ public class ConfigFileSettingsCache : FileSettingsCache
     }
 
     /// <summary>
-    /// Adds the specific configuration section to the .git/config file.
+    ///     Adds the specific configuration section to the .git/config file.
     /// </summary>
     /// <param name="configSection">The configuration section.</param>
     public void AddConfigSection(IConfigSection configSection)
@@ -82,10 +80,10 @@ public class ConfigFileSettingsCache : FileSettingsCache
     }
 
     /// <summary>
-    /// Gets all configured values for a git setting that accepts multiple values for the same key.
+    ///     Gets all configured values for a git setting that accepts multiple values for the same key.
     /// </summary>
     /// <param name="key">The git setting key</param>
-    /// <returns>The collection of all the <see cref="string"/> values.</returns>
+    /// <returns>The collection of all the <see cref="string" /> values.</returns>
     public IReadOnlyList<string> GetValues(string key)
     {
         return LockedAction(() =>
@@ -105,10 +103,10 @@ public class ConfigFileSettingsCache : FileSettingsCache
     }
 
     /// <summary>
-    /// Removes the specific configuration section from the .git/config file.
+    ///     Removes the specific configuration section from the .git/config file.
     /// </summary>
     /// <param name="configSectionName">The name of the configuration section.</param>
-    /// <param name="performSave">If <see langword="true"/> the configuration changes will be saved immediately.</param>
+    /// <param name="performSave">If <see langword="true" /> the configuration changes will be saved immediately.</param>
     public void RemoveConfigSection(string configSectionName, bool performSave = false)
     {
         LockedAction(() =>

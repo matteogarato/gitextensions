@@ -6,7 +6,7 @@ namespace GitCommandsTests.Git;
 
 public sealed class FilteredGitRefsProviderTests
 {
-    private IGitModule _module = null!;
+    private readonly IGitModule _module = null!;
 
     public FilteredGitRefsProviderTests()
     {
@@ -15,11 +15,11 @@ public sealed class FilteredGitRefsProviderTests
 
     private IGitRef CreateSubstituteRef(string guid, string completeName, string remote)
     {
-        bool isRemote = !string.IsNullOrEmpty(remote);
-        string name = (isRemote ? remote + "/" : "") + completeName.LazySplit('/').LastOrDefault();
-        bool isTag = completeName.StartsWith("refs/tags/", StringComparison.InvariantCultureIgnoreCase);
-        bool isHead = completeName.StartsWith("refs/heads/", StringComparison.InvariantCultureIgnoreCase);
-        IGitRef gitRef = Substitute.For<IGitRef>();
+        var isRemote = !string.IsNullOrEmpty(remote);
+        var name = (isRemote ? remote + "/" : "") + completeName.LazySplit('/').LastOrDefault();
+        var isTag = completeName.StartsWith("refs/tags/", StringComparison.InvariantCultureIgnoreCase);
+        var isHead = completeName.StartsWith("refs/heads/", StringComparison.InvariantCultureIgnoreCase);
+        var gitRef = Substitute.For<IGitRef>();
         gitRef.Module.Returns(_module);
         gitRef.Guid.Returns(guid);
         gitRef.CompleteName.Returns(completeName);
@@ -38,7 +38,7 @@ public sealed class FilteredGitRefsProviderTests
         [
             CreateSubstituteRef("f6323b8e80f96dff017dd14bdb28a576556adab4", "refs/heads/develop", ""),
             CreateSubstituteRef("02e10a13e06e7562f7c3c516abb2a0e1a0c0dd90", "refs/remotes/origin/develop", "origin"),
-            CreateSubstituteRef("f6323b8e80f96dff017dd14bdb28a576556adab5", "refs/heads/local", ""),
+            CreateSubstituteRef("f6323b8e80f96dff017dd14bdb28a576556adab5", "refs/heads/local", "")
         ];
 
         _module.GetRefs(RefsFilter.NoFilter).ReturnsForAnyArgs(refs);

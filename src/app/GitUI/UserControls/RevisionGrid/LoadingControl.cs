@@ -1,4 +1,6 @@
-﻿namespace GitUI.UserControls.RevisionGrid;
+﻿using GitExtUtils.GitUI;
+
+namespace GitUI.UserControls.RevisionGrid;
 
 public sealed class LoadingControl : UserControl
 {
@@ -8,11 +10,7 @@ public sealed class LoadingControl : UserControl
     {
         Size size = new(32, 32);
 
-        _waitSpinner = new WaitSpinner
-        {
-            Dock = DockStyle.Fill,
-            Size = size
-        };
+        _waitSpinner = new WaitSpinner { Dock = DockStyle.Fill, Size = size };
 
         SuspendLayout();
         Dock = DockStyle.Fill;
@@ -21,7 +19,7 @@ public sealed class LoadingControl : UserControl
         Controls.Add(_waitSpinner);
         Name = nameof(LoadingControl);
         Size = size;
-        ResumeLayout(performLayout: false);
+        ResumeLayout(false);
 
         this.AdjustForDpiScaling();
     }

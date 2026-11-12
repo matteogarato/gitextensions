@@ -6,16 +6,22 @@ public class CombinedDiffHighlightService : DiffHighlightService
 {
     private static readonly string[] _diffFullPrefixes = ["  ", "++", "+ ", " +", "--", "- ", " -"];
 
-    public CombinedDiffHighlightService(ref string text, bool useGitColoring, DiffViewerLineNumberControl lineNumbersControl)
+    public CombinedDiffHighlightService(ref string text, bool useGitColoring,
+        DiffViewerLineNumberControl lineNumbersControl)
         : base(ref text, useGitColoring)
     {
-        _diffLinesInfo = DiffLineNumAnalyzer.Analyze(text, _textMarkers, isCombinedDiff: true);
-        lineNumbersControl.DisplayLineNum(_diffLinesInfo, showLeftColumn: true);
+        DiffLinesInfo = DiffLineNumAnalyzer.Analyze(text, TextMarkers, true);
+        lineNumbersControl.DisplayLineNum(DiffLinesInfo, true);
         SetHighlighting(text);
     }
 
     public static IGitCommandConfiguration GetGitCommandConfiguration(IGitModule module, bool useGitColoring)
-        => GetGitCommandConfiguration(module, useGitColoring, "diff-tree");
+    {
+        return GetGitCommandConfiguration(module, useGitColoring, "diff-tree");
+    }
 
-    public override string[] GetFullDiffPrefixes() => _diffFullPrefixes;
+    public override string[] GetFullDiffPrefixes()
+    {
+        return _diffFullPrefixes;
+    }
 }

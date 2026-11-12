@@ -5,13 +5,13 @@ using GitExtensions.Extensibility;
 namespace GitCommands.Git;
 
 /// <summary>
-///  Provides ability to ensure compliance with the GIT branch naming conventions.
+///     Provides ability to ensure compliance with the GIT branch naming conventions.
 /// </summary>
 public interface IGitBranchNameNormaliser
 {
     /// <summary>
-    ///  Ensures that the branch name meets the GIT branch naming conventions.
-    ///  For more details refer to <see href="https://git-scm.com/docs/git-check-ref-format"/>.
+    ///     Ensures that the branch name meets the GIT branch naming conventions.
+    ///     For more details refer to <see href="https://git-scm.com/docs/git-check-ref-format" />.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -69,35 +69,42 @@ public interface IGitBranchNameNormaliser
 */
 
 /// <summary>
-///  Ensures compliance with the GIT branch naming conventions.
+///     Ensures compliance with the GIT branch naming conventions.
 /// </summary>
 internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
 {
     [GeneratedRegex(@"^(\.)*", RegexOptions.ExplicitCapture)]
     private static partial Regex PeriodRegex { get; }
+
     [GeneratedRegex(@"(\.lock)$", RegexOptions.ExplicitCapture)]
     private static partial Regex LockRegex { get; }
+
     [GeneratedRegex(@"\.{2,}", RegexOptions.ExplicitCapture)]
     private static partial Regex Rule03Regex { get; }
+
     [GeneratedRegex(@"(\?|\*|\[)", RegexOptions.ExplicitCapture)]
     private static partial Regex Rule05Regex { get; }
+
     [GeneratedRegex(@"(\/{2,})", RegexOptions.ExplicitCapture)]
     private static partial Regex Rule06Regex { get; }
+
     [GeneratedRegex(@"(\.{1,})$", RegexOptions.ExplicitCapture)]
     private static partial Regex Rule07Regex { get; }
+
     [GeneratedRegex(@"(@\{)", RegexOptions.ExplicitCapture)]
     private static partial Regex Rule08Regex { get; }
+
     [GeneratedRegex(@"(\\{1,})", RegexOptions.ExplicitCapture)]
     private static partial Regex Rule10Regex { get; }
 
     /// <summary>
-    ///  Ensures that the branch name meets the GIT branch naming conventions.
-    ///  For more details refer to <see href="https://www.git-scm.com/docs/git-check-ref-format/1.8.2"/>.
+    ///     Ensures that the branch name meets the GIT branch naming conventions.
+    ///     For more details refer to <see href="https://www.git-scm.com/docs/git-check-ref-format/1.8.2" />.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
     /// <returns>Normalised branch name.</returns>
-    public string Normalise(string? branchName, GitBranchNameOptions options)
+    string IGitBranchNameNormaliser.Normalise(string? branchName, GitBranchNameOptions options)
     {
         if (string.IsNullOrWhiteSpace(branchName))
         {
@@ -124,14 +131,14 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name can include slash '/' for hierarchical (directory) grouping,
-    ///  but no slash-separated component can begin with a dot '.' or end with the sequence '.lock'.
+    ///     Branch name can include slash '/' for hierarchical (directory) grouping,
+    ///     but no slash-separated component can begin with a dot '.' or end with the sequence '.lock'.
     /// </summary>
     /// <returns>Normalised branch name.</returns>
     internal static string Rule01(string branchName, GitBranchNameOptions options)
     {
-        string[] tokens = branchName.Split(Delimiters.ForwardSlash);
-        for (int i = 0; i < tokens.Length; i++)
+        var tokens = branchName.Split(Delimiters.ForwardSlash);
+        for (var i = 0; i < tokens.Length; i++)
         {
             if (tokens[i].StartsWith('.'))
             {
@@ -148,7 +155,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name cannot have two consecutive dots '..' anywhere.
+    ///     Branch name cannot have two consecutive dots '..' anywhere.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -159,9 +166,9 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name cannot have ASCII control characters (i.e. bytes whose values are lower than \040, or \127 'DEL'),
-    ///  space, tilde '~', caret '^', or colon ':' anywhere.
-    ///  Also allow any valid Unicode letters.
+    ///     Branch name cannot have ASCII control characters (i.e. bytes whose values are lower than \040, or \127 'DEL'),
+    ///     space, tilde '~', caret '^', or colon ':' anywhere.
+    ///     Also allow any valid Unicode letters.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -169,7 +176,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     internal static string Rule04(string branchName, GitBranchNameOptions options)
     {
         StringBuilder result = new(branchName.Length);
-        foreach (char t in branchName)
+        foreach (var t in branchName)
         {
             if (PathUtil.IsValidPathChar(t) || char.IsLetterOrDigit(t))
             {
@@ -185,7 +192,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name cannot have question-mark '?', asterisk '*', or open bracket '[' anywhere.
+    ///     Branch name cannot have question-mark '?', asterisk '*', or open bracket '[' anywhere.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -196,7 +203,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name begin or end with a slash '/' or contain multiple consecutive slashes.
+    ///     Branch name begin or end with a slash '/' or contain multiple consecutive slashes.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -218,7 +225,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name end with a dot '.'.
+    ///     Branch name end with a dot '.'.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -229,7 +236,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name cannot contain a sequence '@{'.
+    ///     Branch name cannot contain a sequence '@{'.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -240,7 +247,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name cannot be the single character '@'.
+    ///     Branch name cannot be the single character '@'.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>
@@ -251,7 +258,7 @@ internal sealed partial class GitBranchNameNormaliser : IGitBranchNameNormaliser
     }
 
     /// <summary>
-    ///  Branch name cannot contain a '\'.
+    ///     Branch name cannot contain a '\'.
     /// </summary>
     /// <param name="branchName">Name of the branch.</param>
     /// <param name="options">The options.</param>

@@ -2,11 +2,10 @@
 
 internal sealed class TextBoxEx : TextBox
 {
-    private bool _hovered = false;
-
     private Color _borderDefaultColor = SystemColors.WindowFrame;
-    private Color _borderHoveredColor = SystemColors.Highlight;
     private Color _borderFocusedColor = SystemColors.HotTrack;
+    private Color _borderHoveredColor = SystemColors.Highlight;
+    private bool _hovered;
 
     public TextBoxEx()
     {
@@ -54,36 +53,36 @@ internal sealed class TextBoxEx : TextBox
 
         switch (m.Msg)
         {
-            case NativeMethods.WM_NCPAINT:
-            case NativeMethods.WM_PAINT:
-                Color penColor = Focused ? _borderFocusedColor
+            case NativeMethods.WmNcpaint:
+            case NativeMethods.WmPaint:
+                var penColor = Focused ? _borderFocusedColor
                     : _hovered ? _borderHoveredColor
                     : _borderDefaultColor;
 
-                IntPtr windowDC = NativeMethods.GetWindowDC(Handle);
+                var windowDc = NativeMethods.GetWindowDC(Handle);
                 try
                 {
-                    using Graphics graphics = Graphics.FromHdc(windowDC);
+                    using var graphics = Graphics.FromHdc(windowDc);
                     using Pen pen = new(penColor);
 
                     ControlPaint.DrawBorder(graphics, ClientRectangle, penColor, ButtonBorderStyle.Solid);
                 }
                 finally
                 {
-                    NativeMethods.ReleaseDC(Handle, windowDC);
+                    NativeMethods.ReleaseDC(Handle, windowDc);
                 }
 
                 break;
 
-            case NativeMethods.WM_NCMOUSEHOVER when !_hovered:
-            case NativeMethods.WM_MOUSEHOVER when !_hovered:
+            case NativeMethods.WmNcmousehover when !_hovered:
+            case NativeMethods.WmMousehover when !_hovered:
                 _hovered = true;
 
                 Invalidate();
 
                 break;
-            case NativeMethods.WM_NCMOUSELEAVE:
-            case NativeMethods.WM_MOUSELEAVE:
+            case NativeMethods.WmNcmouseleave:
+            case NativeMethods.WmMouseleave:
                 _hovered = false;
 
                 Invalidate();

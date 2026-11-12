@@ -1,32 +1,32 @@
-﻿namespace System;
+﻿namespace GitUI.Interops;
 
 internal static partial class NativeMethods
 {
-    public enum DT : int
+    public enum Dt
     {
-        DT_LEFT = 0x0,
-        DT_TOP = 0x0,
-        DT_CENTER = 0x1,
-        DT_RIGHT = 0x2,
-        DT_VCENTER = 0x4,
-        DT_BOTTOM = 0x8,
-        DT_WORDBREAK = 0x10,
-        DT_SINGLELINE = 0x20,
-        DT_EXPANDTABS = 0x40,
-        DT_TABSTOP = 0x80,
-        DT_NOCLIP = 0x100,
-        DT_EXTERNALLEADING = 0x200,
-        DT_CALCRECT = 0x400,
-        DT_NOPREFIX = 0x800,
-        DT_INTERNAL = 0x1000,
-        DT_EDITCONTROL = 0x2000,
-        DT_PATH_ELLIPSIS = 0x4000,
-        DT_END_ELLIPSIS = 0x8000,
-        DT_MODIFYSTRING = 0x10000,
-        DT_RTLREADING = 0x20000,
-        DT_WORD_ELLIPSIS = 0x40000,
-        DT_NOFULLWIDTHCHARBREAK = 0x80000,
-        DT_HIDEPREFIX = 0x100000,
-        DT_PREFIXONLY = 0x200000,
+        DtLeft = 0x0,
+        DtTop = 0x0,
+        DtCenter = 0x1,
+        DtRight = 0x2,
+        DtVcenter = 0x4,
+        DtBottom = 0x8,
+        DtWordbreak = 0x10,
+        DtSingleline = 0x20,
+        DtExpandtabs = 0x40,
+        DtTabstop = 0x80,
+        DtNoclip = 0x100,
+        DtExternalleading = 0x200,
+        DtCalcrect = 0x400,
+        DtNoprefix = 0x800,
+        DtInternal = 0x1000,
+        DtEditcontrol = 0x2000,
+        DtPathEllipsis = 0x4000,
+        DtEndEllipsis = 0x8000,
+        DtModifystring = 0x10000,
+        DtRtlreading = 0x20000,
+        DtWordEllipsis = 0x40000,
+        DtNofullwidthcharbreak = 0x80000,
+        DtHideprefix = 0x100000,
+        DtPrefixonly = 0x200000
     }
 }

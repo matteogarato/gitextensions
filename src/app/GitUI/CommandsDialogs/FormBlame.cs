@@ -1,19 +1,18 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitUI.Plugin;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormBlame : GitModuleForm
 {
-    public string? FileName { get; }
-
-    private FormBlame(IGitUICommands commands) : base(commands)
+    private FormBlame(IGitUiCommands commands) : base(commands)
     {
         InitializeComponent();
         InitializeComplete();
     }
 
-    public FormBlame(IGitUICommands commands, string fileName, GitRevision? revision, int? initialLine = null)
+    public FormBlame(IGitUiCommands commands, string fileName, GitRevision? revision, int? initialLine = null)
         : this(commands)
     {
         if (string.IsNullOrEmpty(fileName))
@@ -23,9 +22,12 @@ public partial class FormBlame : GitModuleForm
 
         FileName = fileName;
 
-        _ = blameControl1.LoadBlameAsync(revision ?? Module.GetRevision(), children: null, fileName, revisionGridInfo: null, revisionGridFileUpdate: null, controlToMask: null, Module.FilesEncoding, initialLine);
+        _ = blameControl1.LoadBlameAsync(revision ?? Module.GetRevision(), null, fileName, null, null, null,
+            Module.FilesEncoding, initialLine);
         blameControl1.ConfigureRepositoryHostPlugin(PluginRegistry.TryGetGitHosterForModule(Module));
     }
+
+    public string? FileName { get; }
 
     private void FormBlameLoad(object sender, EventArgs e)
     {

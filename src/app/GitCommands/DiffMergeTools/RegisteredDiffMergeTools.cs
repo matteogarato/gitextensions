@@ -1,40 +1,41 @@
 ﻿namespace GitCommands.DiffMergeTools;
 
 /// <summary>
-/// A dictionary of all configured diff/merge tools.
+///     A dictionary of all configured diff/merge tools.
 /// </summary>
 public static class RegisteredDiffMergeTools
 {
-    private static readonly IDictionary<string, DiffMergeTool> RegisteredTools = new Dictionary<string, DiffMergeTool>(StringComparer.InvariantCultureIgnoreCase);
+    private static readonly IDictionary<string, DiffMergeTool> _registeredTools =
+        new Dictionary<string, DiffMergeTool>(StringComparer.InvariantCultureIgnoreCase);
 
     static RegisteredDiffMergeTools()
     {
-        IEnumerable<DiffMergeTool> diffTools = AppDomain.CurrentDomain.GetAssemblies()
-                                               .SelectMany(asm =>
-                                               {
-                                                   try
-                                                   {
-                                                       return asm.GetTypes();
-                                                   }
-                                                   catch (Exception)
-                                                   {
-                                                       return [];
-                                                   }
-                                               })
-                                               .Where(t => t.IsSubclassOf(typeof(DiffMergeTool)))
-                                               .Select(t => (DiffMergeTool)Activator.CreateInstance(t)!);
-        foreach (DiffMergeTool tool in diffTools)
+        var diffTools = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(asm =>
+            {
+                try
+                {
+                    return asm.GetTypes();
+                }
+                catch (Exception)
+                {
+                    return [];
+                }
+            })
+            .Where(t => t.IsSubclassOf(typeof(DiffMergeTool)))
+            .Select(t => (DiffMergeTool)Activator.CreateInstance(t)!);
+        foreach (var tool in diffTools)
         {
-            RegisteredTools.Add(tool.Name, tool);
+            _registeredTools.Add(tool.Name, tool);
         }
     }
 
     /// <summary>
-    /// Gets the collection of all configured diff/merge tools.
+    ///     Gets the collection of all configured diff/merge tools.
     /// </summary>
     public static IEnumerable<string> All(DiffMergeToolType toolType)
     {
-        return RegisteredTools.Where(t =>
+        return _registeredTools.Where(t =>
                 (t.Value.IsDiffTool && toolType == DiffMergeToolType.Diff) ||
                 (t.Value.IsMergeTool && toolType == DiffMergeToolType.Merge))
             .Select(t => t.Key);
@@ -42,7 +43,7 @@ public static class RegisteredDiffMergeTools
 
     internal static DiffMergeTool? Get(string toolName)
     {
-        if (RegisteredTools.TryGetValue(toolName, out DiffMergeTool? tool))
+        if (_registeredTools.TryGetValue(toolName, out var tool))
         {
             return tool;
         }

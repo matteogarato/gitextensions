@@ -120,7 +120,7 @@ partial class RepoObjectsTree
         tsmiMainMenuSpacer1 = new ToolStripSeparator();
         tsmiMainMenuSpacer2 = new ToolStripSeparator();
         repoTreePanel = new TableLayoutPanel();
-        leftPanelToolStrip = new GitUI.ToolStripEx();
+        leftPanelToolStrip = new ToolStripEx();
         tsbCollapseAll = new ToolStripButton();
         tsbShowBranches = new ToolStripButton();
         tsbShowRemotes = new ToolStripButton();

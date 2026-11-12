@@ -8,33 +8,33 @@ namespace GitCommands.ExternalLinks;
 public interface IExternalLinksStorage
 {
     /// <summary>
-    /// Loads external link definitions from the settings.
+    ///     Loads external link definitions from the settings.
     /// </summary>
     IReadOnlyList<ExternalLinkDefinition>? Load(DistributedSettings settings);
 
     /// <summary>
-    /// Saves the provided external link definitions to the settings.
+    ///     Saves the provided external link definitions to the settings.
     /// </summary>
     void Save(DistributedSettings settings, IReadOnlyList<ExternalLinkDefinition> definitions);
 }
 
 public sealed class ExternalLinksStorage : IExternalLinksStorage
 {
-    private const string SettingName = "RevisionLinkDefs";
+    private const string _settingName = "RevisionLinkDefs";
 
     /// <summary>
-    /// Loads external link definitions from the settings.
+    ///     Loads external link definitions from the settings.
     /// </summary>
-    public IReadOnlyList<ExternalLinkDefinition>? Load(DistributedSettings settings)
+    IReadOnlyList<ExternalLinkDefinition>? IExternalLinksStorage.Load(DistributedSettings settings)
     {
-        string? xml = settings.GetString(SettingName, null);
+        var xml = settings.GetString(_settingName, null);
         return LoadFromXmlString(xml);
     }
 
     /// <summary>
-    /// Saves the provided external link definitions to the settings.
+    ///     Saves the provided external link definitions to the settings.
     /// </summary>
-    public void Save(DistributedSettings settings, IReadOnlyList<ExternalLinkDefinition> definitions)
+    void IExternalLinksStorage.Save(DistributedSettings settings, IReadOnlyList<ExternalLinkDefinition> definitions)
     {
         try
         {
@@ -45,7 +45,7 @@ public sealed class ExternalLinksStorage : IExternalLinksStorage
             }
             else
             {
-                foreach (ExternalLinkDefinition definition in definitions)
+                foreach (var definition in definitions)
                 {
                     definition.RemoveEmptyFormats();
                 }
@@ -54,18 +54,15 @@ public sealed class ExternalLinksStorage : IExternalLinksStorage
                 XmlSerializerNamespaces ns = new();
                 ns.Add(string.Empty, string.Empty);
 
-                XmlWriterSettings xmlWriterSettings = new()
-                {
-                    Indent = true
-                };
+                XmlWriterSettings xmlWriterSettings = new() { Indent = true };
                 using StringWriter sw = new();
-                using XmlWriter xmlWriter = XmlWriter.Create(sw, xmlWriterSettings);
+                using var xmlWriter = XmlWriter.Create(sw, xmlWriterSettings);
 
                 serializer.Serialize(xmlWriter, definitions.OrderBy(x => x.Name).ToList(), ns);
                 xml = sw.ToString();
             }
 
-            settings.SetString(SettingName, xml);
+            settings.SetString(_settingName, xml);
         }
         catch (Exception e)
         {

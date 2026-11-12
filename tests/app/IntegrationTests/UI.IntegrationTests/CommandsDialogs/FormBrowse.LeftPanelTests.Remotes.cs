@@ -1,37 +1,44 @@
 ﻿using CommonTestUtils;
-using GitCommands;
 using GitCommands.Remotes;
+using GitCommands.Settings;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
+using GitUI.UserControls;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormBrowse_LeftPanel_RemotesTests : System.IDisposable, IClassFixture<FormBrowse_LeftPanel_RemotesTestsFixture>
+public class FormBrowseLeftPanelRemotesTests : IDisposable, IClassFixture<FormBrowseLeftPanelRemotesTestsFixture>
 {
-    // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
+    private static readonly string[] _remoteNames = ["remote1", "remote5", "remote3", "remote4", "remote2"];
 
     // Created once for each test
-    private GitUICommands _commands = null!;
-    private IConfigFileRemoteSettingsManager _remotesManager = null!;
-    private static readonly string[] RemoteNames = ["remote1", "remote5", "remote3", "remote4", "remote2"];
+    private GitUiCommands _commands = null!;
 
-    public FormBrowse_LeftPanel_RemotesTests(FormBrowse_LeftPanel_RemotesTestsFixture fixture)
+    // Created once for the fixture
+    private ReferenceRepository _referenceRepository = null!;
+    private IConfigFileRemoteSettingsManager _remotesManager = null!;
+
+    public FormBrowseLeftPanelRemotesTests(FormBrowseLeftPanelRemotesTestsFixture fixture)
     {
         InitializeTest();
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
-        foreach (string name in RemoteNames)
+        foreach (var name in _remoteNames)
         {
             _referenceRepository.Module.AddRemote(name, $"http://localhost/remotes/{name}.git");
         }
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
         _remotesManager = new ConfigFileRemoteSettingsManager(() => _referenceRepository.Module);
     }
 
@@ -43,101 +50,96 @@ public class FormBrowse_LeftPanel_RemotesTests : System.IDisposable, IClassFixtu
     [WinFormsFact]
     public void RepoObjectTree_should_load_active_remotes()
     {
-        RunRepoObjectsTreeTest(
-            remotesNode =>
-            {
-                // act
-                // no-op: by the virtue of loading the form, the left panel has loaded its content
+        RunRepoObjectsTreeTest(remotesNode =>
+        {
+            // act
+            // no-op: by the virtue of loading the form, the left panel has loaded its content
 
-                // assert
-                remotesNode.Nodes.Count.Should().Be(RemoteNames.Length);
-            });
+            // assert
+            remotesNode.Nodes.Count.Should().Be(_remoteNames.Length);
+        });
     }
 
     [WinFormsFact]
     public void RepoObjectTree_should_order_active_remotes_alphabetically()
     {
-        RunRepoObjectsTreeTest(
-            remotesNode =>
-            {
-                // act
-                // no-op: by the virtue of loading the form, the left panel has loaded its content
+        RunRepoObjectsTreeTest(remotesNode =>
+        {
+            // act
+            // no-op: by the virtue of loading the form, the left panel has loaded its content
 
-                // assert
-                List<string> names = [.. remotesNode.Nodes.OfType<TreeNode>().Select(x => x.Text)];
-                names.Should().BeEquivalentTo(RemoteNames);
-                names.Should().BeInAscendingOrder();
-            });
+            // assert
+            List<string> names = [.. remotesNode.Nodes.OfType<TreeNode>().Select(x => x.Text)];
+            names.Should().BeEquivalentTo(_remoteNames);
+            names.Should().BeInAscendingOrder();
+        });
     }
 
     [WinFormsFact]
     public void RepoObjectTree_should_order_should_not_display_inactive_if_none()
     {
-        RunRepoObjectsTreeTest(
-            remotesNode =>
-            {
-                // act
-                // no-op: by the virtue of loading the form, the left panel has loaded its content
+        RunRepoObjectsTreeTest(remotesNode =>
+        {
+            // act
+            // no-op: by the virtue of loading the form, the left panel has loaded its content
 
-                // assert
-                remotesNode.Nodes.OfType<TreeNode>().Any(n => n.Text == TranslatedStrings.Inactive).Should().BeFalse();
-            });
+            // assert
+            remotesNode.Nodes.OfType<TreeNode>().Any(n => n.Text == TranslatedStrings.Inactive).Should().BeFalse();
+        });
     }
 
     [WinFormsFact]
     public void RepoObjectTree_should_order_should_display_inactive_if_present()
     {
         // setup
-        DeactivateTreeNode(RemoteNames[1]);
+        DeactivateTreeNode(_remoteNames[1]);
 
-        RunRepoObjectsTreeTest(
-            remotesNode =>
-            {
-                // act
-                // no-op: by the virtue of loading the form, the left panel has loaded its content
+        RunRepoObjectsTreeTest(remotesNode =>
+        {
+            // act
+            // no-op: by the virtue of loading the form, the left panel has loaded its content
 
-                // assert
-                remotesNode.Nodes.OfType<TreeNode>().Count(n => n.Text == TranslatedStrings.Inactive).Should().Be(1);
-            });
+            // assert
+            remotesNode.Nodes.OfType<TreeNode>().Count(n => n.Text == TranslatedStrings.Inactive).Should().Be(1);
+        });
     }
 
     [WinFormsFact]
     public void RepoObjectTree_should_order_should_display_inactive_after_active_nodes()
     {
         // setup
-        DeactivateTreeNode(RemoteNames[1]);
+        DeactivateTreeNode(_remoteNames[1]);
 
-        RunRepoObjectsTreeTest(
-            remotesNode =>
-            {
-                // act
-                // no-op: by the virtue of loading the form, the left panel has loaded its content
+        RunRepoObjectsTreeTest(remotesNode =>
+        {
+            // act
+            // no-op: by the virtue of loading the form, the left panel has loaded its content
 
-                // assert
-                remotesNode.Nodes.OfType<TreeNode>().Last().Text.Should().Be(TranslatedStrings.Inactive);
-            });
+            // assert
+            remotesNode.Nodes.OfType<TreeNode>().Last().Text.Should().Be(TranslatedStrings.Inactive);
+        });
     }
 
     [WinFormsFact]
     public void RepoObjectTree_should_order_inactive_remotes_alphabetically()
     {
         // setup
-        DeactivateTreeNode(RemoteNames[3]);
-        DeactivateTreeNode(RemoteNames[0]);
-        DeactivateTreeNode(RemoteNames[1]);
+        DeactivateTreeNode(_remoteNames[3]);
+        DeactivateTreeNode(_remoteNames[0]);
+        DeactivateTreeNode(_remoteNames[1]);
 
-        RunRepoObjectsTreeTest(
-            remotesNode =>
-            {
-                // act
-                // no-op: by the virtue of loading the form, the left panel has loaded its content
+        RunRepoObjectsTreeTest(remotesNode =>
+        {
+            // act
+            // no-op: by the virtue of loading the form, the left panel has loaded its content
 
-                // assert
-                List<string> inactiveNodes = [.. remotesNode.Nodes.OfType<TreeNode>().Last().Nodes.OfType<TreeNode>().Select(n => n.Text)];
-                inactiveNodes.Should().HaveCount(3);
-                inactiveNodes.Should().BeEquivalentTo(RemoteNames[3], RemoteNames[0], RemoteNames[1]);
-                inactiveNodes.Should().BeInAscendingOrder();
-            });
+            // assert
+            List<string> inactiveNodes =
+                [.. remotesNode.Nodes.OfType<TreeNode>().Last().Nodes.OfType<TreeNode>().Select(n => n.Text)];
+            inactiveNodes.Should().HaveCount(3);
+            inactiveNodes.Should().BeEquivalentTo(_remoteNames[3], _remoteNames[0], _remoteNames[1]);
+            inactiveNodes.Should().BeInAscendingOrder();
+        });
     }
 
     private void DeactivateTreeNode(string nodeText)
@@ -152,8 +154,9 @@ public class FormBrowse_LeftPanel_RemotesTests : System.IDisposable, IClassFixtu
         // Await all async operation such as load of branches and remotes in the left panel
         AsyncTestHelper.JoinPendingOperations();
 
-        GitUI.UserControls.NativeTreeView treeView = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor().TreeView;
-        TreeNode? remotesNode = treeView.Nodes.OfType<TreeNode>().FirstOrDefault(n => n.Text == TranslatedStrings.Remotes);
+        var treeView = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor().TreeView;
+        var remotesNode =
+            treeView.Nodes.OfType<TreeNode>().FirstOrDefault(n => n.Text == TranslatedStrings.Remotes);
         remotesNode.Should().NotBeNull();
 
         return remotesNode;
@@ -161,34 +164,28 @@ public class FormBrowse_LeftPanel_RemotesTests : System.IDisposable, IClassFixtu
 
     private void RunRepoObjectsTreeTest(Action<TreeNode> testDriver)
     {
-        RunFormTest(
-            form =>
-            {
-                testDriver(GetRemoteNode(form));
-                return Task.CompletedTask;
-            });
+        RunFormTest(form =>
+        {
+            testDriver(GetRemoteNode(form));
+            return Task.CompletedTask;
+        });
     }
 
     private void RunFormTest(Func<FormBrowse, Task> testDriverAsync)
     {
-        UITest.RunForm(
-            showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+        UiTest.RunForm(
+            () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }
 
-public sealed class FormBrowse_LeftPanel_RemotesTestsFixture : System.IDisposable
+public sealed class FormBrowseLeftPanelRemotesTestsFixture : IDisposable
 {
     // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
+    private readonly bool _originalShowAuthorAvatarColumn;
+    private readonly bool _showAvailableDiffTools;
 
-    public FormBrowse_LeftPanel_RemotesTestsFixture()
+    public FormBrowseLeftPanelRemotesTestsFixture()
     {
         // Remember the current settings...
         _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
@@ -201,7 +198,7 @@ public sealed class FormBrowse_LeftPanel_RemotesTestsFixture : System.IDisposabl
         AppSettings.ShowAuthorAvatarColumn = false;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
         AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;

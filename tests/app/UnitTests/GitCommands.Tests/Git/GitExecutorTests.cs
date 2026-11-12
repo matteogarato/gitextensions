@@ -18,7 +18,8 @@ public class GitExecutorTests
     [Theory]
     [InlineData(@"\\wsl$\Ubuntu\home\user\repo\", "Ubuntu")]
     [InlineData(@"\\wsl.localhost\Ubuntu-20.04\home\user\repo\", "Ubuntu-20.04")]
-    public void GitExecutable_for_wsl_working_dir_uses_exec_to_bypass_the_distro_shell(string workingDir, string expectedDistro)
+    public void GitExecutable_for_wsl_working_dir_uses_exec_to_bypass_the_distro_shell(string workingDir,
+        string expectedDistro)
     {
         GitExecutor executor = new(new GitDirectoryResolver(), workingDir);
 

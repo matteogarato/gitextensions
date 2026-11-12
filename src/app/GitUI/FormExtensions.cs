@@ -3,7 +3,7 @@ namespace GitUI;
 public static class FormExtensions
 {
     /// <summary>
-    ///  Brings the window to the front and activates it. Needed on drag drop and on button click from Windows Jump List.
+    ///     Brings the window to the front and activates it. Needed on drag drop and on button click from Windows Jump List.
     /// </summary>
     public static void ForceActivate(this Form? form)
     {

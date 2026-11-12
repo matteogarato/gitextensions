@@ -1,27 +1,33 @@
 ﻿using System.ComponentModel;
 using System.Net;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using Microsoft;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
 public class BuildReportTabPageExtension
 {
-    private readonly TabControl _tabControl;
     private readonly string _caption;
     private readonly Func<IGitModule> _getModule;
+
+    private readonly LinkLabel _openReportLink = new()
+    {
+        AutoSize = false,
+        Text = TranslatedStrings.OpenReport,
+        TextAlign = ContentAlignment.MiddleCenter,
+        Dock = DockStyle.Fill
+    };
+
+    private readonly TabControl _tabControl;
 
     private TabPage? _buildReportTabPage;
     private WebBrowserControl? _buildReportWebBrowser;
     private GitRevision? _selectedGitRevision;
     private string? _url;
-    private readonly LinkLabel _openReportLink = new() { AutoSize = false, Text = TranslatedStrings.OpenReport, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-
-    public Control? Control { get; private set; } // for focusing
 
     public BuildReportTabPageExtension(Func<IGitModule> getModule, TabControl tabControl, string caption)
     {
@@ -39,6 +45,8 @@ public class BuildReportTabPageExtension
         _openReportLink.Font = new Font(_openReportLink.Font.Name, 16F);
     }
 
+    public Control? Control { get; private set; } // for focusing
+
     public void FillBuildReport(GitRevision? revision)
     {
         SetSelectedRevision(revision);
@@ -47,8 +55,8 @@ public class BuildReportTabPageExtension
 
         try
         {
-            bool buildResultPageEnabled = revision is not null && IsBuildResultPageEnabled();
-            bool buildInfoIsAvailable = !string.IsNullOrEmpty(revision?.BuildStatus?.Url);
+            var buildResultPageEnabled = revision is not null && IsBuildResultPageEnabled();
+            var buildInfoIsAvailable = !string.IsNullOrEmpty(revision?.BuildStatus?.Url);
 
             if (buildResultPageEnabled && buildInfoIsAvailable)
             {
@@ -64,7 +72,7 @@ public class BuildReportTabPageExtension
 
                 SetTabPageContent(revision);
 
-                bool isFavIconMissing = _buildReportTabPage.ImageIndex < 0;
+                var isFavIconMissing = _buildReportTabPage.ImageIndex < 0;
 
                 if (isFavIconMissing || _tabControl.SelectedTab == _buildReportTabPage)
                 {
@@ -78,7 +86,8 @@ public class BuildReportTabPageExtension
             }
             else
             {
-                if (_buildReportTabPage is not null && _buildReportWebBrowser is not null && _tabControl.Controls.Contains(_buildReportTabPage))
+                if (_buildReportTabPage is not null && _buildReportWebBrowser is not null &&
+                    _tabControl.Controls.Contains(_buildReportTabPage))
                 {
                     _buildReportWebBrowser.Stop();
                     _buildReportWebBrowser.Document!.Write(string.Empty);
@@ -161,48 +170,46 @@ public class BuildReportTabPageExtension
             UseVisualStyleBackColor = true
         };
 
-        _buildReportWebBrowser = new WebBrowserControl
-        {
-            Dock = DockStyle.Fill
-        };
+        _buildReportWebBrowser = new WebBrowserControl { Dock = DockStyle.Fill };
     }
 
-    private void BuildReportWebBrowserOnNavigated(object? sender, WebBrowserNavigatedEventArgs webBrowserNavigatedEventArgs)
+    private void BuildReportWebBrowserOnNavigated(object? sender,
+        WebBrowserNavigatedEventArgs webBrowserNavigatedEventArgs)
     {
         Validates.NotNull(_buildReportWebBrowser);
         Validates.NotNull(_buildReportTabPage);
 
         _buildReportWebBrowser.Navigated -= BuildReportWebBrowserOnNavigated;
 
-        string? favIconUrl = DetermineFavIconUrl(_buildReportWebBrowser.Document!);
+        var favIconUrl = DetermineFavIconUrl(_buildReportWebBrowser.Document!);
 
         if (favIconUrl is not null)
         {
             ThreadHelper.FileAndForget(async () =>
+            {
+                using var imageStream = await DownloadRemoteImageFileAsync(favIconUrl);
+                if (imageStream is not null)
                 {
-                    using Stream? imageStream = await DownloadRemoteImageFileAsync(favIconUrl);
-                    if (imageStream is not null)
+                    await _tabControl.SwitchToMainThreadAsync();
+
+                    var favIconImage = Image.FromStream(imageStream)
+                        .GetThumbnailImage(16, 16, null, IntPtr.Zero);
+                    var imageCollection = _tabControl.ImageList!.Images;
+                    var imageIndex = _buildReportTabPage.ImageIndex;
+
+                    if (imageIndex < 0)
                     {
-                        await _tabControl.SwitchToMainThreadAsync();
-
-                        Image favIconImage = Image.FromStream(imageStream)
-                                                .GetThumbnailImage(16, 16, null, IntPtr.Zero);
-                        ImageList.ImageCollection imageCollection = _tabControl.ImageList!.Images;
-                        int imageIndex = _buildReportTabPage.ImageIndex;
-
-                        if (imageIndex < 0)
-                        {
-                            _buildReportTabPage.ImageIndex = imageCollection.Count;
-                            imageCollection.Add(favIconImage);
-                        }
-                        else
-                        {
-                            imageCollection[imageIndex] = favIconImage;
-                        }
-
-                        _tabControl.Invalidate(false);
+                        _buildReportTabPage.ImageIndex = imageCollection.Count;
+                        imageCollection.Add(favIconImage);
                     }
-                });
+                    else
+                    {
+                        imageCollection[imageIndex] = favIconImage;
+                    }
+
+                    _tabControl.Invalidate(false);
+                }
+            });
         }
     }
 
@@ -212,15 +219,17 @@ public class BuildReportTabPageExtension
     }
 
     private IGitModule GetModule()
-        => _getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
+    {
+        return _getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
+    }
 
     private static string? DetermineFavIconUrl(HtmlDocument htmlDocument)
     {
-        HtmlElementCollection links = htmlDocument.GetElementsByTagName("link");
+        var links = htmlDocument.GetElementsByTagName("link");
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
-        HtmlElement? favIconLink =
+        var favIconLink =
             links.Cast<HtmlElement>()
-                 .SingleOrDefault(x => x.GetAttribute("rel").ToLowerInvariant() == "shortcut icon");
+                .SingleOrDefault(x => x.GetAttribute("rel").ToLowerInvariant() == "shortcut icon");
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
         if (favIconLink is null || htmlDocument.Url is null)
@@ -228,27 +237,25 @@ public class BuildReportTabPageExtension
             return null;
         }
 
-        string href = favIconLink.GetAttribute("href");
+        var href = favIconLink.GetAttribute("href");
 
         if (htmlDocument.Url.PathAndQuery == "/")
         {
             // Scenario: http://test.test/teamcity/....
             return htmlDocument.Url.AbsoluteUri.Replace(htmlDocument.Url.PathAndQuery, href);
         }
-        else
-        {
-            // Scenario: http://teamcity.domain.test/
-            return new Uri(new Uri(htmlDocument.Url.AbsoluteUri), href).ToString();
-        }
+
+        // Scenario: http://teamcity.domain.test/
+        return new Uri(new Uri(htmlDocument.Url.AbsoluteUri), href).ToString();
     }
 
     private static async Task<Stream?> DownloadRemoteImageFileAsync(string uri)
     {
 #pragma warning disable SYSLIB0014 // 'WebRequest.Create(string)' is obsolete
-        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+        var request = (HttpWebRequest)WebRequest.Create(uri);
 #pragma warning restore SYSLIB0014 // 'WebRequest.Create(string)' is obsolete
 
-        HttpWebResponse response = await GetWebResponseAsync(request).ConfigureAwait(false);
+        var response = await GetWebResponseAsync(request).ConfigureAwait(false);
 
         // Check that the remote file was found. The ContentType
         // check is performed since a request for a non-existent
@@ -256,8 +263,8 @@ public class BuildReportTabPageExtension
         // yield the StatusCode "OK", even though the image was not
         // found.
         if ((response.StatusCode == HttpStatusCode.OK ||
-                response.StatusCode == HttpStatusCode.Moved ||
-                response.StatusCode == HttpStatusCode.Redirect) &&
+             response.StatusCode == HttpStatusCode.Moved ||
+             response.StatusCode == HttpStatusCode.Redirect) &&
             response.ContentType.StartsWith("image", StringComparison.OrdinalIgnoreCase))
         {
             // if the remote file was found, download it

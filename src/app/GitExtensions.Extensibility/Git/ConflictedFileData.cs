@@ -1,13 +1,7 @@
 namespace GitExtensions.Extensibility.Git;
 
-public readonly struct ConflictedFileData
+public readonly struct ConflictedFileData(ObjectId objectId, string filename)
 {
-    public ConflictedFileData(ObjectId objectId, string filename)
-    {
-        ObjectId = objectId;
-        Filename = filename;
-    }
-
-    public ObjectId ObjectId { get; }
-    public string Filename { get; }
+    public ObjectId ObjectId { get; } = objectId;
+    public string Filename { get; } = filename;
 }

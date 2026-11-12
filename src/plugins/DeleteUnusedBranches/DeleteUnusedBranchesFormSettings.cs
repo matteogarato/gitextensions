@@ -1,36 +1,23 @@
 ﻿namespace GitExtensions.Plugins.DeleteUnusedBranches;
 
-public class DeleteUnusedBranchesFormSettings
+public class DeleteUnusedBranchesFormSettings(
+    int daysOlderThan,
+    string mergedInBranch,
+    bool removeDeleteRemoteBranchesFromFlag,
+    string remoteName,
+    bool userRegexToFilterBranchesFlag,
+    string regexFilter,
+    bool regexCaseInsensitiveFlag,
+    bool regexInvertedFlag,
+    bool includeUnmergedBranchesFlag)
 {
-    public DeleteUnusedBranchesFormSettings(
-        int daysOlderThan,
-        string mergedInBranch,
-        bool removeDeleteRemoteBranchesFromFlag,
-        string remoteName,
-        bool userRegexToFilterBranchesFlag,
-        string regexFilter,
-        bool regexCaseInsensitiveFlag,
-        bool regexInvertedFlag,
-        bool includeUnmergedBranchesFlag)
-    {
-        MergedInBranch = mergedInBranch;
-        DaysOlderThan = daysOlderThan;
-        DeleteRemoteBranchesFromFlag = removeDeleteRemoteBranchesFromFlag;
-        RemoteName = remoteName;
-        UseRegexToFilterBranchesFlag = userRegexToFilterBranchesFlag;
-        RegexFilter = regexFilter;
-        RegexCaseInsensitiveFlag = regexCaseInsensitiveFlag;
-        RegexInvertedFlag = regexInvertedFlag;
-        IncludeUnmergedBranchesFlag = includeUnmergedBranchesFlag;
-    }
-
-    public string MergedInBranch { get; }
-    public int DaysOlderThan { get; }
-    public bool DeleteRemoteBranchesFromFlag { get; }
-    public string RemoteName { get; }
-    public bool UseRegexToFilterBranchesFlag { get; }
-    public string RegexFilter { get; }
-    public bool RegexCaseInsensitiveFlag { get; }
-    public bool RegexInvertedFlag { get; }
-    public bool IncludeUnmergedBranchesFlag { get; }
+    public string MergedInBranch { get; } = mergedInBranch;
+    public int DaysOlderThan { get; } = daysOlderThan;
+    public bool DeleteRemoteBranchesFromFlag { get; } = removeDeleteRemoteBranchesFromFlag;
+    public string RemoteName { get; } = remoteName;
+    public bool UseRegexToFilterBranchesFlag { get; } = userRegexToFilterBranchesFlag;
+    public string RegexFilter { get; } = regexFilter;
+    public bool RegexCaseInsensitiveFlag { get; } = regexCaseInsensitiveFlag;
+    public bool RegexInvertedFlag { get; } = regexInvertedFlag;
+    public bool IncludeUnmergedBranchesFlag { get; } = includeUnmergedBranchesFlag;
 }

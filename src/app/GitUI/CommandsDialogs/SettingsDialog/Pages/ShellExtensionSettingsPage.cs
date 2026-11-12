@@ -1,4 +1,5 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitUI.CommandsDialogs.SettingsDialog.ShellExtension;
 using ResourceManager;
 
@@ -6,16 +7,18 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class ShellExtensionSettingsPage : SettingsPageWithHeader
 {
-    private const char Checked_InMenu = '0';
-    private const char Indeterminate_InSubMenu = '1';
-    private const char Unchecked_NotInMenu = '2';
+    private const char _checkedInMenu = '0';
+    private const char _indeterminateInSubMenu = '1';
+    private const char _uncheckedNotInMenu = '2';
 
-    private readonly TranslationString _noItems = new("no items");
     private readonly TranslationString _menuHelp = new(@"* Checked: at top level for direct access
 * Intermediate: in a cascaded context menu
 * Unchecked: not added to the menu");
 
-    private bool _isLoading = false;
+    private readonly TranslationString _noItems = new("no items");
+
+    private bool _isLoading;
+
     public ShellExtensionSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)
     {
@@ -32,17 +35,17 @@ public partial class ShellExtensionSettingsPage : SettingsPageWithHeader
     protected override void SettingsToPage()
     {
         _isLoading = true;
-        for (int i = 0; i < AppSettings.CascadeShellMenuItems.Length; i++)
+        for (var i = 0; i < AppSettings.CascadeShellMenuItems.Length; i++)
         {
             switch (AppSettings.CascadeShellMenuItems[i])
             {
-                case Checked_InMenu:
+                case _checkedInMenu:
                     _NO_TRANSLATE_chlMenuEntries.SetItemCheckState(i, CheckState.Checked);
                     break;
-                case Indeterminate_InSubMenu:
+                case _indeterminateInSubMenu:
                     _NO_TRANSLATE_chlMenuEntries.SetItemCheckState(i, CheckState.Indeterminate);
                     break;
-                case Unchecked_NotInMenu:
+                case _uncheckedNotInMenu:
                     _NO_TRANSLATE_chlMenuEntries.SetItemCheckState(i, CheckState.Unchecked);
                     break;
             }
@@ -59,25 +62,25 @@ public partial class ShellExtensionSettingsPage : SettingsPageWithHeader
 
     protected override void PageToSettings()
     {
-        string l_CascadeShellMenuItems = "";
+        var lCascadeShellMenuItems = "";
 
-        for (int i = 0; i < _NO_TRANSLATE_chlMenuEntries.Items.Count; i++)
+        for (var i = 0; i < _NO_TRANSLATE_chlMenuEntries.Items.Count; i++)
         {
             switch (_NO_TRANSLATE_chlMenuEntries.GetItemCheckState(i))
             {
                 case CheckState.Indeterminate:
-                    l_CascadeShellMenuItems += Indeterminate_InSubMenu;
+                    lCascadeShellMenuItems += _indeterminateInSubMenu;
                     break;
                 case CheckState.Checked:
-                    l_CascadeShellMenuItems += Checked_InMenu;
+                    lCascadeShellMenuItems += _checkedInMenu;
                     break;
                 case CheckState.Unchecked:
-                    l_CascadeShellMenuItems += Unchecked_NotInMenu;
+                    lCascadeShellMenuItems += _uncheckedNotInMenu;
                     break;
             }
         }
 
-        AppSettings.CascadeShellMenuItems = l_CascadeShellMenuItems;
+        AppSettings.CascadeShellMenuItems = lCascadeShellMenuItems;
         AppSettings.AlwaysShowAllCommands = cbAlwaysShowAllCommands.Checked;
 
         base.PageToSettings();
@@ -90,10 +93,10 @@ public partial class ShellExtensionSettingsPage : SettingsPageWithHeader
 
     private void UpdatePreview()
     {
-        string topLevel = "";
-        string cascaded = "";
+        var topLevel = "";
+        var cascaded = "";
 
-        for (int i = 0; i < _NO_TRANSLATE_chlMenuEntries.Items.Count; i++)
+        for (var i = 0; i < _NO_TRANSLATE_chlMenuEntries.Items.Count; i++)
         {
             switch (_NO_TRANSLATE_chlMenuEntries.GetItemCheckState(i))
             {
@@ -159,5 +162,7 @@ public partial class ShellExtensionSettingsPage : SettingsPageWithHeader
     }
 
     private void menuHelp_Click(object sender, EventArgs e)
-        => OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "shell-extension"));
+    {
+        OsShellUtil.OpenUrlInDefaultBrowser(UserManual.UserManual.UrlFor("settings", "shell-extension"));
+    }
 }

@@ -1,20 +1,13 @@
 ﻿namespace GitUI;
 
-public sealed class WindowsThumbnailToolbarButtons
+public sealed class WindowsThumbnailToolbarButtons(
+    WindowsThumbnailToolbarButton commit,
+    WindowsThumbnailToolbarButton pull,
+    WindowsThumbnailToolbarButton push,
+    WindowsThumbnailToolbarButton closeAll)
 {
-    public WindowsThumbnailToolbarButtons(WindowsThumbnailToolbarButton commit,
-        WindowsThumbnailToolbarButton pull,
-        WindowsThumbnailToolbarButton push,
-        WindowsThumbnailToolbarButton closeAll)
-    {
-        CloseAll = closeAll;
-        Commit = commit;
-        Pull = pull;
-        Push = push;
-    }
-
-    public WindowsThumbnailToolbarButton CloseAll { get; }
-    public WindowsThumbnailToolbarButton Commit { get; }
-    public WindowsThumbnailToolbarButton Pull { get; }
-    public WindowsThumbnailToolbarButton Push { get; }
+    public WindowsThumbnailToolbarButton CloseAll { get; } = closeAll;
+    public WindowsThumbnailToolbarButton Commit { get; } = commit;
+    public WindowsThumbnailToolbarButton Pull { get; } = pull;
+    public WindowsThumbnailToolbarButton Push { get; } = push;
 }

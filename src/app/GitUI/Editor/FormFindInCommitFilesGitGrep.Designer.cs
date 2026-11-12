@@ -1,8 +1,6 @@
-﻿
-using ICSharpCode.TextEditor.Actions;
-using GitUI.UserControls;
+﻿using GitUI.UserControls;
 
-namespace GitUI;
+namespace GitUI.Editor;
 
 partial class FormFindInCommitFilesGitGrep
 {

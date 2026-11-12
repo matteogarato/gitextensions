@@ -3,21 +3,27 @@ using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.Editor;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormEditorTests : System.IDisposable
+public class FormEditorTests : IDisposable
 {
-    // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
-
     // Created once for each test
-    private GitUICommands _commands = null!;
+    private readonly GitUiCommands _commands = null!;
+
+    // Created once for the fixture
+    private readonly ReferenceRepository _referenceRepository = null!;
+
     public FormEditorTests()
     {
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -28,23 +34,24 @@ public class FormEditorTests : System.IDisposable
     [WinFormsFact]
     public void HasChanges_updated_correctly()
     {
-        string filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
+        var filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
 
         try
         {
             File.WriteAllText(filePath, "Hello↔world", _commands.Module.FilesEncoding);
 
-            UITest.RunForm<FormEditor>(
+            UiTest.RunForm<FormEditor>(
                 () =>
                 {
-                    using FormEditor formEditor = new(_commands, filePath, showWarning: false);
+                    using FormEditor formEditor = new(_commands, filePath, false);
                     formEditor.ShowDialog();
                 },
                 form =>
                 {
                     form.GetTestAccessor().HasChanges.Should().BeFalse();
 
-                    FileViewerInternal fileViewerInternal = form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal;
+                    var fileViewerInternal =
+                        form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal;
                     fileViewerInternal.SetText(fileViewerInternal.GetText() + "!", openWithDifftool: null);
 
                     form.GetTestAccessor().HasChanges.Should().BeTrue();
@@ -65,26 +72,29 @@ public class FormEditorTests : System.IDisposable
     [WinFormsFact]
     public void Should_set_linenumber_correctly()
     {
-        string filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
+        var filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
 
         try
         {
             const int lineNumberDefault = 2;
             File.WriteAllText(filePath, "Hello↔world\nline2\nline3\n\n\n", _commands.Module.FilesEncoding);
 
-            UITest.RunForm<FormEditor>(
+            UiTest.RunForm<FormEditor>(
                 () =>
                 {
-                    using FormEditor formEditor = new(_commands, filePath, showWarning: false, lineNumber: lineNumberDefault);
+                    using FormEditor formEditor = new(_commands, filePath, false, lineNumber: lineNumberDefault);
                     formEditor.ShowDialog();
                 },
                 form =>
                 {
                     form.GetTestAccessor().HasChanges.Should().BeFalse();
 
-                    FileViewerInternal fileViewerInternal = form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal;
-                    fileViewerInternal.GetTestAccessor().CurrentViewPositionCache.GetTestAccessor().SetCurrentIdentification("hello-world");
-                    fileViewerInternal.SetText(fileViewerInternal.GetText() + "!", openWithDifftool: null, ViewMode.Text, true, "hello-world");
+                    var fileViewerInternal =
+                        form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal;
+                    fileViewerInternal.GetTestAccessor().CurrentViewPositionCache.GetTestAccessor()
+                        .SetCurrentIdentification("hello-world");
+                    fileViewerInternal.SetText(fileViewerInternal.GetText() + "!", null, ViewMode.Text, true,
+                        "hello-world");
 
                     form.GetTestAccessor().HasChanges.Should().BeTrue();
 
@@ -103,54 +113,52 @@ public class FormEditorTests : System.IDisposable
         }
     }
 
-    [WinFormsFact(Skip = "Test cannot pass because _commands.Module.FilesEncoding has a preamble which is always used by FormEditor.SaveChanges")]
+    [WinFormsFact(Skip =
+        "Test cannot pass because _commands.Module.FilesEncoding has a preamble which is always used by FormEditor.SaveChanges")]
     public void Should_preserve_encoding_utf8()
     {
-        Should_preserve_encoding(new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        Should_preserve_encoding(new UTF8Encoding(false));
     }
 
     [WinFormsFact]
     public void Should_preserve_encoding_utf8_bom()
     {
-        Should_preserve_encoding(new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        Should_preserve_encoding(new UTF8Encoding(true));
     }
 
     private void Should_preserve_encoding(Encoding encoding)
     {
         UTF8Encoding.Default.ToString().Should().Be(_commands.Module.FilesEncoding.ToString());
         (_commands.Module.FilesEncoding.GetPreamble().SequenceEqual(UTF8Encoding.Default.GetPreamble())
-            || _commands.Module.FilesEncoding.GetPreamble().SequenceEqual(encoding.GetPreamble())).Should().BeTrue();
+         || _commands.Module.FilesEncoding.GetPreamble().SequenceEqual(encoding.GetPreamble())).Should().BeTrue();
 
-        string filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
+        var filePath = Path.Combine(_referenceRepository.Module.WorkingDir, Path.GetRandomFileName());
 
         try
         {
             File.WriteAllText(filePath, "Hello↔world", encoding);
 
-            UITest.RunForm<FormEditor>(
+            UiTest.RunForm<FormEditor>(
                 () =>
                 {
-                    using FormEditor formEditor = new(_commands, filePath, showWarning: false);
+                    using FormEditor formEditor = new(_commands, filePath, false);
                     formEditor.ShowDialog();
                 },
                 form =>
                 {
-                    FileViewerInternal fileViewerInternal = form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal;
+                    var fileViewerInternal =
+                        form.GetTestAccessor().FileViewer.GetTestAccessor().FileViewerInternal;
                     fileViewerInternal.SetText(fileViewerInternal.GetText() + "!", openWithDifftool: null);
                     form.GetTestAccessor().SaveChanges();
                     return Task.CompletedTask;
                 });
 
-            File.ReadAllBytes(filePath).Should().BeEquivalentTo(encoding.GetPreamble().Concat(encoding.GetBytes("Hello↔world!")));
+            File.ReadAllBytes(filePath).Should()
+                .BeEquivalentTo(encoding.GetPreamble().Concat(encoding.GetBytes("Hello↔world!")));
         }
         finally
         {
             File.Delete(filePath);
         }
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

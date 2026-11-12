@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Plugins.ReleaseNotesGenerator.Properties;
@@ -17,7 +17,7 @@ public class ReleaseNotesGeneratorPlugin : GitPluginBase
         Icon = Resources.IconReleaseNotesGenerator;
     }
 
-    public override bool Execute(GitUIEventArgs args)
+    public override bool Execute(GitUiEventArgs args)
     {
         using ReleaseNotesGeneratorForm form = new(args);
         if (form.ShowDialog(args.OwnerForm) == DialogResult.OK)

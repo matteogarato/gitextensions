@@ -3,10 +3,11 @@ using GitCommands;
 using NSubstitute;
 
 namespace GitCommandsTests;
+
 public class FileAssociatedIconProviderTests
 {
-    private FileBase _file = null!;
-    private IFileSystem _fileSystem = null!;
+    private readonly FileBase _file = null!;
+    private readonly IFileSystem _fileSystem = null!;
     private FileAssociatedIconProvider _iconProvider = null!;
 
     public FileAssociatedIconProviderTests()
@@ -41,7 +42,7 @@ public class FileAssociatedIconProviderTests
 
         _iconProvider.Get(folder, file).Should().BeNull();
 
-        string tempPath = Path.Combine(Path.GetTempPath(), file);
+        var tempPath = Path.Combine(Path.GetTempPath(), file);
         _file.Received(1).WriteAllText(tempPath, string.Empty);
     }
 
@@ -56,7 +57,7 @@ public class FileAssociatedIconProviderTests
 
         _iconProvider.Get(folder, file).Should().BeNull();
 
-        string tempPath = Path.Combine(Path.GetTempPath(), file);
+        var tempPath = Path.Combine(Path.GetTempPath(), file);
         _file.Received(1).WriteAllText(tempPath, string.Empty);
     }
 
@@ -66,9 +67,9 @@ public class FileAssociatedIconProviderTests
         _iconProvider = new FileAssociatedIconProvider(); // use real file system
         _iconProvider.ResetCache();
 
-        string tempFile = Path.GetTempFileName();
-        string? folder = Path.GetDirectoryName(tempFile);
-        string file = Path.GetFileName(tempFile);
+        var tempFile = Path.GetTempFileName();
+        var folder = Path.GetDirectoryName(tempFile);
+        var file = Path.GetFileName(tempFile);
 
         _iconProvider.CacheCount.Should().Be(0);
         _iconProvider.Get(folder!, file);

@@ -1,15 +1,20 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
 
 namespace GitUITests.CommandsDialogs;
+
 public class RememberFileContextMenuControllerTests
 {
-    private RememberFileContextMenuController _rememberFileContextMenuController = null!;
+    private readonly RememberFileContextMenuController _rememberFileContextMenuController = null!;
+
+    public RememberFileContextMenuControllerTests()
+    {
+        _rememberFileContextMenuController = new RememberFileContextMenuController();
+    }
 
     /// <summary>
-    /// Mock of GitModule.GetFileBlobHash
+    ///     Mock of GitModule.GetFileBlobHash
     /// </summary>
     /// <param name="name">The git blob name</param>
     /// <param name="id">The commit id</param>
@@ -17,11 +22,6 @@ public class RememberFileContextMenuControllerTests
     private static ObjectId GetFileBlobHash(string name, ObjectId id)
     {
         return id;
-    }
-
-    public RememberFileContextMenuControllerTests()
-    {
-        _rememberFileContextMenuController = new RememberFileContextMenuController();
     }
 
     [Theory]
@@ -33,17 +33,14 @@ public class RememberFileContextMenuControllerTests
     [InlineData(true, false, true, false)]
     [InlineData(true, true, false, false)]
     [InlineData(true, true, true, false)]
-    public void RememberFile_ShouldEnableFirstRemember_WorkTree(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
+    public void RememberFile_ShouldEnableFirstRemember_WorkTree(bool isSubmodule, bool isDeleted, bool isSecondRev,
+        bool result)
     {
         GitRevision rev = new(ObjectId.Random());
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: new GitRevision(ObjectId.WorkTreeId),
-            item: new GitItemStatus("file1")
-            {
-                IsSubmodule = isSubmodule,
-                IsDeleted = isDeleted
-            });
+            rev,
+            new GitRevision(ObjectId.WorkTreeId),
+            new GitItemStatus("file1") { IsSubmodule = isSubmodule, IsDeleted = isDeleted });
         _rememberFileContextMenuController.ShouldEnableFirstItemDiff(item, isSecondRev).Should().Be(result);
     }
 
@@ -56,17 +53,14 @@ public class RememberFileContextMenuControllerTests
     [InlineData(true, false, true, false)]
     [InlineData(true, true, false, false)]
     [InlineData(true, true, true, false)]
-    public void RememberFile_ShouldEnableFirstRemember_Commit(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
+    public void RememberFile_ShouldEnableFirstRemember_Commit(bool isSubmodule, bool isDeleted, bool isSecondRev,
+        bool result)
     {
         GitRevision rev = new(ObjectId.Random());
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: rev,
-            item: new GitItemStatus(name: "file1")
-            {
-                IsSubmodule = isSubmodule,
-                IsDeleted = isDeleted
-            });
+            rev,
+            rev,
+            new GitItemStatus("file1") { IsSubmodule = isSubmodule, IsDeleted = isDeleted });
         _rememberFileContextMenuController.ShouldEnableFirstItemDiff(item, isSecondRev).Should().Be(result);
     }
 
@@ -79,17 +73,14 @@ public class RememberFileContextMenuControllerTests
     [InlineData(true, false, true, false)]
     [InlineData(true, true, false, false)]
     [InlineData(true, true, true, false)]
-    public void RememberFile_ShouldEnableSecondRemember_WorkTree(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
+    public void RememberFile_ShouldEnableSecondRemember_WorkTree(bool isSubmodule, bool isDeleted, bool isSecondRev,
+        bool result)
     {
         GitRevision rev = new(ObjectId.Random());
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: new GitRevision(ObjectId.WorkTreeId),
-            item: new GitItemStatus("file1")
-            {
-                IsSubmodule = isSubmodule,
-                IsDeleted = isDeleted
-            });
+            rev,
+            new GitRevision(ObjectId.WorkTreeId),
+            new GitItemStatus("file1") { IsSubmodule = isSubmodule, IsDeleted = isDeleted });
         _rememberFileContextMenuController.ShouldEnableSecondItemDiff(item, isSecondRev).Should().Be(result);
     }
 
@@ -102,17 +93,14 @@ public class RememberFileContextMenuControllerTests
     [InlineData(true, false, true, false)]
     [InlineData(true, true, false, false)]
     [InlineData(true, true, true, false)]
-    public void RememberFile_ShouldEnableSecondRemember_Commit(bool isSubmodule, bool isDeleted, bool isSecondRev, bool result)
+    public void RememberFile_ShouldEnableSecondRemember_Commit(bool isSubmodule, bool isDeleted, bool isSecondRev,
+        bool result)
     {
         GitRevision rev = new(ObjectId.Random());
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: rev,
-            item: new GitItemStatus("file1")
-            {
-                IsSubmodule = isSubmodule,
-                IsDeleted = isDeleted
-            });
+            rev,
+            rev,
+            new GitItemStatus("file1") { IsSubmodule = isSubmodule, IsDeleted = isDeleted });
         _rememberFileContextMenuController.ShouldEnableSecondItemDiff(item, isSecondRev).Should().Be(result);
     }
 
@@ -125,9 +113,9 @@ public class RememberFileContextMenuControllerTests
         _rememberFileContextMenuController.GetGitCommit(null, null, false).Should().BeNull();
 
         FileStatusItem item = new(
-            firstRev: null,
-            secondRev: rev,
-            item: new GitItemStatus("file"));
+            null,
+            rev,
+            new GitItemStatus("file"));
         _rememberFileContextMenuController.GetGitCommit(null, item, false).Should().BeNull();
     }
 
@@ -136,11 +124,11 @@ public class RememberFileContextMenuControllerTests
     {
         GitRevision rev = new(ObjectId.Random());
         GitRevision workTree = new(ObjectId.WorkTreeId);
-        string name = "WorkTreeFile";
+        var name = "WorkTreeFile";
         FileStatusItem item = new(
-            firstRev: workTree,
-            secondRev: rev,
-            item: new GitItemStatus(name));
+            workTree,
+            rev,
+            new GitItemStatus(name));
         _rememberFileContextMenuController.GetGitCommit(null, item, false).Should().Be(name);
     }
 
@@ -149,11 +137,11 @@ public class RememberFileContextMenuControllerTests
     {
         GitRevision rev = new(ObjectId.Random());
         GitRevision workTree = new(ObjectId.WorkTreeId);
-        string name = "WorkTreeFile";
+        var name = "WorkTreeFile";
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: workTree,
-            item: new GitItemStatus(name));
+            rev,
+            workTree,
+            new GitItemStatus(name));
         _rememberFileContextMenuController.GetGitCommit(null, item, true).Should().Be(name);
     }
 
@@ -164,10 +152,11 @@ public class RememberFileContextMenuControllerTests
         GitRevision index = new(ObjectId.IndexId);
         const string name = "File";
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: index,
-            item: new GitItemStatus(name) { TreeId = ObjectId.Random() });
-        _rememberFileContextMenuController.GetGitCommit(GetFileBlobHash, item, true).Should().Be(ObjectId.IndexId.ToString());
+            rev,
+            index,
+            new GitItemStatus(name) { TreeId = ObjectId.Random() });
+        _rememberFileContextMenuController.GetGitCommit(GetFileBlobHash, item, true).Should()
+            .Be(ObjectId.IndexId.ToString());
     }
 
     [Fact]
@@ -177,10 +166,11 @@ public class RememberFileContextMenuControllerTests
         GitRevision index = new(ObjectId.IndexId);
         const string name = "File";
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: index,
-            item: new GitItemStatus(name) { TreeId = default });
-        _rememberFileContextMenuController.GetGitCommit(GetFileBlobHash, item, true).Should().Be(ObjectId.IndexId.ToString());
+            rev,
+            index,
+            new GitItemStatus(name) { TreeId = default });
+        _rememberFileContextMenuController.GetGitCommit(GetFileBlobHash, item, true).Should()
+            .Be(ObjectId.IndexId.ToString());
     }
 
     [Theory]
@@ -188,18 +178,15 @@ public class RememberFileContextMenuControllerTests
     [InlineData(true)]
     public void RememberFile_GetGitCommit_Commit(bool isSecondRev)
     {
-        ObjectId id = ObjectId.Random();
+        var id = ObjectId.Random();
         GitRevision rev = new(id);
         const string newName = "newName";
         const string oldName = "oldName";
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: rev,
-            item: new GitItemStatus(name: newName)
-            {
-                OldName = oldName
-            });
-        string expected = $"{id}:{(isSecondRev ? newName : oldName)}";
+            rev,
+            rev,
+            new GitItemStatus(newName) { OldName = oldName });
+        var expected = $"{id}:{(isSecondRev ? newName : oldName)}";
         _rememberFileContextMenuController.GetGitCommit(null, item, isSecondRev).Should().Be(expected);
     }
 
@@ -208,14 +195,14 @@ public class RememberFileContextMenuControllerTests
     [InlineData(true)]
     public void RememberFile_GetGitCommit_CommitNoOld(bool isSecondRev)
     {
-        ObjectId id = ObjectId.Random();
+        var id = ObjectId.Random();
         GitRevision rev = new(id);
         const string newName = "newName";
         FileStatusItem item = new(
-            firstRev: rev,
-            secondRev: rev,
-            item: new GitItemStatus(name: newName));
-        string expected = $"{id}:{newName}";
+            rev,
+            rev,
+            new GitItemStatus(newName));
+        var expected = $"{id}:{newName}";
         _rememberFileContextMenuController.GetGitCommit(null, item, isSecondRev).Should().Be(expected);
     }
 }

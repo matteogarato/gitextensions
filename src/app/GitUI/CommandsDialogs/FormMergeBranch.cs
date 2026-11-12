@@ -4,8 +4,10 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.HelperDialogs;
+using GitUI.Properties;
 using GitUI.ScriptsEngine;
 using ResourceManager;
 
@@ -14,18 +16,20 @@ namespace GitUI.CommandsDialogs;
 /// <summary>Form to merge a branch into the current branch.</summary>
 public partial class FormMergeBranch : GitModuleForm
 {
-    private readonly TranslationString _formMergeBranchHoverShowImageLabelText = new("Hover to see scenario when fast forward is possible.");
+    private readonly ICommitMessageManager _commitMessageManager;
     private readonly string? _defaultBranch;
-    private ICommitMessageManager _commitMessageManager;
 
-    /// <summary>Initializes <see cref="FormMergeBranch"/>.</summary>
+    private readonly TranslationString _formMergeBranchHoverShowImageLabelText =
+        new("Hover to see scenario when fast forward is possible.");
+
+    /// <summary>Initializes <see cref="FormMergeBranch" />.</summary>
     /// <param name="defaultBranch">Branch to merge into the current branch.</param>
-    public FormMergeBranch(IGitUICommands commands, string? defaultBranch)
+    public FormMergeBranch(IGitUiCommands commands, string? defaultBranch)
         : base(commands)
     {
         InitializeComponent();
-        helpImageDisplayUserControl1.Image1 = Properties.Images.HelpCommandMerge.AdaptLightness();
-        helpImageDisplayUserControl1.Image2 = Properties.Images.HelpCommandMergeFastForward.AdaptLightness();
+        helpImageDisplayUserControl1.Image1 = Images.HelpCommandMerge.AdaptLightness();
+        helpImageDisplayUserControl1.Image2 = Images.HelpCommandMergeFastForward.AdaptLightness();
         InitializeComplete();
 
         _commitMessageManager = new CommitMessageManager(this, Module.WorkingDirGitDir, Module.CommitEncoding);
@@ -37,8 +41,8 @@ public partial class FormMergeBranch : GitModuleForm
         helpImageDisplayUserControl1.Visible = !AppSettings.DontShowHelpImages;
         _defaultBranch = defaultBranch;
 
-        SettingsSource effectiveSettings = Module.GetEffectiveSettings();
-        IDetachedSettings detachedSettings = effectiveSettings.Detached();
+        var effectiveSettings = Module.GetEffectiveSettings();
+        var detachedSettings = effectiveSettings.Detached();
 
         noFastForward.Checked = detachedSettings.NoFastForwardMerge;
 
@@ -53,7 +57,7 @@ public partial class FormMergeBranch : GitModuleForm
 
     private void FormMergeBranchLoad(object sender, EventArgs e)
     {
-        string selectedHead = Module.GetSelectedBranch();
+        var selectedHead = Module.GetSelectedBranch();
         currentBranchLabel.Text = selectedHead;
 
         // Offer rebase on refs also for tags (but not stash, notes etc)
@@ -65,7 +69,7 @@ public partial class FormMergeBranch : GitModuleForm
         }
         else
         {
-            string merge = Module.GetRemoteBranch(selectedHead);
+            var merge = Module.GetRemoteBranch(selectedHead);
             if (!string.IsNullOrEmpty(merge))
             {
                 Branches.SetSelectedText(merge);
@@ -77,12 +81,12 @@ public partial class FormMergeBranch : GitModuleForm
 
     private void OkClick(object sender, EventArgs e)
     {
-        IDetachedSettings detachedSettings = Module.GetEffectiveSettings().Detached();
+        var detachedSettings = Module.GetEffectiveSettings().Detached();
 
         detachedSettings.NoFastForwardMerge = noFastForward.Checked;
         AppSettings.DontCommitMerge = noCommit.Checked;
 
-        bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforeMerge, this);
+        var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforeMerge, this);
         if (!success)
         {
             return;
@@ -93,31 +97,32 @@ public partial class FormMergeBranch : GitModuleForm
         {
             // [!] Do not reset the last commit message stored in AppSettings.LastCommitMessage
 
-            ThreadHelper.JoinableTaskFactory.Run(
-                () => _commitMessageManager.WriteCommitMessageToFileAsync(mergeMessage.Text, CommitMessageType.Merge,
-                                                                          usingCommitTemplate: false,
-                                                                          ensureCommitMessageSecondLineEmpty: false));
+            ThreadHelper.JoinableTaskFactory.Run(() => _commitMessageManager.WriteCommitMessageToFileAsync(
+                mergeMessage.Text, CommitMessageType.Merge,
+                false,
+                false));
             mergeMessagePath = _commitMessageManager.MergeMessagePath;
         }
 
-        ArgumentString command = Commands.MergeBranch(Branches.GetSelectedText(),
-                                                        fastForward.Checked,
-                                                        squash.Checked,
-                                                        noCommit.Checked,
-                                                        _NO_TRANSLATE_mergeStrategy.Text,
-                                                        allowUnrelatedHistories.Checked,
-                                                        mergeMessagePath,
-                                                        Module.GetPathForGitExecution,
-                                                        addLogMessages.Checked ? (int)nbMessages.Value : (int?)null);
-        success = FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true, out string commandOutput);
+        var command = Commands.MergeBranch(Branches.GetSelectedText(),
+            fastForward.Checked,
+            squash.Checked,
+            noCommit.Checked,
+            _NO_TRANSLATE_mergeStrategy.Text,
+            allowUnrelatedHistories.Checked,
+            mergeMessagePath,
+            Module.GetPathForGitExecution,
+            addLogMessages.Checked ? (int)nbMessages.Value : null);
+        success = FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true,
+            out var commandOutput);
 
-        bool wasConflict = MergeConflictHandler.HandleMergeConflicts(UICommands, this, !noCommit.Checked)
-            || Module.CanContinueAction(commandOutput);
+        var wasConflict = MergeConflictHandler.HandleMergeConflicts(UiCommands, this, !noCommit.Checked)
+                          || Module.CanContinueAction(commandOutput);
 
         if (success || wasConflict)
         {
             ScriptsRunner.RunEventScripts(ScriptEvent.AfterMerge, this);
-            UICommands.RepoChangedNotifier.Notify();
+            UiCommands.RepoChangedNotifier.Notify();
             Close();
         }
     }

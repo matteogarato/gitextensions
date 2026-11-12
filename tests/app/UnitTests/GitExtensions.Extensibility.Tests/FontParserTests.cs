@@ -1,16 +1,17 @@
 ﻿using GitExtensions.Extensibility;
 
-namespace GitUIPluginInterfacesTests;
+namespace GitExtensions.ExtensibilityTests;
+
 public class FontParserTests : IDisposable
 {
-    private Font _defaultFont = null!;
+    private readonly Font _defaultFont = null!;
 
     public FontParserTests()
     {
         _defaultFont = new Font("Arial", 9);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _defaultFont.Dispose();
     }
@@ -32,7 +33,7 @@ public class FontParserTests : IDisposable
     [InlineData("\t")]
     public void Parse_should_return_default_if_null_or_empty(string? serialised)
     {
-        Font font = serialised.Parse(_defaultFont);
+        var font = serialised.Parse(_defaultFont);
 
         font.Should().Be(_defaultFont);
     }
@@ -42,7 +43,7 @@ public class FontParserTests : IDisposable
     [InlineData("Arial;")]
     public void Parse_should_return_default_if_less_then_two_parts(string? serialised)
     {
-        Font font = serialised.Parse(_defaultFont);
+        var font = serialised.Parse(_defaultFont);
 
         font.Should().Be(_defaultFont);
     }
@@ -58,7 +59,7 @@ public class FontParserTests : IDisposable
     [InlineData("Courier;12;_IC_;1;1", "Courier", 12f, FontStyle.Italic | FontStyle.Bold)]
     public void Parse_should_parse(string? serialised, string name, float size, FontStyle style)
     {
-        Font font = serialised.Parse(_defaultFont);
+        var font = serialised.Parse(_defaultFont);
 
         font.Should().NotBe(_defaultFont);
         font.OriginalFontName.Should().Be(name);

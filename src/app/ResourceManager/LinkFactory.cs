@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 
@@ -18,44 +17,46 @@ public interface ILinkFactory
 
     string CreateShowAllLink(string what);
 
-    void ExecuteLink(string? linkUri, Action<CommandEventArgs>? handleInternalLink = null, Action<string?>? showAll = null);
+    void ExecuteLink(string? linkUri, Action<CommandEventArgs>? handleInternalLink = null,
+        Action<string?>? showAll = null);
 }
 
 public sealed class LinkFactory : ILinkFactory
 {
-    private const string InternalScheme = "gitext";
-    private const string ShowAll = "showall";
+    private const string _internalScheme = "gitext";
+    private const string _showAll = "showall";
 
-    public string CreateLink(string? caption, string uri)
+    string ILinkFactory.CreateLink(string? caption, string uri)
     {
-        string htmlUri = WebUtility.HtmlEncode(uri);
+        var htmlUri = WebUtility.HtmlEncode(uri);
 
-        string htmlLink = "<a href=" + htmlUri.Quote("'") + ">" + WebUtility.HtmlEncode(caption) + "</a>";
+        var htmlLink = "<a href=" + htmlUri.Quote("'") + ">" + WebUtility.HtmlEncode(caption) + "</a>";
         return htmlLink;
     }
 
-    public string CreateTagLink(string tag)
+    string ILinkFactory.CreateTagLink(string tag)
     {
         if (tag != "…")
         {
-            return CreateLink(tag, $"{InternalScheme}://gototag/" + tag);
+            return CreateLink(tag, $"{_internalScheme}://gototag/" + tag);
         }
 
         return WebUtility.HtmlEncode(tag);
     }
 
-    public string CreateBranchLink(string noPrefixBranch)
+    string ILinkFactory.CreateBranchLink(string noPrefixBranch)
     {
         if (noPrefixBranch != "…")
         {
-            string linkTarget = DetachedHeadParser.IsDetachedHead(noPrefixBranch) ? "HEAD" : noPrefixBranch;
-            return CreateLink(noPrefixBranch, $"{InternalScheme}://gotobranch/{linkTarget}");
+            var linkTarget = DetachedHeadParser.IsDetachedHead(noPrefixBranch) ? "HEAD" : noPrefixBranch;
+            return CreateLink(noPrefixBranch, $"{_internalScheme}://gotobranch/{linkTarget}");
         }
 
         return WebUtility.HtmlEncode(noPrefixBranch);
     }
 
-    public string CreateCommitLink(ObjectId objectId, string? linkText = null, bool preserveGuidInLinkText = false)
+    string ILinkFactory.CreateCommitLink(ObjectId objectId, string? linkText = null,
+        bool preserveGuidInLinkText = false)
     {
         if (linkText is null)
         {
@@ -77,22 +78,25 @@ public sealed class LinkFactory : ILinkFactory
             }
         }
 
-        return CreateLink(linkText, $"{InternalScheme}://gotocommit/" + objectId);
+        return CreateLink(linkText, $"{_internalScheme}://gotocommit/" + objectId);
     }
 
-    public string CreateShowAllLink(string what)
-        => CreateLink($"[ {TranslatedStrings.ShowAll} ]", $"{InternalScheme}://{ShowAll}/{what}");
-
-    public void ExecuteLink(string? linkUri, Action<CommandEventArgs>? handleInternalLink = null, Action<string?>? showAll = null)
+    string ILinkFactory.CreateShowAllLink(string what)
     {
-        if (!TryParseLink(linkUri, out Uri? uri))
+        return CreateLink($"[ {TranslatedStrings.ShowAll} ]", $"{_internalScheme}://{_showAll}/{what}");
+    }
+
+    void ILinkFactory.ExecuteLink(string? linkUri, Action<CommandEventArgs>? handleInternalLink = null,
+        Action<string?>? showAll = null)
+    {
+        if (!TryParseLink(linkUri, out var uri))
         {
             return;
         }
 
-        if (ParseInternalScheme(uri, out CommandEventArgs? commandEventArgs))
+        if (ParseInternalScheme(uri, out var commandEventArgs))
         {
-            if (commandEventArgs.Command == ShowAll)
+            if (commandEventArgs.Command == _showAll)
             {
                 if (showAll is null)
                 {
@@ -115,9 +119,9 @@ public sealed class LinkFactory : ILinkFactory
         OsShellUtil.OpenUrlInDefaultBrowser(uri.AbsoluteUri);
     }
 
-    private static bool ParseInternalScheme(Uri? uri, [NotNullWhen(returnValue: true)] out CommandEventArgs? commandEventArgs)
+    private static bool ParseInternalScheme(Uri? uri, [NotNullWhen(true)] out CommandEventArgs? commandEventArgs)
     {
-        if (uri?.Scheme == InternalScheme)
+        if (uri?.Scheme == _internalScheme)
         {
             commandEventArgs = new CommandEventArgs(uri.Host, uri.AbsolutePath.TrimStart('/'));
             return true;
@@ -127,7 +131,7 @@ public sealed class LinkFactory : ILinkFactory
         return false;
     }
 
-    private static bool TryParseLink(string? linkUri, [NotNullWhen(returnValue: true)] out Uri? uri)
+    private static bool TryParseLink(string? linkUri, [NotNullWhen(true)] out Uri? uri)
     {
         if (string.IsNullOrWhiteSpace(linkUri))
         {
@@ -135,7 +139,7 @@ public sealed class LinkFactory : ILinkFactory
             return false;
         }
 
-        string uriCandidate = linkUri;
+        var uriCandidate = linkUri;
         while (true)
         {
             if (Uri.TryCreate(uriCandidate, UriKind.Absolute, out uri))
@@ -143,7 +147,7 @@ public sealed class LinkFactory : ILinkFactory
                 return true;
             }
 
-            int idx = uriCandidate.IndexOf('#');
+            var idx = uriCandidate.IndexOf('#');
             if (idx == -1)
             {
                 break;
@@ -155,21 +159,23 @@ public sealed class LinkFactory : ILinkFactory
         return false;
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly LinkFactory _linkFactory;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(LinkFactory linkFactory)
+    internal readonly struct TestAccessor(LinkFactory linkFactory)
+    {
+        private readonly LinkFactory _linkFactory = linkFactory;
+
+        public readonly bool ParseInternalScheme(Uri uri, [NotNullWhen(true)] out CommandEventArgs? commandEventArgs)
         {
-            _linkFactory = linkFactory;
+            return LinkFactory.ParseInternalScheme(uri, out commandEventArgs);
         }
 
-        public readonly bool ParseInternalScheme(Uri uri, [NotNullWhen(returnValue: true)] out CommandEventArgs? commandEventArgs)
-            => LinkFactory.ParseInternalScheme(uri, out commandEventArgs);
-
-        public readonly bool TryParseLink(string? linkUri, [NotNullWhen(returnValue: true)] out Uri? uri)
-            => LinkFactory.TryParseLink(linkUri, out uri);
+        public readonly bool TryParseLink(string? linkUri, [NotNullWhen(true)] out Uri? uri)
+        {
+            return LinkFactory.TryParseLink(linkUri, out uri);
+        }
     }
 }

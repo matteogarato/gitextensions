@@ -4,36 +4,21 @@ using GitExtensions.Extensibility.Translations;
 
 namespace GitExtensions.Extensibility.Plugins;
 
-public abstract class GitPluginBase : IGitPlugin, ITranslate
+public abstract class GitPluginBase(bool hasSettings) : IGitPlugin, ITranslate
 {
-    public Guid Id { get; protected set; }
-
-    public string? Description { get; protected set; }
-    public string? Name { get; protected set; }
-    public Image? Icon { get; protected set; }
-
-    protected GitPluginBase(bool hasSettings)
-    {
-        HasSettings = hasSettings;
-    }
-
     // required for the TranslationApp to work
     protected GitPluginBase()
         : this(false)
     {
     }
 
-    protected void SetNameAndDescription(string name)
-    {
-        Name = name;
-    }
+    protected Guid Id { get; set; }
 
-    void IDisposable.Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
+    protected string? Description { get; set; }
 
-    public bool HasSettings { get; }
+    protected string? Name { get; set; }
+
+    protected Image? Icon { get; set; }
 
     // Store settings to use later
     public SettingsSource Settings
@@ -45,51 +30,85 @@ public abstract class GitPluginBase : IGitPlugin, ITranslate
         }
     }
 
-    public IGitPluginSettingsContainer? SettingsContainer { get; set; }
+    Guid IGitPlugin.Id
+    {
+        get => Id;
+    }
+
+    string? IGitPlugin.Description
+    {
+        get => Description;
+    }
+
+    string? IGitPlugin.Name
+    {
+        get => Name;
+    }
+
+    Image? IGitPlugin.Icon
+    {
+        get => Icon;
+    }
+
+    bool IGitPlugin.HasSettings { get; } = hasSettings;
+
+    IGitPluginSettingsContainer? IGitPlugin.SettingsContainer { get; set; }
 
     public virtual IEnumerable<ISetting> GetSettings()
     {
         return [];
     }
 
-    public virtual void Register(IGitUICommands gitUiCommands)
+    public virtual void Register(IGitUiCommands gitUiCommands)
     {
         ArgumentNullException.ThrowIfNull(SettingsContainer);
         SettingsContainer.SetSettingsSource(gitUiCommands.Module.GetEffectiveSettings());
     }
 
-    public virtual void Unregister(IGitUICommands gitUiCommands)
+    public virtual void Unregister(IGitUiCommands gitUiCommands)
     {
         ArgumentNullException.ThrowIfNull(SettingsContainer);
         SettingsContainer.SetSettingsSource(null);
     }
 
     /// <summary>
-    /// Run the plugin Execute method
+    ///     Run the plugin Execute method
     /// </summary>
     /// <param name="args">arguments from the UI</param>
-    /// <returns>true, if the revision grid need a refresh
-    /// false, otherwise </returns>
-    public abstract bool Execute(GitUIEventArgs args);
+    /// <returns>
+    ///     true, if the revision grid need a refresh
+    ///     false, otherwise
+    /// </returns>
+    public abstract bool Execute(GitUiEventArgs args);
 
-    protected void Translate(string? currentTranslation)
+    void IDisposable.Dispose()
     {
-        // Description for old plugin setting processing as key
-        Description = Name;
-        Translator.Translate(this, currentTranslation);
+        GC.SuppressFinalize(this);
     }
 
     public virtual void AddTranslationItems(ITranslation translation)
     {
-        string name = GetType().Name;
+        var name = GetType().Name;
         TranslationUtils.AddTranslationItem(name, this, "Description", translation);
         TranslationUtils.AddTranslationItemsFromFields(name, this, translation);
     }
 
     public virtual void TranslateItems(ITranslation translation)
     {
-        string name = GetType().Name;
+        var name = GetType().Name;
         TranslationUtils.TranslateProperty(name, this, nameof(Name), translation);
         TranslationUtils.TranslateItemsFromFields(name, this, translation);
+    }
+
+    protected void SetNameAndDescription(string name)
+    {
+        Name = name;
+    }
+
+    protected void Translate(string? currentTranslation)
+    {
+        // Description for old plugin setting processing as key
+        Description = Name;
+        Translator.Translate(this, currentTranslation);
     }
 }

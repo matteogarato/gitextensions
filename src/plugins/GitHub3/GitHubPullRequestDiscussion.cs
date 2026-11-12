@@ -14,27 +14,44 @@ internal sealed class GitHubPullRequestDiscussion : IPullRequestDiscussion
         ForceReload();
     }
 
-    public List<IDiscussionEntry> Entries { get; private set; }
+    private List<IDiscussionEntry> Entries { get; set; }
 
-    public void Post(string data)
+    List<IDiscussionEntry> IPullRequestDiscussion.Entries
+    {
+        get => Entries;
+    }
+
+    void IPullRequestDiscussion.Post(string data)
     {
         _pullRequest.ToIssue().CreateComment(data);
     }
 
-    public void ForceReload()
+    void IPullRequestDiscussion.ForceReload()
     {
         Entries.Clear();
 
-        Entries.Add(new GitHubDiscussionComment { Author = _pullRequest.User.Login, Created = _pullRequest.CreatedAt, Body = _pullRequest.Body });
-
-        foreach (PullRequestCommit commit in _pullRequest.GetCommits())
+        Entries.Add(new GitHubDiscussionComment
         {
-            Entries.Add(new GitHubDiscussionCommit { Sha = commit.Sha, Author = commit.AuthorName.Replace("<", "&lt;").Replace(">", "&gt;"), Created = commit.Commit.Author.Date, Body = commit.Commit.Message });
+            Author = _pullRequest.User.Login, Created = _pullRequest.CreatedAt, Body = _pullRequest.Body
+        });
+
+        foreach (var commit in _pullRequest.GetCommits())
+        {
+            Entries.Add(new GitHubDiscussionCommit
+            {
+                Sha = commit.Sha,
+                Author = commit.AuthorName.Replace("<", "&lt;").Replace(">", "&gt;"),
+                Created = commit.Commit.Author.Date,
+                Body = commit.Commit.Message
+            });
         }
 
-        foreach (IssueComment comment in _pullRequest.GetIssueComments())
+        foreach (var comment in _pullRequest.GetIssueComments())
         {
-            Entries.Add(new GitHubDiscussionComment { Author = comment.User.Login, Created = comment.CreatedAt, Body = comment.Body });
+            Entries.Add(new GitHubDiscussionComment
+            {
+                Author = comment.User.Login, Created = comment.CreatedAt, Body = comment.Body
+            });
         }
 
         Entries = [.. Entries.OrderBy(entry => entry.Created)];
@@ -43,12 +60,34 @@ internal sealed class GitHubPullRequestDiscussion : IPullRequestDiscussion
 
 internal class GitHubDiscussionComment : IDiscussionEntry
 {
-    public string? Author { get; internal set; }
-    public DateTime Created { get; internal set; }
-    public string? Body { get; internal set; }
+    internal string? Author { get; set; }
+
+    internal DateTime Created { get; set; }
+
+    internal string? Body { get; set; }
+
+    string? IDiscussionEntry.Author
+    {
+        get => Author;
+    }
+
+    DateTime IDiscussionEntry.Created
+    {
+        get => Created;
+    }
+
+    string? IDiscussionEntry.Body
+    {
+        get => Body;
+    }
 }
 
 internal sealed class GitHubDiscussionCommit : GitHubDiscussionComment, ICommitDiscussionEntry
 {
-    public string? Sha { get; internal set; }
+    internal string? Sha { get; set; }
+
+    string? ICommitDiscussionEntry.Sha
+    {
+        get => Sha;
+    }
 }

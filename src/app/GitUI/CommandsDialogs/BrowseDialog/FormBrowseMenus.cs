@@ -1,38 +1,37 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Translations;
-using GitUI.CommandsDialogs.BrowseDialog;
-using Microsoft;
+using GitUI.UserControls;
 
-namespace GitUI.CommandsDialogs;
+namespace GitUI.CommandsDialogs.BrowseDialog;
 
 /// <summary>
-/// Add MenuCommands as menus to the FormBrowse main menu.
-/// This class is intended to have NO dependency to FormBrowse
-///   (if needed this kind of code should be done in FormBrowseMenuCommands).
+///     Add MenuCommands as menus to the FormBrowse main menu.
+///     This class is intended to have NO dependency to FormBrowse
+///     (if needed this kind of code should be done in FormBrowseMenuCommands).
 /// </summary>
 internal class FormBrowseMenus : ITranslate, IDisposable
 {
+    // we have to remember which items we registered with the menucommands because other
+    // location (RevisionGrid) can register items too!
+    private readonly List<ToolStripMenuItem> _itemsRegisteredWithMenuCommand = [];
+
     /// <summary>
-    /// The menu to which we will be adding RevisionGrid command menus.
+    ///     The menu to which we will be adding RevisionGrid command menus.
     /// </summary>
     private readonly ToolStrip _mainMenuStrip;
 
     /// <summary>
-    /// The context menu that be shown to allow toggle visibility of toolbars in <see cref="FormBrowse"/>.
+    ///     The context menu that be shown to allow toggle visibility of toolbars in <see cref="FormBrowse" />.
     /// </summary>
     private readonly ContextMenuStrip _toolStripContextMenu = new();
 
     private List<MenuCommand>? _navigateMenuCommands;
-    private List<MenuCommand>? _viewMenuCommands;
 
     private ToolStripMenuItem? _navigateToolStripMenuItem;
-    private ToolStripMenuItem? _viewToolStripMenuItem;
     private ToolStripMenuItem? _toolbarsMenuItem;
-
-    // we have to remember which items we registered with the menucommands because other
-    // location (RevisionGrid) can register items too!
-    private readonly List<ToolStripMenuItem> _itemsRegisteredWithMenuCommand = [];
+    private List<MenuCommand>? _viewMenuCommands;
+    private ToolStripMenuItem? _viewToolStripMenuItem;
 
     public FormBrowseMenus(ToolStrip menuStrip)
     {
@@ -44,10 +43,21 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         _toolStripContextMenu.Opening += (s, e) => RefreshToolbarsMenuItemCheckedState(_toolStripContextMenu.Items);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    public virtual void AddTranslationItems(ITranslation translation)
+    {
+        TranslationUtils.AddTranslationItemsFromList("FormBrowse", translation,
+            GetAdditionalMainMenuItemsForTranslation());
+    }
+
+    public virtual void TranslateItems(ITranslation translation)
+    {
+        TranslationUtils.TranslateItemsFromList("FormBrowse", translation, GetAdditionalMainMenuItemsForTranslation());
     }
 
     protected virtual void Dispose(bool disposing)
@@ -65,20 +75,10 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         Translator.Translate(this, AppSettings.CurrentTranslation);
     }
 
-    public virtual void AddTranslationItems(ITranslation translation)
-    {
-        TranslationUtils.AddTranslationItemsFromList("FormBrowse", translation, GetAdditionalMainMenuItemsForTranslation());
-    }
-
-    public virtual void TranslateItems(ITranslation translation)
-    {
-        TranslationUtils.TranslateItemsFromList("FormBrowse", translation, GetAdditionalMainMenuItemsForTranslation());
-    }
-
     /// <summary>
-    /// Creates menu items for each toolbar supplied in <paramref name="toolStrips"/>. These menus will
-    /// be surfaced in <see cref="_mainMenuStrip"/>, and <see cref="_toolStripContextMenu"/>,
-    /// and will allow to toggle visibility of the toolbars.
+    ///     Creates menu items for each toolbar supplied in <paramref name="toolStrips" />. These menus will
+    ///     be surfaced in <see cref="_mainMenuStrip" />, and <see cref="_toolStripContextMenu" />,
+    ///     and will allow to toggle visibility of the toolbars.
     /// </summary>
     /// <param name="toolStrips">The list of toobars to toggle visibility for.</param>
     public void CreateToolbarsMenus(params ToolStripEx[] toolStrips)
@@ -87,7 +87,8 @@ internal class FormBrowseMenus : ITranslate, IDisposable
 
         foreach (ToolStrip toolStrip in toolStrips)
         {
-            DebugHelpers.Assert(!string.IsNullOrEmpty(toolStrip.Text), "Toolstrip must specify its name via Text property.");
+            DebugHelpers.Assert(!string.IsNullOrEmpty(toolStrip.Text),
+                "Toolstrip must specify its name via Text property.");
 
             _toolStripContextMenu.Items.Add(CreateItem(toolStrip));
             _toolbarsMenuItem.DropDownItems.Add(CreateItem(toolStrip));
@@ -97,9 +98,7 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         {
             ToolStripMenuItem toolStripItem = new(senderToolStrip.Text)
             {
-                Checked = senderToolStrip.Visible,
-                CheckOnClick = true,
-                Tag = senderToolStrip
+                Checked = senderToolStrip.Visible, CheckOnClick = true, Tag = senderToolStrip
             };
 
             toolStripItem.DropDown.Closing += (sender, e) =>
@@ -135,7 +134,7 @@ internal class FormBrowseMenus : ITranslate, IDisposable
                 continue;
             }
 
-            bool belongToAGroup = BelongToAGroup(toolbarItem, out string groupName);
+            var belongToAGroup = BelongToAGroup(toolbarItem, out var groupName);
             string key;
             if (belongToAGroup)
             {
@@ -153,32 +152,30 @@ internal class FormBrowseMenus : ITranslate, IDisposable
                 key = toolbarItem.Name!;
             }
 
-            bool visible = LoadVisibilitySetting(key, IsVisibleByDefault(key));
+            var visible = LoadVisibilitySetting(key, IsVisibleByDefault(key));
 
             toolbarItem.Visible = visible;
 
             ToolStripMenuItem menuToolbarItem = new(toolbarItem.ToolTipText)
             {
-                Checked = visible,
-                CheckOnClick = true,
-                Tag = toolbarItem,
-                Image = toolbarItem.Image
+                Checked = visible, CheckOnClick = true, Tag = toolbarItem, Image = toolbarItem.Image
             };
 
             menuToolbarItem.Click += (s, e) =>
             {
                 toolbarItem.Visible = !toolbarItem.Visible;
 
-                if (!BelongToAGroup(toolbarItem, out string group))
+                if (!BelongToAGroup(toolbarItem, out var group))
                 {
-                    SaveVisibilitySetting(toolbarItem.Name!, toolbarItem.Visible, IsVisibleByDefault(toolbarItem.Name!));
+                    SaveVisibilitySetting(toolbarItem.Name!, toolbarItem.Visible,
+                        IsVisibleByDefault(toolbarItem.Name!));
                 }
                 else
                 {
                     SaveVisibilitySetting(group, toolbarItem.Visible, IsVisibleByDefault(toolbarItem.Name!));
                     foreach (ToolStripItem item in senderToolStrip.Items)
                     {
-                        if (item.Tag == (object)group)
+                        if (item.Tag == group)
                         {
                             item.Visible = toolbarItem.Visible;
                         }
@@ -196,11 +193,20 @@ internal class FormBrowseMenus : ITranslate, IDisposable
 
         return;
 
-        static bool IsVisibleByDefault(string buttonKey) => !buttonKey.Contains(FormBrowse.FetchPullToolbarShortcutsPrefix);
+        static bool IsVisibleByDefault(string buttonKey)
+        {
+            return !buttonKey.Contains(FormBrowse.FetchPullToolbarShortcutsPrefix);
+        }
+
         static void SaveVisibilitySetting(string key, bool visible, bool defaultValue = true)
-            => AppSettings.SetBool(toolbarSettingsPrefix + key, visible == defaultValue ? null : visible);
+        {
+            AppSettings.SetBool(toolbarSettingsPrefix + key, visible == defaultValue ? null : visible);
+        }
+
         static bool LoadVisibilitySetting(string key, bool defaultValue = true)
-            => AppSettings.GetBool(toolbarSettingsPrefix + key, defaultValue);
+        {
+            return AppSettings.GetBool(toolbarSettingsPrefix + key, defaultValue);
+        }
 
         static bool BelongToAGroup(ToolStripItem toolbarItem, out string groupName)
         {
@@ -219,7 +225,7 @@ internal class FormBrowseMenus : ITranslate, IDisposable
     private static void AdaptSeparatorsVisibility(ToolStrip senderToolStrip)
     {
         // First pass: toolbar items from left to right
-        bool shouldHideNextSeparator = true;
+        var shouldHideNextSeparator = true;
         foreach (ToolStripItem item in senderToolStrip.Items)
         {
             HandleCurrentItem(item);
@@ -227,9 +233,9 @@ internal class FormBrowseMenus : ITranslate, IDisposable
 
         // Second pass: toolbar items from right to left
         shouldHideNextSeparator = true;
-        for (int i = senderToolStrip.Items.Count - 1; i >= 0; i--)
+        for (var i = senderToolStrip.Items.Count - 1; i >= 0; i--)
         {
-            ToolStripItem item = senderToolStrip.Items[i];
+            var item = senderToolStrip.Items[i];
 
             if (item is ToolStripSeparator { Visible: false })
             {
@@ -253,7 +259,10 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         }
     }
 
-    public void ShowToolStripContextMenu(Point point) => _toolStripContextMenu.Show(point);
+    public void ShowToolStripContextMenu(Point point)
+    {
+        _toolStripContextMenu.Show(point);
+    }
 
     public void ResetMenuCommandSets()
     {
@@ -262,10 +271,11 @@ internal class FormBrowseMenus : ITranslate, IDisposable
     }
 
     /// <summary>
-    /// Appends the provided <paramref name="menuCommands"/> list to the commands menus specified by <paramref name="mainMenuItem"/>.
+    ///     Appends the provided <paramref name="menuCommands" /> list to the commands menus specified by
+    ///     <paramref name="mainMenuItem" />.
     /// </summary>
     /// <remarks>
-    /// Each new command set will be automatically separated by a separator.
+    ///     Each new command set will be automatically separated by a separator.
     /// </remarks>
     public void AddMenuCommandSet(MainMenuItem mainMenuItem, IEnumerable<MenuCommand> menuCommands)
     {
@@ -309,7 +319,7 @@ internal class FormBrowseMenus : ITranslate, IDisposable
     }
 
     /// <summary>
-    /// Inserts "Navigate" and "View" menus after the <paramref name="insertAfterMenuItem"/>.
+    ///     Inserts "Navigate" and "View" menus after the <paramref name="insertAfterMenuItem" />.
     /// </summary>
     public void InsertRevisionGridMainMenuItems(ToolStripItem insertAfterMenuItem)
     {
@@ -325,7 +335,8 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         SetDropDownItems(_viewToolStripMenuItem, _viewMenuCommands);
 
         _mainMenuStrip.Items.Insert(_mainMenuStrip.Items.IndexOf(insertAfterMenuItem) + 1, _navigateToolStripMenuItem);
-        _mainMenuStrip.Items.Insert(_mainMenuStrip.Items.IndexOf(_navigateToolStripMenuItem) + 1, _viewToolStripMenuItem);
+        _mainMenuStrip.Items.Insert(_mainMenuStrip.Items.IndexOf(_navigateToolStripMenuItem) + 1,
+            _viewToolStripMenuItem);
 
         // We're a bit lying here - "Toolbars" is not a RevisionGrid menu item,
         // however it is the logical place to add it to the "View" menu
@@ -340,40 +351,32 @@ internal class FormBrowseMenus : ITranslate, IDisposable
     }
 
     /// <summary>
-    /// Creates menu items to be added to the main menu of the <see cref="FormBrowse"/>
-    /// (represented by <see cref="_mainMenuStrip"/>).
+    ///     Creates menu items to be added to the main menu of the <see cref="FormBrowse" />
+    ///     (represented by <see cref="_mainMenuStrip" />).
     /// </summary>
     /// <remarks>
-    /// Call in ctor before translation.
+    ///     Call in ctor before translation.
     /// </remarks>
     private void CreateMenuItems()
     {
-        _navigateToolStripMenuItem ??= new ToolStripMenuItem
-        {
-            Name = "navigateToolStripMenuItem",
-            Text = "&Navigate"
-        };
+        _navigateToolStripMenuItem ??= new ToolStripMenuItem { Name = "navigateToolStripMenuItem", Text = "&Navigate" };
 
-        _viewToolStripMenuItem ??= new ToolStripMenuItem
-        {
-            Name = "viewToolStripMenuItem",
-            Text = "&View"
-        };
+        _viewToolStripMenuItem ??= new ToolStripMenuItem { Name = "viewToolStripMenuItem", Text = "&View" };
 
         if (_toolbarsMenuItem is null)
         {
-            _toolbarsMenuItem = new ToolStripMenuItem
-            {
-                Name = "toolbarsMenuItem",
-                Text = "Toolbars",
-            };
-            _toolbarsMenuItem.DropDownOpening += (s, e) => RefreshToolbarsMenuItemCheckedState(_toolbarsMenuItem.DropDownItems);
+            _toolbarsMenuItem = new ToolStripMenuItem { Name = "toolbarsMenuItem", Text = "Toolbars" };
+            _toolbarsMenuItem.DropDownOpening +=
+                (s, e) => RefreshToolbarsMenuItemCheckedState(_toolbarsMenuItem.DropDownItems);
         }
     }
 
     private IEnumerable<(string name, object item)> GetAdditionalMainMenuItemsForTranslation()
     {
-        foreach (ToolStripMenuItem? menuItem in new[] { _navigateToolStripMenuItem, _viewToolStripMenuItem, _toolbarsMenuItem })
+        foreach (var menuItem in new[]
+                 {
+                     _navigateToolStripMenuItem, _viewToolStripMenuItem, _toolbarsMenuItem
+                 })
         {
             Validates.NotNull(menuItem);
 
@@ -386,9 +389,9 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         toolStripMenuItemTarget.DropDownItems.Clear();
 
         List<ToolStripItem> toolStripItems = [];
-        foreach (MenuCommand menuCommand in menuCommands)
+        foreach (var menuCommand in menuCommands)
         {
-            ToolStripItem toolStripItem = MenuCommand.CreateToolStripItem(menuCommand);
+            var toolStripItem = MenuCommand.CreateToolStripItem(menuCommand);
             toolStripItems.Add(toolStripItem);
 
             if (toolStripItem is ToolStripMenuItem toolStripMenuItem)
@@ -423,9 +426,9 @@ internal class FormBrowseMenus : ITranslate, IDisposable
 
     public void OnMenuCommandsPropertyChanged()
     {
-        IEnumerable<MenuCommand> menuCommands = GetNavigateAndViewMenuCommands();
+        var menuCommands = GetNavigateAndViewMenuCommands();
 
-        foreach (MenuCommand menuCommand in menuCommands)
+        foreach (var menuCommand in menuCommands)
         {
             menuCommand.SetCheckForRegisteredMenuItems();
             menuCommand.UpdateMenuItemsShortcutKeyDisplayString();
@@ -438,21 +441,21 @@ internal class FormBrowseMenus : ITranslate, IDisposable
         {
             return [];
         }
-        else if (_navigateMenuCommands is not null && _viewMenuCommands is not null)
+
+        if (_navigateMenuCommands is not null && _viewMenuCommands is not null)
         {
             return _navigateMenuCommands.Concat(_viewMenuCommands);
         }
-        else
-        {
-            throw new ApplicationException("this case is not allowed");
-        }
+
+        throw new ApplicationException("this case is not allowed");
     }
 
     private static void RefreshToolbarsMenuItemCheckedState(ToolStripItemCollection toolStripItems)
     {
         foreach (ToolStripMenuItem item in toolStripItems)
         {
-            DebugHelpers.Assert(item.Tag is ToolStrip, "Toolbars context menu items must reference Toolstrips via Tag property.");
+            DebugHelpers.Assert(item.Tag is ToolStrip,
+                "Toolbars context menu items must reference Toolstrips via Tag property.");
             item.Checked = ((ToolStrip)item.Tag).Visible;
         }
     }

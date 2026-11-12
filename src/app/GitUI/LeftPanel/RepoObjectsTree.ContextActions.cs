@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
@@ -14,35 +15,45 @@ namespace GitUI.LeftPanel;
 
 partial class RepoObjectsTree : IMenuItemFactory
 {
-    private GitRefsSortOrderContextMenuItem _sortOrderContextMenuItem;
-    private GitRefsSortByContextMenuItem _sortByContextMenuItem;
-
     /// <summary>
-    /// Local branch context menu [git ref / rename / delete] actions.
+    ///     Local branch context menu [git ref / rename / delete] actions.
     /// </summary>
     private LocalBranchMenuItems<LocalBranchNode> _localBranchMenuItems;
 
     /// <summary>
-    /// Remote branch context menu [git ref / rename / delete] actions.
+    ///     Remote branch context menu [git ref / rename / delete] actions.
     /// </summary>
     private MenuItemsGenerator<RemoteBranchNode> _remoteBranchMenuItems;
 
+    private GitRefsSortByContextMenuItem _sortByContextMenuItem;
+    private GitRefsSortOrderContextMenuItem _sortOrderContextMenuItem;
+
     /// <summary>
-    /// Tags context menu [git ref] actions.
+    ///     Tags context menu [git ref] actions.
     /// </summary>
     private MenuItemsGenerator<TagNode> _tagNodeMenuItems;
 
+    /// <inheritdoc />
+    TMenuItem IMenuItemFactory.CreateMenuItem<TMenuItem, TNode>(Action<TNode> onClick, TranslationString text,
+        TranslationString toolTip, Bitmap? icon = null)
+    {
+        TMenuItem result = new() { Image = icon, Text = text.Text, ToolTipText = toolTip.Text };
+        RegisterClick(result, onClick);
+        return result;
+    }
+
     private static void EnableMenuItems(bool enabled, params ToolStripItem[] items)
     {
-        foreach (ToolStripItem item in items)
+        foreach (var item in items)
         {
             item.Enable(enabled);
         }
     }
 
-    private static void EnableMenuItems<TNode>(MenuItemsGenerator<TNode> generator, Func<ToolStripItemWithKey, bool> isEnabled) where TNode : class, INode
+    private static void EnableMenuItems<TNode>(MenuItemsGenerator<TNode> generator,
+        Func<ToolStripItemWithKey, bool> isEnabled) where TNode : class, INode
     {
-        foreach (ToolStripItemWithKey item in generator)
+        foreach (var item in generator)
         {
             item.Item.Enable(isEnabled(item));
         }
@@ -60,8 +71,8 @@ partial class RepoObjectsTree : IMenuItemFactory
 
     private void EnableMoveTreeUpDownContexMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleTreeSelected = hasSingleSelection && selectedNode is Tree;
-        TreeNode? treeNode = (selectedNode as Tree)?.TreeViewNode;
+        var isSingleTreeSelected = hasSingleSelection && selectedNode is Tree;
+        var treeNode = (selectedNode as Tree)?.TreeViewNode;
         mnubtnMoveUp.Visible = mnubtnMoveDown.Visible = isSingleTreeSelected;
         mnubtnMoveUp.Enabled = isSingleTreeSelected && treeNode?.PrevNode is not null;
         mnubtnMoveDown.Enabled = isSingleTreeSelected && treeNode?.NextNode is not null;
@@ -69,7 +80,7 @@ partial class RepoObjectsTree : IMenuItemFactory
 
     private void EnableRemoteBranchContextMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleRemoteBranchSelected = hasSingleSelection && selectedNode is RemoteBranchNode;
+        var isSingleRemoteBranchSelected = hasSingleSelection && selectedNode is RemoteBranchNode;
         EnableMenuItems(_remoteBranchMenuItems, _ => isSingleRemoteBranchSelected);
 
         EnableMenuItems(isSingleRemoteBranchSelected, mnubtnFetchOneBranch, mnubtnPullFromRemoteBranch,
@@ -78,30 +89,34 @@ partial class RepoObjectsTree : IMenuItemFactory
 
     private void EnableRemoteRepoContextMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleRemoteRepoSelected = hasSingleSelection && selectedNode is RemoteRepoNode;
-        RemoteRepoNode? remoteRepo = selectedNode as RemoteRepoNode;
+        var isSingleRemoteRepoSelected = hasSingleSelection && selectedNode is RemoteRepoNode;
+        var remoteRepo = selectedNode as RemoteRepoNode;
         mnubtnManageRemotes.Enable(isSingleRemoteRepoSelected);
-        EnableMenuItems(isSingleRemoteRepoSelected && remoteRepo?.Enabled is true, mnubtnFetchAllBranchesFromARemote, mnubtnDisableRemote, mnuBtnPruneAllBranchesFromARemote);
+        EnableMenuItems(isSingleRemoteRepoSelected && remoteRepo?.Enabled is true, mnubtnFetchAllBranchesFromARemote,
+            mnubtnDisableRemote, mnuBtnPruneAllBranchesFromARemote);
         mnuBtnOpenRemoteUrlInBrowser.Enable(isSingleRemoteRepoSelected && remoteRepo?.IsRemoteUrlUsingHttp is true);
-        EnableMenuItems(isSingleRemoteRepoSelected && remoteRepo?.Enabled is false, mnubtnEnableRemote, mnubtnEnableRemoteAndFetch);
+        EnableMenuItems(isSingleRemoteRepoSelected && remoteRepo?.Enabled is false, mnubtnEnableRemote,
+            mnubtnEnableRemoteAndFetch);
     }
 
     private void EnableSortContextMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleRefSelected = hasSingleSelection && selectedNode is IGitRefActions;
+        var isSingleRefSelected = hasSingleSelection && selectedNode is IGitRefActions;
         _sortByContextMenuItem.Enable(isSingleRefSelected);
 
         // If refs are sorted by git (GitRefsSortBy = Default) don't show sort order options
-        bool showSortOrder = AppSettings.RefsSortBy != GitRefsSortBy.Default;
+        var showSortOrder = AppSettings.RefsSortBy != GitRefsSortBy.Default;
         _sortOrderContextMenuItem.Enable(isSingleRefSelected && showSortOrder);
     }
 
     private void EnableWorktreeContextMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleWorktreeSelected = hasSingleSelection && selectedNode is WorktreeNode;
-        WorktreeNode? worktreeNode = selectedNode as WorktreeNode;
-        bool canActOnWorktree = isSingleWorktreeSelected && worktreeNode is { IsCurrent: false, Worktree.IsDeleted: false };
-        bool worktreePathExists = isSingleWorktreeSelected && worktreeNode is not null && Directory.Exists(worktreeNode.Worktree.Path);
+        var isSingleWorktreeSelected = hasSingleSelection && selectedNode is WorktreeNode;
+        var worktreeNode = selectedNode as WorktreeNode;
+        var canActOnWorktree =
+            isSingleWorktreeSelected && worktreeNode is { IsCurrent: false, Worktree.IsDeleted: false };
+        var worktreePathExists = isSingleWorktreeSelected && worktreeNode is not null &&
+                                 Directory.Exists(worktreeNode.Worktree.Path);
 
         // Always show menu items for any worktree node, but disable for current/deleted
         mnubtnOpenWorktree.Enable(isSingleWorktreeSelected);
@@ -115,20 +130,23 @@ partial class RepoObjectsTree : IMenuItemFactory
 
     private void EnableStashContextMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleStashSelected = hasSingleSelection && selectedNode is StashNode;
-        bool isBareRepository = Module.IsBareRepository();
-        EnableMenuItems(isSingleStashSelected && !isBareRepository, mnubtnOpenStash, mnubtnApplyStash, mnubtnPopStash, mnubtnDropStash);
+        var isSingleStashSelected = hasSingleSelection && selectedNode is StashNode;
+        var isBareRepository = Module.IsBareRepository();
+        EnableMenuItems(isSingleStashSelected && !isBareRepository, mnubtnOpenStash, mnubtnApplyStash, mnubtnPopStash,
+            mnubtnDropStash);
     }
 
     private void EnableSubmoduleContextMenu(bool hasSingleSelection, NodeBase? selectedNode)
     {
-        bool isSingleSubmoduleSelected = hasSingleSelection && selectedNode is SubmoduleNode;
-        SubmoduleNode? submoduleNode = selectedNode as SubmoduleNode;
-        bool isBareRepository = Module.IsBareRepository();
+        var isSingleSubmoduleSelected = hasSingleSelection && selectedNode is SubmoduleNode;
+        var submoduleNode = selectedNode as SubmoduleNode;
+        var isBareRepository = Module.IsBareRepository();
         mnubtnOpenSubmodule.Enable(isSingleSubmoduleSelected && submoduleNode?.IsCurrent is false);
         EnableMenuItems(isSingleSubmoduleSelected, mnubtnOpenGESubmodule, mnubtnUpdateSubmodule);
-        EnableMenuItems(isSingleSubmoduleSelected && !isBareRepository && submoduleNode?.IsCurrent is true, mnubtnManageSubmodules, mnubtnSynchronizeSubmodules);
-        EnableMenuItems(isSingleSubmoduleSelected && !isBareRepository, mnubtnResetSubmodule, mnubtnStashSubmodule, mnubtnCommitSubmodule);
+        EnableMenuItems(isSingleSubmoduleSelected && !isBareRepository && submoduleNode?.IsCurrent is true,
+            mnubtnManageSubmodules, mnubtnSynchronizeSubmodules);
+        EnableMenuItems(isSingleSubmoduleSelected && !isBareRepository, mnubtnResetSubmodule, mnubtnStashSubmodule,
+            mnubtnCommitSubmodule);
     }
 
     private static void RegisterClick(ToolStripItem item, Action onClick)
@@ -141,19 +159,21 @@ partial class RepoObjectsTree : IMenuItemFactory
         item.Click += (o, e) => Node.OnNode(treeMain.SelectedNode, onClick);
     }
 
-    [MemberNotNull(nameof(_sortByContextMenuItem), nameof(_sortOrderContextMenuItem), nameof(_localBranchMenuItems), nameof(_remoteBranchMenuItems), nameof(_tagNodeMenuItems))]
+    [MemberNotNull(nameof(_sortByContextMenuItem), nameof(_sortOrderContextMenuItem), nameof(_localBranchMenuItems),
+        nameof(_remoteBranchMenuItems), nameof(_tagNodeMenuItems))]
     private void RegisterContextActions()
     {
         copyContextMenuItem.SetRevisionFunc(() => _revisionGridInfo.GetSelectedRevisions());
 
         // Filter for selected
-        filterForSelectedRefsMenuItem.ToolTipText = "Filter the revision grid to show selected (underlined) refs (branches and tags) only." +
+        filterForSelectedRefsMenuItem.ToolTipText =
+            "Filter the revision grid to show selected (underlined) refs (branches and tags) only." +
             "\nHold CTRL while clicking to de/select multiple and include descendant tree nodes by additionally holding SHIFT." +
             "\nReset the filter via View > Show all branches.";
 
         RegisterClick(filterForSelectedRefsMenuItem, () =>
         {
-            IEnumerable<string> refPaths = GetSelectedNodes().OfType<IGitRefActions>().Select(b => b.FullPath);
+            var refPaths = GetSelectedNodes().OfType<IGitRefActions>().Select(b => b.FullPath);
             _filterRevisionGridBySpaceSeparatedRefs(refPaths.Join(" "));
         });
 
@@ -161,12 +181,15 @@ partial class RepoObjectsTree : IMenuItemFactory
         _tagNodeMenuItems = new TagMenuItems<TagNode>(this);
         _remoteBranchMenuItems = new RemoteBranchMenuItems<RemoteBranchNode>(this);
         _localBranchMenuItems = new LocalBranchMenuItems<LocalBranchNode>(this);
-        menuMain.InsertItems(_tagNodeMenuItems.Select(s => s.Item).Prepend(new ToolStripSeparator()), after: filterForSelectedRefsMenuItem);
-        menuMain.InsertItems(_remoteBranchMenuItems.Select(s => s.Item).Prepend(new ToolStripSeparator()), after: filterForSelectedRefsMenuItem);
-        menuMain.InsertItems(_localBranchMenuItems.Select(s => s.Item).Prepend(new ToolStripSeparator()), after: filterForSelectedRefsMenuItem);
+        menuMain.InsertItems(_tagNodeMenuItems.Select(s => s.Item).Prepend(new ToolStripSeparator()),
+            after: filterForSelectedRefsMenuItem);
+        menuMain.InsertItems(_remoteBranchMenuItems.Select(s => s.Item).Prepend(new ToolStripSeparator()),
+            after: filterForSelectedRefsMenuItem);
+        menuMain.InsertItems(_localBranchMenuItems.Select(s => s.Item).Prepend(new ToolStripSeparator()),
+            after: filterForSelectedRefsMenuItem);
 
         // Remotes Tree
-        RegisterClick(mnuBtnManageRemotesFromRootNode, () => _remotesTree.PopupManageRemotesForm(remoteName: null));
+        RegisterClick(mnuBtnManageRemotesFromRootNode, () => _remotesTree.PopupManageRemotesForm(null));
         RegisterClick(mnuBtnFetchAllRemotes, () => _remotesTree.FetchAll());
         RegisterClick(mnuBtnPruneAllRemotes, () => _remotesTree.FetchPruneAll());
 
@@ -176,9 +199,9 @@ partial class RepoObjectsTree : IMenuItemFactory
         RegisterClick<RemoteRepoNode>(mnuBtnPruneAllBranchesFromARemote, remote => remote.Prune());
         RegisterClick<RemoteRepoNode>(mnuBtnOpenRemoteUrlInBrowser, remote => remote.OpenRemoteUrlInBrowser());
         mnubtnEnableRemote.AdaptImageLightness();
-        RegisterClick<RemoteRepoNode>(mnubtnEnableRemote, remote => remote.Enable(fetch: false));
+        RegisterClick<RemoteRepoNode>(mnubtnEnableRemote, remote => remote.Enable(false));
         mnubtnEnableRemoteAndFetch.AdaptImageLightness();
-        RegisterClick<RemoteRepoNode>(mnubtnEnableRemoteAndFetch, remote => remote.Enable(fetch: true));
+        RegisterClick<RemoteRepoNode>(mnubtnEnableRemoteAndFetch, remote => remote.Enable(true));
         mnubtnDisableRemote.AdaptImageLightness();
         RegisterClick<RemoteRepoNode>(mnubtnDisableRemote, remote => remote.Disable());
 
@@ -195,7 +218,8 @@ partial class RepoObjectsTree : IMenuItemFactory
         // RemoteBranchNode
         RegisterClick<RemoteBranchNode>(mnubtnFetchOneBranch, remoteBranch => remoteBranch.Fetch());
         RegisterClick<RemoteBranchNode>(mnubtnPullFromRemoteBranch, remoteBranch => remoteBranch.FetchAndMerge());
-        RegisterClick<RemoteBranchNode>(mnubtnRemoteBranchFetchAndCheckout, remoteBranch => remoteBranch.FetchAndCheckout());
+        RegisterClick<RemoteBranchNode>(mnubtnRemoteBranchFetchAndCheckout,
+            remoteBranch => remoteBranch.FetchAndCheckout());
         RegisterClick<RemoteBranchNode>(mnubtnFetchCreateBranch, remoteBranch => remoteBranch.FetchAndCreateBranch());
         RegisterClick<RemoteBranchNode>(mnubtnFetchRebase, remoteBranch => remoteBranch.FetchAndRebase());
 
@@ -219,20 +243,28 @@ partial class RepoObjectsTree : IMenuItemFactory
         RegisterClick<WorktreeNode>(mnubtnOpenWorktree, node => node.OpenWorktree());
         RegisterClick<WorktreeNode>(mnubtnDeleteWorktree, node => node.DeleteWorktree());
         RegisterClick<WorktreeNode>(mnubtnCopyWorktreePath, node => ClipboardUtil.TrySetText(node.Worktree.Path));
-        RegisterClick<WorktreeNode>(mnubtnShowWorktreeInFolder, node => OsShellUtil.OpenWithFileExplorer(node.Worktree.Path));
+        RegisterClick<WorktreeNode>(mnubtnShowWorktreeInFolder,
+            node => OsShellUtil.OpenWithFileExplorer(node.Worktree.Path));
 
         // Expand / Collapse
-        RegisterClick(mnubtnCollapse, () => GetSelectedNodes().HavingChildren().Collapsible().ForEach(node => node.TreeViewNode.Collapse()));
-        RegisterClick(mnubtnExpand, () => GetSelectedNodes().HavingChildren().Expandable().ForEach(node => node.TreeViewNode.ExpandAll()));
+        RegisterClick(mnubtnCollapse,
+            () => GetSelectedNodes().HavingChildren().Collapsible().ForEach(node => node.TreeViewNode.Collapse()));
+        RegisterClick(mnubtnExpand,
+            () => GetSelectedNodes().HavingChildren().Expandable().ForEach(node => node.TreeViewNode.ExpandAll()));
 
         // Move up / down (for top level Trees)
-        RegisterClick(mnubtnMoveUp, () => ReorderTreeNode(treeMain.SelectedNode!, up: true));
-        RegisterClick(mnubtnMoveDown, () => ReorderTreeNode(treeMain.SelectedNode!, up: false));
+        RegisterClick(mnubtnMoveUp, () => ReorderTreeNode(treeMain.SelectedNode!, true));
+        RegisterClick(mnubtnMoveDown, () => ReorderTreeNode(treeMain.SelectedNode!, false));
 
         // Sort by / order
-        _sortByContextMenuItem = new GitRefsSortByContextMenuItem(() => ResortRefs(new FilteredGitRefsProvider(UICommands.Module).GetRefs));
-        _sortOrderContextMenuItem = new GitRefsSortOrderContextMenuItem(() => ResortRefs(new FilteredGitRefsProvider(UICommands.Module).GetRefs));
-        menuMain.InsertItems(new ToolStripItem[] { new ToolStripSeparator(), _sortByContextMenuItem, _sortOrderContextMenuItem }, after: mnubtnMoveDown);
+        _sortByContextMenuItem =
+            new GitRefsSortByContextMenuItem(() => ResortRefs(new FilteredGitRefsProvider(UiCommands.Module).GetRefs));
+        _sortOrderContextMenuItem =
+            new GitRefsSortOrderContextMenuItem(() =>
+                ResortRefs(new FilteredGitRefsProvider(UiCommands.Module).GetRefs));
+        menuMain.InsertItems(
+            new ToolStripItem[] { new ToolStripSeparator(), _sortByContextMenuItem, _sortOrderContextMenuItem },
+            after: mnubtnMoveDown);
     }
 
     private void contextMenu_Opening(object sender, CancelEventArgs e)
@@ -243,17 +275,19 @@ partial class RepoObjectsTree : IMenuItemFactory
         }
 
         NodeBase[] selectedNodes = [.. GetSelectedNodes()];
-        bool hasSingleSelection = selectedNodes.Length == 1;
-        NodeBase? selectedNode = treeMain.SelectedNode?.Tag as NodeBase;
+        var hasSingleSelection = selectedNodes.Length == 1;
+        var selectedNode = treeMain.SelectedNode?.Tag as NodeBase;
 
-        copyContextMenuItem.Enable(hasSingleSelection && (selectedNode is BaseBranchLeafNode or StashNode) && selectedNode.Visible);
-        filterForSelectedRefsMenuItem.Enable(selectedNodes.OfType<IGitRefActions>().Any()); // enable if selection contains refs
+        copyContextMenuItem.Enable(hasSingleSelection && selectedNode is BaseBranchLeafNode or StashNode &&
+                                   selectedNode.Visible);
+        filterForSelectedRefsMenuItem.Enable(selectedNodes.OfType<IGitRefActions>()
+            .Any()); // enable if selection contains refs
 
-        LocalBranchNode? selectedLocalBranch = selectedNode as LocalBranchNode;
+        var selectedLocalBranch = selectedNode as LocalBranchNode;
 
-        foreach (ToolStripItemWithKey item in _localBranchMenuItems)
+        foreach (var item in _localBranchMenuItems)
         {
-            bool visible = hasSingleSelection && selectedLocalBranch != null;
+            var visible = hasSingleSelection && selectedLocalBranch != null;
             item.Item.Visible = visible; // only display for single-selected branch
 
             /* Enabled items must also be visible; cancellation of menu opening below relies on it.
@@ -261,27 +295,33 @@ partial class RepoObjectsTree : IMenuItemFactory
              * because the ContextMenuStrip as the visual parent is not Visible on Opening. */
             item.Item.Enabled = visible
 
-                // enable all items for non-current branches or only those applying to the current branch
-                && (selectedLocalBranch?.IsCurrent == false || LocalBranchMenuItems<LocalBranchNode>.CurrentBranchItemKeys.Contains(item.Key));
+                                // enable all items for non-current branches or only those applying to the current branch
+                                && (selectedLocalBranch?.IsCurrent == false ||
+                                    LocalBranchMenuItems<LocalBranchNode>.CurrentBranchItemKeys.Contains(item.Key));
         }
 
         EnableRemoteBranchContextMenu(hasSingleSelection, selectedNode);
         EnableMenuItems(_tagNodeMenuItems, _ => hasSingleSelection && selectedNode is TagNode);
-        EnableMenuItems(hasSingleSelection && selectedNode is RemoteBranchTree, mnuBtnManageRemotesFromRootNode, mnuBtnFetchAllRemotes, mnuBtnPruneAllRemotes);
+        EnableMenuItems(hasSingleSelection && selectedNode is RemoteBranchTree, mnuBtnManageRemotesFromRootNode,
+            mnuBtnFetchAllRemotes, mnuBtnPruneAllRemotes);
         EnableRemoteRepoContextMenu(hasSingleSelection, selectedNode);
-        EnableMenuItems(hasSingleSelection && selectedNode is StashTree, mnubtnStashAllFromRootNode, mnubtnStashStagedFromRootNode, mnubtnManageStashFromRootNode);
+        EnableMenuItems(hasSingleSelection && selectedNode is StashTree, mnubtnStashAllFromRootNode,
+            mnubtnStashStagedFromRootNode, mnubtnManageStashFromRootNode);
         EnableStashContextMenu(hasSingleSelection, selectedNode);
         EnableSubmoduleContextMenu(hasSingleSelection, selectedNode);
         EnableWorktreeContextMenu(hasSingleSelection, selectedNode);
-        EnableMenuItems(hasSingleSelection && selectedNode is WorktreeTree, mnubtnCreateWorktreeFromRootNode, mnubtnPruneWorktreesFromRootNode, mnubtnManageWorktreesFromRootNode);
-        EnableMenuItems(hasSingleSelection && selectedNode is BranchPathNode, mnubtnCreateBranch, mnubtnDeleteAllBranches);
+        EnableMenuItems(hasSingleSelection && selectedNode is WorktreeTree, mnubtnCreateWorktreeFromRootNode,
+            mnubtnPruneWorktreesFromRootNode, mnubtnManageWorktreesFromRootNode);
+        EnableMenuItems(hasSingleSelection && selectedNode is BranchPathNode, mnubtnCreateBranch,
+            mnubtnDeleteAllBranches);
         EnableExpandCollapseContextMenu(selectedNodes);
         EnableMoveTreeUpDownContexMenu(hasSingleSelection, selectedNode);
         EnableSortContextMenu(hasSingleSelection, selectedNode);
 
         if (hasSingleSelection && selectedLocalBranch?.Visible == true)
         {
-            contextMenu.AddUserScripts(runScriptToolStripMenuItem, ExecuteCommand, script => script.AddToRevisionGridContextMenu, UICommands);
+            contextMenu.AddUserScripts(runScriptToolStripMenuItem, ExecuteCommand,
+                script => script.AddToRevisionGridContextMenu, UiCommands);
         }
         else
         {
@@ -310,20 +350,5 @@ partial class RepoObjectsTree : IMenuItemFactory
         {
             contextMenu.Top = Cursor.Position.Y;
         }
-    }
-
-    /// <inheritdoc />
-    public TMenuItem CreateMenuItem<TMenuItem, TNode>(Action<TNode> onClick, TranslationString text, TranslationString toolTip, Bitmap? icon = null)
-        where TMenuItem : ToolStripItem, new()
-        where TNode : class, INode
-    {
-        TMenuItem result = new()
-        {
-            Image = icon,
-            Text = text.Text,
-            ToolTipText = toolTip.Text
-        };
-        RegisterClick(result, onClick);
-        return result;
     }
 }

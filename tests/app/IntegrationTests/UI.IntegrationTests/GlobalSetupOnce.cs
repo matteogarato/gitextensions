@@ -1,13 +1,15 @@
-﻿using Xunit;
+﻿using UITests;
 
 [assembly: AssemblyFixture(typeof(GlobalSetupOnce))]
 
 // No namespace, so it runs for all tests.
 #pragma warning disable CA1050 // Declare types in namespaces
+namespace UITests;
+
 public sealed class GlobalSetupOnce : IAsyncLifetime
 #pragma warning restore CA1050 // Declare types in namespaces
 {
-    public ValueTask InitializeAsync()
+    ValueTask IAsyncLifetime.InitializeAsync()
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
@@ -15,5 +17,8 @@ public sealed class GlobalSetupOnce : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
 }

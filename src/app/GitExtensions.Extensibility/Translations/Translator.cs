@@ -4,7 +4,7 @@ namespace GitExtensions.Extensibility.Translations;
 
 public static class Translator
 {
-    private const string EnglishTranslationName = "English";
+    private const string _englishTranslationName = "English";
 
     // Try to cache the translation as long as possible
     private static IDictionary<string, TranslationFile> _translation = new Dictionary<string, TranslationFile>();
@@ -19,14 +19,14 @@ public static class Translator
         else if (translationName != _name)
         {
             _translation = new Dictionary<string, TranslationFile>();
-            string translationsDir = GetTranslationDir();
+            var translationsDir = GetTranslationDir();
             if (Directory.Exists(translationsDir))
             {
-                IEnumerable<string> result = Directory.EnumerateFiles(translationsDir, translationName + "*.xlf");
-                foreach (string file in result)
+                var result = Directory.EnumerateFiles(translationsDir, translationName + "*.xlf");
+                foreach (var file in result)
                 {
-                    string name = Path.GetFileNameWithoutExtension(file)[translationName.Length..];
-                    TranslationFile t = TranslationSerializer.Deserialize(file) ??
+                    var name = Path.GetFileNameWithoutExtension(file)[translationName.Length..];
+                    var t = TranslationSerializer.Deserialize(file) ??
                             new TranslationFile();
                     t.SourceLanguage = t.TranslationCategories.FirstOrDefault()?.SourceLanguage;
                     t.TargetLanguage = t.TranslationCategories.FirstOrDefault()?.TargetLanguage;
@@ -49,21 +49,21 @@ public static class Translator
         List<string> translations = [];
         try
         {
-            string translationDir = GetTranslationDir();
+            var translationDir = GetTranslationDir();
             if (!Directory.Exists(translationDir))
             {
                 return [];
             }
 
-            foreach (string fileName in Directory.GetFiles(translationDir, "*.xlf"))
+            foreach (var fileName in Directory.GetFiles(translationDir, "*.xlf"))
             {
-                string name = Path.GetFileNameWithoutExtension(fileName);
+                var name = Path.GetFileNameWithoutExtension(fileName);
                 if (name.IndexOf('.') > 0)
                 {
                     continue;
                 }
 
-                if (string.Compare(EnglishTranslationName, name, StringComparison.CurrentCultureIgnoreCase) == 0)
+                if (string.Compare(_englishTranslationName, name, StringComparison.CurrentCultureIgnoreCase) == 0)
                 {
                     continue;
                 }
@@ -80,13 +80,13 @@ public static class Translator
 
     public static void Translate(ITranslate obj, string? translationName)
     {
-        IDictionary<string, TranslationFile> translation = GetTranslation(translationName);
+        var translation = GetTranslation(translationName);
         if (translation.Count == 0)
         {
             return;
         }
 
-        foreach (KeyValuePair<string, TranslationFile> pair in translation)
+        foreach (var pair in translation)
         {
             obj.TranslateItems(pair.Value);
         }

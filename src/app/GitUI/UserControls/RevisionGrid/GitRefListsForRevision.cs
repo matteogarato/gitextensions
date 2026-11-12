@@ -1,13 +1,13 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid;
 
 internal sealed class GitRefListsForRevision
 {
     private readonly IGitRef[] _allBranches;
-    private readonly IGitRef[] _localBranches;
     private readonly IGitRef[] _branchesWithNoIdenticalRemotes;
+    private readonly IGitRef[] _localBranches;
     private readonly IGitRef[] _tags;
 
     public GitRefListsForRevision(GitRevision revision)
@@ -21,19 +21,34 @@ internal sealed class GitRefListsForRevision
 
         _allBranches = [.. revision.Refs.Where(h => !h.IsTag && (h.IsHead || h.IsRemote))];
         _localBranches = Array.FindAll(_allBranches, b => !b.IsRemote);
-        _branchesWithNoIdenticalRemotes = [.. _allBranches.Where(b => !b.IsRemote ||
-                                                                  !_localBranches.Any(lb => lb.IsTrackingRemote(b)))];
+        _branchesWithNoIdenticalRemotes =
+        [
+            .. _allBranches.Where(b => !b.IsRemote ||
+                                       !_localBranches.Any(lb => lb.IsTrackingRemote(b)))
+        ];
 
         _tags = [.. revision.Refs.Where(h => h.IsTag)];
     }
 
-    public IReadOnlyList<IGitRef> LocalBranches => _localBranches;
+    public IReadOnlyList<IGitRef> LocalBranches
+    {
+        get => _localBranches;
+    }
 
-    public IReadOnlyList<IGitRef> AllBranches => _allBranches;
+    public IReadOnlyList<IGitRef> AllBranches
+    {
+        get => _allBranches;
+    }
 
-    public IReadOnlyList<IGitRef> AllTags => _tags;
+    public IReadOnlyList<IGitRef> AllTags
+    {
+        get => _tags;
+    }
 
-    public IReadOnlyList<IGitRef> BranchesWithNoIdenticalRemotes => _branchesWithNoIdenticalRemotes;
+    public IReadOnlyList<IGitRef> BranchesWithNoIdenticalRemotes
+    {
+        get => _branchesWithNoIdenticalRemotes;
+    }
 
     public IReadOnlyList<string> GetAllBranchNames()
     {
@@ -46,7 +61,7 @@ internal sealed class GitRefListsForRevision
     }
 
     /// <summary>
-    /// Returns the collection of branches and tags which can be deleted.
+    ///     Returns the collection of branches and tags which can be deleted.
     /// </summary>
     public IReadOnlyList<IGitRef> GetDeletableRefs(string currentBranch)
     {
@@ -54,7 +69,7 @@ internal sealed class GitRefListsForRevision
     }
 
     /// <summary>
-    /// Returns the collection of local branches which can be renamed.
+    ///     Returns the collection of local branches which can be renamed.
     /// </summary>
     public IReadOnlyList<IGitRef> GetRenameableLocalBranches()
     {

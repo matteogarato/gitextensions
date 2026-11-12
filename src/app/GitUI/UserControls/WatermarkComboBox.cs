@@ -5,7 +5,7 @@ using GitExtensions.Extensibility.Translations.Xliff;
 namespace GitUI.UserControls;
 
 /// <summary>
-///  A ComboBox control with built-in watermark text functionality.
+///     A ComboBox control with built-in watermark text functionality.
 /// </summary>
 [ToolboxItem(true)]
 [Description("A ComboBox control with built-in watermark text functionality.")]
@@ -13,11 +13,11 @@ namespace GitUI.UserControls;
 public sealed class WatermarkComboBox : ComboBox
 {
     private readonly Color _watermarkColor = SystemColors.GrayText;
-    private Font? _watermarkFont;
+    private bool _isInitialized;
     private Font? _originalFont;
     private Color _originalForeColor;
-    private bool _isInitialized;
     private bool _suppressEvents;
+    private Font? _watermarkFont;
 
     public WatermarkComboBox()
     {
@@ -25,7 +25,7 @@ public sealed class WatermarkComboBox : ComboBox
     }
 
     /// <summary>
-    ///  Gets or sets the watermark text to display when the ComboBox is empty.
+    ///     Gets or sets the watermark text to display when the ComboBox is empty.
     /// </summary>
     [Category("Appearance")]
     [Description("The watermark text to display when the ComboBox is empty.")]
@@ -35,7 +35,7 @@ public sealed class WatermarkComboBox : ComboBox
         get;
         set
         {
-            string val = value ?? string.Empty;
+            var val = value ?? string.Empty;
             if (field == val)
             {
                 return;
@@ -51,13 +51,13 @@ public sealed class WatermarkComboBox : ComboBox
     }
 
     /// <summary>
-    ///  Gets a value indicating whether the watermark is currently visible.
+    ///     Gets a value indicating whether the watermark is currently visible.
     /// </summary>
     [Browsable(false)]
     public bool IsWatermarkVisible { get; private set; }
 
     /// <summary>
-    ///  Gets or sets the text associated with this control, handling watermark display automatically.
+    ///     Gets or sets the text associated with this control, handling watermark display automatically.
     /// </summary>
     [AllowNull]
     public override string Text
@@ -65,7 +65,7 @@ public sealed class WatermarkComboBox : ComboBox
         get => IsWatermarkVisible ? string.Empty : base.Text;
         set
         {
-            string val = value ?? string.Empty;
+            var val = value ?? string.Empty;
             if (IsWatermarkVisible && val == Watermark)
             {
                 return;
@@ -73,7 +73,7 @@ public sealed class WatermarkComboBox : ComboBox
 
             if (IsWatermarkVisible)
             {
-                HideWatermark(resetText: false);
+                HideWatermark(false);
             }
 
             base.Text = val;
@@ -85,6 +85,11 @@ public sealed class WatermarkComboBox : ComboBox
         }
     }
 
+    internal string BaseText
+    {
+        get => base.Text;
+    }
+
     protected override void OnCreateControl()
     {
         base.OnCreateControl();
@@ -93,7 +98,7 @@ public sealed class WatermarkComboBox : ComboBox
 
         if (Focused)
         {
-            HideWatermark(resetText: true);
+            HideWatermark(true);
             return;
         }
 
@@ -106,7 +111,7 @@ public sealed class WatermarkComboBox : ComboBox
     protected override void OnEnter(EventArgs e)
     {
         base.OnEnter(e);
-        HideWatermark(resetText: true);
+        HideWatermark(true);
     }
 
     protected override void OnLeave(EventArgs e)
@@ -115,7 +120,7 @@ public sealed class WatermarkComboBox : ComboBox
 
         if (ShouldWatermarkBeVisible(base.Text))
         {
-            ShowWatermark(leaving: true);
+            ShowWatermark(true);
         }
     }
 
@@ -134,7 +139,7 @@ public sealed class WatermarkComboBox : ComboBox
         }
         else
         {
-            HideWatermark(resetText: false);
+            HideWatermark(false);
         }
     }
 
@@ -142,8 +147,9 @@ public sealed class WatermarkComboBox : ComboBox
     {
         base.OnFontChanged(e);
 
-        Font currentFont = Font;
-        if (!IsWatermarkVisible && _isInitialized && !currentFont.Equals(_watermarkFont) && !currentFont.Equals(_originalFont))
+        var currentFont = Font;
+        if (!IsWatermarkVisible && _isInitialized && !currentFont.Equals(_watermarkFont) &&
+            !currentFont.Equals(_originalFont))
         {
             _originalFont = currentFont;
             UpdateWatermarkFont();
@@ -187,7 +193,8 @@ public sealed class WatermarkComboBox : ComboBox
 
     private void ShowWatermark(bool leaving = false)
     {
-        if ((IsWatermarkVisible && base.Text == Watermark) || !_isInitialized || (!leaving && Focused) || string.IsNullOrEmpty(Watermark))
+        if ((IsWatermarkVisible && base.Text == Watermark) || !_isInitialized || (!leaving && Focused) ||
+            string.IsNullOrEmpty(Watermark))
         {
             return;
         }
@@ -237,7 +244,7 @@ public sealed class WatermarkComboBox : ComboBox
     }
 
     /// <summary>
-    ///  Prevent text change events.
+    ///     Prevent text change events.
     /// </summary>
     private void ActWithEventsSuppressed(Action action)
     {
@@ -252,9 +259,10 @@ public sealed class WatermarkComboBox : ComboBox
         }
     }
 
-    internal string BaseText => base.Text;
-
-    internal TestAccessor GetTestAccessor() => new(this);
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor
     {
@@ -265,6 +273,9 @@ public sealed class WatermarkComboBox : ComboBox
             _comboBox = comboBox;
         }
 
-        internal string BaseText => _comboBox.BaseText;
+        internal string BaseText
+        {
+            get => _comboBox.BaseText;
+        }
     }
 }

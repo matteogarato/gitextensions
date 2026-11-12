@@ -9,16 +9,17 @@ internal sealed class PropertySorter : ExpandableObjectConverter
         return true;
     }
 
-    public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object value, Attribute[]? attributes)
+    public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object value,
+        Attribute[]? attributes)
     {
-        PropertyDescriptorCollection pdc = TypeDescriptor.GetProperties(value, attributes);
+        var pdc = TypeDescriptor.GetProperties(value, attributes);
         List<(string name, int order)> orderedProperties = [];
         foreach (PropertyDescriptor pd in pdc)
         {
-            Attribute? attribute = pd.Attributes[typeof(PropertyOrderAttribute)];
+            var attribute = pd.Attributes[typeof(PropertyOrderAttribute)];
             if (attribute is not null)
             {
-                PropertyOrderAttribute poa = (PropertyOrderAttribute)attribute;
+                var poa = (PropertyOrderAttribute)attribute;
                 orderedProperties.Add((pd.Name, poa.Order));
             }
             else

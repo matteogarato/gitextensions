@@ -2,34 +2,34 @@
 using CommonTestUtils;
 using GitCommands.Config;
 using GitCommands.Remotes;
-using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests.Remote;
+
 public class ConfigFileRemoteSettingsManagerTests : IDisposable
 {
-    private CultureInfo _currentCulture = null!;
-    private CultureInfo _currentUICulture = null!;
+    private readonly CultureInfo _currentCulture = null!;
+    private readonly CultureInfo _currentUiCulture = null!;
+    private readonly IConfigFileRemoteSettingsManager _remotesManager = null!;
     private IGitModule _module = null!;
-    private IConfigFileRemoteSettingsManager _remotesManager = null!;
 
     public ConfigFileRemoteSettingsManagerTests()
     {
         _currentCulture = CultureInfo.CurrentCulture;
-        _currentUICulture = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentCulture = new("en-US");
-        CultureInfo.CurrentUICulture = new("en-US");
+        _currentUiCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentCulture = new CultureInfo("en-US");
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
 
         _module = Substitute.For<IGitModule>();
 
         _remotesManager = new ConfigFileRemoteSettingsManager(() => _module);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         CultureInfo.CurrentCulture = _currentCulture;
-        CultureInfo.CurrentUICulture = _currentUICulture;
+        CultureInfo.CurrentUICulture = _currentUiCulture;
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     {
         _module.GetRemoteNames().Returns(x => []);
 
-        IEnumerable<ConfigFileRemote> remotes = _remotesManager.LoadRemotes(true);
+        var remotes = _remotesManager.LoadRemotes(true);
 
         remotes.Should().BeEmpty();
         _module.Received(1).GetRemoteNames();
@@ -58,7 +58,7 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     {
         _module.GetRemoteNames().Returns(x => new[] { null!, "", " ", "    ", "\t" });
 
-        IEnumerable<ConfigFileRemote> remotes = _remotesManager.LoadRemotes(true);
+        var remotes = _remotesManager.LoadRemotes(true);
 
         remotes.Should().BeEmpty();
         _module.Received(1).GetRemoteNames();
@@ -74,10 +74,14 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
         const string remoteName1 = "name1";
         const string remoteName2 = "name2";
         _module.GetRemoteNames().Returns(x => new[] { null!, "", " ", "    ", remoteName1, "\t" });
-        (string Setting, string Value)[] settings = [($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{remoteName2}.dummy-name", "dummy value")];
+        (string Setting, string Value)[] settings =
+        [
+            ($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{remoteName2}.dummy-name",
+                "dummy value")
+        ];
         _module.GetAllLocalSettings().Returns(x => settings);
 
-        IEnumerable<ConfigFileRemote> remotes = _remotesManager.LoadRemotes(loadDisabled);
+        var remotes = _remotesManager.LoadRemotes(loadDisabled);
 
         remotes.Should().HaveCount(loadDisabled ? 2 : 1);
 
@@ -87,12 +91,16 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
         _module.Received(1).GetSetting(string.Format(SettingKeyString.RemotePuttySshKey, remoteName1));
         _module.Received(1).GetSettings(string.Format(SettingKeyString.RemotePush, remoteName1));
 
-        int count = loadDisabled ? 1 : 0;
+        var count = loadDisabled ? 1 : 0;
         _module.Received(count).GetAllLocalSettings();
-        _module.Received(count).GetSetting(ConfigFileRemoteSettingsManager.DisabledSectionPrefix + string.Format(SettingKeyString.RemoteUrl, remoteName2));
-        _module.Received(count).GetSetting(ConfigFileRemoteSettingsManager.DisabledSectionPrefix + string.Format(SettingKeyString.RemotePushUrl, remoteName2));
-        _module.Received(count).GetSetting(ConfigFileRemoteSettingsManager.DisabledSectionPrefix + string.Format(SettingKeyString.RemotePuttySshKey, remoteName2));
-        _module.Received(count).GetSettings(ConfigFileRemoteSettingsManager.DisabledSectionPrefix + string.Format(SettingKeyString.RemotePush, remoteName2));
+        _module.Received(count).GetSetting(ConfigFileRemoteSettingsManager.DisabledSectionPrefix +
+                                           string.Format(SettingKeyString.RemoteUrl, remoteName2));
+        _module.Received(count).GetSetting(ConfigFileRemoteSettingsManager.DisabledSectionPrefix +
+                                           string.Format(SettingKeyString.RemotePushUrl, remoteName2));
+        _module.Received(count).GetSetting(ConfigFileRemoteSettingsManager.DisabledSectionPrefix +
+                                           string.Format(SettingKeyString.RemotePuttySshKey, remoteName2));
+        _module.Received(count).GetSettings(ConfigFileRemoteSettingsManager.DisabledSectionPrefix +
+                                            string.Format(SettingKeyString.RemotePush, remoteName2));
     }
 
     [Fact]
@@ -115,12 +123,17 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [Fact]
     public void SaveRemote_should_throw_if_remoteName_is_null_or_empty()
     {
-        ((Action)(() => _remotesManager.SaveRemote(null, null!, "b", "c", "d", "e", "f"))).Should().Throw<ArgumentNullException>()
+        ((Action)(() => _remotesManager.SaveRemote(null, null!, "b", "c", "d", "e", "f"))).Should()
+            .Throw<ArgumentNullException>()
             .WithMessage("Value cannot be null. (Parameter 'remoteName')");
-        ((Action)(() => _remotesManager.SaveRemote(null, "", "b", "c", "d", "e", "f"))).Should().Throw<ArgumentException>()
-            .WithMessage("The value cannot be an empty string or composed entirely of whitespace. (Parameter 'remoteName')");
-        ((Action)(() => _remotesManager.SaveRemote(null, "  ", "b", "c", "d", "e", "f"))).Should().Throw<ArgumentException>()
-            .WithMessage("The value cannot be an empty string or composed entirely of whitespace. (Parameter 'remoteName')");
+        ((Action)(() => _remotesManager.SaveRemote(null, "", "b", "c", "d", "e", "f"))).Should()
+            .Throw<ArgumentException>()
+            .WithMessage(
+                "The value cannot be an empty string or composed entirely of whitespace. (Parameter 'remoteName')");
+        ((Action)(() => _remotesManager.SaveRemote(null, "  ", "b", "c", "d", "e", "f"))).Should()
+            .Throw<ArgumentException>()
+            .WithMessage(
+                "The value cannot be an empty string or composed entirely of whitespace. (Parameter 'remoteName')");
     }
 
     [Fact]
@@ -131,7 +144,8 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
         const string output = "";
         _module.AddRemote(Arg.Any<string>(), Arg.Any<string>()).Returns(x => output);
 
-        ConfigFileRemoteSaveResult result = _remotesManager.SaveRemote(null, remoteName, remoteUrl, null, null!, null, null);
+        var result =
+            _remotesManager.SaveRemote(null, remoteName, remoteUrl, null, null!, null, null);
 
         result.UserMessage.Should().Be(output);
         result.ShouldUpdateRemote.Should().BeTrue();
@@ -150,7 +164,8 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
         const string output = "";
         _module.AddRemote(Arg.Any<string>(), Arg.Any<string>()).Returns(x => output);
 
-        ConfigFileRemoteSaveResult result = _remotesManager.SaveRemote(null, remoteName, remoteUrl, remotePushUrl, remotePuttySshKey, remoteColor, remotePrefix);
+        var result = _remotesManager.SaveRemote(null, remoteName, remoteUrl, remotePushUrl,
+            remotePuttySshKey, remoteColor, remotePrefix);
 
         result.UserMessage.Should().Be(output);
         result.ShouldUpdateRemote.Should().BeTrue();
@@ -169,7 +184,8 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
         ConfigFileRemote gitRemote = new() { Name = "old", Url = remoteUrl };
         _module.RenameRemote(Arg.Any<string>(), Arg.Any<string>()).Returns(x => output);
 
-        ConfigFileRemoteSaveResult result = _remotesManager.SaveRemote(gitRemote, remoteName, remoteUrl, null, null!, null, null);
+        var result =
+            _remotesManager.SaveRemote(gitRemote, remoteName, remoteUrl, null, null!, null, null);
 
         result.UserMessage.Should().Be(output);
         result.ShouldUpdateRemote.Should().BeFalse();
@@ -185,7 +201,8 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
         ConfigFileRemote gitRemote = new() { Name = "old", Url = "old" };
         _module.RenameRemote(Arg.Any<string>(), Arg.Any<string>()).Returns(x => output);
 
-        ConfigFileRemoteSaveResult result = _remotesManager.SaveRemote(gitRemote, remoteName, remoteUrl, null, null!, null, null);
+        var result =
+            _remotesManager.SaveRemote(gitRemote, remoteName, remoteUrl, null, null!, null, null);
 
         result.UserMessage.Should().Be(output);
         result.ShouldUpdateRemote.Should().BeTrue();
@@ -199,11 +216,13 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [InlineData("a", "b", "c", null, null)]
     [InlineData("a", "b", "c", "d", null)]
     [InlineData("a", "b", "c", "d", "e")]
-    public void SaveRemote_should_update_settings(string? remoteUrl, string? remotePushUrl, string? remotePuttySshKey, string? remoteColor, string? remotePrefix)
+    public void SaveRemote_should_update_settings(string? remoteUrl, string? remotePushUrl, string? remotePuttySshKey,
+        string? remoteColor, string? remotePrefix)
     {
         ConfigFileRemote remote = new() { Name = "bla", Url = remoteUrl };
 
-        _remotesManager.SaveRemote(remote, remote.Name, remoteUrl!, remotePushUrl, remotePuttySshKey!, remoteColor, remotePrefix);
+        _remotesManager.SaveRemote(remote, remote.Name, remoteUrl!, remotePushUrl, remotePuttySshKey!, remoteColor,
+            remotePrefix);
 
         void Ensure(string setting, string value)
         {
@@ -247,38 +266,45 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [InlineData("name2", true)]
     public void SetRemoteState_should_call_ToggleRemoteState(string remoteName, bool remoteDisabled)
     {
-        (string Setting, string Value)[] settings = [("-remote.name1.dummy-name1", "dummy value 1"), ("remote.name2.dummy-name2", "dummy value 2")];
+        (string Setting, string Value)[] settings =
+            [("-remote.name1.dummy-name1", "dummy value 1"), ("remote.name2.dummy-name2", "dummy value 2")];
         _module.GetAllLocalSettings().Returns(x => settings);
 
         _remotesManager.ToggleRemoteState(remoteName, remoteDisabled);
 
         _module.Received(1).GetAllLocalSettings();
         _module.Received(remoteDisabled ? 1 : 0).RemoveRemote(remoteName);
-        _module.Received(remoteDisabled ? 0 : 1).RemoveConfigSection($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}", remoteName);
+        _module.Received(remoteDisabled ? 0 : 1).RemoveConfigSection(
+            $"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}",
+            remoteName);
 
-        (string setting, string value) = settings[remoteDisabled ? 1 : 0];
+        (var setting, var value) = settings[remoteDisabled ? 1 : 0];
         setting = remoteDisabled
             ? $"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{setting}"
             : setting.TrimStart(ConfigFileRemoteSettingsManager.DisabledSectionPrefix[0]);
-        _module.Received(1).SetSetting(setting, value, append: true);
+        _module.Received(1).SetSetting(setting, value, true);
     }
 
     [Fact]
     public void GetDisabledRemotes_returns_disabled_remotes_only()
     {
-        string enabledRemoteName = "enabledRemote";
-        string disabledRemoteName = "disabledRemote";
+        var enabledRemoteName = "enabledRemote";
+        var disabledRemoteName = "disabledRemote";
 
-        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName, });
+        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName });
 
-        (string Setting, string Value)[] settings = [($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name", "dummy value")];
+        (string Setting, string Value)[] settings =
+        [
+            ($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name",
+                "dummy value")
+        ];
         _module.GetAllLocalSettings().Returns(x => settings);
 
-        IReadOnlyList<GitExtensions.Extensibility.Git.Remote> disabledRemotes = _remotesManager.GetDisabledRemotes();
+        var disabledRemotes = _remotesManager.GetDisabledRemotes();
         disabledRemotes.Count.Should().Be(1);
         disabledRemotes[0].Name.Should().Be(disabledRemoteName);
 
-        IReadOnlyList<string> disabledRemoteNames = _remotesManager.GetDisabledRemoteNames();
+        var disabledRemoteNames = _remotesManager.GetDisabledRemoteNames();
         disabledRemoteNames.Count.Should().Be(1);
         disabledRemoteNames[0].Should().Be(disabledRemoteName);
     }
@@ -286,15 +312,19 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [Fact]
     public void GetEnabledRemoteNames_returns_enabled_remotes_only()
     {
-        string enabledRemoteName = "enabledRemote";
-        string disabledRemoteName = "disabledRemote";
+        var enabledRemoteName = "enabledRemote";
+        var disabledRemoteName = "disabledRemote";
 
-        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName, });
+        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName });
 
-        (string Setting, string Value)[] settings = [($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name", "dummy value")];
+        (string Setting, string Value)[] settings =
+        [
+            ($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name",
+                "dummy value")
+        ];
         _module.GetAllLocalSettings().Returns(x => settings);
 
-        IReadOnlyList<string> enabledRemoteNames = _remotesManager.GetEnabledRemoteNames();
+        var enabledRemoteNames = _remotesManager.GetEnabledRemoteNames();
         enabledRemoteNames.Count.Should().Be(1);
         enabledRemoteNames[0].Should().Be(enabledRemoteName);
     }
@@ -302,12 +332,16 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [Fact]
     public void EnabledRemoteExists_returns_true_for_enabled_remotes_only()
     {
-        string enabledRemoteName = "enabledRemote";
-        string disabledRemoteName = "disabledRemote";
+        var enabledRemoteName = "enabledRemote";
+        var disabledRemoteName = "disabledRemote";
 
-        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName, });
+        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName });
 
-        (string Setting, string Value)[] settings = [($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name", "dummy value")];
+        (string Setting, string Value)[] settings =
+        [
+            ($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name",
+                "dummy value")
+        ];
         _module.GetAllLocalSettings().Returns(x => settings);
 
         _remotesManager.EnabledRemoteExists(enabledRemoteName).Should().BeTrue();
@@ -317,12 +351,16 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [Fact]
     public void DisabledRemoteExists_returns_true_for_disabled_remotes_only()
     {
-        string enabledRemoteName = "enabledRemote";
-        string disabledRemoteName = "disabledRemote";
+        var enabledRemoteName = "enabledRemote";
+        var disabledRemoteName = "disabledRemote";
 
-        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName, });
+        _module.GetRemoteNames().Returns(x => new[] { enabledRemoteName });
 
-        (string Setting, string Value)[] settings = [($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name", "dummy value")];
+        (string Setting, string Value)[] settings =
+        [
+            ($"{ConfigFileRemoteSettingsManager.DisabledSectionPrefix}{ConfigFileRemoteSettingsManager.SectionRemote}.{disabledRemoteName}.dummy-name",
+                "dummy value")
+        ];
         _module.GetAllLocalSettings().Returns(x => settings);
 
         _remotesManager.DisabledRemoteExists(disabledRemoteName).Should().BeTrue();
@@ -348,7 +386,8 @@ public class ConfigFileRemoteSettingsManagerTests : IDisposable
     [Theory]
     [InlineData("BranchName", "*")]
     [InlineData("BranchName", "dev/me/*")]
-    public void GetDefaultPushRemote_returns_value_for_wildcard_mapped_remote_branch(string branchName, string pushToBranch)
+    public void GetDefaultPushRemote_returns_value_for_wildcard_mapped_remote_branch(string branchName,
+        string pushToBranch)
     {
         ConfigFileRemote remote = new() { Push = [$"refs/heads/*:refs/heads/{pushToBranch}"] };
         _remotesManager.GetDefaultPushRemote(remote, branchName).Should().Be(pushToBranch.Replace("*", branchName));

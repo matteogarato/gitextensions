@@ -1,8 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
-
 #if NET6_0_OR_GREATER
-[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows7.0")]
+[assembly: SupportedOSPlatform("windows7.0")]
 #endif
 
 // General Information about an assembly is controlled through the following
@@ -28,7 +27,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyInformationalVersion("33.33.33")]
 
 // Disable CLS compliance. See https://github.com/gitextensions/gitextensions/issues/4710
-[assembly: CLSCompliant(isCompliant: false)]
+[assembly: CLSCompliant(false)]
 
 // Setting ComVisible to false makes the types in this assembly not visible
 // to COM components.  If you need to access a type in this assembly from

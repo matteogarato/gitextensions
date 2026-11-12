@@ -1,6 +1,6 @@
 <Project>
-  <Import Project="eng\RepoLayout.props" />
-  <Import Project="eng\Tests.props" />
+  <Import Project="eng\RepoLayout.props"/>
+  <Import Project="eng\Tests.props"/>
 
   <PropertyGroup>
     <LangVersion>14.0</LangVersion>
@@ -63,7 +63,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="$(RepoRoot)\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="$(RepoRoot)\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs"/>
   </ItemGroup>
 
   <ItemGroup>

@@ -1,10 +1,10 @@
-﻿using CommonTestUtils;
-using GitUI;
+﻿using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 // This diagnostic is unnecessarily noisy when testing async patterns
 
 namespace GitUITests;
+
 public class ControlThreadingExtensionsTests
 {
     [StaFact]
@@ -35,7 +35,7 @@ public class ControlThreadingExtensionsTests
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
 
-        ControlThreadingExtensions.ControlMainThreadAwaiter awaiter = form.SwitchToMainThreadAsync().GetAwaiter();
+        var awaiter = form.SwitchToMainThreadAsync().GetAwaiter();
         awaiter.IsCompleted.Should().BeTrue();
         awaiter.GetResult();
 
@@ -79,7 +79,7 @@ public class ControlThreadingExtensionsTests
         form.Dispose();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
-        Func<Task> act = async () => await form.SwitchToMainThreadAsync();
+        var act = async () => await form.SwitchToMainThreadAsync();
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -91,7 +91,7 @@ public class ControlThreadingExtensionsTests
         await cancellationTokenSource.CancelAsync();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
-        Func<Task> act = async () => await form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
+        var act = async () => await form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -104,8 +104,8 @@ public class ControlThreadingExtensionsTests
         await cancellationTokenSource.CancelAsync();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
-        Func<Task> act = async () => await form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
-        OperationCanceledException exception = (await act.Should().ThrowAsync<OperationCanceledException>()).Which;
+        var act = async () => await form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
+        var exception = (await act.Should().ThrowAsync<OperationCanceledException>()).Which;
 
         // If both conditions are met on entry, the explicit cancellation token is the one used for the exception
         exception.CancellationToken.Should().Be(cancellationTokenSource.Token);
@@ -116,12 +116,12 @@ public class ControlThreadingExtensionsTests
     {
         Form form = new();
 
-        ControlThreadingExtensions.ControlMainThreadAwaitable awaitable = form.SwitchToMainThreadAsync();
+        var awaitable = form.SwitchToMainThreadAsync();
 
         form.Dispose();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
-        Func<Task> act = async () => await awaitable;
+        var act = async () => await awaitable;
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -131,12 +131,13 @@ public class ControlThreadingExtensionsTests
         using Form form = new();
         using CancellationTokenSource cancellationTokenSource = new();
 
-        ControlThreadingExtensions.ControlMainThreadAwaitable awaitable = form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
+        var awaitable =
+            form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
 
         await cancellationTokenSource.CancelAsync();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeTrue();
-        Func<Task> act = async () => await awaitable;
+        var act = async () => await awaitable;
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -149,7 +150,7 @@ public class ControlThreadingExtensionsTests
         await TaskScheduler.Default;
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeFalse();
-        Func<Task> act = async () => await form.SwitchToMainThreadAsync();
+        var act = async () => await form.SwitchToMainThreadAsync();
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -164,7 +165,7 @@ public class ControlThreadingExtensionsTests
         await cancellationTokenSource.CancelAsync();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeFalse();
-        Func<Task> act = async () => await form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
+        var act = async () => await form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -175,16 +176,15 @@ public class ControlThreadingExtensionsTests
 
         await TaskScheduler.Default;
 
-        ControlThreadingExtensions.ControlMainThreadAwaitable awaitable = form.SwitchToMainThreadAsync();
-        await ThreadHelper.JoinableTaskFactory.RunAsync(
-            async () =>
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                form.Dispose();
-            });
+        var awaitable = form.SwitchToMainThreadAsync();
+        await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            form.Dispose();
+        });
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeFalse();
-        Func<Task> act = async () => await awaitable;
+        var act = async () => await awaitable;
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -197,12 +197,13 @@ public class ControlThreadingExtensionsTests
 
         using CancellationTokenSource cancellationTokenSource = new();
 
-        ControlThreadingExtensions.ControlMainThreadAwaitable awaitable = form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
+        var awaitable =
+            form.SwitchToMainThreadAsync(cancellationTokenSource.Token);
 
         await cancellationTokenSource.CancelAsync();
 
         ThreadHelper.JoinableTaskContext.IsOnMainThread.Should().BeFalse();
-        Func<Task> act = async () => await awaitable;
+        var act = async () => await awaitable;
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 }

@@ -1,17 +1,15 @@
-﻿using static System.NativeMethods;
-
-namespace GitUI.UserControls;
+﻿namespace GitUI.UserControls;
 
 public class NativeListView : ListView
 {
-    internal static event EventHandler? BeginCreateHandle;
-    internal static event EventHandler? EndCreateHandle;
-    internal event ScrollEventHandler? Scroll;
-
     public NativeListView()
     {
         DoubleBuffered = true;
     }
+
+    internal static event EventHandler? BeginCreateHandle;
+    internal static event EventHandler? EndCreateHandle;
+    internal event ScrollEventHandler? Scroll;
 
     protected override void CreateHandle()
     {
@@ -22,7 +20,7 @@ public class NativeListView : ListView
         {
             // explorer style selection painting in left panel
             // Not needed in dark mode, this is the same for "DarkMode_Explorer"
-            NativeMethods.SetWindowTheme(Handle, "explorer", null);
+            SetWindowTheme(Handle, "explorer", null);
         }
 
         EndCreateHandle?.Invoke(this, EventArgs.Empty);
@@ -30,7 +28,7 @@ public class NativeListView : ListView
 
     protected override void WndProc(ref Message m)
     {
-        Message message = m;
+        var message = m;
         switch (m.Msg)
         {
             default:
@@ -46,19 +44,19 @@ public class NativeListView : ListView
 
             switch (msg.Msg)
             {
-                case WM_VSCROLL:
+                case WmVscroll:
                     type = (ScrollEventType)LowWord(msg.WParam.ToInt64());
                     newValue = HighWord(msg.WParam.ToInt64());
                     break;
 
-                case WM_MOUSEWHEEL:
+                case WmMousewheel:
                     type = HighWord(msg.WParam.ToInt64()) > 0
                         ? ScrollEventType.SmallDecrement
                         : ScrollEventType.SmallIncrement;
                     break;
 
-                case WM_KEYDOWN:
-                    switch ((Keys)(int)(long)msg.WParam)
+                case WmKeydown:
+                    switch ((Keys)(int)msg.WParam)
                     {
                         case Keys.Up:
                             type = ScrollEventType.SmallDecrement;
@@ -88,14 +86,18 @@ public class NativeListView : ListView
                     return;
             }
 
-            newValue ??= GetScrollPos(Handle, SB.VERT);
+            newValue ??= GetScrollPos(Handle, Sb.Vert);
             Scroll?.Invoke(this, new ScrollEventArgs(type, newValue.Value));
 
-            short LowWord(long number) =>
-                unchecked((short)(number & 0x0000ffff));
+            short LowWord(long number)
+            {
+                return unchecked((short)(number & 0x0000ffff));
+            }
 
-            short HighWord(long number) =>
-                unchecked((short)(number >> 16));
+            short HighWord(long number)
+            {
+                return unchecked((short)(number >> 16));
+            }
         }
     }
 }

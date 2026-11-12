@@ -3,26 +3,30 @@ using GitCommands.Remotes;
 using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces.BuildServerIntegration;
 
-namespace AzureDevOpsIntegration;
+namespace GitExtensions.Plugins.AzureDevOpsIntegration;
 
 [Export(typeof(IBuildServerAutoDetector))]
 internal sealed class AzureDevOpsAutoDetector : IBuildServerAutoDetector
 {
-    public string BuildServerType => AzureDevOpsAdapter.PluginName;
+    string IBuildServerAutoDetector.BuildServerType
+    {
+        get => AzureDevOpsAdapter.PluginName;
+    }
 
-    public bool TryDetect(IReadOnlyList<string> remoteUrls, SettingsSource? settingsSource)
+    bool IBuildServerAutoDetector.TryDetect(IReadOnlyList<string> remoteUrls, SettingsSource? settingsSource)
     {
         AzureDevOpsRemoteParser parser = new();
 
-        foreach (string remoteUrl in remoteUrls)
+        foreach (var remoteUrl in remoteUrls)
         {
-            if (parser.TryExtractAzureDevopsDataFromRemoteUrl(remoteUrl, out string? owner, out string? project, out string? repository))
+            if (parser.TryExtractAzureDevopsDataFromRemoteUrl(remoteUrl, out var owner, out var project,
+                    out var repository))
             {
                 if (settingsSource is not null)
                 {
                     if (string.IsNullOrWhiteSpace(settingsSource.GetString("ProjectUrl", null)))
                     {
-                        string? projectUrl = AzureDevOpsRemoteParser.BuildProjectUrl(remoteUrl, owner, project);
+                        var projectUrl = AzureDevOpsRemoteParser.BuildProjectUrl(remoteUrl, owner, project);
                         if (projectUrl is not null)
                         {
                             settingsSource.SetString("ProjectUrl", projectUrl);

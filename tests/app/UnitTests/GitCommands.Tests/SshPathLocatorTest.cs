@@ -4,9 +4,10 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
 namespace GitCommandsTests;
+
 public class SshPathLocatorTest
 {
-    private IFileSystem _fileSystem = null!;
+    private readonly IFileSystem _fileSystem = null!;
 
     public SshPathLocatorTest()
     {
@@ -29,7 +30,7 @@ public class SshPathLocatorTest
     public void GetSshFromGitDir_should_return_null_if_system_access_throwing()
     {
         const string path = @"C:\";
-        DirectoryBase directoryBase = Substitute.For<DirectoryBase>();
+        var directoryBase = Substitute.For<DirectoryBase>();
         directoryBase.GetParent(path).Throws<Exception>();
         _fileSystem.Directory.Returns(directoryBase);
         SshPathLocator sshPathLocator = new(_fileSystem);
@@ -39,7 +40,7 @@ public class SshPathLocatorTest
     [Fact]
     public void GetSshFromGitDir_on_gitBinDir_having_no_ssh_exe_in_parent_directory_children_should_return_null()
     {
-        string path = SetUpFileSystemWithSshExePathsAs();
+        var path = SetUpFileSystemWithSshExePathsAs();
         SshPathLocator sshPathLocator = new(_fileSystem);
         sshPathLocator.GetSshFromGitDir(path).Should().BeNull();
     }
@@ -50,7 +51,7 @@ public class SshPathLocatorTest
     public void GetSshFromGitDir_on_gitBinDir_should_work_with_or_without_trailing_separator(bool withTrailingSeparator)
     {
         const string sshExe = @"C:\someotherdir\ssh.exe";
-        string path = SetUpFileSystemWithSshExePathsAs(sshExe);
+        var path = SetUpFileSystemWithSshExePathsAs(sshExe);
         SshPathLocator sshPathLocator = new(_fileSystem);
         sshPathLocator.GetSshFromGitDir(@"C:\someotherdir" + (withTrailingSeparator ? @"\" : "")).Should().BeNull();
     }
@@ -59,11 +60,11 @@ public class SshPathLocatorTest
     {
         const string path = @"C:\somedir";
         const string parentPath = @"C:\";
-        DirectoryInfoBase gitBinDir = Substitute.For<DirectoryInfoBase>();
+        var gitBinDir = Substitute.For<DirectoryInfoBase>();
         gitBinDir.FullName.Returns(path);
-        DirectoryInfoBase gitDir = Substitute.For<DirectoryInfoBase>();
+        var gitDir = Substitute.For<DirectoryInfoBase>();
         gitDir.FullName.Returns(parentPath);
-        DirectoryBase directoryBase = Substitute.For<DirectoryBase>();
+        var directoryBase = Substitute.For<DirectoryBase>();
         directoryBase.GetParent(path).Returns(gitDir);
 
         // a single trailing separator is considered a sub-directory by Directory.GetParent

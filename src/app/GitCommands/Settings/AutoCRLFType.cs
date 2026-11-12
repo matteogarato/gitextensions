@@ -1,8 +1,8 @@
 ﻿namespace GitCommands.Settings;
 
-public enum AutoCRLFType
+public enum AutoCrlfType
 {
-    @true,
-    input,
-    @false
+    True,
+    Input,
+    False
 }

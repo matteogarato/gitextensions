@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <Compile Include="..\..\..\app\GitExtUtils\Validates.cs" Link="Validates.cs" />
+    <Compile Include="..\..\..\app\GitExtUtils\Validates.cs" Link="Validates.cs"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Resources\IconGitStatistics.png" />
+    <None Include="Resources\IconGitStatistics.png"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -41,7 +41,7 @@
 
   <ItemGroup>
     <!-- Resources -->
-    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
+    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs"/>
   </ItemGroup>
 
 </Project>

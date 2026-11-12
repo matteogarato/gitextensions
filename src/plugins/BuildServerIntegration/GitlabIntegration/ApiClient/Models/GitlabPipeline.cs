@@ -6,26 +6,21 @@ namespace GitExtensions.Plugins.GitlabIntegration.ApiClient.Models;
 
 public class GitlabPipeline
 {
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = null!;
-    [JsonPropertyName("sha")]
-    public string Sha { get; set; } = null!;
-    [JsonPropertyName("web_url")]
-    public string WebUrl { get; set; } = null!;
-    [JsonPropertyName("created_at")]
-    public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("updated_at")]
-    public DateTime UpdatedAt { get; set; }
+    [JsonPropertyName("id")] public int Id { get; set; }
+
+    [JsonPropertyName("status")] public string Status { get; set; } = null!;
+
+    [JsonPropertyName("sha")] public string Sha { get; set; } = null!;
+
+    [JsonPropertyName("web_url")] public string WebUrl { get; set; } = null!;
+
+    [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
+
+    [JsonPropertyName("updated_at")] public DateTime UpdatedAt { get; set; }
 
     public BuildInfo ToBuildInfo()
     {
-        BuildInfo result = new()
-        {
-            Id = Id.ToString(),
-            CommitHashList = new List<ObjectId> { ObjectId.Parse(Sha) }
-        };
+        BuildInfo result = new() { Id = Id.ToString(), CommitHashList = new List<ObjectId> { ObjectId.Parse(Sha) } };
 
         switch (Status)
         {

@@ -1,4 +1,4 @@
-namespace AppVeyorIntegration.Settings;
+namespace GitExtensions.Plugins.AppVeyorIntegration.Settings;
 
 partial class AppVeyorSettingsUserControl
 {

@@ -5,53 +5,56 @@ using GitUIPluginInterfaces.RepositoryHosts;
 namespace GitExtensions.Plugins.GitHub3;
 
 [DebuggerDisplay("{Data}")]
-internal sealed class GitHubHostedRemote : IHostedRemote
+internal sealed class GitHubHostedRemote(string name, string owner, string remoteRepositoryName, string url)
+    : IHostedRemote
 {
     private GitHubRepo? _repo;
 
-    public GitHubHostedRemote(string name, string owner, string remoteRepositoryName, string url)
+    IHostedRepository IHostedRemote.GetHostedRepository()
     {
-        Name = name;
-        Owner = owner;
-        RemoteRepositoryName = remoteRepositoryName;
-        RemoteUrl = url;
-        CloneProtocol = url.IsUrlUsingHttp() ? GitProtocol.Https : GitProtocol.Ssh;
-    }
-
-    public IHostedRepository GetHostedRepository()
-    {
-        return _repo ??= new GitHubRepo(GitHub3Plugin.GitHub.getRepository(Owner, RemoteRepositoryName))
+        return _repo ??= new GitHubRepo(GitHub3Plugin.GitHub.GetRepository(Owner, RemoteRepositoryName))
         {
             CloneProtocol = CloneProtocol
         };
     }
 
     /// <summary>
-    /// Local name of the remote, 'origin'
+    ///     Local name of the remote, 'origin'
     /// </summary>
-    public string Name { get; }
+    string IHostedRemote.Name { get; } = name;
 
     /// <summary>
-    /// Owner of the remote repository, in
-    /// git@github.com:mabako/Git.hub.git this is 'mabako'
+    ///     Owner of the remote repository, in
+    ///     git@github.com:mabako/Git.hub.git this is 'mabako'
     /// </summary>
-    public string Owner { get; }
+    string IHostedRemote.Owner { get; } = owner;
 
     /// <summary>
-    /// Name of the remote repository, in
-    /// git@github.com:mabako/Git.hub.git this is 'Git.hub'
+    ///     Name of the remote repository, in
+    ///     git@github.com:mabako/Git.hub.git this is 'Git.hub'
     /// </summary>
-    public string RemoteRepositoryName { get; }
+    string IHostedRemote.RemoteRepositoryName { get; } = remoteRepositoryName;
 
-    public string RemoteUrl { get; }
+    string IHostedRemote.RemoteUrl { get; } = url;
 
-    public GitProtocol CloneProtocol { get; }
+    GitProtocol IHostedRemote.CloneProtocol { get; } = url.IsUrlUsingHttp() ? GitProtocol.Https : GitProtocol.Ssh;
 
-    public string Data => Owner + "/" + RemoteRepositoryName;
-    public string DisplayData => Data;
-    public bool IsOwnedByMe => GitHubLoginInfo.Username == Owner;
+    string IHostedRemote.Data
+    {
+        get => Owner + "/" + RemoteRepositoryName;
+    }
 
-    public string GetBlameUrl(string commitHash, string fileName, int lineIndex)
+    string IHostedRemote.DisplayData
+    {
+        get => Data;
+    }
+
+    bool IHostedRemote.IsOwnedByMe
+    {
+        get => GitHubLoginInfo.Username == Owner;
+    }
+
+    string IHostedRemote.GetBlameUrl(string commitHash, string fileName, int lineIndex)
     {
         return $"{GitHub3Plugin.Instance.GitHubEndpoint}/{Data}/blame/{commitHash}/{fileName}#L{lineIndex}";
     }

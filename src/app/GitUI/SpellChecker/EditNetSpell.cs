@@ -1,52 +1,33 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using GitCommands;
 using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
+using GitExtUtils.GitUI;
 using GitUI.AutoCompletion;
 using GitUI.UserControls;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
-using NetSpell.SpellChecker;
-using NetSpell.SpellChecker.Dictionary;
 using ResourceManager;
+using SpellChecker;
+using SpellChecker.Dictionary;
 
 namespace GitUI.SpellChecker;
 
 [DefaultEvent("TextChanged")]
 public partial class EditNetSpell : GitModuleControl
 {
-    public event EventHandler? TextAssigned;
-
-    /// <summary>
-    ///  Raised after all built-in items have been added to the spell-check context menu,
-    ///  allowing consumers to append additional items.
-    /// </summary>
-    public event EventHandler<ContextMenuStrip>? ContextMenuPopulating;
-
-    private readonly TranslationString _cutMenuItemText = new("Cut");
-    private readonly TranslationString _copyMenuItemText = new("Copy");
-    private readonly TranslationString _pasteMenuItemText = new("Paste");
-    private readonly TranslationString _deleteMenuItemText = new("Delete");
-    private readonly TranslationString _selectAllMenuItemText = new("Select all");
-
-    private readonly TranslationString _addToDictionaryText = new("Add to dictionary");
-    private readonly TranslationString _ignoreWordText = new("Ignore word");
-    private readonly TranslationString _removeWordText = new("Remove word");
-    private readonly TranslationString _dictionaryText = new("Dictionary");
-    private readonly TranslationString _markIllFormedLinesText = new("Mark ill formed lines");
-    private readonly TranslationString _autoCompletionText = new("Provide auto completion");
-
-    private SpellCheckEditControl? _customUnderlines;
-    private Spelling? _spelling;
     private static WordDictionary? _wordDictionary;
 
-    private CancellationTokenSource _autoCompleteCancellationTokenSource = new();
+    private readonly TranslationString _addToDictionaryText = new("Add to dictionary");
     private readonly List<IAutoCompleteProvider> _autoCompleteProviders = [];
-    private AsyncLazy<IEnumerable<AutoCompleteWord>?>? _autoCompleteListTask;
-    private bool _autoCompleteWasUserActivated;
-    private bool _disableAutoCompleteTriggerOnTextUpdate = true; // only popup on key press
+    private readonly TranslationString _autoCompletionText = new("Provide auto completion");
+    private readonly TranslationString _copyMenuItemText = new("Copy");
+
+    private readonly TranslationString _cutMenuItemText = new("Cut");
+    private readonly TranslationString _deleteMenuItemText = new("Delete");
+    private readonly TranslationString _dictionaryText = new("Dictionary");
+    private readonly TranslationString _ignoreWordText = new("Ignore word");
+
     private readonly Dictionary<Keys, string> _keysToSendToAutoComplete = new()
     {
         { Keys.Down, "{DOWN}" },
@@ -57,11 +38,27 @@ public partial class EditNetSpell : GitModuleControl
         { Keys.Home, "{HOME}" }
     };
 
+    private readonly TranslationString _markIllFormedLinesText = new("Mark ill formed lines");
+    private readonly TranslationString _pasteMenuItemText = new("Paste");
+    private readonly TranslationString _removeWordText = new("Remove word");
+    private readonly TranslationString _selectAllMenuItemText = new("Select all");
+
     private readonly IWordAtCursorExtractor _wordAtCursorExtractor;
 
-    public Font TextBoxFont { get; set; }
-
     public bool IsUndoInProgress;
+
+    private CancellationTokenSource _autoCompleteCancellationTokenSource = new();
+    private AsyncLazy<IEnumerable<AutoCompleteWord>?>? _autoCompleteListTask;
+    private bool _autoCompleteWasUserActivated;
+
+    private SpellCheckEditControl? _customUnderlines;
+    private bool _disableAutoCompleteTriggerOnTextUpdate = true; // only popup on key press
+
+    private bool _isWatermarkShowing;
+
+    private bool _skipSelectionUndo;
+    private Spelling? _spelling;
+    private string _watermarkText = "";
 
     public EditNetSpell()
     {
@@ -85,6 +82,8 @@ public partial class EditNetSpell : GitModuleControl
         }
     }
 
+    public Font TextBoxFont { get; set; }
+
     [AllowNull]
     public override string Text
     {
@@ -107,81 +106,27 @@ public partial class EditNetSpell : GitModuleControl
         }
     }
 
-    public void EvaluateForecolor()
-    {
-        if (Application.IsDarkModeEnabled)
-        {
-            // In dark mode the background color is set to White, but still reported as SystemColors.Window (or adjusted)
-            // The Forecolor must be changed manually
-            TextBox.ForeColor = TextBox.Enabled ? SystemColors.WindowText : SystemColors.HighlightText;
-        }
-    }
-
-    private void OnTextAssigned()
-    {
-        TextAssigned?.Invoke(this, EventArgs.Empty);
-    }
-
-    public string Line(int line)
-    {
-        return TextBox.Lines[line];
-    }
-
-    public void ReplaceLine(int line, string withText)
-    {
-        int oldPos = TextBox.SelectionStart + TextBox.SelectionLength;
-        int startIdx = TextBox.GetFirstCharIndexFromLine(line);
-        TextBox.SelectionLength = 0;
-        TextBox.SelectionStart = startIdx;
-        TextBox.SelectionLength = Line(line).Length;
-        TextBox.SelectedText = withText;
-        TextBox.SelectionLength = 0;
-        TextBox.SelectionStart = oldPos;
-    }
-
-    public int LineLength(int line)
-    {
-        return LineCount() <= line ? 0 : TextBox.Lines[line].Length;
-    }
-
-    public int LineCount()
-    {
-        return TextBox.Lines.Length;
-    }
-
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Font MistakeFont { get; set; }
 
     [Browsable(false)]
-    public int CurrentColumn => TextBox.SelectionStart - TextBox.GetFirstCharIndexOfCurrentLine() + 1;
-
-    [Browsable(false)]
-    public int CurrentLine => TextBox.GetLineFromCharIndex(TextBox.SelectionStart) + 1;
-
-    public event EventHandler? SelectionChanged;
-
-    private void EditNetSpellEnabledChanged(object? sender, EventArgs e)
+    public int CurrentColumn
     {
-        if (Enabled)
-        {
-            TextBox.ReadOnly = false;
-            ShowWatermark();
-        }
-        else
-        {
-            TextBox.ReadOnly = true;
-            HideWatermark();
-        }
+        get => TextBox.SelectionStart - TextBox.GetFirstCharIndexOfCurrentLine() + 1;
     }
 
-    private bool _isWatermarkShowing;
-    private string _watermarkText = "";
+    [Browsable(false)]
+    public int CurrentLine
+    {
+        get => TextBox.GetLineFromCharIndex(TextBox.SelectionStart) + 1;
+    }
+
     [Category("Appearance")]
     [DefaultValue("")]
     public string WatermarkText
     {
-        get { return _watermarkText; }
+        get => _watermarkText;
 
         set
         {
@@ -224,7 +169,76 @@ public partial class EditNetSpell : GitModuleControl
         }
     }
 
-    protected DistributedSettings Settings => Module.GetEffectiveSettings() as DistributedSettings ?? AppSettings.SettingsContainer;
+    protected DistributedSettings Settings
+    {
+        get => Module.GetEffectiveSettings() as DistributedSettings ?? AppSettings.SettingsContainer;
+    }
+
+    public event EventHandler? TextAssigned;
+
+    /// <summary>
+    ///     Raised after all built-in items have been added to the spell-check context menu,
+    ///     allowing consumers to append additional items.
+    /// </summary>
+    public event EventHandler<ContextMenuStrip>? ContextMenuPopulating;
+
+    public void EvaluateForecolor()
+    {
+        if (Application.IsDarkModeEnabled)
+        {
+            // In dark mode the background color is set to White, but still reported as SystemColors.Window (or adjusted)
+            // The Forecolor must be changed manually
+            TextBox.ForeColor = TextBox.Enabled ? SystemColors.WindowText : SystemColors.HighlightText;
+        }
+    }
+
+    private void OnTextAssigned()
+    {
+        TextAssigned?.Invoke(this, EventArgs.Empty);
+    }
+
+    public string Line(int line)
+    {
+        return TextBox.Lines[line];
+    }
+
+    public void ReplaceLine(int line, string withText)
+    {
+        var oldPos = TextBox.SelectionStart + TextBox.SelectionLength;
+        var startIdx = TextBox.GetFirstCharIndexFromLine(line);
+        TextBox.SelectionLength = 0;
+        TextBox.SelectionStart = startIdx;
+        TextBox.SelectionLength = Line(line).Length;
+        TextBox.SelectedText = withText;
+        TextBox.SelectionLength = 0;
+        TextBox.SelectionStart = oldPos;
+    }
+
+    public int LineLength(int line)
+    {
+        return LineCount() <= line ? 0 : TextBox.Lines[line].Length;
+    }
+
+    public int LineCount()
+    {
+        return TextBox.Lines.Length;
+    }
+
+    public event EventHandler? SelectionChanged;
+
+    private void EditNetSpellEnabledChanged(object? sender, EventArgs e)
+    {
+        if (Enabled)
+        {
+            TextBox.ReadOnly = false;
+            ShowWatermark();
+        }
+        else
+        {
+            TextBox.ReadOnly = true;
+            HideWatermark();
+        }
+    }
 
     public void SelectAll()
     {
@@ -247,9 +261,7 @@ public partial class EditNetSpell : GitModuleControl
         components = new Container();
         _spelling = new Spelling(components)
         {
-            ShowDialog = false,
-            IgnoreAllCapsWords = true,
-            IgnoreWordsWithDigits = true
+            ShowDialog = false, IgnoreAllCapsWords = true, IgnoreWordsWithDigits = true
         };
 
         ToggleAutoCompletion();
@@ -293,7 +305,7 @@ public partial class EditNetSpell : GitModuleControl
             ToolStripMenuItem noDicToolStripMenuItem = new("None");
             noDicToolStripMenuItem.Click += DicToolStripMenuItemClick;
 
-            IDetachedSettings detachedSettings = Settings.Detached();
+            var detachedSettings = Settings.Detached();
 
             if (detachedSettings.Dictionary is "None")
             {
@@ -302,11 +314,12 @@ public partial class EditNetSpell : GitModuleControl
 
             toolStripDropDown.Items.Add(noDicToolStripMenuItem);
 
-            foreach (string fileName in Directory.GetFiles(AppSettings.GetDictionaryDir(), "*.dic", SearchOption.TopDirectoryOnly))
+            foreach (var fileName in Directory.GetFiles(AppSettings.GetDictionaryDir(), "*.dic",
+                         SearchOption.TopDirectoryOnly))
             {
                 FileInfo file = new(fileName);
 
-                string dic = file.Name.Replace(".dic", "");
+                var dic = file.Name.Replace(".dic", "");
 
                 ToolStripMenuItem dicToolStripMenuItem = new(dic);
                 dicToolStripMenuItem.Click += DicToolStripMenuItemClick;
@@ -352,9 +365,9 @@ public partial class EditNetSpell : GitModuleControl
             // generate suggestions
             _spelling.Suggest();
 
-            foreach (string suggestion in _spelling.Suggestions)
+            foreach (var suggestion in _spelling.Suggestions)
             {
-                ToolStripMenuItem si = AddContextMenuItem(suggestion, SuggestionToolStripItemClick);
+                var si = AddContextMenuItem(suggestion, SuggestionToolStripItemClick);
                 si.Font = new Font(si.Font, FontStyle.Bold);
             }
 
@@ -381,16 +394,14 @@ public partial class EditNetSpell : GitModuleControl
             return;
         }
 
-        IDetachedSettings detachedSettings = Settings.Detached();
-        string dictionaryFile = string.Concat(Path.Join(AppSettings.GetDictionaryDir(), detachedSettings.Dictionary), ".dic");
+        var detachedSettings = Settings.Detached();
+        var dictionaryFile =
+            string.Concat(Path.Join(AppSettings.GetDictionaryDir(), detachedSettings.Dictionary), ".dic");
 
         if (_wordDictionary is null || _wordDictionary.DictionaryFile != dictionaryFile)
         {
             _wordDictionary =
-                new WordDictionary(components)
-                {
-                    DictionaryFile = dictionaryFile
-                };
+                new WordDictionary(components) { DictionaryFile = dictionaryFile };
         }
 
         Validates.NotNull(_spelling);
@@ -408,18 +419,18 @@ public partial class EditNetSpell : GitModuleControl
         }
 
         InitializeAutoCompleteWordsTask();
-        CancellationToken cancellationToken = _autoCompleteCancellationTokenSource.Token;
+        var cancellationToken = _autoCompleteCancellationTokenSource.Token;
 
         Validates.NotNull(_autoCompleteListTask);
         Validates.NotNull(_spelling);
 
         ThreadHelper.FileAndForget(async () =>
-            {
-                IEnumerable<AutoCompleteWord>? words = await _autoCompleteListTask.GetValueAsync(cancellationToken);
-                await this.SwitchToMainThreadAsync(cancellationToken);
+        {
+            var words = await _autoCompleteListTask.GetValueAsync(cancellationToken);
+            await this.SwitchToMainThreadAsync(cancellationToken);
 
-                _spelling.AddAutoCompleteWords(words!.Select(x => x.Word));
-            });
+            _spelling.AddAutoCompleteWords(words!.Select(x => x.Word));
+        });
     }
 
     private void SpellingMisspelledWord(object? sender, SpellingEventArgs e)
@@ -469,12 +480,12 @@ public partial class EditNetSpell : GitModuleControl
             return;
         }
 
-        int numLines = TextBox.Lines.Length;
-        int chars = 0;
-        for (int curLine = 0; curLine < numLines; ++curLine)
+        var numLines = TextBox.Lines.Length;
+        var chars = 0;
+        for (var curLine = 0; curLine < numLines; ++curLine)
         {
-            int curLength = TextBox.Lines[curLine].Length;
-            int curMaxLength = curLine switch
+            var curLength = TextBox.Lines[curLine].Length;
+            var curMaxLength = curLine switch
             {
                 0 => 50,
                 1 => 0,
@@ -493,8 +504,8 @@ public partial class EditNetSpell : GitModuleControl
 
     private void SpellingDeletedWord(object? sender, SpellingEventArgs e)
     {
-        int start = TextBox.SelectionStart;
-        int length = TextBox.SelectionLength;
+        var start = TextBox.SelectionStart;
+        var length = TextBox.SelectionLength;
 
         TextBox.Select(e.TextIndex, e.Word.Length);
         TextBox.SelectedText = "";
@@ -504,7 +515,7 @@ public partial class EditNetSpell : GitModuleControl
             start = TextBox.Text.Length;
         }
 
-        if ((start + length) > TextBox.Text.Length)
+        if (start + length > TextBox.Text.Length)
         {
             length = 0;
         }
@@ -514,8 +525,8 @@ public partial class EditNetSpell : GitModuleControl
 
     private void SpellingReplacedWord(object? sender, ReplaceWordEventArgs e)
     {
-        int start = TextBox.SelectionStart;
-        int length = TextBox.SelectionLength;
+        var start = TextBox.SelectionStart;
+        var length = TextBox.SelectionLength;
 
         TextBox.Select(e.TextIndex, e.Word.Length);
         TextBox.SelectedText = e.ReplacementWord;
@@ -525,7 +536,7 @@ public partial class EditNetSpell : GitModuleControl
             start = TextBox.Text.Length;
         }
 
-        if ((start + length) > TextBox.Text.Length)
+        if (start + length > TextBox.Text.Length)
         {
             length = 0;
         }
@@ -536,7 +547,7 @@ public partial class EditNetSpell : GitModuleControl
     private void SpellCheckContextMenuOpening(object sender, CancelEventArgs e)
     {
         TextBox.Focus();
-        int pos = TextBox.SelectionStart;
+        var pos = TextBox.SelectionStart;
         if (pos < 0)
         {
             e.Cancel = true;
@@ -565,10 +576,7 @@ public partial class EditNetSpell : GitModuleControl
         mi.Click += MarkIllFormedLinesInCommitMsgClick;
         SpellCheckContextMenu.Items.Add(mi);
 
-        mi = new ToolStripMenuItem(_autoCompletionText.Text)
-        {
-            Checked = AppSettings.ProvideAutocompletion
-        };
+        mi = new ToolStripMenuItem(_autoCompletionText.Text) { Checked = AppSettings.ProvideAutocompletion };
         mi.Click += (s, _) =>
         {
             AppSettings.ProvideAutocompletion = !AppSettings.ProvideAutocompletion;
@@ -618,8 +626,8 @@ public partial class EditNetSpell : GitModuleControl
         // if a Module is available, then always change the "repository local" setting
         // it will set a dictionary only for this Module (repository) locally
 
-        DistributedSettings settings = Module.GetLocalSettings() as DistributedSettings ?? Settings;
-        IDetachedSettings detachedSettings = settings.Detached();
+        var settings = Module.GetLocalSettings() as DistributedSettings ?? Settings;
+        var detachedSettings = settings.Detached();
 
         detachedSettings.Dictionary = ((ToolStripItem)sender!).Text!;
 
@@ -667,7 +675,7 @@ public partial class EditNetSpell : GitModuleControl
         {
             OnTextChanged(e);
 
-            IDetachedSettings detachedSettings = Settings.Detached();
+            var detachedSettings = Settings.Detached();
 
             if (detachedSettings.Dictionary is "None" || TextBox.Text.Length < 4)
             {
@@ -693,8 +701,6 @@ public partial class EditNetSpell : GitModuleControl
         OnKeyUp(e);
     }
 
-    private bool _skipSelectionUndo;
-
     private void UndoHighlighting()
     {
         if (!_skipSelectionUndo)
@@ -715,7 +721,8 @@ public partial class EditNetSpell : GitModuleControl
 
     private void TextBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (!e.Alt && !e.Control && !e.Shift && _keysToSendToAutoComplete.ContainsKey(e.KeyCode) && AutoComplete.Visible)
+        if (!e.Alt && !e.Control && !e.Shift && _keysToSendToAutoComplete.ContainsKey(e.KeyCode) &&
+            AutoComplete.Visible)
         {
             if (e.KeyCode == Keys.Up && AutoComplete.SelectedIndex == 0)
             {
@@ -771,20 +778,20 @@ public partial class EditNetSpell : GitModuleControl
     private void PasteTextFromClipboard()
     {
         // insert only text with replace vertical tab to line feed
-        string clipboardText = Clipboard.GetText().Replace('\v', '\n');
+        var clipboardText = Clipboard.GetText().Replace('\v', '\n');
 
         TextBox.SelectedText = clipboardText;
     }
 
     private void TextBox_KeyPress(object sender, KeyPressEventArgs e)
     {
-        bool isSeparator = e.KeyChar.IsSeparator();
+        var isSeparator = e.KeyChar.IsSeparator();
         _disableAutoCompleteTriggerOnTextUpdate = isSeparator;
 
         if (e.KeyChar == (char)Keys.Back)
         {
-           // When a character is deleted...
-           if (TextBox.SelectionStart == 0
+            // When a character is deleted...
+            if (TextBox.SelectionStart == 0
                 || TextBox.Text[TextBox.SelectionStart - 1].IsSeparator())
             {
                 CloseAutoComplete();
@@ -805,8 +812,8 @@ public partial class EditNetSpell : GitModuleControl
 
     private void TextBox_DoubleClick(object? sender, EventArgs e)
     {
-        int charIndexAtMousePosition = TextBox.GetCharIndexFromPosition(TextBox.PointToClient(MousePosition));
-        (int start, int length) = _wordAtCursorExtractor.GetWordBounds(TextBox.Text, charIndexAtMousePosition);
+        var charIndexAtMousePosition = TextBox.GetCharIndexFromPosition(TextBox.PointToClient(MousePosition));
+        (var start, var length) = _wordAtCursorExtractor.GetWordBounds(TextBox.Text, charIndexAtMousePosition);
         TextBox.Select(start, length);
     }
 
@@ -877,13 +884,14 @@ public partial class EditNetSpell : GitModuleControl
 
     public void ChangeTextColor(int line, int offset, int length, Color color)
     {
-        int oldPos = TextBox.SelectionStart;
-        Color oldColor = TextBox.SelectionColor;
-        int lineIndex = TextBox.GetFirstCharIndexFromLine(line);
+        var oldPos = TextBox.SelectionStart;
+        var oldColor = TextBox.SelectionColor;
+        var lineIndex = TextBox.GetFirstCharIndexFromLine(line);
         TextBox.SelectionStart = Math.Max(lineIndex + offset, 0);
         TextBox.SelectionLength = length;
         TextBox.SelectionColor = color;
-        bool restoreColor = oldPos < TextBox.SelectionStart || oldPos > TextBox.SelectionStart + TextBox.SelectionLength;
+        var restoreColor =
+            oldPos < TextBox.SelectionStart || oldPos > TextBox.SelectionStart + TextBox.SelectionLength;
 
         TextBox.SelectionLength = 0;
         TextBox.SelectionStart = oldPos;
@@ -899,17 +907,17 @@ public partial class EditNetSpell : GitModuleControl
     }
 
     /// <summary>
-    /// Make sure this line is empty by inserting a newline at its start.
+    ///     Make sure this line is empty by inserting a newline at its start.
     /// </summary>
     public void EnsureEmptyLine(bool addBullet, int afterLine)
     {
-        int lineLength = LineLength(afterLine);
+        var lineLength = LineLength(afterLine);
         if (lineLength > 0)
         {
-            string bullet = addBullet ? " - " : string.Empty;
-            int indexOfLine = TextBox.GetFirstCharIndexFromLine(afterLine);
-            string newLine = Environment.NewLine;
-            int newCursorPos = indexOfLine + newLine.Length + bullet.Length + lineLength - 1;
+            var bullet = addBullet ? " - " : string.Empty;
+            var indexOfLine = TextBox.GetFirstCharIndexFromLine(afterLine);
+            var newLine = Environment.NewLine;
+            var newCursorPos = indexOfLine + newLine.Length + bullet.Length + lineLength - 1;
             TextBox.SelectionLength = 0;
             TextBox.SelectionStart = indexOfLine;
             TextBox.SelectedText = newLine + bullet;
@@ -930,16 +938,17 @@ public partial class EditNetSpell : GitModuleControl
     {
         CancelAutoComplete();
         _autoCompleteCancellationTokenSource = new CancellationTokenSource();
-        CancellationToken cancellationToken = _autoCompleteCancellationTokenSource.Token;
+        var cancellationToken = _autoCompleteCancellationTokenSource.Token;
         _autoCompleteListTask = new AsyncLazy<IEnumerable<AutoCompleteWord>?>(
             async () =>
             {
-                await TaskScheduler.Default.SwitchTo(alwaysYield: true);
+                await TaskScheduler.Default.SwitchTo(true);
 
-                Task<IEnumerable<AutoCompleteWord>>[] subTasks = [.. _autoCompleteProviders.Select(p => p.GetAutoCompleteWordsAsync(cancellationToken))];
+                Task<IEnumerable<AutoCompleteWord>>[] subTasks =
+                    [.. _autoCompleteProviders.Select(p => p.GetAutoCompleteWordsAsync(cancellationToken))];
                 try
                 {
-                    IEnumerable<AutoCompleteWord>[] results = await Task.WhenAll(subTasks);
+                    var results = await Task.WhenAll(subTasks);
                     return results.SelectMany(result => result).Distinct();
                 }
                 catch (OperationCanceledException)
@@ -970,7 +979,7 @@ public partial class EditNetSpell : GitModuleControl
     {
         if (AutoComplete.Visible)
         {
-            if (keyData is (Keys.Tab or Keys.Enter))
+            if (keyData is Keys.Tab or Keys.Enter)
             {
                 AcceptAutoComplete();
                 return true;
@@ -1000,7 +1009,7 @@ public partial class EditNetSpell : GitModuleControl
     private void AcceptAutoComplete(AutoCompleteWord? completionWord = null)
     {
         completionWord ??= (AutoCompleteWord?)AutoComplete.SelectedItem;
-        string word = GetWordAtCursor();
+        var word = GetWordAtCursor();
         TextBox.Select(TextBox.SelectionStart - word.Length, word.Length);
         TextBox.SelectedText = completionWord!.Word;
         CloseAutoComplete();
@@ -1036,9 +1045,9 @@ public partial class EditNetSpell : GitModuleControl
             if (calledByUser)
             {
                 AutoCompleteToolTip.Show(
-                        "AutoComplete is not available yet (it is still parsing the changed files).",
-                        TextBox,
-                        GetCursorPosition());
+                    "AutoComplete is not available yet (it is still parsing the changed files).",
+                    TextBox,
+                    GetCursorPosition());
                 AutoCompleteToolTipTimer.Start();
             }
 
@@ -1048,7 +1057,7 @@ public partial class EditNetSpell : GitModuleControl
         AutoCompleteToolTipTimer.Stop();
         AutoCompleteToolTip.Hide(TextBox);
 
-        string word = GetWordAtCursor();
+        var word = GetWordAtCursor();
 
         if (word is null || (word.Length <= 1 && !calledByUser && !_autoCompleteWasUserActivated))
         {
@@ -1060,7 +1069,8 @@ public partial class EditNetSpell : GitModuleControl
             return;
         }
 
-        IEnumerable<AutoCompleteWord>? autoCompleteList = ThreadHelper.JoinableTaskFactory.Run(_autoCompleteListTask.GetValueAsync);
+        var autoCompleteList =
+            ThreadHelper.JoinableTaskFactory.Run(_autoCompleteListTask.GetValueAsync);
         IReadOnlyList<AutoCompleteWord> list = autoCompleteList!.Where(x => x.Matches(word)).ToList();
 
         if (list.Count == 0)
@@ -1086,11 +1096,11 @@ public partial class EditNetSpell : GitModuleControl
 
         List<Size> sizes = [.. list.Select(x => TextRenderer.MeasureText(x.Word, TextBox.Font))];
 
-        Point cursorPos = GetCursorPosition();
+        var cursorPos = GetCursorPosition();
 
-        int top = cursorPos.Y;
-        int height = (sizes.Count + 1) * AutoComplete.ItemHeight;
-        int width = sizes.Max(x => x.Width);
+        var top = cursorPos.Y;
+        var height = (sizes.Count + 1) * AutoComplete.ItemHeight;
+        var width = sizes.Max(x => x.Width);
         if (top + height > TextBox.Height)
         {
             // if reduced height is not too small then shrink only
@@ -1119,7 +1129,7 @@ public partial class EditNetSpell : GitModuleControl
 
     private Point GetCursorPosition()
     {
-        Point cursorPos = TextBox.GetPositionFromCharIndex(TextBox.SelectionStart);
+        var cursorPos = TextBox.GetPositionFromCharIndex(TextBox.SelectionStart);
         cursorPos.Y += (int)Math.Ceiling(TextBox.Font.GetHeight());
         cursorPos.X += 2;
         return cursorPos;
@@ -1153,7 +1163,7 @@ public partial class EditNetSpell : GitModuleControl
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)

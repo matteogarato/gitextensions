@@ -1,27 +1,27 @@
 ﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommands;
 
 /// <summary>
-/// Extension methods for working with <see cref="ArgumentBuilder"/>.
+///     Extension methods for working with <see cref="ArgumentBuilder" />.
 /// </summary>
 public static class ArgumentBuilderExtensions
 {
     /// <summary>
-    /// Adds <paramref name="ifConditionTrue"/> to the argument list if <paramref name="condition"/>
-    /// is <c>true</c>.
+    ///     Adds <paramref name="ifConditionTrue" /> to the argument list if <paramref name="condition" />
+    ///     is <c>true</c>.
     /// </summary>
     /// <remarks>
-    /// If <paramref name="ifConditionTrue"/> is <c>null</c> or white-space, then no change is made
-    /// to the argument list, regardless of the value of <paramref name="condition"/>.
+    ///     If <paramref name="ifConditionTrue" /> is <c>null</c> or white-space, then no change is made
+    ///     to the argument list, regardless of the value of <paramref name="condition" />.
     /// </remarks>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
-    /// <param name="condition">Whether or not to add <paramref name="ifConditionTrue"/> to the argument list.</param>
-    /// <param name="ifConditionTrue">The string to add if <paramref name="condition"/> is <c>true</c>.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
+    /// <param name="condition">Whether or not to add <paramref name="ifConditionTrue" /> to the argument list.</param>
+    /// <param name="ifConditionTrue">The string to add if <paramref name="condition" /> is <c>true</c>.</param>
     public static void Add(this ArgumentBuilder builder, bool condition, string? ifConditionTrue)
     {
         if (condition)
@@ -31,31 +31,31 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds either <paramref name="ifConditionTrue"/> or <paramref name="ifConditionFalse"/> to the
-    /// argument list, depending upon the value of <paramref name="condition"/>.
+    ///     Adds either <paramref name="ifConditionTrue" /> or <paramref name="ifConditionFalse" /> to the
+    ///     argument list, depending upon the value of <paramref name="condition" />.
     /// </summary>
     /// <remarks>
-    /// If <paramref name="ifConditionTrue"/> is <c>null</c> or white-space, then no change is made
-    /// to the argument list, regardless of the value of <paramref name="condition"/>.
+    ///     If <paramref name="ifConditionTrue" /> is <c>null</c> or white-space, then no change is made
+    ///     to the argument list, regardless of the value of <paramref name="condition" />.
     /// </remarks>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
-    /// <param name="condition">Whether or not to add <paramref name="ifConditionTrue"/> to the argument list.</param>
-    /// <param name="ifConditionTrue">The string to add if <paramref name="condition"/> is <c>true</c>.</param>
-    /// <param name="ifConditionFalse">The string to add if <paramref name="condition"/> is <c>false</c>.</param>
-    public static void Add(this ArgumentBuilder builder, bool condition, string? ifConditionTrue, string? ifConditionFalse)
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
+    /// <param name="condition">Whether or not to add <paramref name="ifConditionTrue" /> to the argument list.</param>
+    /// <param name="ifConditionTrue">The string to add if <paramref name="condition" /> is <c>true</c>.</param>
+    /// <param name="ifConditionFalse">The string to add if <paramref name="condition" /> is <c>false</c>.</param>
+    public static void Add(this ArgumentBuilder builder, bool condition, string? ifConditionTrue,
+        string? ifConditionFalse)
     {
         builder.Add(condition ? ifConditionTrue : ifConditionFalse);
     }
 
     /// <summary>
-    /// Adds all non-<c>null</c> <paramref name="values"/> to the argument list.
+    ///     Adds all non-<c>null</c> <paramref name="values" /> to the argument list.
     /// </summary>
     /// <remarks>
-    /// <para>If <paramref name="values"/> is <c>null</c> or empty, then no change is made to the argument list.</para>
-    ///
-    /// <para>Any <c>null</c> values in the enumeration will be skipped, which can be convenient in calling constructions.</para>
+    ///     <para>If <paramref name="values" /> is <c>null</c> or empty, then no change is made to the argument list.</para>
+    ///     <para>Any <c>null</c> values in the enumeration will be skipped, which can be convenient in calling constructions.</para>
     /// </remarks>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="values">A sequence of strings to add.</param>
     public static void Add(this ArgumentBuilder builder, IEnumerable<string?>? values)
     {
@@ -64,25 +64,27 @@ public static class ArgumentBuilderExtensions
             return;
         }
 
-        foreach (string? value in values)
+        foreach (var value in values)
         {
             builder.Add(value);
         }
     }
 
     /// <summary>
-    /// Adds all non-<c>null</c> <paramref name="ifConditionTrue"/> values to the argument list if <paramref name="condition"/>
-    /// is <c>true</c>.
+    ///     Adds all non-<c>null</c> <paramref name="ifConditionTrue" /> values to the argument list if
+    ///     <paramref name="condition" />
+    ///     is <c>true</c>.
     /// </summary>
     /// <remarks>
-    /// <para>If <paramref name="ifConditionTrue"/> is <c>null</c> or empty, then no change is made
-    /// to the argument list, regardless of the value of <paramref name="condition"/>.</para>
-    ///
-    /// <para>Any <c>null</c> values in the enumeration will be skipped, which can be convenient in calling constructions.</para>
+    ///     <para>
+    ///         If <paramref name="ifConditionTrue" /> is <c>null</c> or empty, then no change is made
+    ///         to the argument list, regardless of the value of <paramref name="condition" />.
+    ///     </para>
+    ///     <para>Any <c>null</c> values in the enumeration will be skipped, which can be convenient in calling constructions.</para>
     /// </remarks>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
-    /// <param name="condition">Whether or not to add <paramref name="ifConditionTrue"/> to the argument list.</param>
-    /// <param name="ifConditionTrue">A sequence of strings to add if <paramref name="condition"/> is <c>true</c>.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
+    /// <param name="condition">Whether or not to add <paramref name="ifConditionTrue" /> to the argument list.</param>
+    /// <param name="ifConditionTrue">A sequence of strings to add if <paramref name="condition" /> is <c>true</c>.</param>
     public static void Add(this ArgumentBuilder builder, bool condition, IEnumerable<string?>? ifConditionTrue)
     {
         if (!condition || ifConditionTrue is null)
@@ -90,16 +92,16 @@ public static class ArgumentBuilderExtensions
             return;
         }
 
-        foreach (string? value in ifConditionTrue)
+        foreach (var value in ifConditionTrue)
         {
             builder.Add(value);
         }
     }
 
     /// <summary>
-    /// Adds the git argument syntax for members of the <see cref="ForcePushOptions"/> enum.
+    ///     Adds the git argument syntax for members of the <see cref="ForcePushOptions" /> enum.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="option">The enum member to add to the builder.</param>
     public static void Add(this ArgumentBuilder builder, ForcePushOptions option)
     {
@@ -118,9 +120,9 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds the git argument syntax for members of the <see cref="UntrackedFilesMode"/> enum.
+    ///     Adds the git argument syntax for members of the <see cref="UntrackedFilesMode" /> enum.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="mode">The enum member to add to the builder.</param>
     public static void Add(this ArgumentBuilder builder, UntrackedFilesMode mode)
     {
@@ -140,9 +142,9 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds the git argument syntax for members of the <see cref="IgnoreSubmodulesMode"/> enum.
+    ///     Adds the git argument syntax for members of the <see cref="IgnoreSubmodulesMode" /> enum.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="mode">The enum member to add to the builder.</param>
     public static void Add(this ArgumentBuilder builder, IgnoreSubmodulesMode mode)
     {
@@ -163,9 +165,9 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds the git argument syntax for members of the <see cref="CleanMode"/> enum.
+    ///     Adds the git argument syntax for members of the <see cref="CleanMode" /> enum.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="mode">The enum member to add to the builder.</param>
     public static void Add(this ArgumentBuilder builder, CleanMode mode)
     {
@@ -184,9 +186,9 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds the git argument syntax for members of the <see cref="ResetMode"/> enum.
+    ///     Adds the git argument syntax for members of the <see cref="ResetMode" /> enum.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="mode">The enum member to add to the builder.</param>
     public static void Add(this ArgumentBuilder builder, ResetMode mode)
     {
@@ -208,9 +210,9 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds the git argument syntax for members of the <see cref="GitBisectOption"/> enum.
+    ///     Adds the git argument syntax for members of the <see cref="GitBisectOption" /> enum.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="option">The enum member to add to the builder.</param>
     public static void Add(this ArgumentBuilder builder, GitBisectOption option)
     {
@@ -229,13 +231,13 @@ public static class ArgumentBuilderExtensions
     }
 
     /// <summary>
-    /// Adds <paramref name="objectId"/> as a SHA-1 argument without allocating a string.
+    ///     Adds <paramref name="objectId" /> as a SHA-1 argument without allocating a string.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
     /// <param name="objectId">The SHA-1 object ID to add to the builder.</param>
-    /// <exception cref="ArgumentException"><paramref name="objectId"/> does not represent a real git object.</exception>
+    /// <exception cref="ArgumentException"><paramref name="objectId" /> does not represent a real git object.</exception>
     /// <remarks>
-    ///  If <paramref name="objectId"/> is zero then no change is made to the arguments.
+    ///     If <paramref name="objectId" /> is zero then no change is made to the arguments.
     /// </remarks>
     public static void Add(this ArgumentBuilder builder, ObjectId objectId)
     {
@@ -251,15 +253,15 @@ public static class ArgumentBuilderExtensions
 
         Span<char> buffer = stackalloc char[ObjectId.Sha1CharCount];
         objectId.WriteTo(buffer);
-        builder.Add((ReadOnlySpan<char>)buffer);
+        builder.Add(buffer);
     }
 
     /// <summary>
-    /// Adds a sequence of <paramref name="objectIds"/> to the builder.
+    ///     Adds a sequence of <paramref name="objectIds" /> to the builder.
     /// </summary>
-    /// <param name="builder">The <see cref="ArgumentBuilder"/> to add arguments to.</param>
-    /// <param name="objectIds">A sequence of SHA-1 object IDs to add to the builder, or <see langword="null"/>.</param>
-    /// <exception cref="ArgumentException"><paramref name="objectIds"/> contains an artificial commit.</exception>
+    /// <param name="builder">The <see cref="ArgumentBuilder" /> to add arguments to.</param>
+    /// <param name="objectIds">A sequence of SHA-1 object IDs to add to the builder, or <see langword="null" />.</param>
+    /// <exception cref="ArgumentException"><paramref name="objectIds" /> contains an artificial commit.</exception>
     public static void Add(this ArgumentBuilder builder, IEnumerable<ObjectId>? objectIds)
     {
         if (objectIds is null)
@@ -267,41 +269,44 @@ public static class ArgumentBuilderExtensions
             return;
         }
 
-        foreach (ObjectId objectId in objectIds)
+        foreach (var objectId in objectIds)
         {
             builder.Add(objectId);
         }
     }
 
     /// <summary>
-    /// Split arguments exceeding max length into multiple batches.
-    /// Windows by default limit arguments length less than 32767 <see cref="short.MaxValue"/>.
-    /// Implementation by <see cref="System.Diagnostics.Process"/> will have file path included in command line arguments,
-    /// as well as added quotation and space characters, so we need base length to account for all these added characters
-    /// <see href="https://referencesource.microsoft.com/#system/services/monitoring/system/diagnosticts/Process.cs,1944"/>
+    ///     Split arguments exceeding max length into multiple batches.
+    ///     Windows by default limit arguments length less than 32767 <see cref="short.MaxValue" />.
+    ///     Implementation by <see cref="System.Diagnostics.Process" /> will have file path included in command line arguments,
+    ///     as well as added quotation and space characters, so we need base length to account for all these added characters
+    ///     <see href="https://referencesource.microsoft.com/#system/services/monitoring/system/diagnosticts/Process.cs,1944" />
     /// </summary>
     /// <param name="builder">Argument builder instance.</param>
     /// <param name="arguments">Arguments.</param>
     /// <param name="baseLength">Base executable file and command line length.</param>
     /// <param name="maxLength">Command line max length. Default is 32767 - 1 on Windows.</param>
     /// <returns>Array of batch arguments split by max length.</returns>
-    public static List<BatchArgumentItem> BuildBatchArguments(this ArgumentBuilder builder, IEnumerable<string> arguments, int? baseLength = null, int maxLength = short.MaxValue)
+    public static List<BatchArgumentItem> BuildBatchArguments(this ArgumentBuilder builder,
+        IEnumerable<string> arguments, int? baseLength = null, int maxLength = short.MaxValue)
     {
         // 3: double quotes + ' '
         // '"git.exe" ' is always included in final command line arguments
         baseLength ??= AppSettings.GitCommand.Length + 3;
 
-        string baseArgument = builder.ToString();
+        var baseArgument = builder.ToString();
         if (baseLength + baseArgument.Length >= maxLength)
         {
-            throw new ArgumentException($"Git base command \"{baseArgument}\" always reached max length of {maxLength} characters.", nameof(baseLength));
+            throw new ArgumentException(
+                $"Git base command \"{baseArgument}\" always reached max length of {maxLength} characters.",
+                nameof(baseLength));
         }
 
         // Clone command as argument builder
         List<BatchArgumentItem> batches = [];
-        int currentBatchItemCount = 0;
-        int currentArgumentLength = baseArgument.Length;
-        ArgumentBuilder lastBatchBuilder = arguments.Aggregate(builder, (currentBatchBuilder, argument) =>
+        var currentBatchItemCount = 0;
+        var currentArgumentLength = baseArgument.Length;
+        var lastBatchBuilder = arguments.Aggregate(builder, (currentBatchBuilder, argument) =>
         {
             // 1: ' ' space character length will be added
             // When enumeration is finished, no need to add ' ' to length calculation
@@ -310,7 +315,9 @@ public static class ArgumentBuilderExtensions
                 // Handle abnormal case when base command and a single argument exceed max length
                 if (currentBatchItemCount == 0)
                 {
-                    throw new ArgumentException($"Git command \"{currentBatchBuilder}\" always exceeded max length of {maxLength} characters.", nameof(arguments));
+                    throw new ArgumentException(
+                        $"Git command \"{currentBatchBuilder}\" always exceeded max length of {maxLength} characters.",
+                        nameof(arguments));
                 }
 
                 // Finish current command line
@@ -331,7 +338,9 @@ public static class ArgumentBuilderExtensions
         // Handle rare case when last argument length exceed max length
         if (baseLength + currentArgumentLength >= maxLength)
         {
-            throw new ArgumentException($"Git command \"{lastBatchBuilder}\" always exceeded max length of {maxLength} characters.", nameof(arguments));
+            throw new ArgumentException(
+                $"Git command \"{lastBatchBuilder}\" always exceeded max length of {maxLength} characters.",
+                nameof(arguments));
         }
 
         // Add last commandline batch
@@ -343,6 +352,9 @@ public static class ArgumentBuilderExtensions
         return batches;
     }
 
-    public static List<BatchArgumentItem> BuildBatchArgumentsForFiles(this ArgumentBuilder builder, IEnumerable<string> files)
-        => builder.BuildBatchArguments(files.Select(f => f.ToPosixPath().QuoteNE()));
+    public static List<BatchArgumentItem> BuildBatchArgumentsForFiles(this ArgumentBuilder builder,
+        IEnumerable<string> files)
+    {
+        return builder.BuildBatchArguments(files.Select(f => f.ToPosixPath().QuoteNe()));
+    }
 }

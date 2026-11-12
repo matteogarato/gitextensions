@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+
 namespace GitCommands.Git.Extensions;
 
 public static class ProcessExtensions
@@ -10,7 +11,7 @@ public static class ProcessExtensions
         {
             // Send Ctrl+C
             NativeMethods.AttachConsole(process.Id);
-            NativeMethods.SetConsoleCtrlHandler(IntPtr.Zero, add: true);
+            NativeMethods.SetConsoleCtrlHandler(IntPtr.Zero, true);
             NativeMethods.GenerateConsoleCtrlEvent(0, 0);
 
             if (!process.HasExited)

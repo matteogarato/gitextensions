@@ -8,7 +8,7 @@ namespace ResourceManager;
 // NOTE do not make this class abstract as it breaks the WinForms designer in VS
 
 /// <summary>
-///  Provides translation for Git Extensions <see cref="UserControl"/>s.
+///     Provides translation for Git Extensions <see cref="UserControl" />s.
 /// </summary>
 public class TranslatedControl : UserControl, ITranslate
 {
@@ -28,7 +28,20 @@ public class TranslatedControl : UserControl, ITranslate
         set => base.Font = value;
     }
 
-    protected bool IsDesignMode => _initialiser.IsDesignMode;
+    protected bool IsDesignMode
+    {
+        get => _initialiser.IsDesignMode;
+    }
+
+    public virtual void AddTranslationItems(ITranslation translation)
+    {
+        TranslationUtils.AddTranslationItemsFromFields(Name, this, translation);
+    }
+
+    public virtual void TranslateItems(ITranslation translation)
+    {
+        TranslationUtils.TranslateItemsFromFields(Name, this, translation);
+    }
 
     protected virtual void OnRuntimeLoad()
     {
@@ -46,9 +59,12 @@ public class TranslatedControl : UserControl, ITranslate
 
     /// <summary>Performs post-initialisation tasks such as translation.</summary>
     /// <remarks>
-    /// <para>Subclasses must ensure this method is called in their constructor, ideally as the final statement.</para>
-    /// <para>Requiring this extra life-cycle event allows preparing the UI after any call to <c>InitializeComponent</c>,
-    /// but before it is show. The <see cref="UserControl.Load"/> event occurs too late for operations that effect layout.</para>
+    ///     <para>Subclasses must ensure this method is called in their constructor, ideally as the final statement.</para>
+    ///     <para>
+    ///         Requiring this extra life-cycle event allows preparing the UI after any call to <c>InitializeComponent</c>,
+    ///         but before it is show. The <see cref="UserControl.Load" /> event occurs too late for operations that effect
+    ///         layout.
+    ///     </para>
     /// </remarks>
     protected void InitializeComplete()
     {
@@ -60,15 +76,5 @@ public class TranslatedControl : UserControl, ITranslate
         }
 
         this.FixVisualStyle();
-    }
-
-    public virtual void AddTranslationItems(ITranslation translation)
-    {
-        TranslationUtils.AddTranslationItemsFromFields(Name, this, translation);
-    }
-
-    public virtual void TranslateItems(ITranslation translation)
-    {
-        TranslationUtils.TranslateItemsFromFields(Name, this, translation);
     }
 }

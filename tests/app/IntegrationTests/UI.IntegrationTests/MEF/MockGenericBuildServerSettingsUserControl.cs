@@ -3,7 +3,7 @@ using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using ResourceManager;
 
-namespace UITests.CommandsDialogs.SettingsDialog.Pages;
+namespace UITests.MEF;
 
 [Export(typeof(IBuildServerSettingsUserControl))]
 [BuildServerSettingsUserControlMetadata("GenericBuildServerMock")]
@@ -20,12 +20,12 @@ public partial class MockGenericBuildServerSettingsUserControl : GitExtensionsCo
         Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
     }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
         _defaultProjectName = defaultProjectName;
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
     {
         txtProjectName.Text = buildServerConfig.GetString("ProjectName", _defaultProjectName);
         txtAccountName.Text = buildServerConfig.GetString("AccountName", null);
@@ -40,7 +40,7 @@ public partial class MockGenericBuildServerSettingsUserControl : GitExtensionsCo
         }
     }
 
-    public void SaveSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
     {
         buildServerConfig.SetString("ProjectName", txtProjectName.Text.NullIfEmpty());
         buildServerConfig.SetString("AccountName", txtAccountName.Text.NullIfEmpty());

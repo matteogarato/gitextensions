@@ -11,9 +11,10 @@ public static class TreeViewExtensions
             return;
         }
 
-        if (node.TreeView is not TreeView treeView)
+        if (node.TreeView is not { } treeView)
         {
-            DebugHelpers.Fail(@$"{nameof(EnsureVerticallyVisible)}: Node ""{node.Text}"" does not belong to a TreeView.");
+            DebugHelpers.Fail(
+                @$"{nameof(EnsureVerticallyVisible)}: Node ""{node.Text}"" does not belong to a TreeView.");
             return;
         }
 
@@ -32,7 +33,7 @@ public static class TreeViewExtensions
 
         List<TreeNode> parents = [];
         AddParents(parents, node, treeView.Nodes);
-        foreach (TreeNode parent in parents)
+        foreach (var parent in parents)
         {
             parent.Expand();
         }
@@ -41,8 +42,8 @@ public static class TreeViewExtensions
 
         static bool AddParents(List<TreeNode> parentsOfNode, TreeNode node, TreeNodeCollection nodes)
         {
-            IEnumerable<TreeNode> actualNodes = GetActualNodes(nodes);
-            foreach (TreeNode parent in actualNodes)
+            var actualNodes = GetActualNodes(nodes);
+            foreach (var parent in actualNodes)
             {
                 if (parent == node)
                 {
@@ -54,7 +55,7 @@ public static class TreeViewExtensions
                     continue;
                 }
 
-                bool found = AddParents(parentsOfNode, node, parent.Nodes);
+                var found = AddParents(parentsOfNode, node, parent.Nodes);
                 if (found)
                 {
                     parentsOfNode.Insert(0, parent);
@@ -67,9 +68,9 @@ public static class TreeViewExtensions
     }
 
     /// <summary>
-    /// Returns a set of expanded node paths to be used with RestoreExpandedNodeState starting from the input node.
-    /// This function makes use of GetFullNamePath, rather than TreeNode.FullPath, so you can vary the node's Text,
-    /// as long as the node's Name remains stable.
+    ///     Returns a set of expanded node paths to be used with RestoreExpandedNodeState starting from the input node.
+    ///     This function makes use of GetFullNamePath, rather than TreeNode.FullPath, so you can vary the node's Text,
+    ///     as long as the node's Name remains stable.
     /// </summary>
     public static HashSet<string> GetExpandedNodesState(this TreeNode node)
     {
@@ -79,17 +80,17 @@ public static class TreeViewExtensions
     }
 
     /// <summary>
-    /// Similar to TreeNode.FullPath, this function returns a full path made up of TreeNode.Name rather
-    /// than TreeNode.Text, if the former is non-empty. This is useful as it allows the node's Text to
-    /// be changed, while the node's Name can remain a key for operations such as getting and restoring
-    /// the expanded node state.
+    ///     Similar to TreeNode.FullPath, this function returns a full path made up of TreeNode.Name rather
+    ///     than TreeNode.Text, if the former is non-empty. This is useful as it allows the node's Text to
+    ///     be changed, while the node's Name can remain a key for operations such as getting and restoring
+    ///     the expanded node state.
     /// </summary>
     public static string GetFullNamePath(this TreeNode node)
     {
-        string sep = node.TreeView is not null ? node.TreeView.PathSeparator : "\\";
+        var sep = node.TreeView is not null ? node.TreeView.PathSeparator : "\\";
 
-        string result = GetNameOrText(node);
-        TreeNode currNode = node;
+        var result = GetNameOrText(node);
+        var currNode = node;
         while (currNode.Parent is not null)
         {
             currNode = currNode.Parent;
@@ -106,14 +107,14 @@ public static class TreeViewExtensions
 
     public static TreeNode? GetNodeFromPath(this TreeNode node, string? path)
     {
-        if (GetFullNamePath(node) == path)
+        if (node.GetFullNamePath() == path)
         {
             return node;
         }
 
         foreach (TreeNode childNode in node.Nodes)
         {
-            if (GetNodeFromPath(childNode, path) is TreeNode foundNode)
+            if (childNode.GetNodeFromPath(path) is { } foundNode)
             {
                 return foundNode;
             }
@@ -123,7 +124,9 @@ public static class TreeViewExtensions
     }
 
     public static IEnumerable<TreeNode> Items(this TreeView? treeView)
-        => treeView is null ? [] : Recurse(treeView.Nodes);
+    {
+        return treeView is null ? [] : Recurse(treeView.Nodes);
+    }
 
     public static IEnumerable<TreeNode> Items(this TreeNode? node)
     {
@@ -134,26 +137,30 @@ public static class TreeViewExtensions
 
         yield return node;
 
-        foreach (TreeNode subNode in Recurse(node.Nodes))
+        foreach (var subNode in Recurse(node.Nodes))
         {
             yield return subNode;
         }
     }
 
     public static IEnumerable<T> ItemTags<T>(this TreeView? treeView) where T : class
-        => treeView.Items().ItemTags<T>();
+    {
+        return treeView.Items().ItemTags<T>();
+    }
 
     public static IEnumerable<T> ItemTags<T>(this TreeNode? node) where T : class
-        => node.Items().ItemTags<T>();
+    {
+        return node.Items().ItemTags<T>();
+    }
 
     /// <summary>
-    /// Restores the expanded state of nodes under the input node using the set returned by GetExpandedNodesState.
+    ///     Restores the expanded state of nodes under the input node using the set returned by GetExpandedNodesState.
     /// </summary>
     public static void RestoreExpandedNodesState(this TreeNode node, HashSet<string> expandedNodes)
     {
-        foreach (string path in expandedNodes)
+        foreach (var path in expandedNodes)
         {
-            TreeNode? foundNode = GetNodeFromPath(node, path);
+            var foundNode = node.GetNodeFromPath(path);
             foundNode?.Expand();
         }
     }
@@ -164,42 +171,49 @@ public static class TreeViewExtensions
         // is pointless for one which was not shown yet - it has nothing to scroll.
         if (treeView?.IsHandleCreated is true)
         {
-            NativeMethods.SendMessageW(treeView.Handle, NativeMethods.WM_HSCROLL, (IntPtr)NativeMethods.SBH.LEFT, IntPtr.Zero);
+            NativeMethods.SendMessageW(treeView.Handle, NativeMethods.WmHscroll, (IntPtr)NativeMethods.Sbh.Left,
+                IntPtr.Zero);
         }
     }
 
     public static IEnumerable<T> SelectedItemTags<T>(this MultiSelectTreeView? treeView) where T : class
-        => treeView is null ? [] : treeView.SelectedNodes.ItemTags<T>();
+    {
+        return treeView is null ? [] : treeView.SelectedNodes.ItemTags<T>();
+    }
 
     private static void DoGetExpandedNodesState(this TreeNode node, HashSet<string> expandedNodes)
     {
         if (node.IsExpanded)
         {
-            expandedNodes.Add(GetFullNamePath(node));
+            expandedNodes.Add(node.GetFullNamePath());
         }
 
         foreach (TreeNode childNode in node.Nodes)
         {
-            DoGetExpandedNodesState(childNode, expandedNodes);
+            childNode.DoGetExpandedNodesState(expandedNodes);
         }
     }
 
     private static IEnumerable<TreeNode> GetActualNodes(TreeNodeCollection nodes)
-        => nodes.Count == 1 && nodes[0].Tag is TreeNode[] actualNodes
+    {
+        return nodes.Count == 1 && nodes[0].Tag is TreeNode[] actualNodes
             ? actualNodes
             : nodes.Cast<TreeNode>();
+    }
 
     /// <summary>
-    ///  Returns the Tag of the nodes which can be casted to T - without iterating subnodes.
+    ///     Returns the Tag of the nodes which can be casted to T - without iterating subnodes.
     /// </summary>
     private static IEnumerable<T> ItemTags<T>(this IEnumerable<TreeNode> nodes) where T : class
-        => nodes.Select(node => node.Tag as T).Where(value => value is not null).Cast<T>();
+    {
+        return nodes.Select(node => node.Tag as T).Where(value => value is not null).Cast<T>();
+    }
 
     private static IEnumerable<TreeNode> Recurse(TreeNodeCollection nodes)
     {
-        foreach (TreeNode node in GetActualNodes(nodes))
+        foreach (var node in GetActualNodes(nodes))
         {
-            foreach (TreeNode treeNode in node.Items())
+            foreach (var treeNode in node.Items())
             {
                 yield return treeNode;
             }

@@ -1,25 +1,21 @@
 using GitExtensions.Extensibility;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
-using ICSharpCode.TextEditor;
+using ICSharpCode.TextEditor.Document.HighlightingStrategy;
+using ICSharpCode.TextEditor.Gui;
 
 namespace GitUI.Editor.Diff;
 
-public class DiffViewerLineNumberControl : AbstractMargin
+public class DiffViewerLineNumberControl(TextArea textArea) : AbstractMargin(textArea)
 {
     private const int _textHorizontalMargin = 4;
     private static readonly IReadOnlyDictionary<int, DiffLineInfo> _empty = new Dictionary<int, DiffLineInfo>();
     private IReadOnlyDictionary<int, DiffLineInfo> _diffLines = _empty;
-    private bool _visible = true;
     private bool _showLeftColumn = true;
-
-    public DiffViewerLineNumberControl(TextArea textArea)
-        : base(textArea)
-    {
-    }
+    private bool _visible = true;
 
     /// <summary>
-    /// Gets the maximum line number from either left or right version.
+    ///     Gets the maximum line number from either left or right version.
     /// </summary>
     public int MaxLineNumber { get; private set; }
 
@@ -30,8 +26,8 @@ public class DiffViewerLineNumberControl : AbstractMargin
             if (_visible && _diffLines.Count != 0)
             {
                 // add a space behind each number
-                int maxDigits = MaxLineNumber > 0 ? ((int)Math.Log10(MaxLineNumber) + 1) : 0;
-                int length = (_showLeftColumn ? 2 : 1) * (1 + maxDigits);
+                var maxDigits = MaxLineNumber > 0 ? (int)Math.Log10(MaxLineNumber) + 1 : 0;
+                var length = (_showLeftColumn ? 2 : 1) * (1 + maxDigits);
                 return _textHorizontalMargin + (textArea.TextView.WideSpaceWidth * length);
             }
 
@@ -39,32 +35,42 @@ public class DiffViewerLineNumberControl : AbstractMargin
         }
     }
 
+    public override bool IsVisible
+    {
+        get => _visible;
+    }
+
     /// <summary>
-    /// returns the according line numbers or null if the caretLine is not mapped.
+    ///     returns the according line numbers or null if the caretLine is not mapped.
     /// </summary>
     /// <param name="caretLine">0-based (in contrast to the displayed line numbers which are 1-based).</param>
     public DiffLineInfo? GetLineInfo(int caretLine)
     {
-        _diffLines.TryGetValue(caretLine + 1, out DiffLineInfo? diffLine);
+        _diffLines.TryGetValue(caretLine + 1, out var diffLine);
         return diffLine;
     }
 
     public override void Paint(Graphics g, Rectangle rect)
     {
-        int numbersWidth = Width - _textHorizontalMargin;
-        int leftWidth = _showLeftColumn ? _textHorizontalMargin + (numbersWidth / 2) : 0;
-        int rightWidth = rect.Width - leftWidth;
+        var numbersWidth = Width - _textHorizontalMargin;
+        var leftWidth = _showLeftColumn ? _textHorizontalMargin + (numbersWidth / 2) : 0;
+        var rightWidth = rect.Width - leftWidth;
 
-        int fontHeight = textArea.TextView.FontHeight;
-        ICSharpCode.TextEditor.Document.HighlightColor lineNumberPainterColor = textArea.Document.HighlightingStrategy.GetColorFor("LineNumbers");
-        ICSharpCode.TextEditor.Document.HighlightColor lineNumberCurrentPainterColor = textArea.Document.HighlightingStrategy.GetColorFor("LineNumberSelected");
-        Brush fillBrush = textArea.Enabled ? BrushRegistry.GetBrush(lineNumberPainterColor.BackgroundColor) : SystemBrushes.InactiveBorder;
-        Brush drawBrush = BrushRegistry.GetBrush(lineNumberPainterColor.Color);
-        Brush currentLineBrush = BrushRegistry.GetBrush(lineNumberCurrentPainterColor.Color);
+        var fontHeight = textArea.TextView.FontHeight;
+        var lineNumberPainterColor = textArea.Document.HighlightingStrategy.GetColorFor("LineNumbers");
+        var lineNumberCurrentPainterColor =
+            textArea.Document.HighlightingStrategy.GetColorFor("LineNumberSelected");
+        var fillBrush = textArea.Enabled
+            ? BrushRegistry.GetBrush(lineNumberPainterColor.BackgroundColor)
+            : SystemBrushes.InactiveBorder;
+        var drawBrush = BrushRegistry.GetBrush(lineNumberPainterColor.Color);
+        var currentLineBrush = BrushRegistry.GetBrush(lineNumberCurrentPainterColor.Color);
 
-        for (int y = 0; y < ((DrawingPosition.Height + textArea.TextView.VisibleLineDrawingRemainder) / fontHeight) + 1; ++y)
+        for (var y = 0;
+             y < ((DrawingPosition.Height + textArea.TextView.VisibleLineDrawingRemainder) / fontHeight) + 1;
+             ++y)
         {
-            int ypos = drawingPosition.Y + (fontHeight * y) - textArea.TextView.VisibleLineDrawingRemainder;
+            var ypos = drawingPosition.Y + (fontHeight * y) - textArea.TextView.VisibleLineDrawingRemainder;
             Rectangle backgroundRectangle = new(drawingPosition.X, ypos, drawingPosition.Width, fontHeight);
             if (!rect.IntersectsWith(backgroundRectangle))
             {
@@ -72,10 +78,12 @@ public class DiffViewerLineNumberControl : AbstractMargin
             }
 
             g.FillRectangle(fillBrush, backgroundRectangle);
-            int curLine = textArea.Document.GetFirstLogicalLine(textArea.Document.GetVisibleLine(textArea.TextView.FirstVisibleLine) + y);
+            var curLine =
+                textArea.Document.GetFirstLogicalLine(
+                    textArea.Document.GetVisibleLine(textArea.TextView.FirstVisibleLine) + y);
 
             if (curLine >= textArea.Document.TotalNumberOfLines
-                || !_diffLines.TryGetValue(curLine + 1, out DiffLineInfo? diffLine))
+                || !_diffLines.TryGetValue(curLine + 1, out var diffLine))
             {
                 continue;
             }
@@ -84,35 +92,42 @@ public class DiffViewerLineNumberControl : AbstractMargin
             {
                 if (diffLine.LineType is not DiffLineType.PlusRight)
                 {
-                    Brush leftBrush = BrushRegistry.GetBrush(AppColor.AnsiTerminalRedBackNormal.GetThemeColor());
-                    g.FillRectangle(leftBrush, new Rectangle(0, backgroundRectangle.Top, backgroundRectangle.Width / 2, backgroundRectangle.Height));
+                    var leftBrush = BrushRegistry.GetBrush(AppColor.AnsiTerminalRedBackNormal.GetThemeColor());
+                    g.FillRectangle(leftBrush,
+                        new Rectangle(0, backgroundRectangle.Top, backgroundRectangle.Width / 2,
+                            backgroundRectangle.Height));
                 }
 
                 if (diffLine.LineType is not DiffLineType.MinusLeft)
                 {
-                    Brush rightBrush = BrushRegistry.GetBrush(AppColor.AnsiTerminalGreenBackNormal.GetThemeColor());
-                    g.FillRectangle(rightBrush, new Rectangle(backgroundRectangle.Width / 2, backgroundRectangle.Top, rightWidth, backgroundRectangle.Height));
+                    var rightBrush = BrushRegistry.GetBrush(AppColor.AnsiTerminalGreenBackNormal.GetThemeColor());
+                    g.FillRectangle(rightBrush,
+                        new Rectangle(backgroundRectangle.Width / 2, backgroundRectangle.Top, rightWidth,
+                            backgroundRectangle.Height));
                 }
             }
             else if (diffLine.LineType != DiffLineType.Context)
             {
-                Brush? brush = diffLine.LineType switch
+                var brush = diffLine.LineType switch
                 {
                     DiffLineType.Plus => BrushRegistry.GetBrush(AppColor.AnsiTerminalGreenBackNormal.GetThemeColor()),
                     DiffLineType.Minus => BrushRegistry.GetBrush(AppColor.AnsiTerminalRedBackNormal.GetThemeColor()),
                     DiffLineType.Header => BrushRegistry.GetBrush(AppColor.DiffSection.GetThemeColor()),
                     DiffLineType.Grep => BrushRegistry.GetBrush(AppColor.AnsiTerminalRedBackNormal.GetThemeColor()),
-                    _ => default(Brush)
+                    _ => default
                 };
 
-                DebugHelpers.Assert(brush is not null, string.Format("brush is not null, unknow diff line style {0}", diffLine.LineType));
-                g.FillRectangle(brush, new Rectangle(0, backgroundRectangle.Top, leftWidth, backgroundRectangle.Height));
-                g.FillRectangle(brush, new Rectangle(leftWidth, backgroundRectangle.Top, rightWidth, backgroundRectangle.Height));
+                DebugHelpers.Assert(brush is not null,
+                    string.Format("brush is not null, unknow diff line style {0}", diffLine.LineType));
+                g.FillRectangle(brush,
+                    new Rectangle(0, backgroundRectangle.Top, leftWidth, backgroundRectangle.Height));
+                g.FillRectangle(brush,
+                    new Rectangle(leftWidth, backgroundRectangle.Top, rightWidth, backgroundRectangle.Height));
             }
 
-            bool isCurrentLine = curLine == textArea.Caret.Line && MarkSelectedLine;
-            Brush lineBrush = isCurrentLine ? currentLineBrush : drawBrush;
-            Font font = isCurrentLine
+            var isCurrentLine = curLine == textArea.Caret.Line && MarkSelectedLine;
+            var lineBrush = isCurrentLine ? currentLineBrush : drawBrush;
+            var font = isCurrentLine
                 ? lineNumberCurrentPainterColor.GetFont(TextEditorProperties.FontContainer)
                 : lineNumberPainterColor.GetFont(TextEditorProperties.FontContainer);
             if (diffLine.LeftLineNumber != DiffLineInfo.NotApplicableLineNum)
@@ -146,30 +161,24 @@ public class DiffViewerLineNumberControl : AbstractMargin
         MaxLineNumber = 0;
     }
 
-    public override bool IsVisible => _visible;
-
     public void SetVisibility(bool visible)
     {
         _visible = visible;
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly DiffViewerLineNumberControl _diffViewerLineNumberControl;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(DiffViewerLineNumberControl diffViewerLineNumberControl)
-        {
-            _diffViewerLineNumberControl = diffViewerLineNumberControl;
-        }
-
+    internal readonly struct TestAccessor(DiffViewerLineNumberControl diffViewerLineNumberControl)
+    {
         public DiffLinesInfo Result
         {
             get
             {
                 DiffLinesInfo diffLinesInfo = new();
-                foreach (KeyValuePair<int, DiffLineInfo> kvp in _diffViewerLineNumberControl._diffLines)
+                foreach (var kvp in diffViewerLineNumberControl._diffLines)
                 {
                     diffLinesInfo.Add(kvp.Value);
                 }

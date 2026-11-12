@@ -1,15 +1,16 @@
 ﻿using GitUI.Theming;
 
 namespace GitUITests.Theming;
+
 public class ThemePersistenceTests
 {
     public static IEnumerable<object[]> ColorFormatCases()
     {
-        yield return [Color.FromArgb(red: 255, green: 0, blue: 0), "#ff0000"];
+        yield return [Color.FromArgb(255, 0, 0), "#ff0000"];
 
-        yield return [Color.FromArgb(red: 0, green: 255, blue: 0), "#00ff00"];
+        yield return [Color.FromArgb(0, 255, 0), "#00ff00"];
 
-        yield return [Color.FromArgb(red: 0, green: 0, blue: 255), "#0000ff"];
+        yield return [Color.FromArgb(0, 0, 255), "#0000ff"];
     }
 
     [Theory]

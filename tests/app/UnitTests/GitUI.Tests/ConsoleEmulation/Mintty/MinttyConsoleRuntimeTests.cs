@@ -45,15 +45,15 @@ public sealed class MinttyConsoleRuntimeTests
         // Regression test for WSL repos. Previously the raw command line was spliced into
         // a bash script verbatim; bash collapsed the `\\` in the double-quoted UNC path
         // to a single `\` and wsl.exe rejected the malformed argument with E_INVALIDARG.
-        string commandLine =
+        var commandLine =
             """
-            "wsl" -d Ubuntu-22.04 --cd "\\wsl$\Ubuntu-22.04\home\user\src\WLED" git -c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress "--all" --prune --force
-            """.Trim();
+                "wsl" -d Ubuntu-22.04 --cd "\\wsl$\Ubuntu-22.04\home\user\src\WLED" git -c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress "--all" --prune --force
+                """.Trim();
 
-        string expected =
+        var expected =
             """
-            'wsl' '-d' 'Ubuntu-22.04' '--cd' '\\wsl$\Ubuntu-22.04\home\user\src\WLED' 'git' '-c' 'fetch.parallel=0' '-c' 'submodule.fetchjobs=0' 'fetch' '--progress' '--all' '--prune' '--force'
-            """.Trim();
+                'wsl' '-d' 'Ubuntu-22.04' '--cd' '\\wsl$\Ubuntu-22.04\home\user\src\WLED' 'git' '-c' 'fetch.parallel=0' '-c' 'submodule.fetchjobs=0' 'fetch' '--progress' '--all' '--prune' '--force'
+                """.Trim();
 
         MinttyConsoleRuntime.ConvertCommandLineToBash(commandLine).Should().Be(expected);
     }

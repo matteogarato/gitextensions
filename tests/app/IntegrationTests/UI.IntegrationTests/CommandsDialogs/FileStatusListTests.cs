@@ -2,32 +2,34 @@
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
 using NSubstitute;
-using Xunit;
+using FileStatusList = GitUI.UserControls.FileStatusList;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FileStatusListTests : System.IDisposable
+public class FileStatusListTests : IDisposable
 {
+    private readonly FileStatusList _fileStatusList = null!;
+
     // Created once for each test
-    private Form _form = null!;
-    private FileStatusList _fileStatusList = null!;
+    private readonly Form _form = null!;
+
     public FileStatusListTests()
     {
-        ServiceContainer serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
-        IGitModule module = Substitute.For<IGitModule>();
-        GitUICommands commands = new(serviceContainer, module);
-        IGitUICommandsSource uiCommandsSource = Substitute.For<IGitUICommandsSource>();
-        uiCommandsSource.UICommands.Returns(x => commands);
+        var serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
+        var module = Substitute.For<IGitModule>();
+        GitUiCommands commands = new(serviceContainer, module);
+        var uiCommandsSource = Substitute.For<IGitUiCommandsSource>();
+        uiCommandsSource.UiCommands.Returns(x => commands);
 
         _form = new Form();
-        _fileStatusList = new FileStatusList
-        {
-            Parent = _form,
-            UICommandsSource = uiCommandsSource
-        };
+        _fileStatusList = new FileStatusList { Parent = _form, UiCommandsSource = uiCommandsSource };
         _form.Show(); // must be visible to be able to change the focus
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -41,11 +43,11 @@ public class FileStatusListTests : System.IDisposable
     {
         const int folderCount = 4;
         const int filesPerFolder = 50;
-        GitItemStatus[] items = Enumerable.Range(0, folderCount * filesPerFolder)
+        var items = Enumerable.Range(0, folderCount * filesPerFolder)
             .Select(index => new GitItemStatus($"folder{index / filesPerFolder}/subfolder/file{index:D3}"))
             .ToArray();
         _fileStatusList.SetDiffs(null, new GitRevision(ObjectId.Random()), items);
-        MultiSelectTreeView tree = _fileStatusList.GetTestAccessor().FileStatusListView;
+        var tree = _fileStatusList.GetTestAccessor().FileStatusListView;
         tree.CollapseAll();
 
         _fileStatusList.SelectAll();
@@ -60,21 +62,21 @@ public class FileStatusListTests : System.IDisposable
     [WinFormsFact]
     public void ItemSelections()
     {
-        FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
+        var accessor = _fileStatusList.GetTestAccessor();
 
-        GitItemStatus itemNotInList = new(name: "not in list");
-        GitItemStatus item0 = new(name: "z.0");
-        GitItemStatus item1 = new(name: "x.1");
-        GitItemStatus item2 = new(name: "y.2");
+        GitItemStatus itemNotInList = new("not in list");
+        GitItemStatus item0 = new("z.0");
+        GitItemStatus item1 = new("x.1");
+        GitItemStatus item2 = new("y.2");
         List<GitItemStatus> items = [item0, item1, item2];
 
         // alphabetical order
-        GitItemStatus itemAt0 = item1;
-        GitItemStatus itemAt1 = item2;
-        GitItemStatus itemAt2 = item0;
+        var itemAt0 = item1;
+        var itemAt1 = item2;
+        var itemAt2 = item0;
         GitRevision firstRev = new(ObjectId.Random());
         GitRevision secondRev = new(ObjectId.Random());
-        _fileStatusList.SetDiffs(firstRev: firstRev, secondRev: secondRev, items: items);
+        _fileStatusList.SetDiffs(firstRev, secondRev, items);
 
         accessor.FileStatusListView.FocusedNode!.Index.Should().Be(0);
         _fileStatusList.SelectedItem!.Item.Should().Be(itemAt0);
@@ -162,7 +164,7 @@ public class FileStatusListTests : System.IDisposable
         _fileStatusList.SelectedGitItem.Should().BeNull(); // empty
         _fileStatusList.SelectedItems!.Items().Should().BeEmpty();
 
-        _fileStatusList.SelectedGitItems = new List<GitItemStatus> { };
+        _fileStatusList.SelectedGitItems = new List<GitItemStatus>();
 
         accessor.FileStatusListView.FocusedNode!.Index.Should().Be(1); // unchanged
         _fileStatusList.SelectedItem.Should().BeNull(); // empty
@@ -221,7 +223,7 @@ public class FileStatusListTests : System.IDisposable
         _fileStatusList.SelectedGitItems = [itemAt2];
         _fileStatusList.SelectAll();
 
-        foreach (TreeNode item in accessor.FileStatusListView.Items())
+        foreach (var item in accessor.FileStatusListView.Items())
         {
             accessor.FileStatusListView.SelectedNodes.Contains(item).Should().BeTrue();
         }
@@ -229,7 +231,8 @@ public class FileStatusListTests : System.IDisposable
         accessor.FileStatusListView.FocusedNode!.Index.Should().Be(0);
         _fileStatusList.SelectedItem.Should().BeNull(); // due to multi-selection
         _fileStatusList.SelectedGitItem.Should().BeNull(); // due to multi-selection
-        _fileStatusList.SelectedItems.Items().Should().BeEquivalentTo(new List<GitItemStatus> { itemAt0, itemAt1, itemAt2 });
+        _fileStatusList.SelectedItems.Items().Should()
+            .BeEquivalentTo(new List<GitItemStatus> { itemAt0, itemAt1, itemAt2 });
 
         // SelectFirstVisibleItem
 
@@ -261,10 +264,11 @@ public class FileStatusListTests : System.IDisposable
         string? filterText,
         bool filterFocused)
     {
-        FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
+        var accessor = _fileStatusList.GetTestAccessor();
 
-        accessor.FilterComboBox.Text = filterText; // must be set first because it does not need to update the visibility
-        accessor.SetFileStatusListVisibility(showNoFiles: false);
+        accessor.FilterComboBox.Text =
+            filterText; // must be set first because it does not need to update the visibility
+        accessor.SetFileStatusListVisibility(false);
 
         if (filterFocused)
         {
@@ -277,18 +281,18 @@ public class FileStatusListTests : System.IDisposable
     [WinFormsFact]
     public void Test_FilterWatermarkLabelVisibility_on_Focus()
     {
-        FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
+        var accessor = _fileStatusList.GetTestAccessor();
 
         accessor.FilterComboBox.Text = "";
-        accessor.SetFileStatusListVisibility(showNoFiles: false);
+        accessor.SetFileStatusListVisibility(false);
         accessor.FilterWatermarkLabelVisible.Should().BeTrue();
 
         accessor.FilterComboBox.Focus();
-        accessor.SetFileStatusListVisibility(showNoFiles: false);
+        accessor.SetFileStatusListVisibility(false);
         accessor.FilterWatermarkLabelVisible.Should().BeFalse();
 
         accessor.FileStatusListView.Focus();
-        accessor.SetFileStatusListVisibility(showNoFiles: false);
+        accessor.SetFileStatusListVisibility(false);
         accessor.FilterWatermarkLabelVisible.Should().BeTrue();
     }
 
@@ -298,13 +302,13 @@ public class FileStatusListTests : System.IDisposable
     [InlineData("\\.cs", true)]
     public void Test_StoreFilter_valid(string? regex, bool active)
     {
-        FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
+        var accessor = _fileStatusList.GetTestAccessor();
 
-        Color expectedColor = active ? accessor.ActiveInputColor : SystemColors.Window;
-        string? expectedRegex = string.IsNullOrEmpty(regex) ? null : regex;
+        var expectedColor = active ? accessor.ActiveInputColor : SystemColors.Window;
+        var expectedRegex = string.IsNullOrEmpty(regex) ? null : regex;
 
         _fileStatusList.SetFilter(regex!);
-        accessor.SetFileStatusListVisibility(showNoFiles: false);
+        accessor.SetFileStatusListVisibility(false);
 
         CheckStoreFilter(expectedColor, expectedRegex!, accessor);
 
@@ -317,7 +321,7 @@ public class FileStatusListTests : System.IDisposable
         const string validRegex = "\\.cs";
         const string invalidRegex = "(";
 
-        FileStatusList.TestAccessor accessor = _fileStatusList.GetTestAccessor();
+        var accessor = _fileStatusList.GetTestAccessor();
 
         // set a valid Filter that must not change
         accessor.StoreFilter(validRegex);
@@ -327,14 +331,10 @@ public class FileStatusListTests : System.IDisposable
         CheckStoreFilter(accessor.InvalidInputColor, validRegex, accessor);
     }
 
-    private static void CheckStoreFilter(Color expectedColor, string expectedRegex, FileStatusList.TestAccessor accessor)
+    private static void CheckStoreFilter(Color expectedColor, string expectedRegex,
+        FileStatusList.TestAccessor accessor)
     {
         accessor.FilterComboBox.BackColor.Should().Be(expectedColor);
         accessor.Filter?.ToString().Should().Be(expectedRegex);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

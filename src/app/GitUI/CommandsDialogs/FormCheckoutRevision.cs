@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.HelperDialogs;
@@ -14,8 +14,8 @@ public partial class FormCheckoutRevision : GitExtensionsDialog
     private readonly TranslationString _noRevisionSelectedMsgBox = new("Select 1 revision to checkout.");
     private readonly TranslationString _noRevisionSelectedMsgBoxCaption = new("Checkout");
 
-    public FormCheckoutRevision(IGitUICommands commands)
-        : base(commands, enablePositionRestore: false)
+    public FormCheckoutRevision(IGitUiCommands commands)
+        : base(commands, false)
     {
         InitializeComponent();
         InitializeComplete();
@@ -30,31 +30,33 @@ public partial class FormCheckoutRevision : GitExtensionsDialog
     {
         try
         {
-            ObjectId selectedObjectId = commitPickerSmallControl1.SelectedObjectId;
+            var selectedObjectId = commitPickerSmallControl1.SelectedObjectId;
 
             if (selectedObjectId.IsZero)
             {
-                MessageBoxes.Show(this, _noRevisionSelectedMsgBox.Text, _noRevisionSelectedMsgBoxCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _noRevisionSelectedMsgBox.Text, _noRevisionSelectedMsgBoxCaption.Text,
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            ObjectId checkedOutObjectId = Module.GetCurrentCheckout();
+            var checkedOutObjectId = Module.GetCurrentCheckout();
 
             DebugHelpers.Assert(!checkedOutObjectId.IsZero, "checkedOutObjectId is not zero");
 
-            bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforeCheckout, this);
+            var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforeCheckout, this);
             if (!success)
             {
                 return;
             }
 
-            string command = Commands.Checkout(selectedObjectId.ToString(), Force.Checked ? LocalChangesAction.Reset : 0);
-            success = FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+            string command =
+                Commands.Checkout(selectedObjectId.ToString(), Force.Checked ? LocalChangesAction.Reset : 0);
+            success = FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
             if (success)
             {
                 if (selectedObjectId != checkedOutObjectId)
                 {
-                    UICommands.UpdateSubmodules(this);
+                    UiCommands.UpdateSubmodules(this);
                 }
             }
 

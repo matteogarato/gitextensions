@@ -3,15 +3,9 @@ using GitExtUtils.GitUI;
 
 namespace GitUI;
 
-public sealed class SplitterManager
+public sealed class SplitterManager(SettingsSource settings)
 {
     private readonly List<SplitterData> _splitters = [];
-    private readonly SettingsSource _settings;
-
-    public SplitterManager(SettingsSource settings)
-    {
-        _settings = settings;
-    }
 
     public void AddSplitter(SplitContainer splitter, string settingName, int? defaultDistance = null)
     {
@@ -24,59 +18,78 @@ public sealed class SplitterManager
 
     public void RestoreSplitters()
     {
-        foreach (SplitterData splitter in _splitters)
+        foreach (var splitter in _splitters)
         {
-            splitter.RestoreFromSettings(_settings);
+            splitter.RestoreFromSettings(settings);
         }
     }
 
     public void SaveSplitters()
     {
-        foreach (SplitterData splitter in _splitters)
+        foreach (var splitter in _splitters)
         {
-            splitter.SaveToSettings(_settings);
+            splitter.SaveToSettings(settings);
         }
     }
 
-    internal sealed class SplitterData
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly SplitContainer _splitter;
-        private readonly string _settingName;
-        private readonly int _dpi;
-        private readonly int? _defaultDistance;
+        return new TestAccessor(this);
+    }
 
-        public SplitterData(SplitContainer splitter, string settingName, int dpi, int? defaultDistance)
+    internal sealed class SplitterData(SplitContainer splitter, string settingName, int dpi, int? defaultDistance)
+    {
+        private int SplitterSize
         {
-            _splitter = splitter;
-            _settingName = settingName;
-            _dpi = dpi;
-            _defaultDistance = defaultDistance;
+            get => splitter.Orientation == Orientation.Horizontal ? splitter.Height : splitter.Width;
         }
 
-        private int SplitterSize => _splitter.Orientation == Orientation.Horizontal ? _splitter.Height : _splitter.Width;
-        internal string SizeSettingsKey => _settingName + "_Size";
-        internal string DpiSettingsKey => _settingName + "_Dpi";
-        internal string DistanceSettingsKey => _settingName + "_Distance";
-        internal string FontSizeSettingsKey => _settingName + "_FontSize";
-        internal string Panel1CollapsedSettingsKey => _settingName + "_Panel1Collapsed";
-        internal string Panel2CollapsedSettingsKey => _settingName + "_Panel2Collapsed";
+        internal string SizeSettingsKey
+        {
+            get => settingName + "_Size";
+        }
+
+        internal string DpiSettingsKey
+        {
+            get => settingName + "_Dpi";
+        }
+
+        internal string DistanceSettingsKey
+        {
+            get => settingName + "_Distance";
+        }
+
+        internal string FontSizeSettingsKey
+        {
+            get => settingName + "_FontSize";
+        }
+
+        internal string Panel1CollapsedSettingsKey
+        {
+            get => settingName + "_Panel1Collapsed";
+        }
+
+        internal string Panel2CollapsedSettingsKey
+        {
+            get => settingName + "_Panel2Collapsed";
+        }
 
         public void RestoreFromSettings(SettingsSource settings)
         {
-            _splitter.BeginInit();
-            _splitter.SuspendLayout();
+            splitter.BeginInit();
+            splitter.SuspendLayout();
 
-            int prevDpi = settings.GetInt(DpiSettingsKey) ?? DpiUtil.DpiX;
-            int? prevSizeSetting = settings.GetInt(SizeSettingsKey);
-            int prevSize = prevSizeSetting ?? 0;
-            int? prevDistanceSetting = settings.GetInt(DistanceSettingsKey);
-            int prevDistance = prevDistanceSetting ?? 0;
+            var prevDpi = settings.GetInt(DpiSettingsKey) ?? DpiUtil.DpiX;
+            var prevSizeSetting = settings.GetInt(SizeSettingsKey);
+            var prevSize = prevSizeSetting ?? 0;
+            var prevDistanceSetting = settings.GetInt(DistanceSettingsKey);
+            var prevDistance = prevDistanceSetting ?? 0;
 
             if (prevSize > 0 && prevDistance > 0)
             {
-                FixedPanel fixedPanel = _splitter.FixedPanel;
-                int splitterWidth = _splitter.SplitterWidth;
-                if (SplitterSize == prevSize && _dpi == prevDpi)
+                var fixedPanel = splitter.FixedPanel;
+                var splitterWidth = splitter.SplitterWidth;
+                if (SplitterSize == prevSize && dpi == prevDpi)
                 {
                     SetSplitterDistance(fixedPanel == FixedPanel.Panel2 ? prevDistance + splitterWidth : prevDistance);
                 }
@@ -94,49 +107,50 @@ public sealed class SplitterManager
                             SetSplitterDistance(DpiUtil.Scale(prevDistance, prevDpi));
                             break;
                         case FixedPanel.Panel2:
-                            int panel2PrevSize = DpiUtil.Scale(prevSize, prevDpi) - DpiUtil.Scale(prevDistance, prevDpi);
+                            var panel2PrevSize =
+                                DpiUtil.Scale(prevSize, prevDpi) - DpiUtil.Scale(prevDistance, prevDpi);
                             const int paddingOffset = 2; // Refer to FormCommit.ctor+WorkaroundPaddingIncreaseBug
                             SetSplitterDistance(SplitterSize - panel2PrevSize - paddingOffset + splitterWidth);
                             break;
                     }
                 }
             }
-            else if (_defaultDistance.HasValue && !prevSizeSetting.HasValue && !prevDistanceSetting.HasValue)
+            else if (defaultDistance.HasValue && !prevSizeSetting.HasValue && !prevDistanceSetting.HasValue)
             {
-                SetSplitterDistance(_defaultDistance.Value);
+                SetSplitterDistance(defaultDistance.Value);
             }
 
             // Keep the collapsed states as in the designer if not stored yet
-            _splitter.Panel1Collapsed = settings.GetBool(Panel1CollapsedSettingsKey, defaultValue: _splitter.Panel1Collapsed);
-            _splitter.Panel2Collapsed = settings.GetBool(Panel2CollapsedSettingsKey, defaultValue: _splitter.Panel2Collapsed);
+            splitter.Panel1Collapsed = settings.GetBool(Panel1CollapsedSettingsKey, splitter.Panel1Collapsed);
+            splitter.Panel2Collapsed = settings.GetBool(Panel2CollapsedSettingsKey, splitter.Panel2Collapsed);
 
-            _splitter.ResumeLayout();
-            _splitter.EndInit();
+            splitter.ResumeLayout();
+            splitter.EndInit();
         }
 
         public void SaveToSettings(SettingsSource settings)
         {
-            settings.SetInt(DpiSettingsKey, _dpi);
+            settings.SetInt(DpiSettingsKey, dpi);
             settings.SetInt(SizeSettingsKey, SplitterSize);
-            settings.SetInt(DistanceSettingsKey, _splitter.SplitterDistance);
-            settings.SetFloat(FontSizeSettingsKey, _splitter.Font.Size);
-            settings.SetBool(Panel1CollapsedSettingsKey, _splitter.Panel1Collapsed);
-            settings.SetBool(Panel2CollapsedSettingsKey, _splitter.Panel2Collapsed);
+            settings.SetInt(DistanceSettingsKey, splitter.SplitterDistance);
+            settings.SetFloat(FontSizeSettingsKey, splitter.Font.Size);
+            settings.SetBool(Panel1CollapsedSettingsKey, splitter.Panel1Collapsed);
+            settings.SetBool(Panel2CollapsedSettingsKey, splitter.Panel2Collapsed);
         }
 
         private void SetSplitterDistance(float distance)
         {
             try
             {
-                int intDistance = Convert.ToInt32(distance);
+                var intDistance = Convert.ToInt32(distance);
 
                 if (IsValidSplitterDistance(intDistance))
                 {
-                    _splitter.SplitterDistance = intDistance;
+                    splitter.SplitterDistance = intDistance;
                 }
-                else if (_defaultDistance.HasValue && IsValidSplitterDistance(_defaultDistance.Value))
+                else if (defaultDistance.HasValue && IsValidSplitterDistance(defaultDistance.Value))
                 {
-                    _splitter.SplitterDistance = _defaultDistance.Value;
+                    splitter.SplitterDistance = defaultDistance.Value;
                 }
             }
             catch
@@ -146,24 +160,17 @@ public sealed class SplitterManager
 
             bool IsValidSplitterDistance(int d)
             {
-                return d > _splitter.Panel1MinSize &&
-                       d < SplitterSize - _splitter.Panel2MinSize;
+                return d > splitter.Panel1MinSize &&
+                       d < SplitterSize - splitter.Panel2MinSize;
             }
         }
     }
 
-    internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
+    internal readonly struct TestAccessor(SplitterManager manager)
     {
-        private readonly SplitterManager _manager;
-
-        public TestAccessor(SplitterManager manager)
+        public List<SplitterData> Splitters
         {
-            _manager = manager;
+            get => manager._splitters;
         }
-
-        public List<SplitterData> Splitters => _manager._splitters;
     }
 }

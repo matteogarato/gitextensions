@@ -1,4 +1,5 @@
 ﻿namespace GitUITests;
+
 public sealed class LinqExtensionsTests
 {
     [Fact]
@@ -13,7 +14,7 @@ public sealed class LinqExtensionsTests
     {
         HashSet<int> set = [1, 2, 3];
 
-        set.AsReadOnlyList().Should().Equal(new[] { 1, 2, 3 });
+        set.AsReadOnlyList().Should().Equal(1, 2, 3);
     }
 
     [Fact]

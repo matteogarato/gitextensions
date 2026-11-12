@@ -1,21 +1,24 @@
 ﻿using GitCommands.DiffMergeTools;
 
 namespace GitCommandsTests.DiffMergeTools;
+
 public class RegisteredDiffMergeToolsTests
 {
     [Fact]
     public void All_DiffTools()
     {
-        IEnumerable<string> tools = RegisteredDiffMergeTools.All(DiffMergeToolType.Diff);
+        var tools = RegisteredDiffMergeTools.All(DiffMergeToolType.Diff);
 
-        tools.Should().BeEquivalentTo("araxis", "bc", "bc3", "diffmerge", "kdiff3", "meld", "p4merge", "semanticmerge", "smerge", "tortoisediff", "TortoiseGitIDiff", "vscode", "vsdiffmerge", "winmerge");
+        tools.Should().BeEquivalentTo("araxis", "bc", "bc3", "diffmerge", "kdiff3", "meld", "p4merge", "semanticmerge",
+            "smerge", "tortoisediff", "TortoiseGitIDiff", "vscode", "vsdiffmerge", "winmerge");
     }
 
     [Fact]
     public void All_MergeTools()
     {
-        IEnumerable<string> tools = RegisteredDiffMergeTools.All(DiffMergeToolType.Merge);
+        var tools = RegisteredDiffMergeTools.All(DiffMergeToolType.Merge);
 
-        tools.Should().BeEquivalentTo("araxis", "bc", "bc3", "diffmerge", "kdiff3", "meld", "p4merge", "semanticmerge", "smerge", "tortoisediff", "tortoisemerge", "vscode", "vsdiffmerge", "winmerge");
+        tools.Should().BeEquivalentTo("araxis", "bc", "bc3", "diffmerge", "kdiff3", "meld", "p4merge", "semanticmerge",
+            "smerge", "tortoisediff", "tortoisemerge", "vscode", "vsdiffmerge", "winmerge");
     }
 }

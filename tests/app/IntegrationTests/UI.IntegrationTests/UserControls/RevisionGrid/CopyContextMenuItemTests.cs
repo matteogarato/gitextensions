@@ -1,21 +1,34 @@
 ﻿using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
-using GitUI;
 using GitUI.UserControls.RevisionGrid;
-using GitUIPluginInterfaces;
-using Xunit;
+using ResourceManager;
+using AppSettings = GitCommands.Settings.AppSettings;
 
-namespace GitExtensions.UITests.UserControls.RevisionGrid;
-public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyContextMenuItemTestsFixture>
+namespace UITests.UserControls.RevisionGrid;
+
+public class CopyContextMenuItemTests : IDisposable, IClassFixture<CopyContextMenuItemTestsFixture>
 {
-    private CopyContextMenuItem _copyContextMenuItem = null!;
+    private readonly CopyContextMenuItem _copyContextMenuItem = null!;
 
     public CopyContextMenuItemTests(CopyContextMenuItemTestsFixture fixture)
     {
-        _copyContextMenuItem = new CopyContextMenuItem
+        _copyContextMenuItem = new CopyContextMenuItem { Owner = new ToolStrip() };
+    }
+
+    public static IEnumerable<object[]> GetArtificialCommits
+    {
+        get
         {
-            Owner = new ToolStrip()
-        };
+            yield return [ObjectId.WorkTreeId];
+            yield return [ObjectId.IndexId];
+            yield return [ObjectId.CombinedDiffId];
+        }
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -38,17 +51,18 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
     [MemberData(nameof(GetArtificialCommits))]
     public void Should_should_show_minimum_info_for_artificial_commits(ObjectId objectId)
     {
-        GitRevision[] revisions = [new GitRevision(objectId)];
+        GitRevision[] revisions = [new(objectId)];
         _copyContextMenuItem.SetRevisionFunc(() => revisions);
 
         _copyContextMenuItem.ShowDropDown();
 
         _copyContextMenuItem.DropDownItems.Count.Should().Be(4);
 
-        _copyContextMenuItem.DropDownItems[0].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
-        _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
-        _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
-        _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
+        _copyContextMenuItem.DropDownItems[0].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetCommitHash(1), 'C'));
+        _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetMessage(1), 'M'));
+        _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetAuthor(1), 'A'));
+        _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(TranslatedStrings.Date, 'D'));
     }
 
     [Fact]
@@ -67,14 +81,15 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
         _copyContextMenuItem.ShowDropDown();
 
         _copyContextMenuItem.DropDownItems.Count.Should().Be(8);
-        _copyContextMenuItem.DropDownItems[0].Text.Should().Be(TranslatedStrings.Branches);
+        _copyContextMenuItem.DropDownItems[0].Text.Should().Be(GitUI.TranslatedStrings.Branches);
         _copyContextMenuItem.DropDownItems[1].Text.Should().EndWith("branch1");
         _copyContextMenuItem.DropDownItems[2].Text.Should().EndWith("branch2");
         _copyContextMenuItem.DropDownItems[3].Should().BeOfType<ToolStripSeparator>();
-        _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
-        _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
-        _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
-        _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
+        _copyContextMenuItem.DropDownItems[4].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetCommitHash(1), 'C'));
+        _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetMessage(1), 'M'));
+        _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetAuthor(1), 'A'));
+        _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(TranslatedStrings.Date, 'D'));
     }
 
     [Fact]
@@ -93,14 +108,15 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
         _copyContextMenuItem.ShowDropDown();
 
         _copyContextMenuItem.DropDownItems.Count.Should().Be(8);
-        _copyContextMenuItem.DropDownItems[0].Text.Should().Be(TranslatedStrings.Tags);
+        _copyContextMenuItem.DropDownItems[0].Text.Should().Be(GitUI.TranslatedStrings.Tags);
         _copyContextMenuItem.DropDownItems[1].Text.Should().EndWith("tag1");
         _copyContextMenuItem.DropDownItems[2].Text.Should().EndWith("tag2");
         _copyContextMenuItem.DropDownItems[3].Should().BeOfType<ToolStripSeparator>();
-        _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
-        _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
-        _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
-        _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
+        _copyContextMenuItem.DropDownItems[4].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetCommitHash(1), 'C'));
+        _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetMessage(1), 'M'));
+        _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetAuthor(1), 'A'));
+        _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(TranslatedStrings.Date, 'D'));
     }
 
     [Fact]
@@ -112,7 +128,7 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
             new GitRef(null!, revision.ObjectId, "refs/tags/tag1"),
             new GitRef(null!, revision.ObjectId, "refs/heads/branch1"),
             new GitRef(null!, revision.ObjectId, "refs/tags/tag2"),
-            new GitRef(null!, revision.ObjectId, "refs/heads/branch2"),
+            new GitRef(null!, revision.ObjectId, "refs/heads/branch2")
         ];
         revision.Refs = refs;
         GitRevision[] revisions = [revision];
@@ -121,18 +137,19 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
         _copyContextMenuItem.ShowDropDown();
 
         _copyContextMenuItem.DropDownItems.Count.Should().Be(12);
-        _copyContextMenuItem.DropDownItems[0].Text.Should().Be(TranslatedStrings.Branches);
+        _copyContextMenuItem.DropDownItems[0].Text.Should().Be(GitUI.TranslatedStrings.Branches);
         _copyContextMenuItem.DropDownItems[1].Text.Should().EndWith("branch1");
         _copyContextMenuItem.DropDownItems[2].Text.Should().EndWith("branch2");
         _copyContextMenuItem.DropDownItems[3].Should().BeOfType<ToolStripSeparator>();
-        _copyContextMenuItem.DropDownItems[4].Text.Should().Be(TranslatedStrings.Tags);
+        _copyContextMenuItem.DropDownItems[4].Text.Should().Be(GitUI.TranslatedStrings.Tags);
         _copyContextMenuItem.DropDownItems[5].Text.Should().EndWith("tag1");
         _copyContextMenuItem.DropDownItems[6].Text.Should().EndWith("tag2");
         _copyContextMenuItem.DropDownItems[7].Should().BeOfType<ToolStripSeparator>();
-        _copyContextMenuItem.DropDownItems[8].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
-        _copyContextMenuItem.DropDownItems[9].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
-        _copyContextMenuItem.DropDownItems[10].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
-        _copyContextMenuItem.DropDownItems[11].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
+        _copyContextMenuItem.DropDownItems[8].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetCommitHash(1), 'C'));
+        _copyContextMenuItem.DropDownItems[9].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetMessage(1), 'M'));
+        _copyContextMenuItem.DropDownItems[10].Text.Should().StartWith(AddHotKey(TranslatedStrings.GetAuthor(1), 'A'));
+        _copyContextMenuItem.DropDownItems[11].Text.Should().StartWith(AddHotKey(TranslatedStrings.Date, 'D'));
     }
 
     [Fact]
@@ -142,7 +159,7 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
         {
             Author = "Author1",
             AuthorEmail = "author1@foo.bla",
-            AuthorUnixTime = DateTimeUtils.ToUnixTime(new DateTime(2018, 10, 23, 11, 34, 21)),
+            AuthorUnixTime = DateTimeUtils.ToUnixTime(new DateTime(2018, 10, 23, 11, 34, 21))
         };
         GitRevision rev2 = new(ObjectId.Random())
         {
@@ -150,13 +167,9 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
             AuthorEmail = "author2@foo.bla",
             Committer = "Committer2",
             CommitterEmail = "committer2@foo.bar",
-            CommitUnixTime = DateTimeUtils.ToUnixTime(new DateTime(2018, 10, 23, 11, 34, 21)),
+            CommitUnixTime = DateTimeUtils.ToUnixTime(new DateTime(2018, 10, 23, 11, 34, 21))
         };
-        GitRevision rev3 = new(ObjectId.Random())
-        {
-            Author = "Author3",
-            AuthorEmail = "author3@foo.bla",
-        };
+        GitRevision rev3 = new(ObjectId.Random()) { Author = "Author3", AuthorEmail = "author3@foo.bla" };
         GitRevision[] revisions = [rev1, rev2, rev3];
         _copyContextMenuItem.SetRevisionFunc(() => revisions);
 
@@ -164,11 +177,16 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
 
         _copyContextMenuItem.DropDownItems.Count.Should().Be(5);
 
-        _copyContextMenuItem.DropDownItems[0].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(revisions.Length), 'C'));
-        _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(revisions.Length), 'M'));
-        _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(revisions.Length), 'A'));
-        _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthorDate(revisions.Length), 'T'));
-        _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitDate(revisions.Length), 'D'));
+        _copyContextMenuItem.DropDownItems[0].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetCommitHash(revisions.Length), 'C'));
+        _copyContextMenuItem.DropDownItems[1].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetMessage(revisions.Length), 'M'));
+        _copyContextMenuItem.DropDownItems[2].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetAuthor(revisions.Length), 'A'));
+        _copyContextMenuItem.DropDownItems[3].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetAuthorDate(revisions.Length), 'T'));
+        _copyContextMenuItem.DropDownItems[4].Text.Should()
+            .StartWith(AddHotKey(TranslatedStrings.GetCommitDate(revisions.Length), 'D'));
     }
 
     private static string AddHotKey(string label, char? hotkey)
@@ -178,7 +196,7 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
             return label;
         }
 
-        int position = label.IndexOf(hotkey.Value.ToString(), StringComparison.InvariantCultureIgnoreCase);
+        var position = label.IndexOf(hotkey.Value.ToString(), StringComparison.InvariantCultureIgnoreCase);
         if (position >= 0)
         {
             label = label.Insert(position, "&");
@@ -186,26 +204,11 @@ public class CopyContextMenuItemTests : System.IDisposable, IClassFixture<CopyCo
 
         return label;
     }
-
-    public static IEnumerable<object[]> GetArtificialCommits
-    {
-        get
-        {
-            yield return [ObjectId.WorkTreeId];
-            yield return [ObjectId.IndexId];
-            yield return [ObjectId.CombinedDiffId];
-        }
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
-    }
 }
 
-public sealed class CopyContextMenuItemTestsFixture : System.IDisposable
+public sealed class CopyContextMenuItemTestsFixture : IDisposable
 {
-    private string? _originalTranslation;
+    private readonly string? _originalTranslation;
 
     public CopyContextMenuItemTestsFixture()
     {
@@ -213,7 +216,7 @@ public sealed class CopyContextMenuItemTestsFixture : System.IDisposable
         AppSettings.CurrentTranslation = "en";
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.CurrentTranslation = _originalTranslation;
     }

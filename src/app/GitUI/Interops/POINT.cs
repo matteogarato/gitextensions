@@ -1,19 +1,20 @@
-﻿namespace System;
+﻿namespace GitUI.Interops;
 
 internal static partial class NativeMethods
 {
-    public readonly struct POINT
+    public readonly struct Point(int x, int y)
     {
-        public readonly int X;
-        public readonly int Y;
+        public readonly int X = x;
+        public readonly int Y = y;
 
-        public POINT(int x, int y)
+        public static implicit operator System.Drawing.Point(Point p)
         {
-            X = x;
-            Y = y;
+            return new System.Drawing.Point(p.X, p.Y);
         }
 
-        public static implicit operator Point(POINT p) => new(p.X, p.Y);
-        public static implicit operator POINT(Point p) => new(p.X, p.Y);
+        public static implicit operator Point(System.Drawing.Point p)
+        {
+            return new Point(p.X, p.Y);
+        }
     }
 }

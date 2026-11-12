@@ -1,24 +1,24 @@
+using System.Text;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class PatchWorkflowTests
 {
     [Fact]
     public void ReadPatchFile_should_preserve_all_patch_bytes()
     {
-        string patchFile = Path.Combine(Path.GetTempPath(), $"patch {Guid.NewGuid():N}.patch");
-        byte[] patchBytes = [.. System.Text.Encoding.Latin1.GetBytes("diff --git a/café.txt b/café.txt\n")];
+        var patchFile = Path.Combine(Path.GetTempPath(), $"patch {Guid.NewGuid():N}.patch");
+        byte[] patchBytes = [.. Encoding.Latin1.GetBytes("diff --git a/café.txt b/café.txt\n")];
         File.WriteAllBytes(patchFile, patchBytes);
 
         try
         {
             PatchWorkflow.ReadPatchFile(patchFile)
-                .Should().Be(System.Text.Encoding.Latin1.GetString(patchBytes));
+                .Should().Be(Encoding.Latin1.GetString(patchBytes));
         }
         finally
         {
@@ -29,12 +29,12 @@ public sealed class PatchWorkflowTests
     [Fact]
     public void BuildApply_should_build_git_apply_for_raw_diff_patch()
     {
-        string patchFile = Path.Combine(Path.GetTempPath(), $"patch {Guid.NewGuid():N}.diff");
+        var patchFile = Path.Combine(Path.GetTempPath(), $"patch {Guid.NewGuid():N}.diff");
         File.WriteAllText(patchFile, "diff --git a/file.txt b/file.txt\n");
 
         try
         {
-            IGitModule module = Substitute.For<IGitModule>();
+            var module = Substitute.For<IGitModule>();
             module.GetPathForGitExecution(patchFile).Returns(patchFile);
 
             PatchWorkflow.BuildApply(module, patchFile).ToString()
@@ -49,12 +49,12 @@ public sealed class PatchWorkflowTests
     [Fact]
     public void BuildApply_should_build_git_am_for_mailbox_patch()
     {
-        string patchFile = Path.Combine(Path.GetTempPath(), $"patch {Guid.NewGuid():N}.patch");
+        var patchFile = Path.Combine(Path.GetTempPath(), $"patch {Guid.NewGuid():N}.patch");
         File.WriteAllText(patchFile, "From: author@example.com\n");
 
         try
         {
-            IGitModule module = Substitute.For<IGitModule>();
+            var module = Substitute.For<IGitModule>();
             module.GetPathForGitExecution(patchFile).Returns(patchFile);
 
             PatchWorkflow.BuildApply(module, patchFile).ToString()
@@ -71,24 +71,26 @@ public sealed class PatchWorkflowTests
     {
         const string parent = "parent-id";
         const string revision = "revision-id";
-        string outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
-        IGitModule module = Substitute.For<IGitModule>();
+        var outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
+        var module = Substitute.For<IGitModule>();
         module.GetPathForGitExecution(outputDirectory).Returns(outputDirectory);
 
         PatchWorkflow.BuildFormatPatch(module, parent, revision, outputDirectory).ToString()
-            .Should().Be($"format-patch --find-renames --find-copies --break-rewrites \"{parent}\"..\"{revision}\" -o \"{outputDirectory}\"");
+            .Should().Be(
+                $"format-patch --find-renames --find-copies --break-rewrites \"{parent}\"..\"{revision}\" -o \"{outputDirectory}\"");
     }
 
     [Fact]
     public void BuildFormatPatch_should_build_root_commit_arguments()
     {
         const string revision = "root-id";
-        string outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
-        IGitModule module = Substitute.For<IGitModule>();
+        var outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
+        var module = Substitute.For<IGitModule>();
         module.GetPathForGitExecution(outputDirectory).Returns(outputDirectory);
 
         PatchWorkflow.BuildFormatPatch(module, string.Empty, revision, outputDirectory).ToString()
-            .Should().Be($"format-patch --find-renames --find-copies --break-rewrites --root \"{revision}\" -o \"{outputDirectory}\"");
+            .Should().Be(
+                $"format-patch --find-renames --find-copies --break-rewrites --root \"{revision}\" -o \"{outputDirectory}\"");
     }
 
     [Fact]
@@ -100,17 +102,17 @@ public sealed class PatchWorkflowTests
         const string secondRevision = "cccccccccccccccccccccccccccccccccccccccc";
         const string thirdParent = "cccccccccccccccccccccccccccccccccccccccc";
         const string thirdRevision = "dddddddddddddddddddddddddddddddddddddddd";
-        string outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
-        IGitModule module = Substitute.For<IGitModule>();
+        var outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
+        var module = Substitute.For<IGitModule>();
         module.GetPathForGitExecution(outputDirectory).Returns(outputDirectory);
-        GitRevision[] revisions =
+        GitUIPluginInterfaces.GitRevision[] revisions =
         [
             new(ObjectId.Parse(firstRevision)) { ParentIds = [ObjectId.Parse(firstParent)] },
             new(ObjectId.Parse(secondRevision)) { ParentIds = [ObjectId.Parse(secondParent)] },
-            new(ObjectId.Parse(thirdRevision)) { ParentIds = [ObjectId.Parse(thirdParent)] },
+            new(ObjectId.Parse(thirdRevision)) { ParentIds = [ObjectId.Parse(thirdParent)] }
         ];
 
-        IReadOnlyList<ArgumentString> commands = PatchWorkflow.BuildFormatPatches(module, revisions, outputDirectory);
+        var commands = PatchWorkflow.BuildFormatPatches(module, revisions, outputDirectory);
 
         commands.Select(command => command.ToString()).Should().Equal(
             $"format-patch --find-renames --find-copies --break-rewrites --start-number 1 \"{firstParent}\"..\"{firstRevision}\" -o \"{outputDirectory}\"",
@@ -124,13 +126,13 @@ public sealed class PatchWorkflowTests
         const string firstParent = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         const string firstRevision = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         const string secondRevision = "cccccccccccccccccccccccccccccccccccccccc";
-        string outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
-        IGitModule module = Substitute.For<IGitModule>();
+        var outputDirectory = Path.Combine(Path.GetTempPath(), "patch output");
+        var module = Substitute.For<IGitModule>();
         module.GetPathForGitExecution(outputDirectory).Returns(outputDirectory);
-        GitRevision[] revisions =
+        GitUIPluginInterfaces.GitRevision[] revisions =
         [
             new(ObjectId.Parse(firstRevision)) { ParentIds = [ObjectId.Parse(firstParent)] },
-            new(ObjectId.Parse(secondRevision)),
+            new(ObjectId.Parse(secondRevision))
         ];
 
         PatchWorkflow.BuildFormatPatches(module, revisions, outputDirectory)

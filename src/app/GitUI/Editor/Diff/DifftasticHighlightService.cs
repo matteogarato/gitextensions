@@ -2,23 +2,23 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
 
 namespace GitUI.Editor.Diff;
 
 /// <summary>
-/// Highlight difftastic diff
+///     Highlight difftastic diff
 /// </summary>
 public partial class DifftasticHighlightService : TextHighlightService
 {
-    protected readonly List<TextMarker> _textMarkers = [];
-    private DiffLinesInfo _diffLinesInfo = new();
+    protected readonly List<TextMarker> TextMarkers = [];
+    private readonly DiffLinesInfo _diffLinesInfo = new();
 
-    [GeneratedRegex(@"^(\s*(?<matchStart>(?<lineNo>\d+)|(\.+)) )", RegexOptions.ExplicitCapture)]
-    private static partial Regex LineNoRegex { get; }
-
-    public DifftasticHighlightService(ref string text, DiffViewerLineNumberControl lineNumbersControl, out int rightColumnStart)
+    public DifftasticHighlightService(ref string text, DiffViewerLineNumberControl lineNumbersControl,
+        out int rightColumnStart)
     {
         // Hide VRulerPos by default
         rightColumnStart = 0;
@@ -28,14 +28,14 @@ public partial class DifftasticHighlightService : TextHighlightService
         }
 
         StringBuilder sb = new(text.Length);
-        StringBuilder lineBuilder = column > 0 ? new(column) : new();
+        var lineBuilder = column > 0 ? new StringBuilder(column) : new StringBuilder();
         List<TextMarker> textMarkers = [];
-        int halfColumn = column / 2;
-        bool nextIsHeader = true;
-        bool debugPrinted = false;
-        bool reverseGitColoring = AppSettings.ReverseGitColoring.Value;
+        var halfColumn = column / 2;
+        var nextIsHeader = true;
+        var debugPrinted = false;
+        var reverseGitColoring = AppSettings.ReverseGitColoring.Value;
 
-        foreach (string rawLine in text.LazySplit('\n'))
+        foreach (var rawLine in text.LazySplit('\n'))
         {
             if (string.IsNullOrWhiteSpace(rawLine))
             {
@@ -46,10 +46,10 @@ public partial class DifftasticHighlightService : TextHighlightService
 
             lineBuilder.Clear();
             textMarkers.Clear();
-            AnsiEscapeUtilities.ParseEscape(rawLine, lineBuilder, textMarkers, themeColors: reverseGitColoring);
+            AnsiEscapeUtilities.ParseEscape(rawLine, lineBuilder, textMarkers, reverseGitColoring);
 
-            int leftLineNo = DiffLineInfo.NotApplicableLineNum;
-            int rightLineNo = DiffLineInfo.NotApplicableLineNum;
+            var leftLineNo = DiffLineInfo.NotApplicableLineNum;
+            var rightLineNo = DiffLineInfo.NotApplicableLineNum;
 
             if (nextIsHeader)
             {
@@ -58,13 +58,14 @@ public partial class DifftasticHighlightService : TextHighlightService
                 continue;
             }
 
-            DiffLineType lineType = DiffLineType.Context;
+            var lineType = DiffLineType.Context;
 
-            Match matchLeft = LineNoRegex.Match(lineBuilder.ToString());
+            var matchLeft = LineNoRegex.Match(lineBuilder.ToString());
             if (!matchLeft.Success)
             {
                 // This could also be a side-by-diff with zero context where ... are not printed
-                Debug.WriteLineIf(debugPrinted, $"Unexpected Difftastic output, no left line. This could occur for last line and may be OK if another difftool is used. ({_diffLinesInfo.DiffLines.Count}) {lineBuilder}");
+                Debug.WriteLineIf(debugPrinted,
+                    $"Unexpected Difftastic output, no left line. This could occur for last line and may be OK if another difftool is used. ({_diffLinesInfo.DiffLines.Count}) {lineBuilder}");
                 debugPrinted = true;
                 AddInfo(leftLineNo, rightLineNo, lineType, textMarkers, lineBuilder);
                 continue;
@@ -84,7 +85,8 @@ public partial class DifftasticHighlightService : TextHighlightService
             else
             {
                 leftLen = matchLeft.Length;
-                if (matchLeft.Groups["lineNo"].Success && int.TryParse(matchLeft.Groups["lineNo"].ValueSpan, out int lineNo))
+                if (matchLeft.Groups["lineNo"].Success &&
+                    int.TryParse(matchLeft.Groups["lineNo"].ValueSpan, out var lineNo))
                 {
                     leftLineNo = lineNo;
                 }
@@ -92,7 +94,7 @@ public partial class DifftasticHighlightService : TextHighlightService
                 if (textMarkers.Count > 0 && textMarkers[0].Offset < leftLen)
                 {
                     // Use lineno coloring to guess if this is added or removed.
-                    Color c = reverseGitColoring ? textMarkers[0].Color : textMarkers[0].ForeColor;
+                    var c = reverseGitColoring ? textMarkers[0].Color : textMarkers[0].ForeColor;
                     if (!IsUnchanged(c))
                     {
                         // Use mostly red/green to detect removed/added.
@@ -114,17 +116,17 @@ public partial class DifftasticHighlightService : TextHighlightService
             if (leftLen > 0)
             {
                 lineBuilder = lineBuilder.Remove(0, leftLen);
-                foreach (TextMarker tm in textMarkers)
+                foreach (var tm in textMarkers)
                 {
                     RemoveLineNoPart(tm, 0, leftLen);
                 }
             }
 
             // Where to try parse for next line number, if both-sides is displayed
-            int rightStartOffset = halfColumn - leftLen;
+            var rightStartOffset = halfColumn - leftLen;
             Match matchRight;
             if (lineBuilder.Length > rightStartOffset
-                && LineNoRegex.Match(lineBuilder.ToString()[rightStartOffset..]) is Match match
+                && LineNoRegex.Match(lineBuilder.ToString()[rightStartOffset..]) is { } match
                 && match.Success)
             {
                 matchRight = match;
@@ -145,7 +147,8 @@ public partial class DifftasticHighlightService : TextHighlightService
             {
                 if (lineType != DiffLineType.PlusRight)
                 {
-                    Debug.WriteLineIf(debugPrinted, $"Unexpected Difftastic no right lineno. This is OK if another difftool is used. ({_diffLinesInfo.DiffLines.Count}) {lineBuilder}");
+                    Debug.WriteLineIf(debugPrinted,
+                        $"Unexpected Difftastic no right lineno. This is OK if another difftool is used. ({_diffLinesInfo.DiffLines.Count}) {lineBuilder}");
                     debugPrinted = true;
                 }
 
@@ -155,19 +158,21 @@ public partial class DifftasticHighlightService : TextHighlightService
 
             if (lineType == DiffLineType.PlusRight)
             {
-                Debug.WriteLineIf(debugPrinted, $"Unexpected Difftastic has PlusRight and right lineno. This is OK if another difftool is used. ({_diffLinesInfo.DiffLines.Count}) {lineBuilder}");
+                Debug.WriteLineIf(debugPrinted,
+                    $"Unexpected Difftastic has PlusRight and right lineno. This is OK if another difftool is used. ({_diffLinesInfo.DiffLines.Count}) {lineBuilder}");
                 debugPrinted = true;
             }
 
-            if (matchRight.Groups["lineNo"].Success && int.TryParse(matchRight.Groups["lineNo"].ValueSpan, out int rightNo))
+            if (matchRight.Groups["lineNo"].Success &&
+                int.TryParse(matchRight.Groups["lineNo"].ValueSpan, out var rightNo))
             {
                 rightLineNo = rightNo;
             }
 
             // Remove right line no from text, markers
-            int rightLen = matchRight.Length;
+            var rightLen = matchRight.Length;
             lineBuilder = lineBuilder.Remove(rightStartOffset, rightLen);
-            int columnGap = 0;
+            var columnGap = 0;
 
             if (rightStartOffset > 0)
             {
@@ -184,8 +189,8 @@ public partial class DifftasticHighlightService : TextHighlightService
                 }
             }
 
-            bool first = true;
-            foreach (TextMarker tm in textMarkers)
+            var first = true;
+            foreach (var tm in textMarkers)
             {
                 if (tm.EndOffset < rightStartOffset)
                 {
@@ -198,10 +203,11 @@ public partial class DifftasticHighlightService : TextHighlightService
 
                     // Use lineno coloring to guess if this is added or removed.
                     // If not unchanged this right lineno is assumed to be added (and is likely green).
-                    Color c = reverseGitColoring ? tm.Color : tm.ForeColor;
+                    var c = reverseGitColoring ? tm.Color : tm.ForeColor;
                     if (!IsUnchanged(c))
                     {
-                        DebugHelpers.Assert(lineType != DiffLineType.PlusRight, $"Left status for rightline {rightLineNo} is {lineType}, incorrect leftline parsing?");
+                        DebugHelpers.Assert(lineType != DiffLineType.PlusRight,
+                            $"Left status for rightline {rightLineNo} is {lineType}, incorrect leftline parsing?");
 
                         // Merge line type with existing left line type
                         lineType = lineType == DiffLineType.Context ? DiffLineType.PlusRight : DiffLineType.MinusPlus;
@@ -219,14 +225,16 @@ public partial class DifftasticHighlightService : TextHighlightService
         }
 
         text = sb.ToString();
-        lineNumbersControl.DisplayLineNum(_diffLinesInfo, showLeftColumn: true);
+        lineNumbersControl.DisplayLineNum(_diffLinesInfo, true);
 
         return;
 
         // Use lineno coloring to guess if this is added or removed.
         // Assume the theme in Diffstatic sets gray for unchanged.
         static bool IsUnchanged(Color c)
-            => c.R == c.G;
+        {
+            return c.R == c.G;
+        }
 
         static void RemoveLineNoPart(TextMarker tm, int offset, int length)
         {
@@ -262,21 +270,22 @@ public partial class DifftasticHighlightService : TextHighlightService
             tm.Length -= tm.Offset + tm.Length - offset;
         }
 
-        void AddInfo(int leftLineNo, int rightLineNo, DiffLineType lineType, List<TextMarker> textMarkers, StringBuilder lineBuilder)
+        void AddInfo(int leftLineNo, int rightLineNo, DiffLineType lineType, List<TextMarker> textMarkers,
+            StringBuilder lineBuilder)
         {
             _diffLinesInfo.Add(
-                new()
+                new DiffLineInfo
                 {
                     LineNumInDiff = _diffLinesInfo.DiffLines.Count + 1,
                     LeftLineNumber = leftLineNo,
                     RightLineNumber = rightLineNo,
                     LineType = lineType,
                     LineSegment = null,
-                    IsMovedLine = false,
+                    IsMovedLine = false
                 });
-            for (int i = 0; i < textMarkers.Count; ++i)
+            for (var i = 0; i < textMarkers.Count; ++i)
             {
-                TextMarker tm = textMarkers[i];
+                var tm = textMarkers[i];
                 if (tm.Length <= 0)
                 {
                     textMarkers.RemoveAt(i);
@@ -287,15 +296,23 @@ public partial class DifftasticHighlightService : TextHighlightService
                 tm.Offset += sb.Length;
             }
 
-            _textMarkers.AddRange(textMarkers);
+            TextMarkers.AddRange(textMarkers);
             sb.Append(lineBuilder);
             sb.Append('\n');
         }
     }
 
+    [GeneratedRegex(@"^(\s*(?<matchStart>(?<lineNo>\d+)|(\.+)) )", RegexOptions.ExplicitCapture)]
+    private static partial Regex LineNoRegex { get; }
+
     public override void AddTextHighlighting(IDocument document)
-        => document.MarkerStrategy.AddMarkers(_textMarkers);
+    {
+        document.MarkerStrategy.AddMarkers(TextMarkers);
+    }
 
     public override bool IsSearchMatch(DiffViewerLineNumberControl lineNumbersControl, int indexInText)
-        => lineNumbersControl.GetLineInfo(indexInText)?.LineType is DiffLineType.Plus or DiffLineType.Minus or DiffLineType.MinusPlus or DiffLineType.MinusLeft or DiffLineType.PlusRight;
+    {
+        return lineNumbersControl.GetLineInfo(indexInText)?.LineType is DiffLineType.Plus or DiffLineType.Minus
+            or DiffLineType.MinusPlus or DiffLineType.MinusLeft or DiffLineType.PlusRight;
+    }
 }

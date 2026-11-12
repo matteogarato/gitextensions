@@ -6,7 +6,7 @@ namespace GitCommands.Git;
 public class GitCreateTagArgs
 {
     /// <summary>
-    /// Creates arguments for creation of a tag.
+    ///     Creates arguments for creation of a tag.
     /// </summary>
     /// <param name="tagName">Name of tag</param>
     /// <param name="objectId">Commit revision to be tagged</param>
@@ -14,7 +14,8 @@ public class GitCreateTagArgs
     /// <param name="tagMessage">Tag Message</param>
     /// <param name="signKeyId">Specific Key ID to be used instead of default one</param>
     /// <param name="force">Force parameter</param>
-    public GitCreateTagArgs(string tagName, ObjectId objectId, TagOperation operation = TagOperation.Lightweight, string tagMessage = "", string signKeyId = "", bool force = false)
+    public GitCreateTagArgs(string tagName, ObjectId objectId, TagOperation operation = TagOperation.Lightweight,
+        string tagMessage = "", string signKeyId = "", bool force = false)
     {
         if (objectId.IsArtificial)
         {

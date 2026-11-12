@@ -1,6 +1,7 @@
 ﻿using GitExtUtils.GitUI;
 
 namespace GitUITests;
+
 public sealed class ToolStripUtilTests
 {
     [Fact]
@@ -10,8 +11,12 @@ public sealed class ToolStripUtilTests
         {
             Items =
             {
-                new ToolStripButton(), new ToolStripButton(),
-                new ToolStripDropDownButton { DropDownItems = { new ToolStripButton(), new ToolStripSplitButton() } }
+                new ToolStripButton(),
+                new ToolStripButton(),
+                new ToolStripDropDownButton
+                {
+                    DropDownItems = { new ToolStripButton(), new ToolStripSplitButton() }
+                }
             }
         };
 

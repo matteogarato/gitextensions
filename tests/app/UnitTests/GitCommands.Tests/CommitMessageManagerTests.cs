@@ -2,9 +2,12 @@
 using System.Text;
 using CommonTestUtils;
 using GitCommands;
+using GitCommands.Git;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitCommandsTests;
+
 public class CommitMessageManagerTests : IDisposable
 {
     private const string _commitMessage = "commit message";
@@ -12,24 +15,24 @@ public class CommitMessageManagerTests : IDisposable
     private const string _newMessage = "new message";
     private const string _overriddenCommitMessage = "commandline message";
 
-    // Created for each test
-    private ReferenceRepository _referenceRepository = null!;
-
-    private readonly string _workingDirGitDir = @"c:\dev\repo\.git";
-    private readonly Encoding _encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-
     private readonly string _amendSaveStatePath;
     private readonly string _commitMessagePath;
+    private readonly Encoding _encoding = new UTF8Encoding(false);
     private readonly string _mergeMessagePath;
-    private readonly bool _rememberAmendCommitState;
-
-    private FileBase _file = null!;
-    private DirectoryBase _directory = null!;
-    private IFileSystem _fileSystem = null!;
-    private CommitMessageManager _manager = null!;
 
     // We don't expect any failures so that we won't be switching to the main thread or showing messages
     private readonly Control _owner = ReferenceRepository.DummyOwner;
+    private readonly bool _rememberAmendCommitState;
+
+    private readonly string _workingDirGitDir = @"c:\dev\repo\.git";
+    private DirectoryBase _directory = null!;
+
+    private FileBase _file = null!;
+    private IFileSystem _fileSystem = null!;
+    private CommitMessageManager _manager = null!;
+
+    // Created for each test
+    private ReferenceRepository _referenceRepository = null!;
 
     public CommitMessageManagerTests()
     {
@@ -41,16 +44,25 @@ public class CommitMessageManagerTests : IDisposable
         Initialize();
     }
 
+    void IDisposable.Dispose()
+    {
+        AppSettings.RememberAmendCommitState = _rememberAmendCommitState;
+
+        _referenceRepository.Dispose();
+    }
+
     private void Initialize()
     {
         _referenceRepository = new ReferenceRepository();
 
         _file = Substitute.For<FileBase>();
-        _file.ReadAllTextAsync(_commitMessagePath, _encoding, cancellationToken: TestContext.Current.CancellationToken).Returns(_commitMessage);
-        _file.ReadAllTextAsync(_mergeMessagePath, _encoding, cancellationToken: TestContext.Current.CancellationToken).Returns(_mergeMessage);
+        _file.ReadAllTextAsync(_commitMessagePath, _encoding, TestContext.Current.CancellationToken)
+            .Returns(_commitMessage);
+        _file.ReadAllTextAsync(_mergeMessagePath, _encoding, TestContext.Current.CancellationToken)
+            .Returns(_mergeMessage);
         _directory = Substitute.For<DirectoryBase>();
 
-        PathBase path = Substitute.For<PathBase>();
+        var path = Substitute.For<PathBase>();
         path.Join(Arg.Any<string>(), Arg.Any<string>()).Returns(x => Path.Join((string)x[0], (string)x[1]));
 
         _fileSystem = Substitute.For<IFileSystem>();
@@ -58,14 +70,7 @@ public class CommitMessageManagerTests : IDisposable
         _fileSystem.Directory.Returns(_directory);
         _fileSystem.Path.Returns(path);
 
-        _manager = new CommitMessageManager(_owner, _workingDirGitDir, _encoding, _fileSystem, overriddenCommitMessage: null);
-    }
-
-    public void Dispose()
-    {
-        AppSettings.RememberAmendCommitState = _rememberAmendCommitState;
-
-        _referenceRepository.Dispose();
+        _manager = new CommitMessageManager(_owner, _workingDirGitDir, _encoding, _fileSystem);
     }
 
     private void SetupExtra(string overriddenCommitMessage)
@@ -77,7 +82,8 @@ public class CommitMessageManagerTests : IDisposable
     [InlineData(null)]
     public void Constructor_should_throw(string? workingDirGitDir)
     {
-        ((Action)(() => new CommitMessageManager(_owner, workingDirGitDir!, _encoding))).Should().Throw<ArgumentNullException>();
+        ((Action)(() => new CommitMessageManager(_owner, workingDirGitDir!, _encoding))).Should()
+            .Throw<ArgumentNullException>();
     }
 
     [Theory]
@@ -137,7 +143,8 @@ public class CommitMessageManagerTests : IDisposable
     public async Task GetAmendStateAsync_should_be_true_if_file_contains(string amendText)
     {
         _file.Exists(_amendSaveStatePath).Returns(true);
-        _file.ReadAllTextAsync(_amendSaveStatePath, Encoding.Default, cancellationToken: TestContext.Current.CancellationToken).Returns(amendText);
+        _file.ReadAllTextAsync(_amendSaveStatePath, Encoding.Default, TestContext.Current.CancellationToken)
+            .Returns(amendText);
 
         AppSettings.RememberAmendCommitState = true;
         (await _manager.GetAmendStateAsync(TestContext.Current.CancellationToken)).Should().BeTrue();
@@ -146,8 +153,9 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetAmendStateAsync_true_should_write_true_to_file()
     {
-        bool correctlyWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_amendSaveStatePath, true.ToString(), Encoding.Default, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
+        var correctlyWritten = false;
+        _file.When(x => x.WriteAllTextAsync(_amendSaveStatePath, true.ToString(), Encoding.Default,
+            TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
         _directory.Exists(Path.GetDirectoryName(_amendSaveStatePath)).Returns(true);
 
         AppSettings.RememberAmendCommitState = true;
@@ -159,7 +167,7 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetAmendStateAsync_true_should_delete_file_if_not_RememberAmendCommitState()
     {
-        bool correctlyDeleted = false;
+        var correctlyDeleted = false;
         _file.Exists(_amendSaveStatePath).Returns(true);
         _file.When(x => x.Delete(_amendSaveStatePath)).Do(_ => correctlyDeleted = true);
 
@@ -174,7 +182,7 @@ public class CommitMessageManagerTests : IDisposable
     [InlineData(false)]
     public async Task SetAmendStateAsync_false_should_delete_file(bool rememberAmendCommitState)
     {
-        bool correctlyDeleted = false;
+        var correctlyDeleted = false;
         _file.When(x => x.Delete(_amendSaveStatePath)).Do(_ => correctlyDeleted = true);
         _file.Exists(_amendSaveStatePath).Returns(true);
 
@@ -203,13 +211,15 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task WriteCommitMessageToFileAsync_should_write_COMMITMESSAGE()
     {
-        CommitMessageManager manager = new(_owner, _referenceRepository.Module.WorkingDir, _referenceRepository.Module.CommitEncoding, overriddenCommitMessage: null);
+        CommitMessageManager manager = new(_owner, _referenceRepository.Module.WorkingDir,
+            _referenceRepository.Module.CommitEncoding);
 
         File.Exists(manager.CommitMessagePath).Should().BeFalse();
 
         // null message isn't formatted, since we're only interested in testing File.Write logic
         string? message = null;
-        await manager.WriteCommitMessageToFileAsync(message!, CommitMessageType.Normal, false, false, TestContext.Current.CancellationToken);
+        await manager.WriteCommitMessageToFileAsync(message!, CommitMessageType.Normal, false, false,
+            TestContext.Current.CancellationToken);
 
         File.Exists(manager.CommitMessagePath).Should().BeTrue();
     }
@@ -220,15 +230,17 @@ public class CommitMessageManagerTests : IDisposable
     [InlineData("UTF-8")]
     public async Task WriteCommitMessageToFileAsync_no_bom(string encodingName)
     {
-        GitModule module = _referenceRepository.Module;
+        var module = _referenceRepository.Module;
         module.SetSetting("i18n.commitencoding", encodingName);
         module.CommitEncoding.Preamble.Length.Should().Be(0);
-        CommitMessageManager manager = new(_owner, _referenceRepository.Module.WorkingDir, _referenceRepository.Module.CommitEncoding);
+        CommitMessageManager manager = new(_owner, _referenceRepository.Module.WorkingDir,
+            _referenceRepository.Module.CommitEncoding);
 
         File.Exists(manager.CommitMessagePath).Should().BeFalse();
 
-        string message = "Test message";
-        await manager.WriteCommitMessageToFileAsync(message, CommitMessageType.Normal, false, false, TestContext.Current.CancellationToken);
+        var message = "Test message";
+        await manager.WriteCommitMessageToFileAsync(message, CommitMessageType.Normal, false, false,
+            TestContext.Current.CancellationToken);
 
         File.Exists(manager.CommitMessagePath).Should().BeTrue();
         File.ReadAllBytes(manager.CommitMessagePath).Should().BeEquivalentTo(Encoding.ASCII.GetBytes(message + "\r\n"));
@@ -237,13 +249,15 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task WriteCommitMessageToFileAsync_should_write_MERGE_MSG()
     {
-        CommitMessageManager manager = new(_owner, _referenceRepository.Module.WorkingDir, _referenceRepository.Module.CommitEncoding, overriddenCommitMessage: null);
+        CommitMessageManager manager = new(_owner, _referenceRepository.Module.WorkingDir,
+            _referenceRepository.Module.CommitEncoding);
 
         File.Exists(manager.MergeMessagePath).Should().BeFalse();
 
         // null message isn't formatted, since we're only interested in testing File.Write logic
         string? message = null;
-        await manager.WriteCommitMessageToFileAsync(message!, CommitMessageType.Merge, false, false, TestContext.Current.CancellationToken);
+        await manager.WriteCommitMessageToFileAsync(message!, CommitMessageType.Merge, false, false,
+            TestContext.Current.CancellationToken);
 
         File.Exists(manager.MergeMessagePath).Should().BeTrue();
     }
@@ -268,11 +282,12 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task GetMergeOrCommitMessageAsync_should_return_overridden_message_if_set()
     {
-        SetupExtra(overriddenCommitMessage: _overriddenCommitMessage);
+        SetupExtra(_overriddenCommitMessage);
         _file.Exists(_commitMessagePath).Returns(true);
         _file.Exists(_mergeMessagePath).Returns(true);
 
-        (await _manager.GetMergeOrCommitMessageAsync(TestContext.Current.CancellationToken)).Should().Be(_overriddenCommitMessage);
+        (await _manager.GetMergeOrCommitMessageAsync(TestContext.Current.CancellationToken)).Should()
+            .Be(_overriddenCommitMessage);
 
         _manager.IsMergeCommit.Should().BeTrue();
     }
@@ -283,7 +298,8 @@ public class CommitMessageManagerTests : IDisposable
         _file.Exists(_commitMessagePath).Returns(true);
         _file.Exists(_mergeMessagePath).Returns(false);
 
-        (await _manager.GetMergeOrCommitMessageAsync(TestContext.Current.CancellationToken)).Should().Be(_commitMessage);
+        (await _manager.GetMergeOrCommitMessageAsync(TestContext.Current.CancellationToken)).Should()
+            .Be(_commitMessage);
 
         _manager.IsMergeCommit.Should().BeFalse();
     }
@@ -306,7 +322,8 @@ public class CommitMessageManagerTests : IDisposable
         _file.Exists(_commitMessagePath).Returns(false);
         _file.Exists(_mergeMessagePath).Returns(false);
 
-        (await _manager.GetMergeOrCommitMessageAsync(TestContext.Current.CancellationToken)).Should().Be(_overriddenCommitMessage);
+        (await _manager.GetMergeOrCommitMessageAsync(TestContext.Current.CancellationToken)).Should()
+            .Be(_overriddenCommitMessage);
 
         _manager.IsMergeCommit.Should().BeFalse();
     }
@@ -314,8 +331,10 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetMergeOrCommitMessageAsync_should_write_merge_message_if_exists()
     {
-        bool correctlyWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_mergeMessagePath, _newMessage, _encoding, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
+        var correctlyWritten = false;
+        _file.When(x =>
+                x.WriteAllTextAsync(_mergeMessagePath, _newMessage, _encoding, TestContext.Current.CancellationToken))
+            .Do(_ => correctlyWritten = true);
         _file.Exists(_commitMessagePath).Returns(true);
         _file.Exists(_mergeMessagePath).Returns(true);
         _directory.Exists(Path.GetDirectoryName(_commitMessagePath)).Returns(true);
@@ -326,11 +345,14 @@ public class CommitMessageManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task SetMergeOrCommitMessageAsync_should_not_write_merge_message_if_exist_if_it_is_the_overridding_commitmessage_exists()
+    public async Task
+        SetMergeOrCommitMessageAsync_should_not_write_merge_message_if_exist_if_it_is_the_overridding_commitmessage_exists()
     {
         SetupExtra(_overriddenCommitMessage);
-        bool hasBeenWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_mergeMessagePath, _newMessage, _encoding, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => hasBeenWritten = true);
+        var hasBeenWritten = false;
+        _file.When(x =>
+                x.WriteAllTextAsync(_mergeMessagePath, _newMessage, _encoding, TestContext.Current.CancellationToken))
+            .Do(_ => hasBeenWritten = true);
         _file.Exists(_commitMessagePath).Returns(true);
         _file.Exists(_mergeMessagePath).Returns(true);
 
@@ -342,8 +364,10 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetMergeOrCommitMessageAsync_should_write_commit_message_if_exists_and_no_merge_message()
     {
-        bool correctlyWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_commitMessagePath, _newMessage, _encoding, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
+        var correctlyWritten = false;
+        _file.When(x =>
+                x.WriteAllTextAsync(_commitMessagePath, _newMessage, _encoding, TestContext.Current.CancellationToken))
+            .Do(_ => correctlyWritten = true);
         _file.Exists(_commitMessagePath).Returns(true);
         _file.Exists(_mergeMessagePath).Returns(false);
         _directory.Exists(Path.GetDirectoryName(_commitMessagePath)).Returns(true);
@@ -356,8 +380,10 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetMergeOrCommitMessageAsync_should_write_commit_message_if_no_file_exists()
     {
-        bool correctlyWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_commitMessagePath, _newMessage, _encoding, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
+        var correctlyWritten = false;
+        _file.When(x =>
+                x.WriteAllTextAsync(_commitMessagePath, _newMessage, _encoding, TestContext.Current.CancellationToken))
+            .Do(_ => correctlyWritten = true);
         _file.Exists(_commitMessagePath).Returns(false);
         _file.Exists(_mergeMessagePath).Returns(false);
         _directory.Exists(Path.GetDirectoryName(_commitMessagePath)).Returns(true);
@@ -370,8 +396,10 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetMergeOrCommitMessageAsync_should_write_empty_message_if_null()
     {
-        bool correctlyWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_commitMessagePath, string.Empty, _encoding, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
+        var correctlyWritten = false;
+        _file.When(x =>
+                x.WriteAllTextAsync(_commitMessagePath, string.Empty, _encoding, TestContext.Current.CancellationToken))
+            .Do(_ => correctlyWritten = true);
         _file.Exists(_commitMessagePath).Returns(false);
         _file.Exists(_mergeMessagePath).Returns(false);
         _directory.Exists(Path.GetDirectoryName(_commitMessagePath)).Returns(true);
@@ -384,8 +412,10 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task SetMergeOrCommitMessageAsync_should_not_write_if_dir_no_longer_exists()
     {
-        bool correctlyWritten = false;
-        _file.When(x => x.WriteAllTextAsync(_commitMessagePath, string.Empty, _encoding, cancellationToken: TestContext.Current.CancellationToken)).Do(_ => correctlyWritten = true);
+        var correctlyWritten = false;
+        _file.When(x =>
+                x.WriteAllTextAsync(_commitMessagePath, string.Empty, _encoding, TestContext.Current.CancellationToken))
+            .Do(_ => correctlyWritten = true);
         _file.Exists(_commitMessagePath).Returns(false);
         _file.Exists(_mergeMessagePath).Returns(false);
         _directory.Exists(Path.GetDirectoryName(_commitMessagePath)).Returns(false);
@@ -398,9 +428,9 @@ public class CommitMessageManagerTests : IDisposable
     [Fact]
     public async Task ResetCommitMessageAsync()
     {
-        bool deletedA = false;
-        bool deletedC = false;
-        bool deletedM = false;
+        var deletedA = false;
+        var deletedC = false;
+        var deletedM = false;
         _file.When(x => x.Delete(_amendSaveStatePath)).Do(_ => deletedA = true);
         _file.When(x => x.Delete(_commitMessagePath)).Do(_ => deletedC = true);
         _file.When(x => x.Delete(_mergeMessagePath)).Do(_ => deletedM = true);
@@ -412,17 +442,21 @@ public class CommitMessageManagerTests : IDisposable
         deletedM.Should().BeFalse();
     }
 
-    [Theory, MemberData(nameof(FormatCommitMessageTestData.FormatCommitMessageTestCases), MemberType = typeof(FormatCommitMessageTestData))]
+    [Theory]
+    [MemberData(nameof(FormatCommitMessageTestData.FormatCommitMessageTestCases),
+        MemberType = typeof(FormatCommitMessageTestData))]
     public void FormatCommitMessage(
-    string commitMessageText, bool usingCommitTemplate, bool ensureCommitMessageSecondLineEmpty, string expectedMessage)
+        string commitMessageText, bool usingCommitTemplate, bool ensureCommitMessageSecondLineEmpty,
+        string expectedMessage)
     {
-        CommitMessageManager.FormatCommitMessage(commitMessageText, usingCommitTemplate, ensureCommitMessageSecondLineEmpty)
+        CommitMessageManager
+            .FormatCommitMessage(commitMessageText, usingCommitTemplate, ensureCommitMessageSecondLineEmpty)
             .Should().Be(expectedMessage);
     }
 
     public class FormatCommitMessageTestData
     {
-        private static readonly string NL = Environment.NewLine;
+        private static readonly string _nl = Environment.NewLine;
 
         public static IEnumerable<object?[]> FormatCommitMessageTestCases
         {
@@ -437,25 +471,40 @@ public class CommitMessageManagerTests : IDisposable
                 yield return new object?[] { "", true, false, "" };
                 yield return new object?[] { "", false, true, "" };
                 yield return new object?[] { "", true, true, "" };
-                yield return new object?[] { "\n", false, false, NL + NL };
-                yield return new object?[] { "\n", true, false, NL + NL };
-                yield return new object?[] { "\n", false, true, NL + NL };
-                yield return new object?[] { "\n", true, true, NL + NL };
-                yield return new object?[] { "1", true, false, "1" + NL };
-                yield return new object?[] { "#1", false, false, "#1" + NL };
+                yield return new object?[] { "\n", false, false, _nl + _nl };
+                yield return new object?[] { "\n", true, false, _nl + _nl };
+                yield return new object?[] { "\n", false, true, _nl + _nl };
+                yield return new object?[] { "\n", true, true, _nl + _nl };
+                yield return new object?[] { "1", true, false, "1" + _nl };
+                yield return new object?[] { "#1", false, false, "#1" + _nl };
                 yield return new object?[] { "#1", true, false, "" };
-                yield return new object?[] { "1\n\n3", false, false, "1" + NL + NL + "3" + NL };
-                yield return new object?[] { "1\n\n3", false, true, "1" + NL + NL + "3" + NL };
-                yield return new object?[] { "1\n2\n3", false, false, "1" + NL + "2" + NL + "3" + NL };
-                yield return new object?[] { "1\n2\n3", false, true, "1" + NL + NL + "2" + NL + "3" + NL };
-                yield return new object?[] { "#0\n1\n\n3", true, false, "1" + NL + NL + "3" + NL };
-                yield return new object?[] { "#0\n1\n\n3", true, true, "1" + NL + NL + "3" + NL };
-                yield return new object?[] { "#0\n1\n2\n3", true, false, "1" + NL + "2" + NL + "3" + NL };
-                yield return new object?[] { "#0\n1\n2\n3", true, true, "1" + NL + NL + "2" + NL + "3" + NL };
-                yield return new object?[] { "#0\n1\n#0\n2\n3", true, true, "1" + NL + NL + "2" + NL + "3" + NL };
-                yield return new object?[] { "1\n2\n3\n4\n5\n\n7\n\n\n10", true, true, "1" + NL + NL + "2" + NL + "3" + NL + "4" + NL + "5" + NL + NL + "7" + NL + NL + NL + "10" + NL };
-                yield return new object?[] { "1\n2\n3\n4\n5\n\n7\n\n\n10", false, true, "1" + NL + NL + "2" + NL + "3" + NL + "4" + NL + "5" + NL + NL + "7" + NL + NL + NL + "10" + NL };
-                yield return new object?[] { "1\n2\n3\n4\n5\n\n7\n\n\n10\n", false, true, "1" + NL + NL + "2" + NL + "3" + NL + "4" + NL + "5" + NL + NL + "7" + NL + NL + NL + "10" + NL + NL };
+                yield return new object?[] { "1\n\n3", false, false, "1" + _nl + _nl + "3" + _nl };
+                yield return new object?[] { "1\n\n3", false, true, "1" + _nl + _nl + "3" + _nl };
+                yield return new object?[] { "1\n2\n3", false, false, "1" + _nl + "2" + _nl + "3" + _nl };
+                yield return new object?[] { "1\n2\n3", false, true, "1" + _nl + _nl + "2" + _nl + "3" + _nl };
+                yield return new object?[] { "#0\n1\n\n3", true, false, "1" + _nl + _nl + "3" + _nl };
+                yield return new object?[] { "#0\n1\n\n3", true, true, "1" + _nl + _nl + "3" + _nl };
+                yield return new object?[] { "#0\n1\n2\n3", true, false, "1" + _nl + "2" + _nl + "3" + _nl };
+                yield return new object?[] { "#0\n1\n2\n3", true, true, "1" + _nl + _nl + "2" + _nl + "3" + _nl };
+                yield return new object?[] { "#0\n1\n#0\n2\n3", true, true, "1" + _nl + _nl + "2" + _nl + "3" + _nl };
+                yield return new object?[]
+                {
+                    "1\n2\n3\n4\n5\n\n7\n\n\n10", true, true,
+                    "1" + _nl + _nl + "2" + _nl + "3" + _nl + "4" + _nl + "5" + _nl + _nl + "7" + _nl + _nl + _nl +
+                    "10" + _nl
+                };
+                yield return new object?[]
+                {
+                    "1\n2\n3\n4\n5\n\n7\n\n\n10", false, true,
+                    "1" + _nl + _nl + "2" + _nl + "3" + _nl + "4" + _nl + "5" + _nl + _nl + "7" + _nl + _nl + _nl +
+                    "10" + _nl
+                };
+                yield return new object?[]
+                {
+                    "1\n2\n3\n4\n5\n\n7\n\n\n10\n", false, true,
+                    "1" + _nl + _nl + "2" + _nl + "3" + _nl + "4" + _nl + "5" + _nl + _nl + "7" + _nl + _nl + _nl +
+                    "10" + _nl + _nl
+                };
             }
         }
     }

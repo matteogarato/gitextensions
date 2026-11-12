@@ -7,7 +7,7 @@ namespace GitCommands.Git.Tag;
 public interface IGitTagController
 {
     /// <summary>
-    /// Create the Tag depending on input parameter.
+    ///     Create the Tag depending on input parameter.
     /// </summary>
     /// <param name="args">tag creation arguments</param>
     /// <param name="parentWindow">the UI window to act as the parent of the create tag dialog</param>
@@ -15,29 +15,20 @@ public interface IGitTagController
     bool CreateTag(GitCreateTagArgs args, IWin32Window parentWindow);
 }
 
-public class GitTagController : IGitTagController
+public class GitTagController(IGitUiCommands uiCommands, IFileSystem fileSystem) : IGitTagController
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly IGitUICommands _uiCommands;
-
-    public GitTagController(IGitUICommands uiCommands, IFileSystem fileSystem)
-    {
-        _fileSystem = fileSystem;
-        _uiCommands = uiCommands;
-    }
-
-    public GitTagController(IGitUICommands uiCommands)
+    public GitTagController(IGitUiCommands uiCommands)
         : this(uiCommands, new FileSystem())
     {
     }
 
     /// <summary>
-    /// Create the Tag depending on input parameter.
+    ///     Create the Tag depending on input parameter.
     /// </summary>
     /// <param name="args">tag creation arguments</param>
     /// <param name="parentWindow">the UI window to act as the parent of the create tag dialog</param>
     /// <returns>the true if the tag is created.</returns>
-    public bool CreateTag(GitCreateTagArgs args, IWin32Window parentWindow)
+    bool IGitTagController.CreateTag(GitCreateTagArgs args, IWin32Window parentWindow)
     {
         ArgumentNullException.ThrowIfNull(parentWindow);
 
@@ -45,24 +36,25 @@ public class GitTagController : IGitTagController
         if (args.Operation.CanProvideMessage())
         {
             tagMessageFileName = Path.Join(GetWorkingDirPath(), "TAGMESSAGE");
-            _fileSystem.File.WriteAllText(tagMessageFileName, args.TagMessage);
+            fileSystem.File.WriteAllText(tagMessageFileName, args.TagMessage);
         }
 
         try
         {
-            return _uiCommands.StartCommandLineProcessDialog(parentWindow, Commands.CreateTag(args, tagMessageFileName, _uiCommands.Module.GetPathForGitExecution));
+            return uiCommands.StartCommandLineProcessDialog(parentWindow,
+                Commands.CreateTag(args, tagMessageFileName, uiCommands.Module.GetPathForGitExecution));
         }
         finally
         {
-            if (tagMessageFileName is not null && _fileSystem.File.Exists(tagMessageFileName))
+            if (tagMessageFileName is not null && fileSystem.File.Exists(tagMessageFileName))
             {
-                _fileSystem.File.Delete(tagMessageFileName);
+                fileSystem.File.Delete(tagMessageFileName);
             }
         }
     }
 
     private string GetWorkingDirPath()
     {
-        return _uiCommands.Module.WorkingDir;
+        return uiCommands.Module.WorkingDir;
     }
 }

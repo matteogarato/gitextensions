@@ -4,12 +4,8 @@ using GitUI.Properties;
 namespace GitUI.LeftPanel;
 
 [DebuggerDisplay("(Folder) FullPath = {FullPath}")]
-internal sealed class RemoteRepoFolderNode : BaseRevisionNode
+internal sealed class RemoteRepoFolderNode(Tree tree, string name) : BaseRevisionNode(tree, name, true)
 {
-    public RemoteRepoFolderNode(Tree tree, string name) : base(tree, name, true)
-    {
-    }
-
     public override void ApplyStyle()
     {
         base.ApplyStyle();

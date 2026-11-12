@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace System;
+namespace GitUI.Interops.User32;
 
 internal static partial class NativeMethods
 {

@@ -1,34 +1,38 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft;
 
-namespace AzureDevOpsIntegration;
+namespace GitExtensions.Plugins.AzureDevOpsIntegration;
 
 /// <summary>
-/// Provides access to the REST API of a Azure DevOps (or TFS>=2015) instance
+///     Provides access to the REST API of a Azure DevOps (or TFS>=2015) instance
 /// </summary>
 public sealed class ApiClient : IDisposable
 {
-    private const string Properties = "properties=sourceVersion,status,buildNumber,result,definition,_links,startTime,finishTime";
+    private const string _properties =
+        "properties=sourceVersion,status,buildNumber,result,definition,_links,startTime,finishTime";
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private readonly HttpClient _httpClient;
 
     /// <summary>
-    ///  Creates a new API client for the given Azure DevOps / TFS project.
+    ///     Creates a new API client for the given Azure DevOps / TFS project.
     /// </summary>
     /// <param name="projectUrl">
-    ///  The home page url of the project the API client should provide access to.
+    ///     The home page url of the project the API client should provide access to.
     /// </param>
     /// <param name="apiToken">
-    ///  A Personal Access Token for Basic auth. When <see langword="null"/> or empty,
-    ///  the client attempts to obtain a Bearer token from Git Credential Manager, and
-    ///  falls back to default Windows credentials (NTLM/Negotiate) for on-premises TFS.
+    ///     A Personal Access Token for Basic auth. When <see langword="null" /> or empty,
+    ///     the client attempts to obtain a Bearer token from Git Credential Manager, and
+    ///     falls back to default Windows credentials (NTLM/Negotiate) for on-premises TFS.
     /// </param>
     /// <param name="gitExecutable">
-    ///  Path to the git executable, used to invoke <c>git credential fill</c> when
-    ///  no PAT is provided. When <see langword="null"/>, defaults to <c>"git"</c>.
+    ///     Path to the git executable, used to invoke <c>git credential fill</c> when
+    ///     no PAT is provided. When <see langword="null" />, defaults to <c>"git"</c>.
     /// </param>
     public ApiClient(string projectUrl, string? apiToken, string? gitExecutable = null)
     {
@@ -39,7 +43,7 @@ public sealed class ApiClient : IDisposable
         }
         else
         {
-            string? bearerToken = TryGetBearerTokenFromGcm(projectUrl, gitExecutable);
+            var bearerToken = TryGetBearerTokenFromGcm(projectUrl, gitExecutable);
             if (bearerToken is not null)
             {
                 _httpClient = new HttpClient();
@@ -55,33 +59,38 @@ public sealed class ApiClient : IDisposable
         _httpClient.BaseAddress = new Uri(projectUrl.EndsWith('/') ? projectUrl + "_apis/" : projectUrl + "/_apis/");
     }
 
+    void IDisposable.Dispose()
+    {
+        _httpClient?.Dispose();
+    }
+
     private void SetBasicAuth(string apiToken)
     {
-        string apiTokenHeaderValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{apiToken}"));
+        var apiTokenHeaderValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{apiToken}"));
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", apiTokenHeaderValue);
     }
 
     /// <summary>
-    ///  Attempts to obtain a Bearer token from Git Credential Manager via <c>git credential fill</c>.
+    ///     Attempts to obtain a Bearer token from Git Credential Manager via <c>git credential fill</c>.
     /// </summary>
     private static string? TryGetBearerTokenFromGcm(string projectUrl, string? gitExecutable)
     {
         try
         {
-            if (!Uri.TryCreate(projectUrl, UriKind.Absolute, out Uri? uri))
+            if (!Uri.TryCreate(projectUrl, UriKind.Absolute, out var uri))
             {
                 return null;
             }
 
-            string input = $"protocol={uri.Scheme}\nhost={uri.Host}\npath={uri.AbsolutePath.TrimStart('/')}\n\n";
+            var input = $"protocol={uri.Scheme}\nhost={uri.Host}\npath={uri.AbsolutePath.TrimStart('/')}\n\n";
 
-            using System.Diagnostics.Process process = new() { StartInfo = CreateCredentialFillStartInfo(gitExecutable) };
+            using Process process = new() { StartInfo = CreateCredentialFillStartInfo(gitExecutable) };
 
             process.Start();
             process.StandardInput.Write(input);
             process.StandardInput.Close();
 
-            string output = process.StandardOutput.ReadToEnd();
+            var output = process.StandardOutput.ReadToEnd();
             process.WaitForExit(TimeSpan.FromSeconds(30));
 
             if (process.ExitCode != 0)
@@ -89,14 +98,14 @@ public sealed class ApiClient : IDisposable
                 return null;
             }
 
-            foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 // Split on the first '=' only to handle tokens containing '='
-                int separatorIndex = line.IndexOf('=');
+                var separatorIndex = line.IndexOf('=');
                 if (separatorIndex > 0)
                 {
-                    string key = line[..separatorIndex].Trim();
-                    string value = line[(separatorIndex + 1)..].Trim();
+                    var key = line[..separatorIndex].Trim();
+                    var value = line[(separatorIndex + 1)..].Trim();
 
                     if (key == "password" && !string.IsNullOrWhiteSpace(value))
                     {
@@ -114,22 +123,22 @@ public sealed class ApiClient : IDisposable
     }
 
     /// <summary>
-    ///  Builds the start info for the <c>git credential fill</c> lookup.
+    ///     Builds the start info for the <c>git credential fill</c> lookup.
     /// </summary>
-    /// <param name="gitExecutable">Path to the git executable, or <see langword="null"/> to use <c>git</c> from the path.</param>
+    /// <param name="gitExecutable">Path to the git executable, or <see langword="null" /> to use <c>git</c> from the path.</param>
     /// <returns>The start info for a credential lookup which cannot show any user interface.</returns>
     /// <remarks>
-    ///  The lookup runs on a background refresh, with no window to parent a dialog to, so the
-    ///  credential helper must not prompt: an unattended poll which opens the account picker of Git
-    ///  Credential Manager every few minutes is indistinguishable from malware to the user.
-    ///  When no credential is stored yet, the helper simply returns nothing and the caller falls
-    ///  back to the default credentials.
-    ///  Both settings apply to this child process only, so the prompting which interactive git
-    ///  operations rely on is not affected.
+    ///     The lookup runs on a background refresh, with no window to parent a dialog to, so the
+    ///     credential helper must not prompt: an unattended poll which opens the account picker of Git
+    ///     Credential Manager every few minutes is indistinguishable from malware to the user.
+    ///     When no credential is stored yet, the helper simply returns nothing and the caller falls
+    ///     back to the default credentials.
+    ///     Both settings apply to this child process only, so the prompting which interactive git
+    ///     operations rely on is not affected.
     /// </remarks>
-    internal static System.Diagnostics.ProcessStartInfo CreateCredentialFillStartInfo(string? gitExecutable)
+    internal static ProcessStartInfo CreateCredentialFillStartInfo(string? gitExecutable)
     {
-        System.Diagnostics.ProcessStartInfo startInfo = new()
+        ProcessStartInfo startInfo = new()
         {
             FileName = gitExecutable ?? "git",
             Arguments = "-c credential.interactive=false credential fill",
@@ -137,7 +146,7 @@ public sealed class ApiClient : IDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = true
         };
 
         startInfo.Environment["GIT_TERMINAL_PROMPT"] = "0";
@@ -148,42 +157,37 @@ public sealed class ApiClient : IDisposable
         return startInfo;
     }
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     private async Task<T> HttpGetAsync<T>(string url)
     {
-        using HttpResponseMessage response = await _httpClient.GetAsync(url);
+        using var response = await _httpClient.GetAsync(url);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             throw new UnauthorizedAccessException();
         }
 
         response.EnsureSuccessStatusCode();
-        string json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync();
 
         return JsonSerializer.Deserialize<T>(json, _jsonOptions)!;
     }
 
     public async Task<string?> GetBuildDefinitionsAsync(string buildDefinitionNameFilter, string? repositoryName = null)
     {
-        bool isNotFiltered = string.IsNullOrWhiteSpace(buildDefinitionNameFilter);
-        string buildDefinitionUriFilter = isNotFiltered ? string.Empty : "&name=" + buildDefinitionNameFilter;
+        var isNotFiltered = string.IsNullOrWhiteSpace(buildDefinitionNameFilter);
+        var buildDefinitionUriFilter = isNotFiltered ? string.Empty : "&name=" + buildDefinitionNameFilter;
 
-        string repositoryFilter = "";
+        var repositoryFilter = "";
         if (!string.IsNullOrWhiteSpace(repositoryName))
         {
-            string? repositoryId = await GetRepositoryIdAsync(repositoryName);
+            var repositoryId = await GetRepositoryIdAsync(repositoryName);
             if (repositoryId is not null)
             {
                 repositoryFilter = $"&repositoryId={repositoryId}&repositoryType=TfsGit";
             }
         }
 
-        string url = $"build/definitions?api-version=6.0{buildDefinitionUriFilter}{repositoryFilter}";
-        ListWrapper<BuildDefinition> buildDefinitions = await HttpGetAsync<ListWrapper<BuildDefinition>>(url);
+        var url = $"build/definitions?api-version=6.0{buildDefinitionUriFilter}{repositoryFilter}";
+        var buildDefinitions = await HttpGetAsync<ListWrapper<BuildDefinition>>(url);
         if (buildDefinitions.Count != 0)
         {
             return GetBuildDefinitionsIds(buildDefinitions.Value);
@@ -194,19 +198,23 @@ public sealed class ApiClient : IDisposable
             return null;
         }
 
-        buildDefinitions = await HttpGetAsync<ListWrapper<BuildDefinition>>($"build/definitions?api-version=6.0{repositoryFilter}");
+        buildDefinitions =
+            await HttpGetAsync<ListWrapper<BuildDefinition>>($"build/definitions?api-version=6.0{repositoryFilter}");
 
-        return GetBuildDefinitionsIds(buildDefinitions.Value?.Where(b => b.Name is not null && Regex.IsMatch(b.Name, buildDefinitionNameFilter)));
+        return GetBuildDefinitionsIds(buildDefinitions.Value?.Where(b =>
+            b.Name is not null && Regex.IsMatch(b.Name, buildDefinitionNameFilter)));
     }
 
     /// <summary>
-    ///  Resolves a repository name to its GUID via the Azure DevOps Git API.
+    ///     Resolves a repository name to its GUID via the Azure DevOps Git API.
     /// </summary>
     private async Task<string?> GetRepositoryIdAsync(string repositoryName)
     {
         try
         {
-            GitRepository repo = await HttpGetAsync<GitRepository>($"git/repositories/{Uri.EscapeDataString(repositoryName)}?api-version=6.0");
+            var repo =
+                await HttpGetAsync<GitRepository>(
+                    $"git/repositories/{Uri.EscapeDataString(repositoryName)}?api-version=6.0");
             return repo.Id;
         }
         catch
@@ -226,20 +234,20 @@ public sealed class ApiClient : IDisposable
     }
 
     /// <summary>
-    /// Gets the name of the build definition a given build has been built with.
+    ///     Gets the name of the build definition a given build has been built with.
     /// </summary>
     /// <param name="buildId">
-    /// The id of the build to get the build definition name for.
+    ///     The id of the build to get the build definition name for.
     /// </param>
     public async Task<string?> GetBuildDefinitionNameFromIdAsync(int buildId)
     {
-        Build build = await HttpGetAsync<Build>($"build/builds/{buildId}?api-version=2.0");
+        var build = await HttpGetAsync<Build>($"build/builds/{buildId}?api-version=2.0");
         return build.Definition?.Name;
     }
 
     public async Task<IList<Build>> QueryFinishedBuildsAsync(string buildDefinitionsToQuery, DateTime? sinceDate)
     {
-        string queryUrl = QueryForBuildStatus(buildDefinitionsToQuery, "completed");
+        var queryUrl = QueryForBuildStatus(buildDefinitionsToQuery, "completed");
         queryUrl += sinceDate.HasValue
             ? $"&minTime={sinceDate.Value.ToUniversalTime():s}&api-version=4.1"
             : "&api-version=2.0";
@@ -249,25 +257,24 @@ public sealed class ApiClient : IDisposable
 
     private async Task<IList<Build>> QueryBuildsAsync(string queryUrl)
     {
-        IList<Build>? builds = (await HttpGetAsync<ListWrapper<Build>>(queryUrl)).Value;
+        var builds = (await HttpGetAsync<ListWrapper<Build>>(queryUrl)).Value;
         Validates.NotNull(builds);
         return builds;
     }
 
     public async Task<IList<Build>> QueryRunningBuildsAsync(string buildDefinitionsToQuery)
     {
-        string queryUrl = QueryForBuildStatus(buildDefinitionsToQuery, "cancelling,inProgress,none,notStarted,postponed") + "&api-version=2.0";
+        var queryUrl =
+            QueryForBuildStatus(buildDefinitionsToQuery, "cancelling,inProgress,none,notStarted,postponed") +
+            "&api-version=2.0";
 
         return await QueryBuildsAsync(queryUrl);
     }
 
     // Api doc: https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-4.1
     private static string QueryForBuildStatus(string buildDefinitionsToQuery, string statusFilter)
-        => $"build/builds?{Properties}&definitions={buildDefinitionsToQuery}&statusFilter={statusFilter}";
-
-    public void Dispose()
     {
-        _httpClient?.Dispose();
+        return $"build/builds?{_properties}&definitions={buildDefinitionsToQuery}&statusFilter={statusFilter}";
     }
 }
 
@@ -298,7 +305,7 @@ public class BuildDefinition
 }
 
 /// <summary>
-/// Data received from https://docs.microsoft.com/en-us/rest/api/vsts/build/builds/get?view=vsts-rest-4.1
+///     Data received from https://docs.microsoft.com/en-us/rest/api/vsts/build/builds/get?view=vsts-rest-4.1
 /// </summary>
 public class Build
 {
@@ -320,12 +327,19 @@ public class Build
     public Repository? Repository { get; set; }
     public string? Parameters { get; set; }
     public BuildDefinition? Definition { get; set; }
-    public BuildLinks? _links { get; set; }
+    public BuildLinks? Links { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? FinishTime { get; set; }
 
-    public bool IsInProgress => Status != StatusCompleted;
-    public bool IsPullRequest => Reason == ReasonPullRequest;
+    public bool IsInProgress
+    {
+        get => Status != StatusCompleted;
+    }
+
+    public bool IsPullRequest
+    {
+        get => Reason == ReasonPullRequest;
+    }
 }
 
 public class Repository

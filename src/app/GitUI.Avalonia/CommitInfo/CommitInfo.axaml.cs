@@ -1,7 +1,4 @@
-﻿using Avalonia.Controls;
-using GitUIPluginInterfaces;
-
-using ResourceManager;
+﻿using GitUI.Compat;
 
 namespace GitUI.CommitInfo;
 
@@ -19,7 +16,7 @@ public partial class CommitInfo : GitExtensionsControl
     }
 
     /// <summary>
-    ///  Gets or sets the revision whose details are shown (named like the WinForms property).
+    ///     Gets or sets the revision whose details are shown (named like the WinForms property).
     /// </summary>
     public GitRevision? Revision
     {
@@ -35,7 +32,7 @@ public partial class CommitInfo : GitExtensionsControl
                 return;
             }
 
-            string refs = value.Refs.Count > 0
+            var refs = value.Refs.Count > 0
                 ? $"\nRefs:      {string.Join(", ", value.Refs.Select(gitRef => gitRef.Name))}"
                 : string.Empty;
             RevisionHeader.Text =

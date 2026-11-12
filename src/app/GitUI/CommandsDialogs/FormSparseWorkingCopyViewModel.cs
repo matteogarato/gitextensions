@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.HelperDialogs;
@@ -12,40 +12,39 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
 
     public static readonly string SettingCoreSparseCheckout = "core.sparsecheckout";
 
-    private readonly IGitUICommands _gitCommands;
+    private static readonly string[] _first = ["/*"];
+
+    private readonly IGitUiCommands _gitCommands;
 
     private bool _isRefreshWorkingCopyOnSave = true /* on by default, otherwise index bitmap won't be updated */;
 
     private bool _isSparseCheckoutEnabled;
 
     /// <summary>
-    /// Remembers what were in settings, to check <see cref="IsSparseCheckoutEnabled" /> against to tell if modified.
+    ///     Remembers what were in settings, to check <see cref="IsSparseCheckoutEnabled" /> against to tell if modified.
     /// </summary>
     private bool _isSparseCheckoutEnabledAsSaved;
 
     private string? _rulesText;
 
     /// <summary>
-    /// Remembers what were loaded from disk, to check <see cref="RulesText" /> against to tell if modified.
-    /// NULL until loaded.
+    ///     Remembers what were loaded from disk, to check <see cref="RulesText" /> against to tell if modified.
+    ///     NULL until loaded.
     /// </summary>
     private string? _sRulesTextAsOnDisk;
 
-    public FormSparseWorkingCopyViewModel(IGitUICommands gitCommands)
+    public FormSparseWorkingCopyViewModel(IGitUiCommands gitCommands)
     {
         _gitCommands = gitCommands ?? throw new ArgumentNullException(nameof(gitCommands));
         _isSparseCheckoutEnabled = _isSparseCheckoutEnabledAsSaved = GetCurrentSparseEnabledState();
     }
 
     /// <summary>
-    /// Whether to run the cmd to refresh WC when closing w/save.
+    ///     Whether to run the cmd to refresh WC when closing w/save.
     /// </summary>
     public bool IsRefreshWorkingCopyOnSave
     {
-        get
-        {
-            return _isRefreshWorkingCopyOnSave;
-        }
+        get => _isRefreshWorkingCopyOnSave;
         set
         {
             _isRefreshWorkingCopyOnSave = value;
@@ -54,19 +53,19 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Tells whether the rules have been edited in the UI against what's on disk.
+    ///     Tells whether the rules have been edited in the UI against what's on disk.
     /// </summary>
-    public bool IsRulesTextChanged => (_rulesText is not null) && (_rulesText != (_sRulesTextAsOnDisk ?? ""));
+    public bool IsRulesTextChanged
+    {
+        get => _rulesText is not null && _rulesText != (_sRulesTextAsOnDisk ?? "");
+    }
 
     /// <summary>
-    /// Current UI state of the Git sparse option.
+    ///     Current UI state of the Git sparse option.
     /// </summary>
     public bool IsSparseCheckoutEnabled
     {
-        get
-        {
-            return _isSparseCheckoutEnabled;
-        }
+        get => _isSparseCheckoutEnabled;
         set
         {
             if (value == _isSparseCheckoutEnabled)
@@ -80,14 +79,11 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Current UI state of the sparse WC rules text. NULL if n/a.
+    ///     Current UI state of the sparse WC rules text. NULL if n/a.
     /// </summary>
     public string? RulesText
     {
-        get
-        {
-            return _rulesText;
-        }
+        get => _rulesText;
         set
         {
             if (_rulesText == value)
@@ -100,7 +96,14 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
         }
     }
 
-    private static readonly string[] first = ["/*"];
+    /// <summary>
+    ///     Fires on any prop change. Lightweight reactive.
+    /// </summary>
+    event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+    {
+        add => PropertyChanged += value;
+        remove => PropertyChanged -= value;
+    }
 
     public void FirePropertyChanged()
     {
@@ -108,15 +111,16 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Read from settings.
+    ///     Read from settings.
     /// </summary>
     public bool GetCurrentSparseEnabledState()
     {
-        return StringComparer.OrdinalIgnoreCase.Equals(_gitCommands.Module.GetEffectiveSetting(SettingCoreSparseCheckout), bool.TrueString);
+        return StringComparer.OrdinalIgnoreCase.Equals(
+            _gitCommands.Module.GetEffectiveSetting(SettingCoreSparseCheckout), bool.TrueString);
     }
 
     /// <summary>
-    /// Path to the file with the sparse WC rules.
+    ///     Path to the file with the sparse WC rules.
     /// </summary>
     public FileInfo GetPathToSparseCheckoutFile()
     {
@@ -124,7 +128,7 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Checks if got anything to save. Can cancel without confirmation if not dirty.
+    ///     Checks if got anything to save. Can cancel without confirmation if not dirty.
     /// </summary>
     public bool IsWithUnsavedChanges()
     {
@@ -142,7 +146,7 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Re-applies the current options/rules to the WC.
+    ///     Re-applies the current options/rules to the WC.
     /// </summary>
     public void RefreshWorkingCopy()
     {
@@ -153,7 +157,7 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Saves changes (if modified), and refresh WC.
+    ///     Saves changes (if modified), and refresh WC.
     /// </summary>
     public void SaveChanges()
     {
@@ -167,14 +171,15 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
         // Enabled state for the repo
         if (IsSparseCheckoutEnabled != _isSparseCheckoutEnabledAsSaved)
         {
-            _gitCommands.Module.SetSetting(SettingCoreSparseCheckout, IsSparseCheckoutEnabled.ToString().ToLowerInvariant());
+            _gitCommands.Module.SetSetting(SettingCoreSparseCheckout,
+                IsSparseCheckoutEnabled.ToString().ToLowerInvariant());
             _isSparseCheckoutEnabledAsSaved = IsSparseCheckoutEnabled;
         }
 
         // Rules set
         if (IsRulesTextChanged)
         {
-            string newText = RulesText ?? "";
+            var newText = RulesText ?? "";
             File.WriteAllBytes(GetPathToSparseCheckoutFile().FullName, GitModule.SystemEncoding.GetBytes(newText));
             SetRulesTextAsOnDisk(newText); // Update if OK
         }
@@ -187,7 +192,7 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// As view loads the text in its impl of the editor, tells the exact on-disk text when it gets known.
+    ///     As view loads the text in its impl of the editor, tells the exact on-disk text when it gets known.
     /// </summary>
     public void SetRulesTextAsOnDisk(string text)
     {
@@ -195,17 +200,18 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Fires for the view to show a confirmation msgbox on the matter.
+    ///     Fires for the view to show a confirmation msgbox on the matter.
     /// </summary>
-    public event EventHandler<ComfirmAdjustingRulesOnDeactEventArgs> ComfirmAdjustingRulesOnDeactRequested = delegate { };
+    public event EventHandler<ComfirmAdjustingRulesOnDeactEventArgs> ComfirmAdjustingRulesOnDeactRequested =
+        delegate { };
 
     /// <summary>
-    /// Fires on any prop change. Lightweight reactive.
+    ///     Fires on any prop change. Lightweight reactive.
     /// </summary>
-    public event PropertyChangedEventHandler? PropertyChanged;
+    private event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>
-    /// Make sure WC gets unsparsed when turning off sparse.
+    ///     Make sure WC gets unsparsed when turning off sparse.
     /// </summary>
     private void SaveChangesTurningOffSparseSpecialCase()
     {
@@ -215,7 +221,11 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
         }
 
         // Now check the rules, the well-known recommendation is to have the single "/*" rule active
-        List<string> rulelines = [.. RulesText.LazySplit('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).Where(l => (!string.IsNullOrEmpty(l)) && (l[0] != '#'))]; // All nonempty and non-comment lines
+        List<string> rulelines =
+        [
+            .. RulesText.LazySplit('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim())
+                .Where(l => !string.IsNullOrEmpty(l) && l[0] != '#')
+        ]; // All nonempty and non-comment lines
         if (rulelines.All(l => l == "/*"))
         {
             return; // Rules OK for turning off
@@ -231,22 +241,19 @@ public class FormSparseWorkingCopyViewModel : INotifyPropertyChanged
 
         // Adjust the rules
         // Comment out all existing nonempty lines, add the single "/*" line to make a total pass filter
-        RulesText = first.Concat(RulesText.LazySplit('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => (string.IsNullOrWhiteSpace(l) || (l[0] == '#')) ? l : "#" + l)).Join(Environment.NewLine);
+        RulesText = _first
+            .Concat(RulesText.LazySplit('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => string.IsNullOrWhiteSpace(l) || l[0] == '#' ? l : "#" + l)).Join(Environment.NewLine);
     }
 
     /// <summary>
-    /// For <see cref="ComfirmAdjustingRulesOnDeactRequested" />.
+    ///     For <see cref="ComfirmAdjustingRulesOnDeactRequested" />.
     /// </summary>
-    public class ComfirmAdjustingRulesOnDeactEventArgs : CancelEventArgs
+    public class ComfirmAdjustingRulesOnDeactEventArgs(bool isCurrentRuleSetEmpty) : CancelEventArgs
     {
-        public ComfirmAdjustingRulesOnDeactEventArgs(bool isCurrentRuleSetEmpty)
-        {
-            IsCurrentRuleSetEmpty = isCurrentRuleSetEmpty;
-        }
-
         /// <summary>
-        /// Empty rule set vs. got some stuff there.
+        ///     Empty rule set vs. got some stuff there.
         /// </summary>
-        public bool IsCurrentRuleSetEmpty { get; }
+        public bool IsCurrentRuleSetEmpty { get; } = isCurrentRuleSetEmpty;
     }
 }

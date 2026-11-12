@@ -1,40 +1,48 @@
 ﻿using System.ComponentModel.Design;
 using System.Reflection;
 using CommonTestUtils;
-using GitCommands;
 using GitExtensions.Extensibility.Settings;
-using GitExtensions.UITests;
 using GitExtUtils;
-using GitUI;
 using GitUI.CommandsDialogs.SettingsDialog;
 using GitUI.CommandsDialogs.SettingsDialog.Pages;
 using GitUI.ScriptsEngine;
-using GitUIPluginInterfaces;
 using NSubstitute;
-using Xunit;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace UITests.CommandsDialogs.SettingsDialog.Pages;
 
-public class ScriptsSettingsPageTests : System.IDisposable
+public class ScriptsSettingsPageTests : IDisposable
 {
-    private ReferenceRepository _referenceRepository = null!;
-    private ServiceContainer _serviceContainer = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
+    private readonly ServiceContainer _serviceContainer = null!;
     private MockHost _form = null!;
     private ScriptsSettingsPage _settingsPage = null!;
+
     public ScriptsSettingsPageTests()
     {
         _referenceRepository = new ReferenceRepository();
 
-        IScriptsManager scriptsManager = Substitute.For<IScriptsManager>();
+        var scriptsManager = Substitute.For<IScriptsManager>();
         scriptsManager.GetScripts().Returns(
         [
-            new ScriptInfo { HotkeyCommandIdentifier = 9001, Name = "first", Enabled = true, Icon = "StatusBadgeSuccess" },
-            new ScriptInfo { HotkeyCommandIdentifier = 9002, Name = "second", Enabled = true, Icon = "StatusBadgeSuccess" },
+            new ScriptInfo
+            {
+                HotkeyCommandIdentifier = 9001, Name = "first", Enabled = true, Icon = "StatusBadgeSuccess"
+            },
+            new ScriptInfo
+            {
+                HotkeyCommandIdentifier = 9002, Name = "second", Enabled = true, Icon = "StatusBadgeSuccess"
+            }
         ]);
 
         _serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
         _serviceContainer.RemoveService<IScriptsManager>();
         _serviceContainer.AddService(scriptsManager);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -48,49 +56,52 @@ public class ScriptsSettingsPageTests : System.IDisposable
     [WinFormsFact]
     public void Committing_a_pending_grid_edit_while_rebinding_after_an_Icon_change_should_not_crash()
     {
-        RunFormTest(
-            async form =>
+        RunFormTest(async form =>
+        {
+            _settingsPage.LoadSettings();
+            _settingsPage.OnPageShown();
+            await UiTest.WaitForIdleAsync();
+
+            var accessor = _settingsPage.GetTestAccessor();
+            var propertyGrid = accessor.PropertyGrid1;
+            propertyGrid.SelectedObject.Should().NotBeNull();
+
+            var root = propertyGrid.SelectedGridItem!;
+            while (root.Parent is not null)
             {
-                _settingsPage.LoadSettings();
-                _settingsPage.OnPageShown();
-                await UITest.WaitForIdleAsync();
+                root = root.Parent;
+            }
 
-                ScriptsSettingsPage.TestAccessor accessor = _settingsPage.GetTestAccessor();
-                PropertyGrid propertyGrid = accessor.propertyGrid1;
-                propertyGrid.SelectedObject.Should().NotBeNull();
+            var iconItem = FindProperty(root, "Icon");
+            var iconFilePathItem = FindProperty(root, "IconFilePath");
 
-                GridItem root = propertyGrid.SelectedGridItem!;
-                while (root.Parent is not null)
-                {
-                    root = root.Parent;
-                }
+            // The user has typed into the grid, but the edit is not committed yet.
+            // (In #12353 the pending edit was the item picked in the open Icon drop-down list.)
+            iconFilePathItem.Select().Should().BeTrue();
+            var gridView = propertyGrid.Controls.Cast<Control>()
+                .Single(c => c.GetType().Name == "PropertyGridView");
+            var editTextBox = gridView.Controls.OfType<TextBox>().Single();
+            editTextBox.Visible.Should().BeTrue();
+            editTextBox.Text = "pending.ico";
 
-                GridItem iconItem = FindProperty(root, "Icon");
-                GridItem iconFilePathItem = FindProperty(root, "IconFilePath");
+            // The grid commits a new Icon value and raises PropertyValueChanged, as it does on a cursor key in the drop-down list.
+            // BindScripts must not make the grid commit the pending edit (which rebinds again) while it selects a list item.
+            typeof(PropertyGrid)
+                .GetMethod("OnPropertyValueChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(propertyGrid, [new PropertyValueChangedEventArgs(iconItem, null)]);
 
-                // The user has typed into the grid, but the edit is not committed yet.
-                // (In #12353 the pending edit was the item picked in the open Icon drop-down list.)
-                iconFilePathItem.Select().Should().BeTrue();
-                Control gridView = propertyGrid.Controls.Cast<Control>().Single(c => c.GetType().Name == "PropertyGridView");
-                TextBox editTextBox = gridView.Controls.OfType<TextBox>().Single();
-                editTextBox.Visible.Should().BeTrue();
-                editTextBox.Text = "pending.ico";
+            await UiTest.WaitForIdleAsync();
 
-                // The grid commits a new Icon value and raises PropertyValueChanged, as it does on a cursor key in the drop-down list.
-                // BindScripts must not make the grid commit the pending edit (which rebinds again) while it selects a list item.
-                typeof(PropertyGrid)
-                    .GetMethod("OnPropertyValueChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
-                    .Invoke(propertyGrid, [new PropertyValueChangedEventArgs(iconItem, oldValue: null)]);
-
-                await UITest.WaitForIdleAsync();
-
-                accessor.lvScripts.Items.Count.Should().Be(2);
-                accessor.lvScripts.SelectedItems.Count.Should().Be(1);
-            });
+            accessor.LvScripts.Items.Count.Should().Be(2);
+            accessor.LvScripts.SelectedItems.Count.Should().Be(1);
+        });
     }
 
     private static GridItem FindProperty(GridItem root, string name)
-        => Flatten(root).First(item => item.GridItemType == GridItemType.Property && item.PropertyDescriptor?.Name == name);
+    {
+        return Flatten(root).First(item =>
+            item.GridItemType == GridItemType.Property && item.PropertyDescriptor?.Name == name);
+    }
 
     private static IEnumerable<GridItem> Flatten(GridItem item)
     {
@@ -98,7 +109,7 @@ public class ScriptsSettingsPageTests : System.IDisposable
 
         foreach (GridItem child in item.GridItems)
         {
-            foreach (GridItem descendant in Flatten(child))
+            foreach (var descendant in Flatten(child))
             {
                 yield return descendant;
             }
@@ -107,51 +118,38 @@ public class ScriptsSettingsPageTests : System.IDisposable
 
     private void RunFormTest(Func<MockHost, Task> testDriverAsync)
     {
-        UITest.RunForm(
+        UiTest.RunForm(
             () =>
             {
-                _form = new MockHost(_referenceRepository.Module)
-                {
-                    Size = new(800, 600)
-                };
+                _form = new MockHost(_referenceRepository.Module) { Size = new Size(800, 600) };
 
                 _settingsPage = SettingsPageBase.Create<ScriptsSettingsPage>(_form, _serviceContainer);
                 _settingsPage.Dock = DockStyle.Fill;
 
                 _form.Controls.Add(_settingsPage);
 
-                _form.ShowDialog(owner: null);
+                _form.ShowDialog(null);
             },
             testDriverAsync);
     }
 
-    private sealed class MockHost : Form, ISettingsPageHost
+    private sealed class MockHost(GitModule module) : Form, ISettingsPageHost
     {
-        public MockHost(GitModule module)
-        {
-            CheckSettingsLogic = new(new(module));
-        }
+        CheckSettingsLogic ISettingsPageHost.CheckSettingsLogic { get; } = new(new CommonLogic(module));
 
-        public CheckSettingsLogic CheckSettingsLogic { get; }
-
-        public void GotoPage(SettingsPageReference settingsPageReference)
+        void ISettingsPageHost.GotoPage(SettingsPageReference settingsPageReference)
         {
             throw new NotImplementedException();
         }
 
-        public void LoadAll()
+        void ISettingsPageHost.LoadAll()
         {
             throw new NotImplementedException();
         }
 
-        public void SaveAll()
+        void ISettingsPageHost.SaveAll()
         {
             throw new NotImplementedException();
         }
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

@@ -1,5 +1,6 @@
 ﻿using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitUI.UserControls;
 using Microsoft.VisualStudio.Threading;
 
@@ -7,19 +8,19 @@ namespace GitUI.LeftPanel;
 
 internal abstract class Tree : NodeBase, IDisposable
 {
-    private readonly IGitUICommandsSource _uiCommandsSource;
     private readonly ExclusiveTaskRunner _reloadTaskRunner = ThreadHelper.CreateExclusiveTaskRunner();
-    private bool _firstReloadNodesSinceModuleChanged = true;
+    private readonly IGitUiCommandsSource _uiCommandsSource;
     protected TaskCompletionSource LoadingCompleted = new();
+    private bool _firstReloadNodesSinceModuleChanged = true;
 
-    protected Tree(TreeNode treeNode, IGitUICommandsSource uiCommands)
+    protected Tree(TreeNode treeNode, IGitUiCommandsSource uiCommands)
     {
         Nodes = new Nodes(this);
         _uiCommandsSource = uiCommands;
         TreeViewNode = treeNode;
         treeNode.Tag = this;
 
-        uiCommands.UICommandsChanged += (a, e) =>
+        uiCommands.UiCommandsChanged += (a, e) =>
         {
             // When GitModule has changed, clear selected node
             if (TreeViewNode?.TreeView is not null)
@@ -35,25 +36,32 @@ internal abstract class Tree : NodeBase, IDisposable
         };
     }
 
+    public IGitUiCommands UiCommands
+    {
+        get => _uiCommandsSource.UiCommands;
+    }
+
+    /// <summary>
+    ///     A flag to indicate that node SelectionChanged event is not user-originated and
+    ///     must not trigger the event handling sequence.
+    /// </summary>
+    public bool IgnoreSelectionChangedEvent { get; set; }
+
+    protected IGitModule Module
+    {
+        get => UiCommands.Module;
+    }
+
+    /// <summary>
+    ///     Flag if this tree is enabled or invisible.
+    /// </summary>
+    protected bool IsAttached { get; private set; }
+
     public virtual void Dispose()
     {
         Detached();
         _reloadTaskRunner.Dispose();
     }
-
-    public IGitUICommands UICommands => _uiCommandsSource.UICommands;
-
-    /// <summary>
-    /// A flag to indicate that node SelectionChanged event is not user-originated and
-    /// must not trigger the event handling sequence.
-    /// </summary>
-    public bool IgnoreSelectionChangedEvent { get; set; }
-    protected IGitModule Module => UICommands.Module;
-
-    /// <summary>
-    /// Flag if this tree is enabled or invisible.
-    /// </summary>
-    protected bool IsAttached { get; private set; }
 
     public void Attached()
     {
@@ -82,20 +90,28 @@ internal abstract class Tree : NodeBase, IDisposable
     }
 
     public IEnumerable<TNode> DepthEnumerator<TNode>() where TNode : NodeBase
-        => Nodes.DepthEnumerator<TNode>();
+    {
+        return Nodes.DepthEnumerator<TNode>();
+    }
 
     internal IEnumerable<NodeBase> GetNodesAndSelf()
-        => DepthEnumerator<NodeBase>().Prepend(this);
+    {
+        return DepthEnumerator<NodeBase>().Prepend(this);
+    }
 
     internal IEnumerable<NodeBase> GetSelectedNodes()
-        => GetNodesAndSelf().Where(node => node.IsSelected);
+    {
+        return GetNodesAndSelf().Where(node => node.IsSelected);
+    }
 
     // Invoke from child class to reload nodes for the current Tree. Clears Nodes, invokes
     // input async function that should populate Nodes, then fills the tree view with its contents,
     // making sure to disable/enable the control.
-    protected JoinableTask ReloadNodesDetached(Func<Func<RefsFilter, IReadOnlyList<IGitRef>>, CancellationToken, Task<Nodes>> loadNodesTask, Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs)
+    protected JoinableTask ReloadNodesDetached(
+        Func<Func<RefsFilter, IReadOnlyList<IGitRef>>, CancellationToken, Task<Nodes>> loadNodesTask,
+        Func<RefsFilter, IReadOnlyList<IGitRef>> getRefs)
     {
-        TreeView? treeView = TreeViewNode.TreeView;
+        var treeView = TreeViewNode.TreeView;
 
         return _reloadTaskRunner.RunDetached(async cancellationToken =>
         {
@@ -106,10 +122,12 @@ internal abstract class Tree : NodeBase, IDisposable
 
             try
             {
-                LoadingCompleted = new();
+                LoadingCompleted = new TaskCompletionSource();
 
                 // Module is invalid in Dashboard
-                Nodes newNodes = Module.IsValidGitWorkingDir() ? await loadNodesTask(getRefs, cancellationToken) : new(tree: null);
+                var newNodes = Module.IsValidGitWorkingDir()
+                    ? await loadNodesTask(getRefs, cancellationToken)
+                    : new Nodes(null);
 
                 await treeView.SwitchToMainThreadAsync(cancellationToken);
 
@@ -130,7 +148,8 @@ internal abstract class Tree : NodeBase, IDisposable
                 // re-apply multi-selection
                 if (multiSelected.Count > 0)
                 {
-                    foreach (NodeBase node in GetNodesAndSelf().Where(node => multiSelected.Contains(node.GetHashCode())))
+                    foreach (var node in GetNodesAndSelf()
+                                 .Where(node => multiSelected.Contains(node.GetHashCode())))
                     {
                         node.IsSelected = true;
                     }
@@ -138,7 +157,7 @@ internal abstract class Tree : NodeBase, IDisposable
 
                 try
                 {
-                    string? originalSelectedNodeFullNamePath = treeView.SelectedNode?.GetFullNamePath();
+                    var originalSelectedNodeFullNamePath = treeView.SelectedNode?.GetFullNamePath();
 
                     treeView.BeginUpdate();
                     IgnoreSelectionChangedEvent = true;
@@ -163,10 +182,10 @@ internal abstract class Tree : NodeBase, IDisposable
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
-        HashSet<string> expandedNodesState = firstTime ? [] : TreeViewNode.GetExpandedNodesState();
+        var expandedNodesState = firstTime ? [] : TreeViewNode.GetExpandedNodesState();
         Nodes.FillTreeViewNode(TreeViewNode);
 
-        TreeNode? selectedNode = TreeViewNode.TreeView!.SelectedNode;
+        var selectedNode = TreeViewNode.TreeView!.SelectedNode;
 
         if (originalSelectedNodeFullNamePath != selectedNode?.GetFullNamePath()
             && TreeViewNode.GetNodeFromPath(originalSelectedNodeFullNamePath) is { } node)
@@ -196,7 +215,7 @@ internal abstract class Tree : NodeBase, IDisposable
         }
 
         // If no selected node, just make sure that the first node is visible
-        TreeNode node = TreeViewNode.TreeView.SelectedNode ?? TreeViewNode.TreeView.Nodes[0];
+        var node = TreeViewNode.TreeView.SelectedNode ?? TreeViewNode.TreeView.Nodes[0];
         node.EnsureVerticallyVisible();
     }
 }

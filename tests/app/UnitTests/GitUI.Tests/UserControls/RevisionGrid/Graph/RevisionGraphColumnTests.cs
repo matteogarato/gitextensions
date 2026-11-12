@@ -1,12 +1,12 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Columns;
 using GitUI.UserControls.RevisionGrid.Graph;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
 namespace GitUITests.UserControls.RevisionGrid.Graph;
+
 public class RevisionGraphColumnTests
 {
     private const int _rowHeight = 42;
@@ -15,7 +15,7 @@ public class RevisionGraphColumnTests
     public void RenderGraphToCache_should_start_cache_with_single_line()
     {
         const int rowCount = 2;
-        Setup(rowCount, out RevisionGraphColumnProvider.TestAccessor testAccessor);
+        Setup(rowCount, out var testAccessor);
 
         const int rowIndex = 1;
         testAccessor.RenderRowToCache(rowIndex, _rowHeight);
@@ -28,7 +28,7 @@ public class RevisionGraphColumnTests
     [Fact]
     public void RenderGraphToCache_should_draw_from_cache()
     {
-        Setup(rowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
+        Setup(2, out var testAccessor);
 
         const int rowIndex = 1;
         testAccessor.RenderRowToCache(rowIndex, _rowHeight);
@@ -45,9 +45,9 @@ public class RevisionGraphColumnTests
     [Fact]
     public void RenderGraphToCache_should_fill_forward_then_restart()
     {
-        Setup(rowCount: 10, visibleRowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
+        Setup(10, 2, out var testAccessor);
 
-        int rowIndex = 0;
+        var rowIndex = 0;
         testAccessor.RenderRowToCache(rowIndex, _rowHeight);
         testAccessor.GraphCache.Head.Should().Be(0); // not really mandatory, but Head is reset in Clear()
         testAccessor.GraphCache.HeadRow.Should().Be(0);
@@ -69,9 +69,9 @@ public class RevisionGraphColumnTests
     [Fact]
     public void RenderGraphToCache_should_scroll_forward()
     {
-        Setup(rowCount: 10, visibleRowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
+        Setup(10, 2, out var testAccessor);
 
-        int rowIndex = 0;
+        var rowIndex = 0;
         testAccessor.RenderRowToCache(rowIndex, _rowHeight);
         testAccessor.GraphCache.Head.Should().Be(0); // not really mandatory, but Head is reset in Clear()
         testAccessor.GraphCache.HeadRow.Should().Be(0);
@@ -124,9 +124,9 @@ public class RevisionGraphColumnTests
     public void RenderGraphToCache_should_scroll_backward_then_restart()
     {
         const int rowCount = 10;
-        Setup(rowCount, visibleRowCount: 2, out RevisionGraphColumnProvider.TestAccessor testAccessor);
+        Setup(rowCount, 2, out var testAccessor);
 
-        int rowIndex = rowCount - 1;
+        var rowIndex = rowCount - 1;
         testAccessor.RenderRowToCache(rowIndex, _rowHeight);
         testAccessor.GraphCache.Head.Should().Be(0); // not really mandatory, but Head is reset in Clear()
         testAccessor.GraphCache.HeadRow.Should().Be(rowIndex);
@@ -140,34 +140,38 @@ public class RevisionGraphColumnTests
 
         rowIndex = testAccessor.GraphCache.HeadRow - testAccessor.GraphCache.Capacity;
         testAccessor.RenderRowToCache(rowIndex, _rowHeight);
-        testAccessor.GraphCache.Head.Should().Be(testAccessor.GraphCache.Capacity - 1); // unchanged, does not really matter
+        testAccessor.GraphCache.Head.Should()
+            .Be(testAccessor.GraphCache.Capacity - 1); // unchanged, does not really matter
         testAccessor.GraphCache.HeadRow.Should().Be(rowIndex);
         testAccessor.GraphCache.Count.Should().Be(1);
     }
 
     private static void Setup(int rowCount, out RevisionGraphColumnProvider.TestAccessor testAccessor)
-        => Setup(rowCount, rowCount, out testAccessor);
+    {
+        Setup(rowCount, rowCount, out testAccessor);
+    }
 
-    private static void Setup(int rowCount, int visibleRowCount, out RevisionGraphColumnProvider.TestAccessor testAccessor)
+    private static void Setup(int rowCount, int visibleRowCount,
+        out RevisionGraphColumnProvider.TestAccessor testAccessor)
     {
         RevisionGraph revisionGraph = new();
-        for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
+        for (var rowIndex = 0; rowIndex < rowCount; ++rowIndex)
         {
             revisionGraph.Add(new GitRevision(ObjectId.Random()));
         }
 
-        revisionGraph.CacheTo(currentRowIndex: visibleRowCount, lastToCacheRowIndex: visibleRowCount, TestContext.Current.CancellationToken);
+        revisionGraph.CacheTo(visibleRowCount, visibleRowCount, TestContext.Current.CancellationToken);
 
-        IGitRevisionSummaryBuilder gitRevisionSummaryBuilder = Substitute.For<IGitRevisionSummaryBuilder>();
+        var gitRevisionSummaryBuilder = Substitute.For<IGitRevisionSummaryBuilder>();
 
         RevisionGraphColumnProvider revisionGraphColumnProvider = new(revisionGraph, gitRevisionSummaryBuilder);
         testAccessor = revisionGraphColumnProvider.GetTestAccessor();
 
         testAccessor.GraphCache.Capacity.Should().Be(0);
 
-        VisibleRowRange range = new(fromIndex: 0, visibleRowCount);
+        VisibleRowRange range = new(0, visibleRowCount);
         testAccessor.RenderGraphToCache(range, rowCount - 1, _rowHeight);
-        int expectedCapacity = 3 * visibleRowCount;
+        var expectedCapacity = 3 * visibleRowCount;
         testAccessor.GraphCache.Capacity.Should().Be(expectedCapacity);
         testAccessor.GraphCache.Count.Should().Be(Math.Min(rowCount, expectedCapacity));
 

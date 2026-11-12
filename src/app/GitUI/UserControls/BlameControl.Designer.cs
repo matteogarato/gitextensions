@@ -1,4 +1,4 @@
-﻿namespace GitUI.Blame;
+﻿namespace GitUI.UserControls;
 
 partial class BlameControl
 {

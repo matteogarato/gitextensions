@@ -1,4 +1,5 @@
 ﻿namespace GitCommandsTests;
+
 public sealed class StringExtensionTests
 {
     [Theory]
@@ -144,7 +145,8 @@ public sealed class StringExtensionTests
     [InlineData("/usr/bin", true, "/usr/bin")]
     [InlineData("\\usr\\bin", false, "\\\\usr\\\\bin")]
     [InlineData("\\usr\\bin", true, "\\usr\\bin")]
-    [InlineData("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe", true, "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe")]
+    [InlineData("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe", true,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe")]
     [InlineData("echo \"Hello world\"", false, "echo \\\"Hello world\\\"")]
     [InlineData("echo \"Hello world\"", true, "echo \"\"Hello world\"\"")]
     [InlineData("echo \'Hello world\'", false, "echo \\\'Hello world\\\'")]
@@ -172,10 +174,9 @@ public sealed class StringExtensionTests
     [InlineData("wei\"rd", "\"wei\\\"rd\"")]
     [InlineData("\"wei\"rd\"", "\"wei\"rd\"")]
     [InlineData("weird\"", "\"weird\\\"\"")]
-
-    public void QuoteIfUnquotedAndNE(string? str, string? expected)
+    public void QuoteIfUnquotedAndNe(string? str, string? expected)
     {
-        str.QuoteIfNotQuotedAndNE().Should().Be(expected);
+        str.QuoteIfNotQuotedAndNe().Should().Be(expected);
     }
 
     [Theory]
@@ -190,7 +191,6 @@ public sealed class StringExtensionTests
     [InlineData("\"file", "\"file")]
     [InlineData("file\"", "file\"")]
     [InlineData("\"file with spaces\"", "file with spaces")]
-
     public void RemoveQuotes(string? str, string? expected)
     {
         str!.RemoveQuotes().Should().Be(expected);

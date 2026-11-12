@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace GitExtUtils.Tasks;
+namespace CommonTestUtils;
 
 internal static class TaskExtensions
 {
@@ -9,10 +9,14 @@ internal static class TaskExtensions
     // just a tool for the callers to use to show intent.
 #pragma warning disable VSTHRD003
     public static ConfiguredTaskAwaitable DetachFromSynchronizationContext(this Task task)
-        => task.ConfigureAwait(continueOnCapturedContext: false);
+    {
+        return task.ConfigureAwait(false);
+    }
 
     public static ConfiguredTaskAwaitable<TResult> DetachFromSynchronizationContext<TResult>(this Task<TResult> task)
-        => task.ConfigureAwait(continueOnCapturedContext: false);
+    {
+        return task.ConfigureAwait(false);
+    }
 #pragma warning restore VSTHRD003
 
     // VSTHRD002: Synchronously waiting on tasks could cause deadlocks.
@@ -25,9 +29,13 @@ internal static class TaskExtensions
     // on unconfigured tasks.
 #pragma warning disable VSTHRD002
     public static void WaitDirect(this ConfiguredTaskAwaitable task)
-        => task.GetAwaiter().GetResult();
+    {
+        task.GetAwaiter().GetResult();
+    }
 
     public static TResult GetResultDirect<TResult>(this ConfiguredTaskAwaitable<TResult> task)
-        => task.GetAwaiter().GetResult();
+    {
+        return task.GetAwaiter().GetResult();
+    }
 #pragma warning restore VSTHRD002
 }

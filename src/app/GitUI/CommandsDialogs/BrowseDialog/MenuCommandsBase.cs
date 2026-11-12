@@ -1,6 +1,5 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
-using Microsoft;
 
 namespace GitUI.CommandsDialogs.BrowseDialog;
 
@@ -13,21 +12,23 @@ internal abstract class MenuCommandsBase : ITranslate
     {
     }
 
-    public void Translate()
-    {
-        Translator.Translate(this, AppSettings.CurrentTranslation);
-    }
-
     public virtual void AddTranslationItems(ITranslation translation)
     {
         TranslationUtils.AddTranslationItemsFromFields(TranslationCategoryName, this, translation);
-        TranslationUtils.AddTranslationItemsFromList(TranslationCategoryName, translation, GetMenuCommandsForTranslationImpl());
+        TranslationUtils.AddTranslationItemsFromList(TranslationCategoryName, translation,
+            GetMenuCommandsForTranslationImpl());
     }
 
     public virtual void TranslateItems(ITranslation translation)
     {
         TranslationUtils.TranslateItemsFromFields(TranslationCategoryName, this, translation);
-        TranslationUtils.TranslateItemsFromList(TranslationCategoryName, translation, GetMenuCommandsForTranslationImpl());
+        TranslationUtils.TranslateItemsFromList(TranslationCategoryName, translation,
+            GetMenuCommandsForTranslationImpl());
+    }
+
+    public void Translate()
+    {
+        Translator.Translate(this, AppSettings.CurrentTranslation);
     }
 
     // override and return all commands created by extending class
@@ -35,7 +36,7 @@ internal abstract class MenuCommandsBase : ITranslate
 
     private IEnumerable<(string name, object item)> GetMenuCommandsForTranslationImpl()
     {
-        foreach (MenuCommand menuCommand in GetMenuCommandsForTranslation())
+        foreach (var menuCommand in GetMenuCommandsForTranslation())
         {
             Validates.NotNull(menuCommand.Name);
             yield return (menuCommand.Name, menuCommand);

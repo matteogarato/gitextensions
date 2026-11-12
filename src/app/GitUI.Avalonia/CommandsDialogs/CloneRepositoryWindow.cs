@@ -1,38 +1,42 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using GitCommands;
 using GitCommands.Config;
-using GitCommands.Git;
 using GitCommands.Settings;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitExtUtils;
-using ResourceManager;
+using GitUI.Compat;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Clones a Git repository and optionally opens it in the browse window.
+///     Clones a Git repository and optionally opens it in the browse window.
 /// </summary>
 public sealed class CloneRepositoryWindow : GitExtensionsFormBase
 {
-    private readonly IGitUICommands _uiCommands;
+    private readonly CheckBox _bareRepository = new() { Name = "chkBareRepository" };
+    private readonly TextBox _destination = new() { Name = "txtRepositoryDirectory", MinWidth = 360 };
+
+    private readonly CheckBox _initializeSubmodules = new()
+    {
+        Name = "chkInitializeSubmodules", IsChecked = AppSettings.CloneInitializeAllSubmodules
+    };
+
     private readonly Action<string>? _repositoryCloned;
     private readonly TextBox _source = new() { Name = "txtRepositoryToClone", MinWidth = 360 };
-    private readonly TextBox _destination = new() { Name = "txtRepositoryDirectory", MinWidth = 360 };
-    private readonly CheckBox _bareRepository = new() { Name = "chkBareRepository" };
-    private readonly CheckBox _initializeSubmodules = new() { Name = "chkInitializeSubmodules", IsChecked = AppSettings.CloneInitializeAllSubmodules };
+    private readonly IGitUiCommands _uiCommands;
     private string _suggestedDestination = string.Empty;
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="CloneRepositoryWindow"/> class.
+    ///     Initializes a new instance of the <see cref="CloneRepositoryWindow" /> class.
     /// </summary>
     /// <param name="uiCommands">Commands used to run Git with process feedback.</param>
     /// <param name="source">The initial repository URL or local path.</param>
     /// <param name="repositoryCloned">Called after a successful clone.</param>
-    public CloneRepositoryWindow(IGitUICommands uiCommands, string? source, Action<string>? repositoryCloned = null)
+    public CloneRepositoryWindow(IGitUiCommands uiCommands, string? source, Action<string>? repositoryCloned = null)
     {
         ArgumentNullException.ThrowIfNull(uiCommands);
 
@@ -51,33 +55,28 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
             }
         };
 
-        Title = GitUI.TranslatedStrings.ForkCloneRepo;
+        Title = TranslatedStrings.ForkCloneRepo;
         Width = 560;
         SizeToContent = SizeToContent.Height;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         CanResize = false;
 
-        Button browse = new() { Content = GitUI.TranslatedStrings.BrowseForDirectory };
+        Button browse = new() { Content = TranslatedStrings.BrowseForDirectory };
         browse.Click += (_, _) => ThreadHelper.FileAndForget(BrowseForDestinationAsync);
 
         Grid destinationPicker = new()
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            Children =
-            {
-                _destination,
-                browse,
-            },
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _destination, browse }
         };
         Grid.SetColumn(browse, 1);
-        browse.Margin = new Avalonia.Thickness(8, 0, 0, 0);
+        browse.Margin = new Thickness(8, 0, 0, 0);
 
-        _bareRepository.Content = GitUI.TranslatedStrings.BareRepository;
-        _initializeSubmodules.Content = GitUI.TranslatedStrings.SubmoduleUpdate;
+        _bareRepository.Content = TranslatedStrings.BareRepository;
+        _initializeSubmodules.Content = TranslatedStrings.SubmoduleUpdate;
 
-        Button clone = new() { Content = GitUI.TranslatedStrings.OK, IsDefault = true };
+        Button clone = new() { Content = TranslatedStrings.Ok, IsDefault = true };
         clone.Click += (_, _) => ThreadHelper.FileAndForget(CloneAsync);
-        Button cancel = new() { Content = GitUI.TranslatedStrings.Cancel, IsCancel = true };
+        Button cancel = new() { Content = TranslatedStrings.Cancel, IsCancel = true };
         cancel.Click += (_, _) => Close(false);
 
         StackPanel buttons = new()
@@ -85,31 +84,31 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Margin = new Avalonia.Thickness(0, 8, 0, 0),
-            Children = { clone, cancel },
+            Margin = new Thickness(0, 8, 0, 0),
+            Children = { clone, cancel }
         };
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 8,
             Children =
             {
-                new TextBlock { Text = GitUI.TranslatedStrings.ForkCloneRepo },
+                new TextBlock { Text = TranslatedStrings.ForkCloneRepo },
                 _source,
-                new TextBlock { Text = GitUI.TranslatedStrings.RepositoryDirectory },
+                new TextBlock { Text = TranslatedStrings.RepositoryDirectory },
                 destinationPicker,
                 _bareRepository,
                 _initializeSubmodules,
-                buttons,
-            },
+                buttons
+            }
         };
     }
 
     private static string GetCurrentRemote(IGitModule module)
     {
-        IReadOnlyList<string> remotes = module.GetRemoteNames();
-        string? remote = remotes.FirstOrDefault(name => name.Equals("origin", StringComparison.OrdinalIgnoreCase))
-            ?? remotes.FirstOrDefault();
+        var remotes = module.GetRemoteNames();
+        var remote = remotes.FirstOrDefault(name => name.Equals("origin", StringComparison.OrdinalIgnoreCase))
+                     ?? remotes.FirstOrDefault();
         return remote is null
             ? string.Empty
             : module.GetSetting(string.Format(SettingKeyString.RemoteUrl, remote));
@@ -117,15 +116,16 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
 
     private static string GetInitialDestination(string? source, IGitModule module)
     {
-        string parentPath = AppSettings.DefaultCloneDestinationPath;
+        var parentPath = AppSettings.DefaultCloneDestinationPath;
         if (string.IsNullOrWhiteSpace(parentPath) && !string.IsNullOrWhiteSpace(module.WorkingDir))
         {
             parentPath = Directory.Exists(module.WorkingDir)
-                ? Directory.GetParent(module.WorkingDir.TrimEnd(Path.DirectorySeparatorChar))?.FullName ?? module.WorkingDir
+                ? Directory.GetParent(module.WorkingDir.TrimEnd(Path.DirectorySeparatorChar))?.FullName ??
+                  module.WorkingDir
                 : module.WorkingDir;
         }
 
-        string repositoryName = PathUtil.GetRepositoryName(source);
+        var repositoryName = PathUtil.GetRepositoryName(source);
         return string.IsNullOrWhiteSpace(parentPath) || string.IsNullOrWhiteSpace(repositoryName)
             ? parentPath
             : Path.Combine(parentPath, repositoryName);
@@ -133,12 +133,10 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
 
     private async Task BrowseForDestinationAsync()
     {
-        IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            AllowMultiple = false,
-        });
+        var folders =
+            await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { AllowMultiple = false });
 
-        if (folders.Count > 0 && folders[0].TryGetLocalPath() is string path)
+        if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } path)
         {
             _destination.Text = path;
         }
@@ -146,12 +144,12 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
 
     private async Task CloneAsync()
     {
-        string source = _source.Text?.Trim() ?? string.Empty;
+        var source = _source.Text?.Trim() ?? string.Empty;
 
-        string destination = _destination.Text?.Trim() ?? string.Empty;
+        var destination = _destination.Text?.Trim() ?? string.Empty;
         if (!Path.IsPathRooted(destination))
         {
-            MessageBoxes.ShowError(this, GitUI.TranslatedStrings.ChooseDirectory);
+            MessageBoxes.ShowError(this, TranslatedStrings.ChooseDirectory);
             return;
         }
 
@@ -159,8 +157,8 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
         {
             Directory.CreateDirectory(destination);
             AppSettings.CloneInitializeAllSubmodules = _initializeSubmodules.IsChecked == true;
-            IGitUICommands destinationCommands = _uiCommands.WithWorkingDirectory(destination);
-            ArgumentString arguments = CloneRepositoryWorkflow.BuildCloneCommand(
+            var destinationCommands = _uiCommands.WithWorkingDirectory(destination);
+            var arguments = CloneRepositoryWorkflow.BuildCloneCommand(
                 destinationCommands.Module,
                 source,
                 destination,
@@ -184,7 +182,8 @@ public sealed class CloneRepositoryWindow : GitExtensionsFormBase
             _repositoryCloned?.Invoke(destination);
             Close(true);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException
+                                              or InvalidOperationException)
         {
             MessageBoxes.ShowError(this, exception.Message);
         }

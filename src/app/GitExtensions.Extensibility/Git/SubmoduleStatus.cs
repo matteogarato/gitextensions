@@ -10,5 +10,5 @@ public enum SubmoduleStatus
     FastForward,
     Rewind,
     NewerTime,
-    OlderTime,
+    OlderTime
 }

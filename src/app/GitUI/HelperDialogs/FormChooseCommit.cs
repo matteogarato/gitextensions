@@ -1,19 +1,20 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.HelperDialogs;
 
 public partial class FormChooseCommit : GitModuleForm
 {
-    private FormChooseCommit(IGitUICommands commands)
+    private FormChooseCommit(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
         InitializeComplete();
     }
 
-    public FormChooseCommit(IGitUICommands commands, string? preselectCommit, bool showArtificial = false, bool showCurrentBranchOnly = false, string? lastRevisionToDisplayHash = null)
+    public FormChooseCommit(IGitUiCommands commands, string? preselectCommit, bool showArtificial = false,
+        bool showCurrentBranchOnly = false, string? lastRevisionToDisplayHash = null)
         : this(commands)
     {
         revisionGrid.MultiSelect = false;
@@ -30,7 +31,7 @@ public partial class FormChooseCommit : GitModuleForm
 
         if (!string.IsNullOrEmpty(preselectCommit))
         {
-            ObjectId objectId = Module.RevParse(preselectCommit);
+            var objectId = Module.RevParse(preselectCommit);
             if (!objectId.IsZero)
             {
                 revisionGrid.SelectedId = objectId;
@@ -48,7 +49,7 @@ public partial class FormChooseCommit : GitModuleForm
 
     private void btnOK_Click(object sender, EventArgs e)
     {
-        IReadOnlyList<GitRevision> revisions = revisionGrid.GetSelectedRevisions();
+        var revisions = revisionGrid.GetSelectedRevisions();
 
         if (revisions.Count == 1)
         {
@@ -76,8 +77,8 @@ public partial class FormChooseCommit : GitModuleForm
 
     private void linkLabelParent_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
-        LinkLabel linkLabel = (LinkLabel)sender;
-        ObjectId parentId = (ObjectId)linkLabel.Tag!;
+        var linkLabel = (LinkLabel)sender;
+        var parentId = (ObjectId)linkLabel.Tag!;
 
         if (!revisionGrid.SetSelectedRevision(parentId))
         {
@@ -87,9 +88,9 @@ public partial class FormChooseCommit : GitModuleForm
 
     private void revisionGrid_SelectionChanged(object sender, EventArgs e)
     {
-        IReadOnlyList<GitRevision> revisions = revisionGrid.GetSelectedRevisions();
+        var revisions = revisionGrid.GetSelectedRevisions();
 
-        bool singleCommitSelected = revisions.Count == 1;
+        var singleCommitSelected = revisions.Count == 1;
         labelParents.Visible = singleCommitSelected;
         linkLabelParent.Visible = singleCommitSelected;
         linkLabelParent2.Visible = singleCommitSelected;
@@ -108,7 +109,7 @@ public partial class FormChooseCommit : GitModuleForm
             return;
         }
 
-        IReadOnlyList<ObjectId>? parents = SelectedRevision.ParentIds;
+        var parents = SelectedRevision.ParentIds;
 
         if (parents?.Count is not > 0)
         {

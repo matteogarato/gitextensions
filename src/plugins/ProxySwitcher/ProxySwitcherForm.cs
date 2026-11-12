@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using GitCommands;
+using GitCommands.Git;
 using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
@@ -12,22 +13,14 @@ namespace GitExtensions.Plugins.ProxySwitcher;
 
 public partial class ProxySwitcherForm : GitExtensionsFormBase
 {
+    private readonly IGitModule _gitCommands;
     private readonly ProxySwitcherPlugin _plugin;
     private readonly SettingsSource _settings;
-    private readonly IGitModule _gitCommands;
-
-    #region Translation
-    private readonly TranslationString _pluginDescription = new("Proxy Switcher");
-    private readonly TranslationString _pleaseSetProxy = new("There is no proxy configured. Please set the proxy host in the plugin settings.");
-    #endregion
-
-    [GeneratedRegex(@":(.*)@", RegexOptions.ExplicitCapture)]
-    private static partial Regex PasswordRegex { get; }
 
     /// <summary>
-    /// Default constructor added to register all strings to be translated
-    /// Use the other constructor:
-    /// ProxySwitcherForm(IGitPluginSettingsContainer settings, GitUIBaseEventArgs gitUiCommands)
+    ///     Default constructor added to register all strings to be translated
+    ///     Use the other constructor:
+    ///     ProxySwitcherForm(IGitPluginSettingsContainer settings, GitUIBaseEventArgs gitUiCommands)
     /// </summary>
     public ProxySwitcherForm()
     {
@@ -38,7 +31,7 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
         _gitCommands = null!;
     }
 
-    public ProxySwitcherForm(ProxySwitcherPlugin plugin, SettingsSource settings, GitUIEventArgs gitUiCommands)
+    public ProxySwitcherForm(ProxySwitcherPlugin plugin, SettingsSource settings, GitUiEventArgs gitUiCommands)
     {
         InitializeComponent();
         InitializeComplete();
@@ -48,6 +41,9 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
         _settings = settings;
         _gitCommands = gitUiCommands.GitModule;
     }
+
+    [GeneratedRegex(@":(.*)@", RegexOptions.ExplicitCapture)]
+    private static partial Regex PasswordRegex { get; }
 
     private void ProxySwitcherForm_Load(object sender, EventArgs e)
     {
@@ -65,7 +61,9 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
     private void RefreshProxy()
     {
         LocalHttpProxy_TextBox.Text = HidePassword(_gitCommands.GetEffectiveSetting("http.proxy"));
-        GlobalHttpProxy_TextBox.Text = HidePassword(new GitConfigSettings(_gitCommands.GitExecutable, GitSettingLevel.Global).GetValue("http.proxy") ?? "");
+        GlobalHttpProxy_TextBox.Text =
+            HidePassword(
+                new GitConfigSettings(_gitCommands.GitExecutable, GitSettingLevel.Global).GetValue("http.proxy") ?? "");
         ApplyGlobally_CheckBox.Checked = string.Equals(LocalHttpProxy_TextBox.Text, GlobalHttpProxy_TextBox.Text);
     }
 
@@ -78,10 +76,10 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
     {
         StringBuilder sb = new();
         sb.Append('"');
-        string username = _plugin.Username.ValueOrDefault(_settings);
+        var username = _plugin.Username.ValueOrDefault(_settings);
         if (!string.IsNullOrEmpty(username))
         {
-            string password = _plugin.Password.ValueOrDefault(_settings);
+            var password = _plugin.Password.ValueOrDefault(_settings);
             sb.Append(username);
             if (!string.IsNullOrEmpty(password))
             {
@@ -93,7 +91,7 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
         }
 
         sb.Append(_plugin.HttpProxy.ValueOrDefault(_settings));
-        string port = _plugin.HttpProxyPort.ValueOrDefault(_settings);
+        var port = _plugin.HttpProxyPort.ValueOrDefault(_settings);
         if (!string.IsNullOrEmpty(port))
         {
             sb.Append(':');
@@ -106,13 +104,11 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
 
     private void SetProxy_Button_Click(object sender, EventArgs e)
     {
-        string httpProxy = BuildHttpProxy();
+        var httpProxy = BuildHttpProxy();
 
         GitArgumentBuilder args = new("config")
         {
-            { ApplyGlobally_CheckBox.Checked, "--global" },
-            "http.proxy",
-            httpProxy
+            { ApplyGlobally_CheckBox.Checked, "--global" }, "http.proxy", httpProxy
         };
         _gitCommands.GitExecutable.GetOutput(args);
 
@@ -121,7 +117,7 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
 
     private void UnsetProxy_Button_Click(object sender, EventArgs e)
     {
-        string arguments = ApplyGlobally_CheckBox.Checked
+        var arguments = ApplyGlobally_CheckBox.Checked
             ? "config --global --unset http.proxy"
             : "config --unset http.proxy";
 
@@ -129,4 +125,13 @@ public partial class ProxySwitcherForm : GitExtensionsFormBase
 
         RefreshProxy();
     }
+
+    #region Translation
+
+    private readonly TranslationString _pluginDescription = new("Proxy Switcher");
+
+    private readonly TranslationString _pleaseSetProxy =
+        new("There is no proxy configured. Please set the proxy host in the plugin settings.");
+
+    #endregion
 }

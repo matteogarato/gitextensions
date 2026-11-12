@@ -5,5 +5,7 @@ namespace GitCommands.Settings;
 public static class SettingsSourceExtension
 {
     public static IDetachedSettings Detached(this SettingsSource settingsSource)
-        => new DetachedSettings(settingsSource);
+    {
+        return new DetachedSettings(settingsSource);
+    }
 }

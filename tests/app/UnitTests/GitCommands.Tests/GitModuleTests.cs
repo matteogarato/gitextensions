@@ -1,30 +1,109 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using CommonTestUtils;
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitCommandsTests;
+
 public sealed partial class GitModuleTests : IDisposable
 {
-    private static readonly ObjectId Sha1 = ObjectId.Parse("3183d1e95383c44302d4b25a7c647ee169765bd8");
-    private static readonly ObjectId Sha2 = ObjectId.Parse("d12782217535ef00f4f84773d5d33691bbf81d00");
-    private static readonly ObjectId Sha3 = ObjectId.Parse("dd678b7160a9a5890c8725e33930947af210c765");
+    private static readonly ObjectId _sha1 = ObjectId.Parse("3183d1e95383c44302d4b25a7c647ee169765bd8");
+    private static readonly ObjectId _sha2 = ObjectId.Parse("d12782217535ef00f4f84773d5d33691bbf81d00");
+    private static readonly ObjectId _sha3 = ObjectId.Parse("dd678b7160a9a5890c8725e33930947af210c765");
+    private readonly MockExecutable _executable = null!;
 
-    private GitModule _gitModule = null!;
-    private MockExecutable _executable = null!;
+    private readonly GitModule _gitModule = null!;
 
     public GitModuleTests()
     {
         _executable = new MockExecutable();
 
-        _gitModule = GetGitModuleWithExecutable(executable: _executable);
+        _gitModule = GetGitModuleWithExecutable(_executable);
     }
 
-    public void Dispose()
+    public static IEnumerable<object?[]> StagedStatuses
+    {
+        get
+        {
+            var headObjectId = ObjectId.Random();
+
+            yield return new object?[]
+            {
+                ObjectId.IndexId, ObjectId.WorkTreeId, ObjectId.IndexId, StagedStatus.WorkTree
+            };
+
+            yield return new object?[] { headObjectId, ObjectId.IndexId, headObjectId, StagedStatus.Index };
+
+            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), ObjectId.Random(), StagedStatus.None };
+            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), null, StagedStatus.None };
+
+            // Situations where staged status is unknown
+            yield return new object?[]
+            {
+                ObjectId.WorkTreeId, ObjectId.Random(), ObjectId.Random(), StagedStatus.Unknown
+            };
+            yield return new object?[]
+            {
+                ObjectId.Random(), ObjectId.WorkTreeId, ObjectId.IndexId, StagedStatus.Unknown
+            };
+            yield return new object?[] { ObjectId.IndexId, ObjectId.Random(), ObjectId.Random(), StagedStatus.Unknown };
+            yield return new object?[] { ObjectId.Random(), ObjectId.IndexId, ObjectId.Random(), StagedStatus.Unknown };
+            yield return new object?[] { ObjectId.IndexId, ObjectId.Random(), null, StagedStatus.Unknown };
+            yield return new object?[] { ObjectId.Random(), ObjectId.IndexId, null, StagedStatus.Unknown };
+            yield return new object?[] { ObjectId.Random(), null, ObjectId.Random(), StagedStatus.Unknown };
+            yield return new object?[] { null, ObjectId.Random(), ObjectId.Random(), StagedStatus.Unknown };
+
+            // Impossible combinations
+            yield return new object?[]
+            {
+                ObjectId.Random(), ObjectId.WorkTreeId, ObjectId.Random(), StagedStatus.Unknown
+            };
+            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), ObjectId.WorkTreeId, StagedStatus.None };
+            yield return new object?[]
+            {
+                ObjectId.Random(), ObjectId.IndexId, ObjectId.WorkTreeId, StagedStatus.Unknown
+            };
+            yield return new object?[] { headObjectId, ObjectId.WorkTreeId, headObjectId, StagedStatus.Unknown };
+            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), ObjectId.IndexId, StagedStatus.None };
+        }
+    }
+
+    public static IEnumerable<object?[]> BatchUnstageFilesTestCases
+    {
+        get
+        {
+            yield return new object?[]
+            {
+                new GitItemStatus[]
+                {
+                    new("abc2") { IsNew = true }, new("abc2") { IsNew = true, IsDeleted = true },
+                    new("abc2") { IsNew = false },
+                    new("abc3") { IsNew = false, IsRenamed = true, OldName = "def" }
+                },
+                new[]
+                {
+                    "reset --quiet \"HEAD\" -- \"abc2\" \"abc3\" \"def\"", "reset -- \"abc2\"",
+                    "update-index --force-remove --stdin"
+                },
+                false
+            };
+
+            yield return new object?[]
+            {
+                new GitItemStatus[]
+                {
+                    new("abc2") { IsNew = false }, new("abc3") { IsNew = false, IsDeleted = true }
+                },
+                new[] { "reset --quiet \"HEAD\" -- \"abc2\" \"abc3\"" }, true
+            };
+        }
+    }
+
+    void IDisposable.Dispose()
     {
         _executable.Verify();
     }
@@ -34,7 +113,8 @@ public sealed partial class GitModuleTests : IDisposable
     [InlineData("dir/sub.dir/file.min.js", "BASE", 1, "dir/sub.dir/file.min_BASE_1.js")]
     [InlineData("dir.d/README", "REMOTE", 42, "dir.d/README_REMOTE_42")]
     [InlineData(".gitignore", "LOCAL", 7, "_LOCAL_7.gitignore")]
-    public void GetConflictPartFileName_should_use_git_mergetool_scheme(string fileName, string side, int processId, string expected)
+    public void GetConflictPartFileName_should_use_git_mergetool_scheme(string fileName, string side, int processId,
+        string expected)
     {
         GitModule.TestAccessor.GetConflictPartFileName(fileName, side, processId).Should().Be(expected);
     }
@@ -44,24 +124,26 @@ public sealed partial class GitModuleTests : IDisposable
     {
         HashSet<string> existing = ["file_LOCAL_1234.cs", "file_LOCAL_1234_1.cs"];
 
-        GitModule.TestAccessor.GetAvailableFileName("file_LOCAL_1234.cs", existing.Contains).Should().Be("file_LOCAL_1234_2.cs");
-        GitModule.TestAccessor.GetAvailableFileName("other_LOCAL_1234.cs", existing.Contains).Should().Be("other_LOCAL_1234.cs");
+        GitModule.TestAccessor.GetAvailableFileName("file_LOCAL_1234.cs", existing.Contains).Should()
+            .Be("file_LOCAL_1234_2.cs");
+        GitModule.TestAccessor.GetAvailableFileName("other_LOCAL_1234.cs", existing.Contains).Should()
+            .Be("other_LOCAL_1234.cs");
         GitModule.TestAccessor.GetAvailableFileName("README_LOCAL_1234", _ => true).Should().Be("README_LOCAL_1234_49");
     }
 
     [Fact]
     public async Task CheckoutConflictedFiles_should_write_sides_next_to_file_with_extension_kept()
     {
-        string originalDirectory = Directory.GetCurrentDirectory();
+        var originalDirectory = Directory.GetCurrentDirectory();
         using GitModuleTestHelper helper = new();
-        GitModule module = helper.Module;
+        var module = helper.Module;
         try
         {
             // base: file.cs exists; both branches change it; both branches add new.txt (no base)
             helper.CreateRepoFile("dir", "file.cs", "base");
             Run("add .");
             Run("commit -m base");
-            string mainBranch = module.GetSelectedBranch();
+            var mainBranch = module.GetSelectedBranch();
 
             Run("checkout -b other");
             helper.CreateRepoFile("dir", "file.cs", "theirs");
@@ -75,32 +157,35 @@ public sealed partial class GitModuleTests : IDisposable
             Run("add .");
             Run("commit -m ours");
 
-            await module.GitExecutable.ExecuteAsync("merge other", throwOnErrorExit: false, cancellationToken: TestContext.Current.CancellationToken);
+            await module.GitExecutable.ExecuteAsync("merge other", throwOnErrorExit: false,
+                cancellationToken: TestContext.Current.CancellationToken);
 
-            string processId = Environment.ProcessId.ToString();
+            var processId = Environment.ProcessId.ToString();
 
-            ConflictData conflict = await module.GetConflictAsync("dir/file.cs");
-            (string? baseFile, string? localFile, string? remoteFile) = module.CheckoutConflictedFiles(conflict);
+            var conflict = await module.GetConflictAsync("dir/file.cs");
+            (var baseFile, var localFile, var remoteFile) = module.CheckoutConflictedFiles(conflict);
 
-            string expectedBaseFile = Path.Combine(module.WorkingDir, $"dir/file_BASE_{processId}.cs");
-            string expectedLocalFile = Path.Combine(module.WorkingDir, $"dir/file_LOCAL_{processId}.cs");
-            string expectedRemoteFile = Path.Combine(module.WorkingDir, $"dir/file_REMOTE_{processId}.cs");
+            var expectedBaseFile = Path.Combine(module.WorkingDir, $"dir/file_BASE_{processId}.cs");
+            var expectedLocalFile = Path.Combine(module.WorkingDir, $"dir/file_LOCAL_{processId}.cs");
+            var expectedRemoteFile = Path.Combine(module.WorkingDir, $"dir/file_REMOTE_{processId}.cs");
             baseFile.Should().Be(expectedBaseFile);
             localFile.Should().Be(expectedLocalFile);
             remoteFile.Should().Be(expectedRemoteFile);
             (await File.ReadAllTextAsync(expectedBaseFile, TestContext.Current.CancellationToken)).Should().Be("base");
             (await File.ReadAllTextAsync(expectedLocalFile, TestContext.Current.CancellationToken)).Should().Be("ours");
-            (await File.ReadAllTextAsync(expectedRemoteFile, TestContext.Current.CancellationToken)).Should().Be("theirs");
+            (await File.ReadAllTextAsync(expectedRemoteFile, TestContext.Current.CancellationToken)).Should()
+                .Be("theirs");
 
             // the files still exist, so a second checkout must not overwrite them
-            string expectedSecondBaseFile = Path.Combine(module.WorkingDir, $"dir/file_BASE_{processId}_1.cs");
-            (string? baseFile2, _, _) = module.CheckoutConflictedFiles(conflict);
+            var expectedSecondBaseFile = Path.Combine(module.WorkingDir, $"dir/file_BASE_{processId}_1.cs");
+            (var baseFile2, _, _) = module.CheckoutConflictedFiles(conflict);
             baseFile2.Should().Be(expectedSecondBaseFile);
-            (await File.ReadAllTextAsync(expectedSecondBaseFile, TestContext.Current.CancellationToken)).Should().Be("base");
+            (await File.ReadAllTextAsync(expectedSecondBaseFile, TestContext.Current.CancellationToken)).Should()
+                .Be("base");
 
             // add/add conflict: no base side
-            ConflictData addAddConflict = await module.GetConflictAsync("new.txt");
-            (string? noBaseFile, string? addedLocalFile, _) = module.CheckoutConflictedFiles(addAddConflict);
+            var addAddConflict = await module.GetConflictAsync("new.txt");
+            (var noBaseFile, var addedLocalFile, _) = module.CheckoutConflictedFiles(addAddConflict);
             noBaseFile.Should().BeNull();
             addedLocalFile.Should().Be(Path.Combine(module.WorkingDir, $"new_LOCAL_{processId}.txt"));
         }
@@ -111,18 +196,21 @@ public sealed partial class GitModuleTests : IDisposable
 
         return;
 
-        void Run(string arguments) => module.GitExecutable.GetOutput(arguments);
+        void Run(string arguments)
+        {
+            module.GitExecutable.GetOutput(arguments);
+        }
     }
 
     [Fact]
     public void ParseGitBlame()
     {
-        using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-        using IDisposable configList = _executable.StageOutput("config list --includes --null", null!);
+        using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+        using var configList = _executable.StageOutput("config list --includes --null", null!);
         GitVersion.ResetVersion();
 
-        string path = Path.Combine(AppContext.BaseDirectory, @"TestData/README.blame");
-        GitBlame result = _gitModule.ParseGitBlame(File.ReadAllText(path), Encoding.UTF8);
+        var path = Path.Combine(AppContext.BaseDirectory, @"TestData/README.blame");
+        var result = _gitModule.ParseGitBlame(File.ReadAllText(path), Encoding.UTF8);
 
         result.Lines.Count.Should().Be(80);
 
@@ -145,9 +233,11 @@ public sealed partial class GitModuleTests : IDisposable
     [InlineData(" ", " ")]
     [InlineData("Hello, World!", "Hello, World!")]
     [InlineData(@"\353\221\220\353\213\244.txt", "두다.txt")] // escaped octal code points (Korean Hangul in this case)
-    [InlineData(@"Invalid byte \777.txt", @"Invalid byte \777.txt")] // 777 is an invalid byte, which is omitted from the output
+    [InlineData(@"Invalid byte \777.txt",
+        @"Invalid byte \777.txt")] // 777 is an invalid byte, which is omitted from the output
     [InlineData(@"\353\221\220\353\213\244 \777.txt", @"두다 \777.txt")] // valid and invalid in the same string
-    [InlineData(@"\353\221\220\353\213\244\777.txt", @"\353\221\220\353\213\244\777.txt")] // valid and invalid in the same string
+    [InlineData(@"\353\221\220\353\213\244\777.txt",
+        @"\353\221\220\353\213\244\777.txt")] // valid and invalid in the same string
     public void UnescapeOctalCodePoints_handles_octal_codes(string? input, string? expected)
     {
         GitModule.UnescapeOctalCodePoints(input).Should().Be(expected);
@@ -165,38 +255,48 @@ public sealed partial class GitModuleTests : IDisposable
     [Fact]
     public void FetchCmd()
     {
-        using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-        using IDisposable configList = _executable.StageOutput("config list --includes --null", null!);
+        using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+        using var configList = _executable.StageOutput("config list --includes --null", null!);
         GitVersion.ResetVersion();
 
         using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null!))
         {
-            _gitModule.FetchCmd("remote", "remotebranch", "localbranch").Arguments.Should().Be("-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags");
+            _gitModule.FetchCmd("remote", "remotebranch", "localbranch").Arguments.Should().Be(
+                "-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags");
         }
 
         using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null!))
         {
-            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", true).Arguments.Should().Be("-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --tags");
+            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", true).Arguments.Should().Be(
+                "-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --tags");
         }
 
         using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null!))
         {
-            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", null).Arguments.Should().Be("-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch");
+            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", null).Arguments.Should().Be(
+                "-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch");
         }
 
         using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null!))
         {
-            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", isUnshallow: true).Arguments.Should().Be("-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --unshallow");
+            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", isUnshallow: true).Arguments.Should().Be(
+                "-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --unshallow");
         }
 
         using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null!))
         {
-            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", pruneRemoteBranches: true).Arguments.Should().Be("-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --prune --force");
+            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", pruneRemoteBranches: true).Arguments.Should()
+                .Be(
+                    "-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --prune --force");
         }
 
         using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null!))
         {
-            _gitModule.FetchCmd("remote", "remotebranch", "localbranch", pruneRemoteBranches: true, pruneRemoteBranchesAndTags: true).Arguments.Should().Be("-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --prune --force --prune-tags");
+            _gitModule
+                .FetchCmd("remote", "remotebranch", "localbranch", pruneRemoteBranches: true,
+                    pruneRemoteBranchesAndTags: true).Arguments.Should()
+                .Be(
+                    "-c fetch.parallel=0 -c submodule.fetchjobs=0 fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --prune --force --prune-tags");
         }
     }
 
@@ -212,7 +312,7 @@ public sealed partial class GitModuleTests : IDisposable
             "5303e7114f1896c639dea0231fac522752cc44a2\trefs/remotes/upstream/mono\n" +
             "366dfba1abf6cb98d2934455713f3d190df2ba34\trefs/tags/2.51\n";
 
-        IReadOnlyList<IGitRef> refs = _gitModule.ParseRefs(refList);
+        var refs = _gitModule.ParseRefs(refList);
 
         refs.Count.Should().Be(4);
 
@@ -258,17 +358,21 @@ public sealed partial class GitModuleTests : IDisposable
         true,
         true,
         "  aaa\n* current\n+ feature/worktree\n  feature/zzz_another\n  remotes/origin/master\n  remotes/origin/current\n  remotes/upstream/master\n  a+b",
-        new string[] { "aaa", "current", "feature/worktree", "feature/zzz_another", "remotes/origin/master", "remotes/origin/current", "remotes/upstream/master", "a+b" })]
+        new[]
+        {
+            "aaa", "current", "feature/worktree", "feature/zzz_another", "remotes/origin/master",
+            "remotes/origin/current", "remotes/upstream/master", "a+b"
+        })]
     [InlineData("branch --contains",
         true,
         false,
         "  aaa\n* current\n+ feature/worktree\n  feature/zzz_another\n",
-        new string[] { "aaa", "current", "feature/worktree", "feature/zzz_another" })]
+        new[] { "aaa", "current", "feature/worktree", "feature/zzz_another" })]
     [InlineData("branch -r --contains",
         false,
         true,
         "remotes/origin/master\n  remotes/origin/current\n  remotes/upstream/master\n",
-        new string[] { "remotes/origin/master", "remotes/origin/current", "remotes/upstream/master" })]
+        new[] { "remotes/origin/master", "remotes/origin/current", "remotes/upstream/master" })]
     public void GetAllBranchesWhichContainGivenCommit_wellformed(
         string cmd,
         bool getLocal,
@@ -276,9 +380,10 @@ public sealed partial class GitModuleTests : IDisposable
         string output,
         string[] expected)
     {
-        using (_executable.StageOutput(cmd + " " + Sha1.ToString(), output))
+        using (_executable.StageOutput(cmd + " " + _sha1, output))
         {
-            IReadOnlyList<string> result = _gitModule.GetAllBranchesWhichContainGivenCommit(Sha1, getLocal, getRemote, cancellationToken: TestContext.Current.CancellationToken);
+            var result = _gitModule.GetAllBranchesWhichContainGivenCommit(_sha1, getLocal, getRemote,
+                cancellationToken: TestContext.Current.CancellationToken);
             result.Should().Equal(expected);
         }
     }
@@ -293,7 +398,8 @@ public sealed partial class GitModuleTests : IDisposable
         bool getRemote,
         string[] expected)
     {
-        IReadOnlyList<string> result = _gitModule.GetAllBranchesWhichContainGivenCommit(Sha1, getLocal, getRemote, cancellationToken: TestContext.Current.CancellationToken);
+        var result = _gitModule.GetAllBranchesWhichContainGivenCommit(_sha1, getLocal, getRemote,
+            cancellationToken: TestContext.Current.CancellationToken);
         result.Should().Equal(expected);
     }
 
@@ -323,8 +429,9 @@ public sealed partial class GitModuleTests : IDisposable
     [Fact]
     public void RevParse_should_query_git_and_return_ObjectId_if_get_valid_hash()
     {
-        string revisionExpression = "11111";
-        using (_executable.StageOutput($"rev-parse --quiet --verify \"{revisionExpression}~0\"", new string('1', ObjectId.Sha1CharCount), 0))
+        var revisionExpression = "11111";
+        using (_executable.StageOutput($"rev-parse --quiet --verify \"{revisionExpression}~0\"",
+                   new string('1', ObjectId.Sha1CharCount)))
         {
             _gitModule.RevParse(revisionExpression).Should().Be(ObjectId.WorkTreeId);
         }
@@ -333,8 +440,8 @@ public sealed partial class GitModuleTests : IDisposable
     [Fact]
     public void RevParse_should_query_git_and_return_zero_if_invalid_response()
     {
-        string revisionExpression = "11111";
-        using (_executable.StageOutput($"rev-parse --quiet --verify \"{revisionExpression}~0\"", "foo bar", 0))
+        var revisionExpression = "11111";
+        using (_executable.StageOutput($"rev-parse --quiet --verify \"{revisionExpression}~0\"", "foo bar"))
         {
             _gitModule.RevParse(revisionExpression).IsZero.Should().BeTrue();
         }
@@ -347,7 +454,7 @@ public sealed partial class GitModuleTests : IDisposable
     [InlineData("master")]
     public void GetCurrentCheckout_should_query_git_and_return_zero_if_response_is_not_sha(string msg)
     {
-        using (_executable.StageOutput($"rev-parse HEAD", msg, 0))
+        using (_executable.StageOutput("rev-parse HEAD", msg))
         {
             _gitModule.GetCurrentCheckout().IsZero.Should().BeTrue();
         }
@@ -357,7 +464,7 @@ public sealed partial class GitModuleTests : IDisposable
     public void GetCurrentCheckout_should_query_git_and_return_sha_for_HEAD()
     {
         ObjectId objectId;
-        string headId = "69a7c7a40230346778e7eebed809773a6bc45268";
+        var headId = "69a7c7a40230346778e7eebed809773a6bc45268";
 
         using (_executable.StageOutput("rev-parse HEAD", headId))
         {
@@ -370,18 +477,15 @@ public sealed partial class GitModuleTests : IDisposable
     [Fact]
     public void GetParents_calls_correct_command_and_parses_response()
     {
-        GitArgumentBuilder args = new("rev-parse")
-        {
-            $"{Sha1}^@".Quote()
-        };
+        GitArgumentBuilder args = new("rev-parse") { $"{_sha1}^@".Quote() };
 
         using (_executable.StageOutput(
-            args.ToString(),
-            $"{Sha2}\n{Sha3}\n"))
+                   args.ToString(),
+                   $"{_sha2}\n{_sha3}\n"))
         {
-            IReadOnlyList<ObjectId> parents = _gitModule.GetParents(Sha1);
+            var parents = _gitModule.GetParents(_sha1);
 
-            parents.Should().Equal(new[] { Sha2, Sha3 });
+            parents.Should().Equal(_sha2, _sha3);
         }
     }
 
@@ -396,42 +500,13 @@ public sealed partial class GitModuleTests : IDisposable
         }
     }
 
-    public static IEnumerable<object?[]> StagedStatuses
+    [Theory]
+    [MemberData(nameof(StagedStatuses))]
+    public void GetStagedStatus(ObjectId firstRevision, ObjectId secondRevision, ObjectId parentToSecond,
+        StagedStatus status)
     {
-        get
-        {
-            ObjectId headObjectId = ObjectId.Random();
-
-            yield return new object?[] { ObjectId.IndexId, ObjectId.WorkTreeId, ObjectId.IndexId, StagedStatus.WorkTree };
-
-            yield return new object?[] { headObjectId, ObjectId.IndexId, headObjectId, StagedStatus.Index };
-
-            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), ObjectId.Random(), StagedStatus.None };
-            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), null, StagedStatus.None };
-
-            // Situations where staged status is unknown
-            yield return new object?[] { ObjectId.WorkTreeId, ObjectId.Random(), ObjectId.Random(), StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.Random(), ObjectId.WorkTreeId, ObjectId.IndexId, StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.IndexId, ObjectId.Random(), ObjectId.Random(), StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.Random(), ObjectId.IndexId, ObjectId.Random(), StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.IndexId, ObjectId.Random(), null, StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.Random(), ObjectId.IndexId, null, StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.Random(), null, ObjectId.Random(), StagedStatus.Unknown };
-            yield return new object?[] { null, ObjectId.Random(), ObjectId.Random(), StagedStatus.Unknown };
-
-            // Impossible combinations
-            yield return new object?[] { ObjectId.Random(), ObjectId.WorkTreeId, ObjectId.Random(), StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), ObjectId.WorkTreeId, StagedStatus.None };
-            yield return new object?[] { ObjectId.Random(), ObjectId.IndexId, ObjectId.WorkTreeId, StagedStatus.Unknown };
-            yield return new object?[] { headObjectId, ObjectId.WorkTreeId, headObjectId, StagedStatus.Unknown };
-            yield return new object?[] { ObjectId.Random(), ObjectId.Random(), ObjectId.IndexId, StagedStatus.None };
-        }
-    }
-
-    [Theory, MemberData(nameof(StagedStatuses))]
-    public void GetStagedStatus(ObjectId firstRevision, ObjectId secondRevision, ObjectId parentToSecond, StagedStatus status)
-    {
-        StagedStatus stagedStatus = _gitModule.GetTestAccessor().GetStagedStatus(firstRevision, secondRevision, parentToSecond);
+        var stagedStatus =
+            _gitModule.GetTestAccessor().GetStagedStatus(firstRevision, secondRevision, parentToSecond);
         stagedStatus.Should().Be(status);
     }
 
@@ -443,42 +518,44 @@ public sealed partial class GitModuleTests : IDisposable
         {
             const int numModules = 4;
 
-            for (int i = 0; i < numModules; ++i)
+            for (var i = 0; i < numModules; ++i)
             {
                 moduleTestHelpers.Add(new GitModuleTestHelper($"repo{i}"));
                 Debug.WriteLine($"Repo[{i}]:{moduleTestHelpers[i].TemporaryPath}");
             }
 
-            foreach (GitModuleTestHelper helper in moduleTestHelpers)
+            foreach (var helper in moduleTestHelpers)
             {
                 // Submodules require at least one commit
                 helper.Module.GitExecutable.GetOutput(@"commit --allow-empty -m ""Initial commit""");
             }
 
-            for (int i = numModules - 1; i > 0; --i)
+            for (var i = numModules - 1; i > 0; --i)
             {
-                GitModuleTestHelper parent = moduleTestHelpers[i - 1];
-                GitModuleTestHelper child = moduleTestHelpers[i];
+                var parent = moduleTestHelpers[i - 1];
+                var child = moduleTestHelpers[i];
 
                 // Add child as submodule of parent
                 parent.AddSubmodule(child, $"repo{i}");
             }
 
             // Init all modules of root
-            GitModuleTestHelper root = moduleTestHelpers[0];
-            IEnumerable<GitConfigItem> cfgs = Commands.GetAllowFileConfig();
+            var root = moduleTestHelpers[0];
+            var cfgs = Commands.GetAllowFileConfig();
 
-            root.Module.GitExecutable.Execute(Commands.SubmoduleUpdate(name: null, cfgs), cancellationToken: TestContext.Current.CancellationToken);
+            root.Module.GitExecutable.Execute(Commands.SubmoduleUpdate(name: null, cfgs),
+                cancellationToken: TestContext.Current.CancellationToken);
 
-            IReadOnlyList<string> paths = root.Module.GetSubmodulesLocalPaths(recursive: true);
-            paths.Should().Equal(new string[] { "repo1", "repo1/repo2", "repo1/repo2/repo3" }, $"Modules: {string.Join(" ", paths)}");
+            var paths = root.Module.GetSubmodulesLocalPaths(recursive: true);
+            paths.Should().Equal(new[] { "repo1", "repo1/repo2", "repo1/repo2/repo3" },
+                $"Modules: {string.Join(" ", paths)}");
 
             paths = root.Module.GetSubmodulesLocalPaths(recursive: false);
-            paths.Should().Equal(new string[] { "repo1" }, $"Modules: {string.Join(" ", paths)}");
+            paths.Should().Equal(new[] { "repo1" }, $"Modules: {string.Join(" ", paths)}");
         }
         finally
         {
-            foreach (GitModuleTestHelper helper in moduleTestHelpers)
+            foreach (var helper in moduleTestHelpers)
             {
                 helper.Dispose();
             }
@@ -494,7 +571,7 @@ public sealed partial class GitModuleTests : IDisposable
     url = https://github.com/gitextensions/NBug.git
 [submodule ""Externals/Git.hub""]
     url = https://github.com/gitextensions/Git.hub.gitk");
-        helper.Module.GetSubmodulesLocalPaths().Should().Equal(["Externals/NBug"]);
+        helper.Module.GetSubmodulesLocalPaths().Should().Equal("Externals/NBug");
     }
 
     [Fact]
@@ -502,21 +579,22 @@ public sealed partial class GitModuleTests : IDisposable
     {
         // Create super and sub repo
         using GitModuleTestHelper moduleTestHelperSuper = new("super repo"),
-                                                   moduleTestHelperSub = new("sub repo");
+            moduleTestHelperSub = new("sub repo");
 
         // Add and init the submodule
         moduleTestHelperSuper.AddSubmodule(moduleTestHelperSub, "sub repo");
-        IGitModule moduleSub = moduleTestHelperSuper.GetSubmodulesRecursive().ElementAt(0);
+        var moduleSub = moduleTestHelperSuper.GetSubmodulesRecursive().ElementAt(0);
 
         // Commit in submodule
         await moduleSub.GitExecutable.GetOutputAsync(@"commit --allow-empty -am ""First commit""");
-        string commitRef = (await moduleSub.GitExecutable.GetOutputAsync("show HEAD")).LazySplit('\n').First().LazySplit(' ').Skip(1).First();
+        var commitRef = (await moduleSub.GitExecutable.GetOutputAsync("show HEAD")).LazySplit('\n').First()
+            .LazySplit(' ').Skip(1).First();
 
         // Update ref in superproject
         await moduleTestHelperSuper.Module.GitExecutable.GetOutputAsync(@"add ""sub repo""");
         await moduleTestHelperSuper.Module.GitExecutable.GetOutputAsync(@"commit -am ""Update submodule ref""");
 
-        (char code, ObjectId commitId) = await moduleSub.GetSuperprojectCurrentCheckoutAsync();
+        (var code, var commitId) = await moduleSub.GetSuperprojectCurrentCheckoutAsync();
         code.Should().Be(' ');
         commitId.ToString().Should().Be(commitRef);
     }
@@ -531,11 +609,13 @@ public sealed partial class GitModuleTests : IDisposable
 
     [Theory]
     [InlineData("", "")] // empty message
-    [InlineData("a\r\nb\r\n\r\nc\r\n\r\n\r\n\r\nd", "a\r\nb\r\n\r\nc\r\n\r\nd")] // various amount of new lines between text lines
+    [InlineData("a\r\nb\r\n\r\nc\r\n\r\n\r\n\r\nd",
+        "a\r\nb\r\n\r\nc\r\n\r\nd")] // various amount of new lines between text lines
     [InlineData("\r\n\r\n\r\n\r\na\r\nb\r\n\r\n\r\n\r\n\r\n\r\n", "a\r\nb")] // trimmable message
     [InlineData("a\n\n\nb\r\n\r\nc\n\nd", "a\r\n\r\nb\r\n\r\nc\r\n\r\nd")] // mix of new line types
     [InlineData("Hello, this is a single line message", "Hello, this is a single line message")] // single line message
-    [InlineData("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13", "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n10\r\n11\r\n12\r\n13")] // message with more than 10 lines (a previous limitation)
+    [InlineData("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13",
+        "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n10\r\n11\r\n12\r\n13")] // message with more than 10 lines (a previous limitation)
     public void GetTagMessage(string tagMessage, string expectedReturnedMessage)
     {
         // add initial tag message
@@ -543,7 +623,8 @@ public sealed partial class GitModuleTests : IDisposable
         repo.CreateAnnotatedTag("test_tag", repo.CommitHash!, tagMessage);
 
         // execute test look-up
-        string? actualReturnedMessage = repo.Module.GetTagMessage("test_tag", cancellationToken: TestContext.Current.CancellationToken);
+        var actualReturnedMessage =
+            repo.Module.GetTagMessage("test_tag", cancellationToken: TestContext.Current.CancellationToken);
 
         // compare result to expectations
         actualReturnedMessage.Should().Be(expectedReturnedMessage);
@@ -557,16 +638,16 @@ public sealed partial class GitModuleTests : IDisposable
     [InlineData(true, @"update-index --add --stdin")]
     public void UpdateIndexCmd_should_add_core_safecrlf(bool showErrorsWhenStagingFiles, string? expected)
     {
-        GitModule.TestAccessor accessor = _gitModule.GetTestAccessor();
+        var accessor = _gitModule.GetTestAccessor();
 
-        string actual = accessor.UpdateIndexCmd(showErrorsWhenStagingFiles).ToString();
+        var actual = accessor.UpdateIndexCmd(showErrorsWhenStagingFiles).ToString();
         actual.Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(["123", "567", "output.file", null])]
-    [InlineData(["123", "567", "output.file", 1])]
-    [InlineData(["123", "567", "output.file", 2])]
+    [InlineData("123", "567", "output.file", null)]
+    [InlineData("123", "567", "output.file", 1)]
+    [InlineData("123", "567", "output.file", 2)]
     public void Test_FormatPatch(string? from, string to, string outputFile, int? start)
     {
         StringBuilder arguments = new();
@@ -578,16 +659,16 @@ public sealed partial class GitModuleTests : IDisposable
 
         arguments.AppendFormat(" \"{0}\"..\"{1}\" -o \"{2}\"", from, to, outputFile);
 
-        string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
+        var dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
 
         _executable.StageOutput(arguments.ToString(), dummyCommandOutput);
         _gitModule.FormatPatch(from!, to, outputFile, start).Should().Be(dummyCommandOutput);
     }
 
     [Theory]
-    [InlineData(["", "567", "output.file", null])]
-    [InlineData(["", "567", "output.file", 1])]
-    [InlineData([null, "567", "output.file", 2])]
+    [InlineData("", "567", "output.file", null)]
+    [InlineData("", "567", "output.file", 1)]
+    [InlineData(null, "567", "output.file", 2)]
     public void Test_FormatPatchInRoot(string? from, string to, string outputFile, int? start)
     {
         StringBuilder arguments = new();
@@ -599,7 +680,7 @@ public sealed partial class GitModuleTests : IDisposable
 
         arguments.AppendFormat(" --root \"{0}\" -o \"{1}\"", to, outputFile);
 
-        string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
+        var dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
 
         _executable.StageOutput(arguments.ToString(), dummyCommandOutput);
         _gitModule.FormatPatch(from!, to, outputFile, start).Should().Be(dummyCommandOutput);
@@ -614,28 +695,28 @@ public sealed partial class GitModuleTests : IDisposable
     }
 
     [Theory]
-    [InlineData(new string[] { "abc", "def" }, "checkout-index --index --force -- \"abc\" \"def\"")]
+    [InlineData(new[] { "abc", "def" }, "checkout-index --index --force -- \"abc\" \"def\"")]
     public void ResetFiles_should_work_as_expected(string[] files, string args)
     {
         // Real GitModule is need to access AppSettings.GitCommand static property, avoid exception with dummy GitModule
         using GitModuleTestHelper moduleTestHelper = new();
-        GitModule gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
-        string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
+        var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
+        var dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
         _executable.StageOutput(args, dummyCommandOutput);
-        string result = gitModule.CheckoutIndexFiles(files.ToList());
+        var result = gitModule.CheckoutIndexFiles(files.ToList());
         result.Should().Be(dummyCommandOutput);
     }
 
     [Theory]
-    [InlineData(new string[] { "abc", "def" }, "rm -- \"abc\" \"def\"")]
+    [InlineData(new[] { "abc", "def" }, "rm -- \"abc\" \"def\"")]
     public void RemoveFiles_shouldWorkAsExpected(string[] files, string args)
     {
         // Real GitModule is need to access AppSettings.GitCommand static property, avoid exception with dummy GitModule
         using GitModuleTestHelper moduleTestHelper = new();
-        GitModule gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
-        string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
+        var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
+        var dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
         _executable.StageOutput(args, dummyCommandOutput);
-        string result = gitModule.RemoveFiles(files.ToList(), false);
+        var result = gitModule.RemoveFiles(files.ToList(), false);
         result.Should().Be(dummyCommandOutput);
     }
 
@@ -652,14 +733,14 @@ public sealed partial class GitModuleTests : IDisposable
     {
         // Real GitModule is need to access AppSettings.GitCommand static property, avoid exception with dummy GitModule
         using GitModuleTestHelper moduleTestHelper = new();
-        GitModule gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
+        var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
 
-        foreach (string arg in args)
+        foreach (var arg in args)
         {
             _executable.StageCommand(arg);
         }
 
-        bool result = gitModule.BatchUnstageFiles(files);
+        var result = gitModule.BatchUnstageFiles(files);
         result.Should().Be(expectedResult);
     }
 
@@ -669,7 +750,7 @@ public sealed partial class GitModuleTests : IDisposable
     {
         _executable.StageOutput("symbolic-ref --quiet HEAD", gitCommandResult);
 
-        string result = _gitModule.GetSelectedBranch();
+        var result = _gitModule.GetSelectedBranch();
 
         result.Should().Be(expectedResult);
     }
@@ -679,63 +760,26 @@ public sealed partial class GitModuleTests : IDisposable
     [InlineData(true)]
     public void GetSelectedBranch_should_return_requested_result_in_detached_state(bool emptyIfDetached)
     {
-        _executable.StageOutput("symbolic-ref --quiet HEAD", "", exitCode: 1);
+        _executable.StageOutput("symbolic-ref --quiet HEAD", "", 1);
 
-        string expectedResult = emptyIfDetached ? "" : DetachedHeadParser.DetachedBranch;
-        string result = _gitModule.GetSelectedBranch(emptyIfDetached);
+        var expectedResult = emptyIfDetached ? "" : DetachedHeadParser.DetachedBranch;
+        var result = _gitModule.GetSelectedBranch(emptyIfDetached);
 
         result.Should().Be(expectedResult);
     }
 
-    public static IEnumerable<object?[]> BatchUnstageFilesTestCases
-    {
-        get
-        {
-            yield return new object?[]
-            {
-                new GitItemStatus[]
-                {
-                    new("abc2") { IsNew = true },
-                    new("abc2") { IsNew = true, IsDeleted = true },
-                    new("abc2") { IsNew = false },
-                    new("abc3") { IsNew = false, IsRenamed = true, OldName = "def" }
-                },
-                new string[]
-                {
-                    "reset --quiet \"HEAD\" -- \"abc2\" \"abc3\" \"def\"",
-                    "reset -- \"abc2\"",
-                    "update-index --force-remove --stdin"
-                },
-                false,
-            };
-
-            yield return new object?[]
-            {
-                new GitItemStatus[]
-                {
-                    new("abc2") { IsNew = false },
-                    new("abc3") { IsNew = false, IsDeleted = true }
-                },
-                new string[]
-                {
-                    "reset --quiet \"HEAD\" -- \"abc2\" \"abc3\"",
-                },
-                true,
-            };
-        }
-    }
-
     /// <summary>
-    /// Create a GitModule with mockable GitExecutable
+    ///     Create a GitModule with mockable GitExecutable
     /// </summary>
     /// <param name="path">Path to the module</param>
     /// <param name="executable">The mock executable</param>
     /// <returns>The GitModule</returns>
-    private static GitModule GetGitModuleWithExecutable(IExecutable executable, string path = "", GitModule module = null!)
+    private static GitModule GetGitModuleWithExecutable(IExecutable executable, string path = "",
+        GitModule module = null!)
     {
         module ??= new GitModule(new GitExecutorProvider(new GitDirectoryResolver()), path);
 
-        GitExecutor.TestAccessor executorAccessor = module.GetTestAccessor().Executor;
+        var executorAccessor = module.GetTestAccessor().Executor;
         executorAccessor.GitExecutable = executable;
         executorAccessor.GitWindowsExecutable = executable;
         executorAccessor.GitCommandRunner = new GitCommandRunner(executable, () => GitModule.SystemEncoding);

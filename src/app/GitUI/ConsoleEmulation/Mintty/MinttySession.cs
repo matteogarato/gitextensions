@@ -1,13 +1,17 @@
 ﻿using System.Diagnostics;
-using GitCommands.Logging;
 using Windows.Win32.Foundation;
+using GitCommands.Logging;
 
 namespace GitUI.ConsoleEmulation.Mintty;
 
 internal sealed class MinttySession : IDisposable
 {
-    private Action<string>? _lineCallback;
     private Action<int>? _exitCallback;
+    private Action<string>? _lineCallback;
+
+    private MinttySession()
+    {
+    }
 
     public ProcessOperation? ProcessOperation { get; private set; }
 
@@ -16,29 +20,6 @@ internal sealed class MinttySession : IDisposable
     public Process? MinttyProcess { get; private set; }
 
     public int? ExitCode { get; private set; }
-
-    private MinttySession()
-    {
-    }
-
-    public static (MinttySession Session, MinttyConsoleRuntime.CommandLaunchParams LaunchParams) StartCommandSession(MinttyStartInfo startInfo)
-    {
-        MinttyConsoleRuntime.CommandLaunchParams launchParams = MinttyConsoleRuntime.CreateLaunchParams(startInfo);
-
-        MinttySession session = new()
-        {
-            ProcessOperation = startInfo.ProcessOperation,
-            _lineCallback = startInfo.AnsiOutputLineCallback,
-            _exitCallback = startInfo.ProcessExitedCallback,
-        };
-
-        return (session, launchParams);
-    }
-
-    public static MinttySession StartInteractiveShellSession()
-    {
-        return new MinttySession();
-    }
 
     public bool IsExited
     {
@@ -56,6 +37,36 @@ internal sealed class MinttySession : IDisposable
         }
     }
 
+    // Kills the process and releases its handle. The output reader (if any) holds the
+    // stdout stream; killing closes the pipe so it drains and exits, and any read still
+    // in flight when the Process is disposed fails into the reader's own try/catch.
+    void IDisposable.Dispose()
+    {
+        KillProcess();
+        MinttyProcess?.Dispose();
+        MinttyProcess = null;
+    }
+
+    public static (MinttySession Session, MinttyConsoleRuntime.CommandLaunchParams LaunchParams) StartCommandSession(
+        MinttyStartInfo startInfo)
+    {
+        var launchParams = MinttyConsoleRuntime.CreateLaunchParams(startInfo);
+
+        MinttySession session = new()
+        {
+            ProcessOperation = startInfo.ProcessOperation,
+            _lineCallback = startInfo.AnsiOutputLineCallback,
+            _exitCallback = startInfo.ProcessExitedCallback
+        };
+
+        return (session, launchParams);
+    }
+
+    public static MinttySession StartInteractiveShellSession()
+    {
+        return new MinttySession();
+    }
+
     public void AttachProcess(Process minttyProcess)
     {
         MinttyProcess = minttyProcess;
@@ -68,7 +79,7 @@ internal sealed class MinttySession : IDisposable
             MinttyConsoleRuntime.StartOutputReader(
                 minttyProcess,
                 _lineCallback,
-                exitCallback: exitCode =>
+                exitCode =>
                 {
                     ExitCode = exitCode;
                     _exitCallback?.Invoke(exitCode);
@@ -77,8 +88,8 @@ internal sealed class MinttySession : IDisposable
     }
 
     /// <summary>
-    ///  Deliberately aborts the session and reports the command as failed.
-    ///  Use <see cref="Dispose"/> for a silent teardown without exit notification.
+    ///     Deliberately aborts the session and reports the command as failed.
+    ///     Use <see cref="Dispose" /> for a silent teardown without exit notification.
     /// </summary>
     public void Kill()
     {
@@ -113,15 +124,5 @@ internal sealed class MinttySession : IDisposable
         {
             Trace.WriteLine(ex);
         }
-    }
-
-    // Kills the process and releases its handle. The output reader (if any) holds the
-    // stdout stream; killing closes the pipe so it drains and exits, and any read still
-    // in flight when the Process is disposed fails into the reader's own try/catch.
-    public void Dispose()
-    {
-        KillProcess();
-        MinttyProcess?.Dispose();
-        MinttyProcess = null;
     }
 }

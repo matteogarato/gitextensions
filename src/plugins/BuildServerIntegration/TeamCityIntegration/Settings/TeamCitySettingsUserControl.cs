@@ -6,24 +6,29 @@ using GitExtUtils.GitUI.Theming;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using ResourceManager;
 
-namespace TeamCityIntegration.Settings;
+namespace GitExtensions.Plugins.TeamCityIntegration.Settings;
 
 [Export(typeof(IBuildServerSettingsUserControl))]
 [BuildServerSettingsUserControlMetadata(TeamCityAdapter.PluginName)]
 [PartCreationPolicy(CreationPolicy.NonShared)]
 public partial class TeamCitySettingsUserControl : GitExtensionsControl, IBuildServerSettingsUserControl
 {
-    private string? _defaultProjectName;
-    private readonly TeamCityAdapter _teamCityAdapter = new();
-    private readonly TranslationString _failToLoadProjectMessage = new("Failed to load the projects and build list." + Environment.NewLine + "Please verify the server url.");
-    private readonly TranslationString _failToLoadProjectCaption = new("Error when loading the projects and build list");
-    private readonly TranslationString _failToExtractDataFromClipboardMessage = new("The clipboard doesn't contain a valid build url." + Environment.NewLine + Environment.NewLine +
-            "Please copy in the clipboard the url of the build before retrying." + Environment.NewLine +
-            "(Should contain at least the \"buildTypeId\" parameter)");
     private readonly TranslationString _failToExtractDataFromClipboardCaption = new("Build url not valid");
 
-    [GeneratedRegex(@"(\?|\&)(?<buildtypeid>[^=]+)\=(?<buildtype>[^&]+)", RegexOptions.ExplicitCapture)]
-    private static partial Regex TeamcityBuildUrl { get; }
+    private readonly TranslationString _failToExtractDataFromClipboardMessage = new(
+        "The clipboard doesn't contain a valid build url." + Environment.NewLine + Environment.NewLine +
+        "Please copy in the clipboard the url of the build before retrying." + Environment.NewLine +
+        "(Should contain at least the \"buildTypeId\" parameter)");
+
+    private readonly TranslationString
+        _failToLoadProjectCaption = new("Error when loading the projects and build list");
+
+    private readonly TranslationString _failToLoadProjectMessage = new("Failed to load the projects and build list." +
+                                                                       Environment.NewLine +
+                                                                       "Please verify the server url.");
+
+    private readonly TeamCityAdapter _teamCityAdapter = new();
+    private string? _defaultProjectName;
 
     public TeamCitySettingsUserControl()
     {
@@ -34,13 +39,16 @@ public partial class TeamCitySettingsUserControl : GitExtensionsControl, IBuildS
         Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
     }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    [GeneratedRegex(@"(\?|\&)(?<buildtypeid>[^=]+)\=(?<buildtype>[^&]+)", RegexOptions.ExplicitCapture)]
+    private static partial Regex TeamcityBuildUrl { get; }
+
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
         _defaultProjectName = defaultProjectName;
         SetChooseBuildButtonState();
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
     {
         TeamCityServerUrl.Text = buildServerConfig.GetString("BuildServerUrl", null);
         TeamCityProjectName.Text = buildServerConfig.GetString("ProjectName", _defaultProjectName);
@@ -56,7 +64,7 @@ public partial class TeamCitySettingsUserControl : GitExtensionsControl, IBuildS
         }
     }
 
-    public void SaveSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
     {
         if (!BuildServerSettingsHelper.IsRegexValid(TeamCityBuildIdFilter.Text))
         {
@@ -86,8 +94,9 @@ public partial class TeamCitySettingsUserControl : GitExtensionsControl, IBuildS
     {
         try
         {
-            TeamCityBuildChooser teamCityBuildChooser = new(TeamCityServerUrl.Text, TeamCityProjectName.Text, TeamCityBuildIdFilter.Text);
-            DialogResult result = teamCityBuildChooser.ShowDialog(this);
+            TeamCityBuildChooser teamCityBuildChooser =
+                new(TeamCityServerUrl.Text, TeamCityProjectName.Text, TeamCityBuildIdFilter.Text);
+            var result = teamCityBuildChooser.ShowDialog(this);
 
             if (result == DialogResult.OK)
             {
@@ -111,23 +120,24 @@ public partial class TeamCitySettingsUserControl : GitExtensionsControl, IBuildS
         buttonProjectChooser.Enabled = !string.IsNullOrWhiteSpace(TeamCityServerUrl.Text);
     }
 
-    private void lnkExtractDataFromBuildUrlCopiedInTheClipboard_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+    private void lnkExtractDataFromBuildUrlCopiedInTheClipboard_LinkClicked(object sender,
+        LinkLabelLinkClickedEventArgs e)
     {
         if (Clipboard.ContainsText() && Clipboard.GetText().Contains("buildTypeId="))
         {
             Uri buildUri = new(Clipboard.GetText());
-            string teamCityServerUrl = buildUri.Scheme + "://" + buildUri.Authority;
+            var teamCityServerUrl = buildUri.Scheme + "://" + buildUri.Authority;
             TeamCityServerUrl.Text = teamCityServerUrl;
             _teamCityAdapter.InitializeHttpClient(teamCityServerUrl);
 
-            MatchCollection paramResults = TeamcityBuildUrl.Matches(buildUri.Query);
+            var paramResults = TeamcityBuildUrl.Matches(buildUri.Query);
             foreach (Match paramResult in paramResults)
             {
                 if (paramResult.Success)
                 {
                     if (paramResult.Groups["buildtypeid"].ValueSpan is "buildTypeId")
                     {
-                        Build buildType = _teamCityAdapter.GetBuildType(paramResult.Groups["buildtype"].Value);
+                        var buildType = _teamCityAdapter.GetBuildType(paramResult.Groups["buildtype"].Value);
                         TeamCityProjectName.Text = buildType.ParentProject;
                         TeamCityBuildIdFilter.Text = buildType.Id;
                         return;
@@ -136,7 +146,8 @@ public partial class TeamCitySettingsUserControl : GitExtensionsControl, IBuildS
             }
         }
 
-        MessageBoxes.Show(this, _failToExtractDataFromClipboardMessage.Text, _failToExtractDataFromClipboardCaption.Text,
+        MessageBoxes.Show(this, _failToExtractDataFromClipboardMessage.Text,
+            _failToExtractDataFromClipboardCaption.Text,
             MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 }

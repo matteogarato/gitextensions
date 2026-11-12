@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.IO;
 using System.Xml.Serialization;
 using GitUI.ScriptsEngine;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class ScriptInfoTests
 {
@@ -23,22 +22,23 @@ public sealed class ScriptInfoTests
             IsPowerShell = true,
             HotkeyCommandIdentifier = 9008,
             Icon = "Git",
-            IconFilePath = "/tmp/helper.png",
+            IconFilePath = "/tmp/helper.png"
         };
         XmlSerializer serializer = new(typeof(BindingList<ScriptInfo>));
         BindingList<ScriptInfo> scripts = [expected];
         using StringWriter writer = new();
         serializer.Serialize(writer, scripts);
-        string xml = writer.ToString();
+        var xml = writer.ToString();
 
         xml.Should().Contain("<OnEvent>ShowInUserMenuBar</OnEvent>");
         xml.Should().Contain("<Icon>Git</Icon>");
         xml.Should().Contain("<IconFilePath>/tmp/helper.png</IconFilePath>");
 
         using StringReader reader = new(xml);
-        object? deserialized = serializer.Deserialize(reader);
-        BindingList<ScriptInfo> roundTripped = deserialized as BindingList<ScriptInfo>
-            ?? throw new InvalidOperationException("The scripts XML did not contain a script list.");
+        var deserialized = serializer.Deserialize(reader);
+        var roundTripped = deserialized as BindingList<ScriptInfo>
+                           ?? throw new InvalidOperationException(
+                               "The scripts XML did not contain a script list.");
         roundTripped.Should().ContainSingle();
         roundTripped[0].Name.Should().Be(expected.Name);
         roundTripped[0].Command.Should().Be(expected.Command);

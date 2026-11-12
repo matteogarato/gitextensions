@@ -1,7 +1,6 @@
 using System;
-using System.Globalization;
 
-namespace NetSpell.SpellChecker.Dictionary.Phonetic;
+namespace SpellChecker.Dictionary.Phonetic;
 
 /// <summary>
 ///     This class holds helper methods for phonetic encoding
@@ -24,18 +23,18 @@ public static class PhoneticUtility
     public static void EncodeRule(string ruleText, ref PhoneticRule rule)
     {
         // clear the conditions array
-        for (int i = 0; i < rule.Condition.Length; i++)
+        for (var i = 0; i < rule.Condition.Length; i++)
         {
             rule.Condition[i] = 0;
         }
 
-        bool group = false;  /* group indicator */
-        bool end = false;   /* end condition indicator */
+        var group = false; /* group indicator */
+        var end = false; /* end condition indicator */
 
         Span<char> memberChars = stackalloc char[200];
-        int numMember = 0;   /* number of member in group */
+        var numMember = 0; /* number of member in group */
 
-        foreach (char cond in ruleText)
+        foreach (var cond in ruleText)
         {
             switch (cond)
             {
@@ -89,7 +88,7 @@ public static class PhoneticUtility
                 if (group)
                 {
                     // turn on chars in member group
-                    for (int j = 0; j < numMember; j++)
+                    for (var j = 0; j < numMember; j++)
                     {
                         int charCode = memberChars[j];
                         rule.Condition[charCode] = rule.Condition[charCode] | (1 << rule.ConditionCount);

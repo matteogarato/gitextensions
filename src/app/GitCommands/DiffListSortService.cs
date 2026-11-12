@@ -1,18 +1,35 @@
-﻿namespace GitCommands;
+﻿using GitCommands.Settings;
+
+namespace GitCommands;
 
 public class DiffListSortService : IDiffListSortService
 {
     private static readonly Lazy<DiffListSortService> _lazyDiffListSorting = new(() => new DiffListSortService());
-    public static DiffListSortService Instance => _lazyDiffListSorting.Value;
-    private DiffListSortType _diffListSorting;
-    public event EventHandler? DiffListSortingChanged;
 
-    public DiffListSortType DiffListSorting
+    private DiffListSortType _diffListSorting;
+
+    public DiffListSortService()
     {
-        get { return _diffListSorting; }
+        DiffListSorting = GetSettingValueOrDefault();
+    }
+
+    public static DiffListSortService Instance
+    {
+        get => _lazyDiffListSorting.Value;
+    }
+
+    event EventHandler? IDiffListSortService.DiffListSortingChanged
+    {
+        add => DiffListSortingChanged += value;
+        remove => DiffListSortingChanged -= value;
+    }
+
+    DiffListSortType IDiffListSortService.DiffListSorting
+    {
+        get => _diffListSorting;
         set
         {
-            DiffListSortType previous = _diffListSorting;
+            var previous = _diffListSorting;
             if (previous != value)
             {
                 _diffListSorting = value;
@@ -22,10 +39,7 @@ public class DiffListSortService : IDiffListSortService
         }
     }
 
-    public DiffListSortService()
-    {
-        DiffListSorting = GetSettingValueOrDefault();
-    }
+    private event EventHandler? DiffListSortingChanged;
 
     private static DiffListSortType GetSettingValueOrDefault()
     {

@@ -1,8 +1,19 @@
 ﻿using GitCommands;
 
 namespace GitCommandsTests.Helpers;
+
 public class PathUtilTest
 {
+    public static IEnumerable<object?[]> InvalidFolders
+    {
+        get
+        {
+            yield return new object?[] { null };
+            yield return new object?[] { "" };
+            yield return new object?[] { @"A:\does\not\exist" };
+        }
+    }
+
     [Theory]
     [InlineData('a', true)]
     [InlineData('z', true)]
@@ -38,7 +49,7 @@ public class PathUtilTest
     [Fact]
     public void IsValidPathChar_should_return_false_for_all_invalid_path_chars()
     {
-        foreach (char c in Path.GetInvalidPathChars())
+        foreach (var c in Path.GetInvalidPathChars())
         {
             PathUtil.IsValidPathChar(c).Should().BeFalse($"character U+{(int)c:X4} should be invalid");
         }
@@ -47,17 +58,17 @@ public class PathUtilTest
     [Fact]
     public void IsValidPathChar_should_accept_all_ascii_letters_and_digits()
     {
-        for (char c = 'a'; c <= 'z'; c++)
+        for (var c = 'a'; c <= 'z'; c++)
         {
             PathUtil.IsValidPathChar(c).Should().BeTrue();
         }
 
-        for (char c = 'A'; c <= 'Z'; c++)
+        for (var c = 'A'; c <= 'Z'; c++)
         {
             PathUtil.IsValidPathChar(c).Should().BeTrue();
         }
 
-        for (char c = '0'; c <= '9'; c++)
+        for (var c = '0'; c <= '9'; c++)
         {
             PathUtil.IsValidPathChar(c).Should().BeTrue();
         }
@@ -121,7 +132,7 @@ public class PathUtilTest
         PathUtil.ToMountPath(null, prefix).Should().BeNull();
         "".Should().Be(@"".ToMountPath(prefix));
         "C".Should().Be(@"C".ToMountPath(prefix));
-        $".:".Should().Be(@".:".ToMountPath(prefix));
+        ".:".Should().Be(@".:".ToMountPath(prefix));
         $"{prefix}c".Should().Be(@"C:".ToMountPath(prefix));
         $"{prefix}c_".Should().Be(@"C:_".ToMountPath(prefix));
         $"{prefix}c/".Should().Be(@"C:\".ToMountPath(prefix));
@@ -164,7 +175,7 @@ public class PathUtilTest
         ((string?)null).RemoveTrailingPathSeparator().Should().BeNull();
         "".Should().Be("".RemoveTrailingPathSeparator());
 
-        char s = Path.DirectorySeparatorChar;
+        var s = Path.DirectorySeparatorChar;
 
         "C:".Should().Be($"C:{s}".RemoveTrailingPathSeparator());
         "foo".Should().Be("foo".RemoveTrailingPathSeparator());
@@ -214,13 +225,18 @@ public class PathUtilTest
         "test".Should().Be(PathUtil.GetRepositoryName("git://mygitserver/git/test.git"));
         "test".Should().Be(PathUtil.GetRepositoryName("ssh://mygitserver/git/test.git"));
         "test".Should().Be(PathUtil.GetRepositoryName("ssh://john.doe@mygitserver/git/test.git"));
-        "MyAwesomeRepo".Should().Be(PathUtil.GetRepositoryName("ssh://john-abraham.doe@mygitserver/git/MyAwesomeRepo.git"));
+        "MyAwesomeRepo".Should()
+            .Be(PathUtil.GetRepositoryName("ssh://john-abraham.doe@mygitserver/git/MyAwesomeRepo.git"));
         "somerepo".Should().Be(PathUtil.GetRepositoryName("git@anotherserver.mysubnet.com:project/somerepo.git"));
         "somerepo".Should().Be(PathUtil.GetRepositoryName("http://anotherserver.mysubnet.com/project/somerepo.git"));
-        "Hello Günter".Should().Be(PathUtil.GetRepositoryName("http://anotherserver.mysubnet.com/project/Hello+G%C3%BCnter.git"));
-        "Hello Günter".Should().Be(PathUtil.GetRepositoryName("ssh://anotherserver.mysubnet.com/project/Hello+G%C3%BCnter.git"));
-        "Hello Günter".Should().Be(PathUtil.GetRepositoryName("git://anotherserver.mysubnet.com/project/Hello+G%C3%BCnter.git"));
-        "Hello Günter".Should().Be(PathUtil.GetRepositoryName("git@anotherserver.mysubnet.com:project/Hello+G%C3%BCnter.git"));
+        "Hello Günter".Should()
+            .Be(PathUtil.GetRepositoryName("http://anotherserver.mysubnet.com/project/Hello+G%C3%BCnter.git"));
+        "Hello Günter".Should()
+            .Be(PathUtil.GetRepositoryName("ssh://anotherserver.mysubnet.com/project/Hello+G%C3%BCnter.git"));
+        "Hello Günter".Should()
+            .Be(PathUtil.GetRepositoryName("git://anotherserver.mysubnet.com/project/Hello+G%C3%BCnter.git"));
+        "Hello Günter".Should()
+            .Be(PathUtil.GetRepositoryName("git@anotherserver.mysubnet.com:project/Hello+G%C3%BCnter.git"));
 
         "".Should().Be(PathUtil.GetRepositoryName(""));
         "".Should().Be(PathUtil.GetRepositoryName(null));
@@ -238,7 +254,7 @@ public class PathUtilTest
         }
     }
 
-    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Theory(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     [InlineData(null, "")]
     [InlineData("", "")]
     [InlineData(" ", "")]
@@ -259,10 +275,10 @@ public class PathUtilTest
     [InlineData(@"\\w$\work\", "")]
     public void NormalizePath(string? path, string expected)
     {
-        PathUtil.NormalizePath(path!).Should().Be(expected);
+        path!.NormalizePath().Should().Be(expected);
     }
 
-    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Theory(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     [InlineData("", "")]
     [InlineData(" ", " ")]
     [InlineData("c:", "c:")]
@@ -272,7 +288,7 @@ public class PathUtilTest
     [InlineData(@"\\wsl.localhost\Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
     public void NormalizeWslPath(string? path, string expected)
     {
-        PathUtil.NormalizeWslPath(path!).Should().Be(expected);
+        path!.NormalizeWslPath().Should().Be(expected);
     }
 
     [Theory]
@@ -290,7 +306,8 @@ public class PathUtilTest
     [InlineData(@"C:\WORK\", @"GitExtensions\", @"C:\WORK\GitExtensions\")]
     [InlineData(@"C:\WORK\", @" file .txt ", @"C:\WORK\ file .txt ")]
     [InlineData(@"\\wsl$\", @"Ubuntu\home\jack\work\", @"\\wsl$\Ubuntu\home\jack\work\")]
-    public void Resolve_with_relative_path_should_return_expected_path(string? path, string relativePath, string expected)
+    public void Resolve_with_relative_path_should_return_expected_path(string? path, string relativePath,
+        string expected)
     {
         PathUtil.Resolve(path!, relativePath).Should().Be(expected);
     }
@@ -409,12 +426,13 @@ public class PathUtilTest
         PathUtil.GetWindowsPath(path, wslDistro).Should().Be(expected);
     }
 
-    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Theory(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
     [InlineData("a:\\folder\\filename.txt")]
-    [InlineData("a:\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
+    [InlineData(
+        "a:\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
     [InlineData("file:////folder/filename.txt")]
     [MemberData(nameof(GetInvalidPaths))]
     public void TryFindFullPath_not_throw_if_file_not_exist(string? fileName)
@@ -431,16 +449,13 @@ public class PathUtilTest
             yield return new object?[] { @".c:\Programs\" };
             yield return new object?[] { "c:\\Programs\\Get\"\\" };
         }
-        else
-        {
-            // I am not able to figure out any invalid (giving exception) path under mono
-        }
+        // I am not able to figure out any invalid (giving exception) path under mono
     }
 
     [Fact]
     public void GetDisplayPath()
     {
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         PathUtil.GetDisplayPath(Path.Combine(home, "SomePath")).Should().Be(@"~\SomePath");
         PathUtil.GetDisplayPath("c:\\SomePath").Should().Be("c:\\SomePath");
@@ -459,31 +474,22 @@ public class PathUtilTest
         PathUtil.FindAncestors(path!).ToArray().Should().Equal(expected);
     }
 
-    public static IEnumerable<object?[]> InvalidFolders
-    {
-        get
-        {
-            yield return new object?[] { null };
-            yield return new object?[] { "" };
-            yield return new object?[] { @"A:\does\not\exist" };
-        }
-    }
-
-    [Theory, MemberData(nameof(InvalidFolders))]
+    [Theory]
+    [MemberData(nameof(InvalidFolders))]
     public void DeleteWithExtremePrejudice_should_return_true_for_empty_input_or_absent_folders(string? path)
     {
-        path.TryDeleteDirectory(out string? errorMessage).Should().BeTrue();
+        path.TryDeleteDirectory(out var errorMessage).Should().BeTrue();
         errorMessage.Should().BeNull();
     }
 
     [Fact]
     public void DeleteWithExtremePrejudice_should_return_true_if_delete_successful()
     {
-        string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempPath);
         Directory.Exists(tempPath).Should().BeTrue();
 
-        tempPath.TryDeleteDirectory(out string? errorMessage).Should().BeTrue();
+        tempPath.TryDeleteDirectory(out var errorMessage).Should().BeTrue();
         errorMessage.Should().BeNull();
         Directory.Exists(tempPath).Should().BeFalse();
     }
@@ -495,7 +501,7 @@ public class PathUtilTest
         // - GetEnvironmentVariable("ProgramW6432") may return null
         // - AppSettings.LinuxToolsDir may return ""
         // The method should handle all these gracefully without throwing.
-        bool result = PathUtil.TryFindShellPath("nonexistent_shell_1234567890.exe", out string? shellPath);
+        var result = PathUtil.TryFindShellPath("nonexistent_shell_1234567890.exe", out var shellPath);
         result.Should().BeFalse();
         shellPath.Should().BeNull();
     }
@@ -506,23 +512,23 @@ public class PathUtilTest
     [InlineData("usr/bin", "bash.exe")]
     public void TryFindShellInGitDir_should_find_a_shell_shipped_with_git(string subDirectory, string shell)
     {
-        string gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        string shellDir = Path.Combine(gitDir, subDirectory.Replace('/', Path.DirectorySeparatorChar));
+        var gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var shellDir = Path.Combine(gitDir, subDirectory.Replace('/', Path.DirectorySeparatorChar));
 
         try
         {
             Directory.CreateDirectory(shellDir);
-            string expected = Path.Combine(shellDir, shell);
+            var expected = Path.Combine(shellDir, shell);
             File.WriteAllText(expected, "");
 
-            PathUtil.TryFindShellInGitDir(gitDir, shell, out string? shellPath).Should().BeTrue();
+            PathUtil.TryFindShellInGitDir(gitDir, shell, out var shellPath).Should().BeTrue();
             shellPath.Should().Be(expected);
         }
         finally
         {
             if (Directory.Exists(gitDir))
             {
-                Directory.Delete(gitDir, recursive: true);
+                Directory.Delete(gitDir, true);
             }
         }
     }
@@ -533,26 +539,26 @@ public class PathUtilTest
         // "bin\bash.exe" is a thin compatibility wrapper around the real MSYS2 bash shipped in
         // "usr\bin\bash.exe"; running mintty against the wrapper breaks its detection of when an
         // interactive git command has finished. Regression test for #13312.
-        string gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        string binDir = Path.Combine(gitDir, "bin");
-        string usrBinDir = Path.Combine(gitDir, "usr", "bin");
+        var gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var binDir = Path.Combine(gitDir, "bin");
+        var usrBinDir = Path.Combine(gitDir, "usr", "bin");
 
         try
         {
             Directory.CreateDirectory(binDir);
             Directory.CreateDirectory(usrBinDir);
             File.WriteAllText(Path.Combine(binDir, "bash.exe"), "");
-            string expected = Path.Combine(usrBinDir, "bash.exe");
+            var expected = Path.Combine(usrBinDir, "bash.exe");
             File.WriteAllText(expected, "");
 
-            PathUtil.TryFindShellInGitDir(gitDir, "bash.exe", out string? shellPath).Should().BeTrue();
+            PathUtil.TryFindShellInGitDir(gitDir, "bash.exe", out var shellPath).Should().BeTrue();
             shellPath.Should().Be(expected);
         }
         finally
         {
             if (Directory.Exists(gitDir))
             {
-                Directory.Delete(gitDir, recursive: true);
+                Directory.Delete(gitDir, true);
             }
         }
     }
@@ -560,9 +566,9 @@ public class PathUtilTest
     [Fact]
     public void TryFindShellInGitDir_should_not_find_a_shell_which_is_not_there()
     {
-        string gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var gitDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-        PathUtil.TryFindShellInGitDir(gitDir, "sh.exe", out string? shellPath).Should().BeFalse();
+        PathUtil.TryFindShellInGitDir(gitDir, "sh.exe", out var shellPath).Should().BeFalse();
         shellPath.Should().BeNull();
     }
 
@@ -582,7 +588,7 @@ public class PathUtilTest
     [InlineData("", "")]
     public void QuoteNE_should_handle_paths_with_spaces(string? path, string? expected)
     {
-        path.QuoteNE().Should().Be(expected);
+        path.QuoteNe().Should().Be(expected);
     }
 
     [Theory]
@@ -608,8 +614,8 @@ public class PathUtilTest
     [InlineData("SSH:", true)]
     [InlineData("SSH", false)]
     [InlineData("https://myhost:12368/", true)]
-    public void CanBeGitURL(string? url, bool expected)
+    public void CanBeGitUrl(string? url, bool expected)
     {
-        PathUtil.CanBeGitURL(url).Should().Be(expected);
+        PathUtil.CanBeGitUrl(url).Should().Be(expected);
     }
 }

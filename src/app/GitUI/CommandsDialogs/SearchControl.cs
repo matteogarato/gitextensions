@@ -5,19 +5,10 @@ namespace GitUI.CommandsDialogs;
 
 public partial class SearchControl<T> : UserControl, IDisposable where T : class
 {
+    private readonly AsyncLoader _backgroundLoader = new();
     private readonly Func<string, IEnumerable<T>> _getCandidates;
     private readonly Action<Size> _onSizeChanged;
-    private readonly AsyncLoader _backgroundLoader = new();
     private bool _isUpdatingTextFromCode;
-    public event Action? OnTextEntered;
-    public event Action? OnCancelled;
-
-    [AllowNull]
-    public override string Text
-    {
-        get => txtSearchBox.Text;
-        set => txtSearchBox.Text = value;
-    }
 
     public SearchControl(Func<string, IEnumerable<T>> getCandidates, Action<Size> onSizeChanged)
     {
@@ -41,9 +32,11 @@ public partial class SearchControl<T> : UserControl, IDisposable where T : class
         }
     }
 
-    public void CloseDropdown()
+    [AllowNull]
+    public override string Text
     {
-        listBoxSearchResult.Visible = false;
+        get => txtSearchBox.Text;
+        set => txtSearchBox.Text = value;
     }
 
     public BorderStyle SearchBoxBorderStyle
@@ -70,14 +63,33 @@ public partial class SearchControl<T> : UserControl, IDisposable where T : class
         set => txtSearchBox.BorderFocusedColor = value;
     }
 
+    public T? SelectedItem
+    {
+        get => (T?)listBoxSearchResult.SelectedItem;
+    }
+
+    void IDisposable.Dispose()
+    {
+        _backgroundLoader?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    public event Action? OnTextEntered;
+    public event Action? OnCancelled;
+
+    public void CloseDropdown()
+    {
+        listBoxSearchResult.Visible = false;
+    }
+
     private void SearchForCandidates(IEnumerable<T> candidates)
     {
-        int selectionStart = txtSearchBox.SelectionStart;
-        int selectionLength = txtSearchBox.SelectionLength;
+        var selectionStart = txtSearchBox.SelectionStart;
+        var selectionLength = txtSearchBox.SelectionLength;
         listBoxSearchResult.BeginUpdate();
         listBoxSearchResult.Items.Clear();
 
-        foreach (T candidate in candidates.Take(20))
+        foreach (var candidate in candidates.Take(20))
         {
             listBoxSearchResult.Items.Add(candidate);
         }
@@ -103,40 +115,34 @@ public partial class SearchControl<T> : UserControl, IDisposable where T : class
 
         listBoxSearchResult.Visible = true;
 
-        Point txtBoxOnScreen = PointToScreen(txtSearchBox.Location + new Size(0, txtSearchBox.Height));
+        var txtBoxOnScreen = PointToScreen(txtSearchBox.Location + new Size(0, txtSearchBox.Height));
         if (ParentForm is not null && !ParentForm.Controls.Contains(listBoxSearchResult))
         {
             ParentForm.Controls.Add(listBoxSearchResult);
-            Point listBoxLocationOnScreen = txtBoxOnScreen;
+            var listBoxLocationOnScreen = txtBoxOnScreen;
             listBoxSearchResult.Location = ParentForm.PointToClient(listBoxLocationOnScreen);
         }
 
-        int width = 300;
+        var width = 300;
 
-        using (Graphics g = listBoxSearchResult.CreateGraphics())
+        using (var g = listBoxSearchResult.CreateGraphics())
         {
-            for (int i1 = 0; i1 < listBoxSearchResult.Items.Count; i1++)
+            for (var i1 = 0; i1 < listBoxSearchResult.Items.Count; i1++)
             {
-                int itemWidth = Convert.ToInt32(g.MeasureString(Convert.ToString(listBoxSearchResult.Items[i1]), listBoxSearchResult.Font).Width);
+                var itemWidth = Convert.ToInt32(g.MeasureString(Convert.ToString(listBoxSearchResult.Items[i1]),
+                    listBoxSearchResult.Font).Width);
                 width = Math.Max(width, itemWidth);
             }
         }
 
         listBoxSearchResult.Width = width;
-        listBoxSearchResult.Height = Math.Min(800, listBoxSearchResult.Font.Height * (listBoxSearchResult.Items.Count + 1));
+        listBoxSearchResult.Height =
+            Math.Min(800, listBoxSearchResult.Font.Height * (listBoxSearchResult.Items.Count + 1));
 
         _onSizeChanged(new Size(width + Margin.Right + Margin.Left,
             listBoxSearchResult.Height + txtSearchBox.Height));
 
         listBoxSearchResult.BringToFront();
-    }
-
-    public T? SelectedItem => (T?)listBoxSearchResult.SelectedItem;
-
-    void IDisposable.Dispose()
-    {
-        _backgroundLoader?.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     private void txtSearchBox_TextChange(object sender, EventArgs e)
@@ -148,7 +154,7 @@ public partial class SearchControl<T> : UserControl, IDisposable where T : class
             return;
         }
 
-        string selectedText = txtSearchBox.Text;
+        var selectedText = txtSearchBox.Text;
 
         _backgroundLoader.LoadAsync(() => _getCandidates(selectedText), SearchForCandidates);
     }
@@ -188,7 +194,8 @@ public partial class SearchControl<T> : UserControl, IDisposable where T : class
         {
             if (listBoxSearchResult.Items.Count > 1)
             {
-                listBoxSearchResult.SelectedIndex = (listBoxSearchResult.SelectedIndex + 1) % listBoxSearchResult.Items.Count;
+                listBoxSearchResult.SelectedIndex =
+                    (listBoxSearchResult.SelectedIndex + 1) % listBoxSearchResult.Items.Count;
                 e.SuppressKeyPress = true;
             }
         }
@@ -197,7 +204,7 @@ public partial class SearchControl<T> : UserControl, IDisposable where T : class
         {
             if (listBoxSearchResult.Items.Count > 1)
             {
-                int newSelectedIndex = listBoxSearchResult.SelectedIndex - 1;
+                var newSelectedIndex = listBoxSearchResult.SelectedIndex - 1;
                 if (newSelectedIndex < 0)
                 {
                     newSelectedIndex = listBoxSearchResult.Items.Count - 1;

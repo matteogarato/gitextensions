@@ -1,4 +1,5 @@
 ﻿using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Translations;
@@ -8,22 +9,22 @@ namespace GitUI.CommandsDialogs.GitIgnoreDialog;
 
 public class GitIgnoreModel : Translate, IGitIgnoreDialogModel
 {
-    private readonly TranslationString _editGitignoreTitle =
-        new("Edit .gitignore");
-
-    private readonly TranslationString _gitignoreOnlyInWorkingDirSupported =
-        new(".gitignore is only supported when there is a working directory.");
-
     private readonly TranslationString _cannotAccessGitignore =
         new("Failed to save .gitignore." + Environment.NewLine + "Check if file is accessible.");
 
     private readonly TranslationString _cannotAccessGitignoreCaption =
         new("Failed to save .gitignore");
 
-    private readonly TranslationString _saveFileQuestion =
-        new("Save changes to .gitignore?");
+    private readonly TranslationString _editGitignoreTitle =
+        new("Edit .gitignore");
 
     private readonly IFullPathResolver _fullPathResolver;
+
+    private readonly TranslationString _gitignoreOnlyInWorkingDirSupported =
+        new(".gitignore is only supported when there is a working directory.");
+
+    private readonly TranslationString _saveFileQuestion =
+        new("Save changes to .gitignore?");
 
     public GitIgnoreModel(IGitModule module)
     {
@@ -31,15 +32,33 @@ public class GitIgnoreModel : Translate, IGitIgnoreDialogModel
         _fullPathResolver = new FullPathResolver(() => module.WorkingDir);
     }
 
-    public string FormCaption => _editGitignoreTitle.Text;
+    string IGitIgnoreDialogModel.FormCaption
+    {
+        get => _editGitignoreTitle.Text;
+    }
 
-    public string? ExcludeFile => _fullPathResolver.Resolve(".gitignore");
+    string? IGitIgnoreDialogModel.ExcludeFile
+    {
+        get => _fullPathResolver.Resolve(".gitignore");
+    }
 
-    public string FileOnlyInWorkingDirSupported => _gitignoreOnlyInWorkingDirSupported.Text;
+    string IGitIgnoreDialogModel.FileOnlyInWorkingDirSupported
+    {
+        get => _gitignoreOnlyInWorkingDirSupported.Text;
+    }
 
-    public string CannotAccessFile => _cannotAccessGitignore.Text;
+    string IGitIgnoreDialogModel.CannotAccessFile
+    {
+        get => _cannotAccessGitignore.Text;
+    }
 
-    public string CannotAccessFileCaption => _cannotAccessGitignoreCaption.Text;
+    string IGitIgnoreDialogModel.CannotAccessFileCaption
+    {
+        get => _cannotAccessGitignoreCaption.Text;
+    }
 
-    public string SaveFileQuestion => _saveFileQuestion.Text;
+    string IGitIgnoreDialogModel.SaveFileQuestion
+    {
+        get => _saveFileQuestion.Text;
+    }
 }

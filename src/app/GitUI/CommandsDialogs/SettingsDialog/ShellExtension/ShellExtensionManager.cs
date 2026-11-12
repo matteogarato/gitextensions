@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using Microsoft.Win32;
 
@@ -13,30 +13,38 @@ public static class ShellExtensionManager
     internal const string GitExtensionsShellEx64Name = "GitExtensionsShellEx64.dll";
 
     /// <summary>
-    ///  Checks if the shell extension files are found at the known location.
+    ///     Checks if the shell extension files are found at the known location.
     /// </summary>
-    /// <returns><see langword="true"/> the extension files are found at the known location; otherwise <see langword="false"/>.</returns>
+    /// <returns>
+    ///     <see langword="true" /> the extension files are found at the known location; otherwise
+    ///     <see langword="false" />.
+    /// </returns>
     public static bool FilesExist()
     {
-        string path32 = FindFileInBinFolders(GitExtensionsShellEx32Name);
-        string path64 = FindFileInBinFolders(GitExtensionsShellEx64Name);
+        var path32 = FindFileInBinFolders(GitExtensionsShellEx32Name);
+        var path64 = FindFileInBinFolders(GitExtensionsShellEx64Name);
         return !(string.IsNullOrEmpty(path32) || (Environment.Is64BitOperatingSystem && string.IsNullOrEmpty(path64)));
     }
 
     /// <summary>
-    ///  Checks if the shell extension is properly registered in the system.
+    ///     Checks if the shell extension is properly registered in the system.
     /// </summary>
-    /// <returns><see langword="true"/> if the extension is registered; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the extension is registered; otherwise <see langword="false" />.</returns>
     public static bool IsRegistered()
     {
-        return !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.LocalMachine, @"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved", "{3C16B20A-BA16-4156-916F-0A375ECFFE24}"))
-            && !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.ClassesRoot, @"*\shellex\ContextMenuHandlers\GitExtensions2"))
-            && !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.ClassesRoot, @"Directory\shellex\ContextMenuHandlers\GitExtensions2"))
-            && !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.ClassesRoot, @"Directory\Background\shellex\ContextMenuHandlers\GitExtensions2"));
+        return !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.LocalMachine,
+                   @"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved",
+                   "{3C16B20A-BA16-4156-916F-0A375ECFFE24}"))
+               && !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.ClassesRoot,
+                   @"*\shellex\ContextMenuHandlers\GitExtensions2"))
+               && !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.ClassesRoot,
+                   @"Directory\shellex\ContextMenuHandlers\GitExtensions2"))
+               && !string.IsNullOrEmpty(CommonLogic.GetRegistryValue(Registry.ClassesRoot,
+                   @"Directory\Background\shellex\ContextMenuHandlers\GitExtensions2"));
     }
 
     /// <summary>
-    /// Register shell extensions
+    ///     Register shell extensions
     /// </summary>
     /// <exception cref="FileNotFoundException">If at least one necessary for registration file wasn't found</exception>
     /// <exception cref="Win32Exception">If user canceled elevation dialog (when ex.NativeErrorCode == 1223)</exception>
@@ -48,12 +56,15 @@ public static class ShellExtensionManager
     }
 
     /// <summary>
-    /// Unregister shell extensions
+    ///     Unregister shell extensions
     /// </summary>
     /// <exception cref="FileNotFoundException">If at least one necessary for registration file wasn't found</exception>
     /// <exception cref="Win32Exception">If user canceled elevation dialog (when ex.NativeErrorCode == 1223)</exception>
     /// <exception cref="Exception">Other potential error</exception>
-    public static void Unregister() => RunRegSvrForShellExtensionDlls("/s /u {0}");
+    public static void Unregister()
+    {
+        RunRegSvrForShellExtensionDlls("/s /u {0}");
+    }
 
     private static void RunRegSvrForShellExtensionDlls(string argumentsPattern)
     {
@@ -70,21 +81,18 @@ public static class ShellExtensionManager
         {
             try
             {
-                string path = FindFileInBinFolders(dllName);
+                var path = FindFileInBinFolders(dllName);
                 if (string.IsNullOrEmpty(path))
                 {
                     throw new FileNotFoundException(null, dllName);
                 }
 
-                string arguments = string.Format(argumentsPattern, path.Quote());
+                var arguments = string.Format(argumentsPattern, path.Quote());
                 ProcessStartInfo pi = new()
                 {
-                    FileName = "regsvr32",
-                    Arguments = arguments,
-                    Verb = "RunAs",
-                    UseShellExecute = true
+                    FileName = "regsvr32", Arguments = arguments, Verb = "RunAs", UseShellExecute = true
                 };
-                using Process? process = Process.Start(pi);
+                using var process = Process.Start(pi);
                 process?.WaitForExit();
                 if (process?.ExitCode is not 0)
                 {
@@ -93,7 +101,7 @@ public static class ShellExtensionManager
             }
             catch (ExternalOperationException ex)
             {
-                throw new UserExternalOperationException(context: null!, ex);
+                throw new UserExternalOperationException(null!, ex);
             }
             catch (Exception ex)
             {
@@ -104,9 +112,9 @@ public static class ShellExtensionManager
 
     private static string FindFileInBinFolders(string fileName)
     {
-        foreach (string binDirectory in GetBinDirectories())
+        foreach (var binDirectory in GetBinDirectories())
         {
-            string filePath = Path.Join(binDirectory, fileName);
+            var filePath = Path.Join(binDirectory, fileName);
             if (File.Exists(filePath))
             {
                 return filePath;
@@ -117,16 +125,16 @@ public static class ShellExtensionManager
 
         static IEnumerable<string> GetBinDirectories()
         {
-            string? installDir = AppSettings.GetInstallDir();
+            var installDir = AppSettings.GetInstallDir();
             if (!string.IsNullOrEmpty(installDir))
             {
                 yield return installDir;
             }
 
-            string? assemblyPath = Assembly.GetAssembly(typeof(ShellExtensionManager))?.Location;
+            var assemblyPath = Assembly.GetAssembly(typeof(ShellExtensionManager))?.Location;
             if (!string.IsNullOrEmpty(assemblyPath))
             {
-                string? assemblyDir = Path.GetDirectoryName(assemblyPath);
+                var assemblyDir = Path.GetDirectoryName(assemblyPath);
                 if (!string.IsNullOrEmpty(assemblyDir))
                 {
                     yield return assemblyDir;

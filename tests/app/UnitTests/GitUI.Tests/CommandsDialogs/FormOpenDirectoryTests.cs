@@ -1,5 +1,4 @@
 ﻿using CommonTestUtils;
-using GitCommands;
 using GitCommands.Git;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
@@ -11,9 +10,11 @@ namespace GitUITests.CommandsDialogs;
 public class FormOpenDirectoryTests : IDisposable
 {
     // Created once for the fixture
-    private static readonly IGitExecutorProvider _executorProvider = new GitExecutorProvider(new GitDirectoryResolver());
-    private ReferenceRepository _referenceRepository = null!;
-    private ILocalRepositoryManager _localRepositoryManager = null!;
+    private static readonly IGitExecutorProvider
+        _executorProvider = new GitExecutorProvider(new GitDirectoryResolver());
+
+    private readonly ILocalRepositoryManager _localRepositoryManager = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
 
     public FormOpenDirectoryTests()
     {
@@ -21,7 +22,7 @@ public class FormOpenDirectoryTests : IDisposable
         _localRepositoryManager = Substitute.For<ILocalRepositoryManager>();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _referenceRepository.Dispose();
     }
@@ -29,9 +30,10 @@ public class FormOpenDirectoryTests : IDisposable
     [StaFact]
     public void OpenGitRepository_should_return_null_if_directory_not_exist()
     {
-        string path = @"C:\some\directory\that\does\not\exist\at\all";
+        var path = @"C:\some\directory\that\does\not\exist\at\all";
 
-        FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager).Should().BeNull();
+        FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager).Should()
+            .BeNull();
         _localRepositoryManager.DidNotReceive().AddAsMostRecentAsync(Arg.Any<string>());
     }
 
@@ -39,10 +41,11 @@ public class FormOpenDirectoryTests : IDisposable
     public void OpenGitRepository_should_return_null_if_not_valid_git_repo()
     {
         // Path.GetTempPath returns a path with the trailing slash
-        string path = Path.GetTempPath();
+        var path = Path.GetTempPath();
         path[^1].Should().Be(Path.DirectorySeparatorChar);
 
-        FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager).Should().BeNull();
+        FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager).Should()
+            .BeNull();
         _localRepositoryManager.DidNotReceive().AddAsMostRecentAsync(Arg.Any<string>());
     }
 
@@ -50,22 +53,25 @@ public class FormOpenDirectoryTests : IDisposable
     public void OpenGitRepository_should_not_throw_if_path_not_end_with_slash()
     {
         // Path.GetTempPath returns a path with the trailing slash
-        string path = Path.GetTempPath();
+        var path = Path.GetTempPath();
         path[^1].Should().Be(Path.DirectorySeparatorChar);
 
         // ensure absence of the trailing slash isn't a problem
         path = path[..^1];
-        ((Action)(() => FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager))).Should().NotThrow();
+        ((Action)(() =>
+                FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, path, _localRepositoryManager)))
+            .Should().NotThrow();
     }
 
     [StaFact]
     public void OpenGitRepository_should_return_module_For_valid_git_repo()
     {
         // Path.GetTempPath returns a path with the trailing slash
-        string path = Path.GetTempPath();
+        var path = Path.GetTempPath();
         path[^1].Should().Be(Path.DirectorySeparatorChar);
 
-        IGitModule? module = FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider, _referenceRepository.Module.WorkingDir, _localRepositoryManager);
+        var module = FormOpenDirectory.TestAccessor.OpenGitRepository(_executorProvider,
+            _referenceRepository.Module.WorkingDir, _localRepositoryManager);
 
         module.Should().NotBeNull();
         module.WorkingDir.Should().Be(_referenceRepository.Module.WorkingDir);

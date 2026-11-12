@@ -2,21 +2,20 @@
 using System.Text;
 using GitCommands.Logging;
 using GitExtensions.Extensibility;
-using GitUI;
-using Microsoft.VisualStudio.Threading;
+using GitExtUtils.GitUI;
 
-namespace GitCommands;
+namespace GitCommands.Git;
 
 /// <summary>
-///  Wraps an executable file and provides process creation with logging and environment setup.
+///     Wraps an executable file and provides process creation with logging and environment setup.
 /// </summary>
 public sealed class Executable : IExecutable
 {
-    private readonly string _workingDir;
     private readonly Func<string> _fileNameProvider;
+    private readonly string _workingDir;
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="Executable"/> class with a fixed file name.
+    ///     Initializes a new instance of the <see cref="Executable" /> class with a fixed file name.
     /// </summary>
     /// <param name="fileName">The path to the executable file.</param>
     /// <param name="workingDir">The working directory in which the process will be started.</param>
@@ -26,7 +25,7 @@ public sealed class Executable : IExecutable
     }
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="Executable"/> class with a deferred file name resolution.
+    ///     Initializes a new instance of the <see cref="Executable" /> class with a deferred file name resolution.
     /// </summary>
     /// <param name="fileNameProvider">A delegate that returns the path to the executable file.</param>
     /// <param name="workingDir">The working directory in which the process will be started.</param>
@@ -38,70 +37,79 @@ public sealed class Executable : IExecutable
         PrefixArguments = prefixArguments;
     }
 
-    public string WorkingDir => _workingDir;
+    string IExecutable.WorkingDir
+    {
+        get => _workingDir;
+    }
 
-    public string Command => _fileNameProvider();
+    string IExecutable.Command
+    {
+        get => _fileNameProvider();
+    }
 
-    public string PrefixArguments { get; }
+    string IExecutable.PrefixArguments { get; }
 
-    public IProcess Start(ArgumentString arguments = default,
-                          bool createWindow = false,
-                          bool redirectInput = false,
-                          bool redirectOutput = false,
-                          Encoding? outputEncoding = null,
-                          bool useShellExecute = false,
-                          bool throwOnErrorExit = true,
-                          CancellationToken cancellationToken = default)
+    IProcess IExecutable.Start(ArgumentString arguments = default,
+        bool createWindow = false,
+        bool redirectInput = false,
+        bool redirectOutput = false,
+        Encoding? outputEncoding = null,
+        bool useShellExecute = false,
+        bool throwOnErrorExit = true,
+        CancellationToken cancellationToken = default)
     {
         // TODO should we set these on the child process only?
         EnvironmentConfiguration.SetEnvironmentVariables();
 
-        string args = (arguments.Arguments ?? "").Replace("$QUOTE$", "\\\"");
+        var args = (arguments.Arguments ?? "").Replace("$QUOTE$", "\\\"");
 
-        string fileName = _fileNameProvider();
+        var fileName = _fileNameProvider();
 
-        return new ProcessWrapper(fileName, PrefixArguments, args, _workingDir, createWindow, redirectInput, redirectOutput, outputEncoding, useShellExecute, throwOnErrorExit, cancellationToken);
+        return new ProcessWrapper(fileName, PrefixArguments, args, _workingDir, createWindow, redirectInput,
+            redirectOutput, outputEncoding, useShellExecute, throwOnErrorExit, cancellationToken);
     }
 
     #region ProcessWrapper
 
     /// <summary>
-    /// Manages the lifetime of a process. The <see cref="Process"/> object has many members
-    /// that throw at different times in the lifecycle of the process, such as after it is disposed. This class
-    /// provides a simplified API that meets the need of this application via the <see cref="IProcess"/> interface.
+    ///     Manages the lifetime of a process. The <see cref="Process" /> object has many members
+    ///     that throw at different times in the lifecycle of the process, such as after it is disposed. This class
+    ///     provides a simplified API that meets the need of this application via the <see cref="IProcess" /> interface.
     /// </summary>
     private sealed class ProcessWrapper : IProcess
     {
-        // TODO should this use TaskCreationOptions.RunContinuationsAsynchronously
-        private readonly TaskCompletionSource<int> _exitTaskCompletionSource = new();
-
         private readonly CancellationToken _cancellationToken;
         private readonly Encoding? _errorEncoding;
+
         private readonly MemoryStream? _errorOutputStream;
+
+        // TODO should this use TaskCreationOptions.RunContinuationsAsynchronously
+        private readonly TaskCompletionSource<int> _exitTaskCompletionSource = new();
+        private readonly Lock _lock = new();
         private readonly ProcessOperation _logOperation;
         private readonly Process _process;
         private readonly bool _redirectInput;
         private readonly bool _redirectOutput;
-        private readonly Lock _lock = new();
         private readonly bool _throwOnErrorExit;
 
         private bool _disposed;
-        private bool _exitHandlerRemoved;
         private string? _errorOutput;
+        private bool _exitHandlerRemoved;
 
         public ProcessWrapper(string fileName,
-                              string prefixArguments,
-                              string arguments,
-                              string workDir,
-                              bool createWindow,
-                              bool redirectInput,
-                              bool redirectOutput,
-                              Encoding? outputEncoding,
-                              bool useShellExecute,
-                              bool throwOnErrorExit,
-                              CancellationToken cancellationToken)
+            string prefixArguments,
+            string arguments,
+            string workDir,
+            bool createWindow,
+            bool redirectInput,
+            bool redirectOutput,
+            Encoding? outputEncoding,
+            bool useShellExecute,
+            bool throwOnErrorExit,
+            CancellationToken cancellationToken)
         {
-            DebugHelpers.Assert(redirectOutput == (outputEncoding is not null), "redirectOutput == (outputEncoding is not null)");
+            DebugHelpers.Assert(redirectOutput == outputEncoding is not null,
+                "redirectOutput == (outputEncoding is not null)");
             _redirectInput = redirectInput;
             _redirectOutput = redirectOutput;
             _throwOnErrorExit = throwOnErrorExit;
@@ -176,81 +184,12 @@ public sealed class Executable : IExecutable
                 Dispose();
 
                 _logOperation.LogProcessEnd(ex);
-                throw new ExternalOperationException($"{fileName} {prefixArguments}".Trim(), arguments, workDir, innerException: ex);
+                throw new ExternalOperationException($"{fileName} {prefixArguments}".Trim(), arguments, workDir,
+                    innerException: ex);
             }
         }
 
-        private void HandleProcessExit()
-        {
-            try
-            {
-                int exitCode = _process.ExitCode;
-                string? errorOutput = ReadErrorOutput();
-                _logOperation.LogProcessEnd(exitCode, errorOutput);
-
-                if (_throwOnErrorExit && exitCode != 0)
-                {
-                    string errorMessage = errorOutput?.Length is > 0 ? errorOutput : "External program returned non-zero exit code.";
-                    Exception ex
-                        = new ExternalOperationException(command: _process.StartInfo.FileName,
-                                _process.StartInfo.Arguments,
-                                _process.StartInfo.WorkingDirectory,
-                                exitCode,
-                                new Exception(errorMessage));
-                    if (exitCode == NativeMethods.STATUS_CONTROL_C_EXIT)
-                    {
-                        ex = new OperationCanceledException("Ctrl+C pressed or console closed", ex);
-                    }
-
-                    _exitTaskCompletionSource.TrySetException(ex);
-                }
-
-                _exitTaskCompletionSource.TrySetResult(exitCode);
-            }
-            catch (Exception ex)
-            {
-                _logOperation.LogProcessEnd(ex);
-                _exitTaskCompletionSource.TrySetException(ex);
-            }
-
-            return;
-
-            string? ReadErrorOutput()
-            {
-                if (_errorOutputStream is null || _errorEncoding is null)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    _errorOutput = _errorEncoding.GetString(_errorOutputStream.GetBuffer(), 0, (int)_errorOutputStream.Length);
-
-                    return _errorOutput.Trim();
-                }
-                catch (Exception ex)
-                {
-                    return $"Failed to read: {ex}";
-                }
-            }
-        }
-
-        private void OnProcessExit(object? sender, EventArgs eventArgs)
-        {
-            lock (_lock)
-            {
-                // The Exited event can be raised after the process is disposed, however
-                // if the Process is disposed then reading ExitCode will throw.
-                if (!_disposed && !_exitHandlerRemoved)
-                {
-                    _process.Exited -= OnProcessExit;
-                    _exitHandlerRemoved = true;
-                    HandleProcessExit();
-                }
-            }
-        }
-
-        public StreamWriter StandardInput
+        StreamWriter IProcess.StandardInput
         {
             get
             {
@@ -263,7 +202,7 @@ public sealed class Executable : IExecutable
             }
         }
 
-        public StreamReader StandardOutput
+        StreamReader IProcess.StandardOutput
         {
             get
             {
@@ -276,7 +215,7 @@ public sealed class Executable : IExecutable
             }
         }
 
-        public string StandardError
+        string IProcess.StandardError
         {
             get
             {
@@ -289,19 +228,34 @@ public sealed class Executable : IExecutable
             }
         }
 
-        public void Kill(bool entireProcessTree) => _process.Kill(entireProcessTree);
+        void IProcess.Kill(bool entireProcessTree)
+        {
+            _process.Kill(entireProcessTree);
+        }
 
-        public void WaitForInputIdle() => _process.WaitForInputIdle();
+        void IProcess.WaitForInputIdle()
+        {
+            _process.WaitForInputIdle();
+        }
 
 #pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
-        public Task<int> WaitForExitAsync() => _exitTaskCompletionSource.Task;
+        Task<int> IProcess.WaitForExitAsync()
+        {
+            return _exitTaskCompletionSource.Task;
+        }
 #pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
 
-        public Task<int> WaitForExitAsync(CancellationToken token) => WaitForExitAsync().WithCancellation(token);
+        Task<int> IProcess.WaitForExitAsync(CancellationToken token)
+        {
+            return WaitForExitAsync().WithCancellation(token);
+        }
 
-        public int WaitForExit() => ThreadHelper.JoinableTaskFactory.Run(WaitForExitAsync);
+        int IProcess.WaitForExit()
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(WaitForExitAsync);
+        }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             lock (_lock)
             {
@@ -350,6 +304,79 @@ public sealed class Executable : IExecutable
             _logOperation.NotifyDisposed();
 
             _errorOutputStream?.Dispose();
+        }
+
+        private void HandleProcessExit()
+        {
+            try
+            {
+                var exitCode = _process.ExitCode;
+                var errorOutput = ReadErrorOutput();
+                _logOperation.LogProcessEnd(exitCode, errorOutput);
+
+                if (_throwOnErrorExit && exitCode != 0)
+                {
+                    var errorMessage = errorOutput?.Length is > 0
+                        ? errorOutput
+                        : "External program returned non-zero exit code.";
+                    Exception ex
+                        = new ExternalOperationException(_process.StartInfo.FileName,
+                            _process.StartInfo.Arguments,
+                            _process.StartInfo.WorkingDirectory,
+                            exitCode,
+                            new Exception(errorMessage));
+                    if (exitCode == NativeMethods.StatusControlCExit)
+                    {
+                        ex = new OperationCanceledException("Ctrl+C pressed or console closed", ex);
+                    }
+
+                    _exitTaskCompletionSource.TrySetException(ex);
+                }
+
+                _exitTaskCompletionSource.TrySetResult(exitCode);
+            }
+            catch (Exception ex)
+            {
+                _logOperation.LogProcessEnd(ex);
+                _exitTaskCompletionSource.TrySetException(ex);
+            }
+
+            return;
+
+            string? ReadErrorOutput()
+            {
+                if (_errorOutputStream is null || _errorEncoding is null)
+                {
+                    return null;
+                }
+
+                try
+                {
+                    _errorOutput = _errorEncoding.GetString(_errorOutputStream.GetBuffer(), 0,
+                        (int)_errorOutputStream.Length);
+
+                    return _errorOutput.Trim();
+                }
+                catch (Exception ex)
+                {
+                    return $"Failed to read: {ex}";
+                }
+            }
+        }
+
+        private void OnProcessExit(object? sender, EventArgs eventArgs)
+        {
+            lock (_lock)
+            {
+                // The Exited event can be raised after the process is disposed, however
+                // if the Process is disposed then reading ExitCode will throw.
+                if (!_disposed && !_exitHandlerRemoved)
+                {
+                    _process.Exited -= OnProcessExit;
+                    _exitHandlerRemoved = true;
+                    HandleProcessExit();
+                }
+            }
         }
     }
 

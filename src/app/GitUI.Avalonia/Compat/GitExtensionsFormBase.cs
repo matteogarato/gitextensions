@@ -1,21 +1,20 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using GitCommands;
+using Avalonia.Input;
 using GitExtensions.Extensibility.Translations;
-using GitUI.Compat;
-using WinFormsShims = GitExtensions.Shims.WinForms;
 
-namespace ResourceManager;
+namespace GitUI.Compat;
 
 // Twin of ResourceManager/GitExtensionsFormBase.cs: provides xlf translation for windows
 // plus the WinForms form idioms the ported code-behind relies on (Text, DialogResult,
 // synchronous ShowDialog, AcceptButton, OnRuntimeLoad). Hotkeys and theming arrive later.
-public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Window
+public class GitExtensionsFormBase : Window, ITranslate, IWin32Window
 {
-    private WinFormsShims.DialogResult _dialogResult = WinFormsShims.DialogResult.None;
+    private Button? _acceptButton;
+    private DialogResult _dialogResult = DialogResult.None;
     private bool _isShownModally;
     private bool _runtimeLoadRaised;
-    private Button? _acceptButton;
 
     /// <summary>The window title, under its WinForms name so ported code compiles unchanged.</summary>
     public string? Text
@@ -25,23 +24,23 @@ public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Win
     }
 
     /// <summary>
-    ///  The WinForms dialog result: assigning a value other than <c>None</c> while the window
-    ///  is shown modally closes it, and <see cref="ShowDialog"/> returns the assigned value.
+    ///     The WinForms dialog result: assigning a value other than <c>None</c> while the window
+    ///     is shown modally closes it, and <see cref="ShowDialog" /> returns the assigned value.
     /// </summary>
-    public WinFormsShims.DialogResult DialogResult
+    public DialogResult DialogResult
     {
         get => _dialogResult;
         set
         {
             _dialogResult = value;
-            if (value is not WinFormsShims.DialogResult.None && _isShownModally)
+            if (value is not DialogResult.None && _isShownModally)
             {
                 Close();
             }
         }
     }
 
-    /// <summary>The button activated by Enter; mapped to Avalonia's <see cref="Button.IsDefault"/>.</summary>
+    /// <summary>The button activated by Enter; mapped to Avalonia's <see cref="Button.IsDefault" />.</summary>
     public Button? AcceptButton
     {
         get => _acceptButton;
@@ -60,8 +59,8 @@ public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Win
         }
     }
 
-    /// <summary>Setting focuses the control; <see langword="null"/> clears nothing (WinForms parity).</summary>
-    public Avalonia.Input.InputElement? ActiveControl
+    /// <summary>Setting focuses the control; <see langword="null" /> clears nothing (WinForms parity).</summary>
+    public InputElement? ActiveControl
     {
         get;
         set
@@ -71,16 +70,37 @@ public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Win
         }
     }
 
-    nint WinFormsShims.IWin32Window.Handle => TryGetPlatformHandle()?.Handle ?? 0;
+    void IDisposable.Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+
+    public virtual void AddTranslationItems(ITranslation translation)
+    {
+        TranslationUtils.AddTranslationItemsFromFields(GetType().Name, this, translation);
+        AvaloniaTranslationUtils.AddTranslationItemsFromFields(GetType().Name, this, translation);
+    }
+
+    public virtual void TranslateItems(ITranslation translation)
+    {
+        TranslationUtils.TranslateItemsFromFields(GetType().Name, this, translation);
+        AvaloniaTranslationUtils.TranslateItemsFromFields(GetType().Name, this, translation);
+    }
+
+    nint IWin32Window.Handle
+    {
+        get => TryGetPlatformHandle()?.Handle ?? 0;
+    }
 
     /// <summary>
-    ///  Shows the window modally with WinForms blocking semantics: the call returns when the
-    ///  window closes, pumping the UI with a nested dispatcher frame meanwhile.
+    ///     Shows the window modally with WinForms blocking semantics: the call returns when the
+    ///     window closes, pumping the UI with a nested dispatcher frame meanwhile.
     /// </summary>
-    public WinFormsShims.DialogResult ShowDialog(WinFormsShims.IWin32Window? owner = null)
+    public DialogResult ShowDialog(IWin32Window? owner = null)
     {
-        Window? ownerWindow = owner as Window
-            ?? (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        var ownerWindow = owner as Window
+                          ?? (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+                          ?.MainWindow;
 
         _isShownModally = true;
         try
@@ -122,8 +142,8 @@ public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Win
     }
 
     /// <summary>
-    ///  Called once when the window is first shown, like the WinForms
-    ///  <c>GitExtensionsFormBase.OnRuntimeLoad</c> (which forms override to start work).
+    ///     Called once when the window is first shown, like the WinForms
+    ///     <c>GitExtensionsFormBase.OnRuntimeLoad</c> (which forms override to start work).
     /// </summary>
     protected virtual void OnRuntimeLoad(EventArgs e)
     {
@@ -139,22 +159,5 @@ public class GitExtensionsFormBase : Window, ITranslate, WinFormsShims.IWin32Win
         }
 
         Translator.Translate(this, AppSettings.CurrentTranslation);
-    }
-
-    void IDisposable.Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
-
-    public virtual void AddTranslationItems(ITranslation translation)
-    {
-        TranslationUtils.AddTranslationItemsFromFields(GetType().Name, this, translation);
-        AvaloniaTranslationUtils.AddTranslationItemsFromFields(GetType().Name, this, translation);
-    }
-
-    public virtual void TranslateItems(ITranslation translation)
-    {
-        TranslationUtils.TranslateItemsFromFields(GetType().Name, this, translation);
-        AvaloniaTranslationUtils.TranslateItemsFromFields(GetType().Name, this, translation);
     }
 }

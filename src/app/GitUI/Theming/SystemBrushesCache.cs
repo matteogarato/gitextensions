@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-using static System.NativeMethods;
 
 namespace GitUI.Theming;
 
@@ -7,10 +6,10 @@ internal sealed class SystemBrushesCache : IDisposable
 {
     private readonly Dictionary<int, HandleRef> _cache = [];
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         GC.SuppressFinalize(this);
-        foreach (int key in _cache.Keys)
+        foreach (var key in _cache.Keys)
         {
             DeleteObject(_cache[key].Handle);
         }
@@ -20,9 +19,9 @@ internal sealed class SystemBrushesCache : IDisposable
 
     public IntPtr GetBrush(int colorref)
     {
-        if (!_cache.TryGetValue(colorref, out HandleRef handle))
+        if (!_cache.TryGetValue(colorref, out var handle))
         {
-            IntPtr hbrush = CreateSolidBrush(colorref);
+            var hbrush = CreateSolidBrush(colorref);
             handle = new HandleRef(this, hbrush);
 
             _cache.Add(colorref, handle);

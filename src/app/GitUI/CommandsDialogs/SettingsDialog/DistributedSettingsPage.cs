@@ -1,15 +1,17 @@
 ﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using GitUI.SettingControlBindings;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
-public partial class DistributedSettingsPage : SettingsPageWithHeader, IDistributedSettingsPage
+public partial class DistributedSettingsPage(IServiceProvider serviceProvider)
+    : SettingsPageWithHeader(serviceProvider), IDistributedSettingsPage
 {
-    private static TranslationString _numberSettingPlaceholder = new(@"no value set");
-    private static TranslationString _stringSettingPlaceholder = new(@"no value set; for empty string, enter ""{0}"" without the double quotes");
+    private static readonly TranslationString _numberSettingPlaceholder = new(@"no value set");
+
+    private static readonly TranslationString _stringSettingPlaceholder =
+        new(@"no value set; for empty string, enter ""{0}"" without the double quotes");
 
     static DistributedSettingsPage()
     {
@@ -17,29 +19,14 @@ public partial class DistributedSettingsPage : SettingsPageWithHeader, IDistribu
         StringSettingControlBinding.PlaceholderText = _stringSettingPlaceholder.Text;
     }
 
-    public DistributedSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+    protected DistributedSettingsSet DistributedSettingsSet
     {
+        get => CommonLogic.DistributedSettingsSet;
     }
 
-    protected DistributedSettingsSet DistributedSettingsSet => CommonLogic.DistributedSettingsSet;
     protected DistributedSettings? CurrentSettings { get; private set; }
 
-    protected override void Init(ISettingsPageHost pageHost)
-    {
-        base.Init(pageHost);
-
-        CurrentSettings = DistributedSettingsSet.EffectiveSettings;
-    }
-
-    protected override SettingsSource GetCurrentSettings()
-    {
-        Validates.NotNull(CurrentSettings);
-
-        return CurrentSettings;
-    }
-
-    public void SetEffectiveSettings()
+    void ILocalSettingsPage.SetEffectiveSettings()
     {
         if (DistributedSettingsSet.EffectiveSettings is not null)
         {
@@ -47,7 +34,7 @@ public partial class DistributedSettingsPage : SettingsPageWithHeader, IDistribu
         }
     }
 
-    public void SetLocalSettings()
+    void ILocalSettingsPage.SetLocalSettings()
     {
         if (DistributedSettingsSet.LocalSettings is not null)
         {
@@ -55,7 +42,7 @@ public partial class DistributedSettingsPage : SettingsPageWithHeader, IDistribu
         }
     }
 
-    public void SetDistributedSettings()
+    void IDistributedSettingsPage.SetDistributedSettings()
     {
         if (DistributedSettingsSet.DistributedSettings is not null)
         {
@@ -69,6 +56,20 @@ public partial class DistributedSettingsPage : SettingsPageWithHeader, IDistribu
         {
             SetCurrentSettings(DistributedSettingsSet.GlobalSettings);
         }
+    }
+
+    protected override void Init(ISettingsPageHost pageHost)
+    {
+        base.Init(pageHost);
+
+        CurrentSettings = DistributedSettingsSet.EffectiveSettings;
+    }
+
+    protected override SettingsSource GetCurrentSettings()
+    {
+        Validates.NotNull(CurrentSettings);
+
+        return CurrentSettings;
     }
 
     private void SetCurrentSettings(DistributedSettings settings)

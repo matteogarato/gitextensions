@@ -1,19 +1,16 @@
 ﻿using GitCommands;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitCommandsTests;
+
 public class DiffListSortServiceTests : IDisposable
 {
     /// <summary>
-    /// DO NOT change this during the test. It is used to put your normal setting back the way it was.
+    ///     DO NOT change this during the test. It is used to put your normal setting back the way it was.
     /// </summary>
-    private DiffListSortType _storedSetting;
+    private readonly DiffListSortType _storedSetting = AppSettings.DiffListSorting;
 
-    public DiffListSortServiceTests()
-    {
-        _storedSetting = AppSettings.DiffListSorting;
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.DiffListSorting = _storedSetting;
     }
@@ -36,10 +33,7 @@ public class DiffListSortServiceTests : IDisposable
     [InlineData(DiffListSortType.FileStatus)]
     public void Changing_the_sort_modifies_persistence(DiffListSortType sortType)
     {
-        DiffListSortService service = new()
-        {
-            DiffListSorting = sortType
-        };
+        DiffListSortService service = new() { DiffListSorting = sortType };
 
         AppSettings.DiffListSorting.Should().Be(sortType);
     }
@@ -47,12 +41,9 @@ public class DiffListSortServiceTests : IDisposable
     [Fact]
     public void Change_notifications_occur_when_sort_is_changed()
     {
-        DiffListSortService service = new()
-        {
-            DiffListSorting = DiffListSortType.FilePath
-        };
+        DiffListSortService service = new() { DiffListSorting = DiffListSortType.FilePath };
 
-        int raisedCount = 0;
+        var raisedCount = 0;
         service.DiffListSortingChanged += (s, e) => raisedCount++;
 
         service.DiffListSorting = DiffListSortType.FilePath;

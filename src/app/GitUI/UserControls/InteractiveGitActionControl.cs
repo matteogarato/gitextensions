@@ -1,24 +1,17 @@
 ﻿using System.ComponentModel;
 using GitCommands.Git;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.CommandsDialogs;
 using GitUI.CommandsDialogs.BrowseDialog;
 using GitUI.HelperDialogs;
+using GitUI.Properties;
 using ResourceManager;
 
 namespace GitUI.UserControls;
 
 public partial class InteractiveGitActionControl : GitModuleControl
 {
-    private readonly TranslationString _progressMessage = new("{0} is currently in progress.");
-    private readonly TranslationString _conflictsMessage = new("There are unresolved merge conflicts.");
-    private readonly TranslationString _progressWithConflictsMessage = new("{0} is currently in progress with merge conflicts.");
-
-    private readonly TranslationString _bisect = new("Bisect");
-    private readonly TranslationString _rebase = new("Rebase");
-    private readonly TranslationString _merge = new("Merge");
-    private readonly TranslationString _patch = new("Patch");
-
     public enum GitAction
     {
         Unknown,
@@ -29,16 +22,30 @@ public partial class InteractiveGitActionControl : GitModuleControl
         Patch
     }
 
+    private readonly TranslationString _bisect = new("Bisect");
+    private readonly TranslationString _conflictsMessage = new("There are unresolved merge conflicts.");
+    private readonly TranslationString _merge = new("Merge");
+    private readonly TranslationString _patch = new("Patch");
+    private readonly TranslationString _progressMessage = new("{0} is currently in progress.");
+
+    private readonly TranslationString _progressWithConflictsMessage =
+        new("{0} is currently in progress with merge conflicts.");
+
+    private readonly TranslationString _rebase = new("Rebase");
+
     private GitAction _action;
     private bool _hasConflicts;
-
-    private GitModuleForm? Form => FindForm() as GitModuleForm;
 
     public InteractiveGitActionControl()
     {
         InitializeComponent();
         BackColor.AdaptBackColor();
         InitializeComplete();
+    }
+
+    private GitModuleForm? Form
+    {
+        get => FindForm() as GitModuleForm;
     }
 
     // It is possible for a repo to be in a middle of a bisect operation and
@@ -61,7 +68,7 @@ public partial class InteractiveGitActionControl : GitModuleControl
     }
 
     /// <summary>
-    /// Refresh the banner in the revision grid after reactivation.
+    ///     Refresh the banner in the revision grid after reactivation.
     /// </summary>
     /// <param name="checkForConflicts">Allow running Git command to check for conflicts.</param>
     public void RefreshGitAction(bool checkForConflicts)
@@ -79,7 +86,7 @@ public partial class InteractiveGitActionControl : GitModuleControl
             // This command can be executed seemingly in the background (selecting Browse),
             // do not notify the user (this can occur if Git is upgraded).
             // Running Git commands async when restoring may fail.
-            hasConflicts = checkForConflicts && Module.InTheMiddleOfConflictedMerge(throwOnErrorExit: false);
+            hasConflicts = checkForConflicts && Module.InTheMiddleOfConflictedMerge(false);
         }
         catch (Win32Exception)
         {
@@ -109,7 +116,7 @@ public partial class InteractiveGitActionControl : GitModuleControl
 
     private void SetGitAction(GitAction action, bool hasConflicts)
     {
-        if ((action == _action) && (hasConflicts == _hasConflicts))
+        if (action == _action && hasConflicts == _hasConflicts)
         {
             // nothing to do
             return;
@@ -121,17 +128,17 @@ public partial class InteractiveGitActionControl : GitModuleControl
         // remove old controls
         ButtonContainer.Controls.Clear();
 
-        if ((_action == GitAction.None) && !_hasConflicts)
+        if (_action == GitAction.None && !_hasConflicts)
         {
             Visible = false;
             return;
         }
 
-        IconBox.Image = _hasConflicts ? Properties.Images.SolveMerge : Properties.Resources.information;
-        BackColor = (_hasConflicts ? System.Drawing.Color.Orange : System.Drawing.Color.LightSkyBlue).AdaptBackColor();
+        IconBox.Image = _hasConflicts ? Images.SolveMerge : Resources.information;
+        BackColor = (_hasConflicts ? Color.Orange : Color.LightSkyBlue).AdaptBackColor();
         TextLabel.SetForeColorForBackColor();
 
-        string actionStr = "";
+        var actionStr = "";
 
         switch (_action)
         {
@@ -162,22 +169,20 @@ public partial class InteractiveGitActionControl : GitModuleControl
                 break;
         }
 
-        TextLabel.Text = (_action == GitAction.None) ?
-            _conflictsMessage.Text :
-            string.Format(
-                _hasConflicts ?
-                    _progressWithConflictsMessage.Text :
-                    _progressMessage.Text,
+        TextLabel.Text = _action == GitAction.None
+            ? _conflictsMessage.Text
+            : string.Format(
+                _hasConflicts ? _progressWithConflictsMessage.Text : _progressMessage.Text,
                 actionStr);
 
-        ControlDpiExtensions.AdjustForDpiScaling(this);
+        this.AdjustForDpiScaling();
 
         Visible = true;
     }
 
     private void ResolveButton_Click(object sender, EventArgs e)
     {
-        Form?.UICommands.StartResolveConflictsDialog(this);
+        Form?.UiCommands.StartResolveConflictsDialog(this);
     }
 
     private void ContinueButton_Click(object sender, EventArgs e)
@@ -190,19 +195,19 @@ public partial class InteractiveGitActionControl : GitModuleControl
         switch (_action)
         {
             case GitAction.Rebase:
-                FormProcess.ShowDialog(Form, UICommands, arguments: Commands.ContinueRebase(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(Form, UiCommands, Commands.ContinueRebase(), Module.WorkingDir, null, true);
                 break;
             case GitAction.Merge:
-                FormProcess.ShowDialog(Form, UICommands, arguments: Commands.ContinueMerge(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(Form, UiCommands, Commands.ContinueMerge(), Module.WorkingDir, null, true);
                 break;
             case GitAction.Patch:
-                FormProcess.ShowDialog(Form, UICommands, arguments: Commands.Resolved(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(Form, UiCommands, Commands.Resolved(), Module.WorkingDir, null, true);
                 break;
             default:
                 return;
         }
 
-        Form.UICommands.RepoChangedNotifier.Notify();
+        Form.UiCommands.RepoChangedNotifier.Notify();
     }
 
     private void AbortButton_Click(object sender, EventArgs e)
@@ -215,19 +220,19 @@ public partial class InteractiveGitActionControl : GitModuleControl
         switch (_action)
         {
             case GitAction.Rebase:
-                FormProcess.ShowDialog(Form, UICommands, arguments: Commands.AbortRebase(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(Form, UiCommands, Commands.AbortRebase(), Module.WorkingDir, null, true);
                 break;
             case GitAction.Merge:
-                FormProcess.ShowDialog(Form, UICommands, arguments: Commands.AbortMerge(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(Form, UiCommands, Commands.AbortMerge(), Module.WorkingDir, null, true);
                 break;
             case GitAction.Patch:
-                FormProcess.ShowDialog(Form, UICommands, arguments: Commands.Abort(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(Form, UiCommands, Commands.Abort(), Module.WorkingDir, null, true);
                 break;
             default:
                 return;
         }
 
-        Form.UICommands.RepoChangedNotifier.Notify();
+        Form.UiCommands.RepoChangedNotifier.Notify();
     }
 
     private void MoreButton_Click(object sender, EventArgs e)
@@ -250,19 +255,21 @@ public partial class InteractiveGitActionControl : GitModuleControl
                     frm.ShowDialog(this);
                 }
 
-                Form.UICommands.RepoChangedNotifier.Notify();
+                Form.UiCommands.RepoChangedNotifier.Notify();
                 break;
             case GitAction.Rebase:
-                Form.UICommands.StartTheContinueRebaseDialog(Form);
+                Form.UiCommands.StartTheContinueRebaseDialog(Form);
                 break;
             case GitAction.Patch:
-                Form.UICommands.StartApplyPatchDialog(Form);
+                Form.UiCommands.StartApplyPatchDialog(Form);
                 break;
         }
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor
     {
@@ -273,17 +280,49 @@ public partial class InteractiveGitActionControl : GitModuleControl
             _interactiveGitActionControl = interactiveGitActionControl;
         }
 
-        internal GitAction Action => _interactiveGitActionControl._action;
-        internal bool HasConflicts => _interactiveGitActionControl._hasConflicts;
+        internal GitAction Action
+        {
+            get => _interactiveGitActionControl._action;
+        }
 
-        internal bool Visible => _interactiveGitActionControl.Visible;
-        internal ControlCollection Controls => _interactiveGitActionControl.ButtonContainer.Controls;
+        internal bool HasConflicts
+        {
+            get => _interactiveGitActionControl._hasConflicts;
+        }
 
-        internal Button ResolveButton => _interactiveGitActionControl.ResolveButton;
-        internal Button ContinueButton => _interactiveGitActionControl.ContinueButton;
-        internal Button AbortButton => _interactiveGitActionControl.AbortButton;
-        internal Button MoreButton => _interactiveGitActionControl.MoreButton;
+        internal bool Visible
+        {
+            get => _interactiveGitActionControl.Visible;
+        }
 
-        internal void SetGitAction(GitAction action, bool conflicts) => _interactiveGitActionControl.SetGitAction(action, conflicts);
+        internal ControlCollection Controls
+        {
+            get => _interactiveGitActionControl.ButtonContainer.Controls;
+        }
+
+        internal Button ResolveButton
+        {
+            get => _interactiveGitActionControl.ResolveButton;
+        }
+
+        internal Button ContinueButton
+        {
+            get => _interactiveGitActionControl.ContinueButton;
+        }
+
+        internal Button AbortButton
+        {
+            get => _interactiveGitActionControl.AbortButton;
+        }
+
+        internal Button MoreButton
+        {
+            get => _interactiveGitActionControl.MoreButton;
+        }
+
+        internal void SetGitAction(GitAction action, bool conflicts)
+        {
+            _interactiveGitActionControl.SetGitAction(action, conflicts);
+        }
     }
 }

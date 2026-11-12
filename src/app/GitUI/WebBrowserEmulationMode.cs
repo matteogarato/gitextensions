@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.Security.AccessControl;
 using GitExtensions.Extensibility;
 using Microsoft.Win32;
 
@@ -20,15 +21,17 @@ public static class WebBrowserEmulationMode
         }
 
         // FeatureControl settings are per-process
-        string? appName = System.IO.Path.GetFileName(Environment.ProcessPath);
+        var appName = Path.GetFileName(Environment.ProcessPath);
 
-        const string featureControlRegKey = @"HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Main\FeatureControl\";
+        const string featureControlRegKey =
+            @"HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Main\FeatureControl\";
 
-        if (TryGetBrowserEmulationMode(out uint emulationMode))
+        if (TryGetBrowserEmulationMode(out var emulationMode))
         {
             try
             {
-                Registry.SetValue(featureControlRegKey + "FEATURE_BROWSER_EMULATION", appName, emulationMode, RegistryValueKind.DWord);
+                Registry.SetValue(featureControlRegKey + "FEATURE_BROWSER_EMULATION", appName, emulationMode,
+                    RegistryValueKind.DWord);
             }
             catch (UnauthorizedAccessException)
             {
@@ -42,15 +45,16 @@ public static class WebBrowserEmulationMode
         // https://msdn.microsoft.com/en-us/library/ee330730(v=vs.85).aspx#browser_emulation
         // http://stackoverflow.com/questions/28526826/web-browser-control-emulation-issue-feature-browser-emulation/28626667#28626667
 
-        emulationMode = 11000; // Internet Explorer 11. Webpages containing standards-based !DOCTYPE directives are displayed in IE11 Standards mode.
+        emulationMode =
+            11000; // Internet Explorer 11. Webpages containing standards-based !DOCTYPE directives are displayed in IE11 Standards mode.
         try
         {
             int browserVersion;
-            using (RegistryKey? ieKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Internet Explorer",
-                RegistryKeyPermissionCheck.ReadSubTree,
-                System.Security.AccessControl.RegistryRights.QueryValues))
+            using (var ieKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Internet Explorer",
+                       RegistryKeyPermissionCheck.ReadSubTree,
+                       RegistryRights.QueryValues))
             {
-                object? version = ieKey!.GetValue("svcVersion");
+                var version = ieKey!.GetValue("svcVersion");
                 if (version is null)
                 {
                     version = ieKey!.GetValue("Version");

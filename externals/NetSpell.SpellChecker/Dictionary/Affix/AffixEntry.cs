@@ -1,4 +1,4 @@
-namespace NetSpell.SpellChecker.Dictionary.Affix;
+namespace SpellChecker.Dictionary.Affix;
 
 /// <summary>
 ///     Rule Entry for expanding base words

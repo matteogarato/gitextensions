@@ -2,7 +2,7 @@
 <!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project>
 
-  <UsingTask TaskName="_GetPluginAssembliesCodeTask" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll" >
+  <UsingTask TaskName="_GetPluginAssembliesCodeTask" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <SolutionPath ParameterType="System.String" Required="true"/>
       <BuildConfiguration ParameterType="System.String" Required="true"/>
@@ -17,10 +17,10 @@
       <Using Namespace="Microsoft.Build.Evaluation"/>
       <Code Type="Fragment" Language="cs">
         <![CDATA[
-        var _solutionFile = SolutionFile.Parse(SolutionPath); 
+        var _solutionFile = SolutionFile.Parse(SolutionPath);
         Output = _solutionFile.ProjectsInOrder
             .Where(proj => proj.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat)
-            .SelectMany(proj => 
+            .SelectMany(proj =>
                         {
                             var project = new Project(proj.AbsolutePath, null, null, new ProjectCollection());
                             project.SetGlobalProperty("Configuration", BuildConfiguration);

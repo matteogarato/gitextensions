@@ -1,32 +1,35 @@
 using System.Text;
-
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Discards working tree changes through the shared <see cref="IGitModule"/> reset operations,
-///  as the WinForms reset-changes flow does.
+///     Discards working tree changes through the shared <see cref="IGitModule" /> reset operations,
+///     as the WinForms reset-changes flow does.
 /// </summary>
 public static class ResetWorkflow
 {
     /// <summary>
-    ///  Only real commits can be reset to, not the artificial working tree and index revisions.
+    ///     Only real commits can be reset to, not the artificial working tree and index revisions.
     /// </summary>
-    public static bool CanResetTo(GitRevision? revision) => revision is not null && !revision.IsArtificial;
+    public static bool CanResetTo(GitRevision? revision)
+    {
+        return revision is not null && !revision.IsArtificial;
+    }
 
     /// <summary>
-    ///  Builds a soft reset to the parent of HEAD, preserving the undone commit's changes in the index.
+    ///     Builds a soft reset to the parent of HEAD, preserving the undone commit's changes in the index.
     /// </summary>
     /// <returns>A command that moves HEAD back one commit and keeps the changes staged.</returns>
     public static ArgumentString BuildUndoLastCommit()
-        => Commands.Reset(ResetMode.Soft, "HEAD~1");
+    {
+        return Commands.Reset(ResetMode.Soft, "HEAD~1");
+    }
 
     /// <summary>
-    ///  Builds a reset command that moves the current branch to the selected revision.
+    ///     Builds a reset command that moves the current branch to the selected revision.
     /// </summary>
     /// <param name="revision">The commit to reset to.</param>
     /// <param name="mode">The reset mode.</param>
@@ -43,19 +46,25 @@ public static class ResetWorkflow
     }
 
     /// <summary>
-    ///  Returns the confirmation text for discarding the given files, or <see langword="null"/> if there is nothing to discard.
+    ///     Returns the confirmation text for discarding the given files, or <see langword="null" /> if there is nothing to
+    ///     discard.
     /// </summary>
     public static string? BuildDiscardConfirmation(IReadOnlyList<GitItemStatus> items)
-        => items.Count == 0
+    {
+        return items.Count == 0
             ? null
             : string.Format(
-                items.Any(item => item.IsNew) ? TranslatedStrings.ConfirmDiscardChangesAndDelete : TranslatedStrings.ConfirmDiscardChanges,
+                items.Any(item => item.IsNew)
+                    ? TranslatedStrings.ConfirmDiscardChangesAndDelete
+                    : TranslatedStrings.ConfirmDiscardChanges,
                 items.Count);
+    }
 
     /// <summary>
-    ///  Discards the selected unstaged changes; new files are deleted.
+    ///     Discards the selected unstaged changes; new files are deleted.
     /// </summary>
-    public static bool Discard(IGitModule module, IReadOnlyList<GitItemStatus> items, IFullPathResolver fullPathResolver, out string output)
+    public static bool Discard(IGitModule module, IReadOnlyList<GitItemStatus> items,
+        IFullPathResolver fullPathResolver, out string output)
     {
         output = string.Empty;
         if (items.Count == 0)
@@ -63,14 +72,18 @@ public static class ResetWorkflow
             return false;
         }
 
-        bool resetAndDelete = items.Any(item => item.IsNew);
-        bool succeeded = module.ResetChanges(resetId: default, items, resetAndDelete, fullPathResolver, out StringBuilder log, progressAction: null);
+        var resetAndDelete = items.Any(item => item.IsNew);
+        var succeeded =
+            module.ResetChanges(default, items, resetAndDelete, fullPathResolver, out var log, null);
         output = log.ToString();
         return succeeded && output.Length == 0;
     }
 
     /// <summary>
-    ///  Resets tracked files to HEAD, leaving untracked files in place.
+    ///     Resets tracked files to HEAD, leaving untracked files in place.
     /// </summary>
-    public static bool ResetAll(IGitModule module) => module.ResetAllChanges(clean: false);
+    public static bool ResetAll(IGitModule module)
+    {
+        return module.ResetAllChanges(false);
+    }
 }

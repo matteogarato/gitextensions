@@ -3,7 +3,7 @@
 namespace GitCommands.Submodules;
 
 /// <summary>
-/// Complete set of gathered submodule information.
+///     Complete set of gathered submodule information.
 /// </summary>
 public class SubmoduleInfoResult
 {
@@ -27,7 +27,7 @@ public class SubmoduleInfoResult
     public string? CurrentSubmoduleName { get; internal set; }
 
     /// <summary>
-    /// GitItemStatus for the current submodule
+    ///     GitItemStatus for the current submodule
     /// </summary>
     public IReadOnlyList<GitItemStatus>? CurrentSubmoduleStatus { get; internal set; }
 }

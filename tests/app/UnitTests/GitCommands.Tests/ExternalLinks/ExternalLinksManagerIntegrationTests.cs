@@ -5,36 +5,42 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.ExternalLinks;
+
 public class ExternalLinksManagerIntegrationTests : IDisposable
 {
-    private GitModuleTestHelper _testHelper = null!;
-    private string _level1 = null!;
-    private string _level2 = null!;
-    private string _level3 = null!;
-    private DistributedSettings _userRoaming = null!;
-    private DistributedSettings _repoDistributed = null!;
-    private DistributedSettings _repoLocal = null!;
-    private ExternalLinksStorage _externalLinksStorage = null!;
+    private readonly ExternalLinksStorage _externalLinksStorage = null!;
+    private readonly string _level1 = null!;
+    private readonly string _level2 = null!;
+    private readonly string _level3 = null!;
+    private readonly DistributedSettings _repoDistributed = null!;
+    private readonly DistributedSettings _repoLocal = null!;
+    private readonly GitModuleTestHelper _testHelper = null!;
+    private readonly DistributedSettings _userRoaming = null!;
 
     public ExternalLinksManagerIntegrationTests()
     {
         _testHelper = new GitModuleTestHelper();
 
-        string content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.level1_repogit_GitExtensions.settings.xml");
+        var content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.level1_repogit_GitExtensions.settings.xml");
         _level1 = _testHelper.CreateRepoFile(".git", "GitExtensions.settings", content);
-        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.level2_repodist_GitExtensions.settings.xml");
-        _level2 = _testHelper.CreateFile(_testHelper.TemporaryPath + "/RoamingProfile", "GitExtensions.settings", content);
-        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.level3_roaming_GitExtensions.settings.xml");
+        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.level2_repodist_GitExtensions.settings.xml");
+        _level2 = _testHelper.CreateFile(_testHelper.TemporaryPath + "/RoamingProfile", "GitExtensions.settings",
+            content);
+        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.level3_roaming_GitExtensions.settings.xml");
         _level3 = _testHelper.CreateRepoFile("GitExtensions.settings", content);
 
-        _userRoaming = new DistributedSettings(lowerPriority: null, new GitExtSettingsCache(_level3), SettingLevel.Global);
-        _repoDistributed = new DistributedSettings(lowerPriority: _userRoaming, new GitExtSettingsCache(_level2), SettingLevel.Distributed);
-        _repoLocal = new DistributedSettings(lowerPriority: _repoDistributed, new GitExtSettingsCache(_level1), SettingLevel.Local);
+        _userRoaming = new DistributedSettings(null, new GitExtSettingsCache(_level3), SettingLevel.Global);
+        _repoDistributed =
+            new DistributedSettings(_userRoaming, new GitExtSettingsCache(_level2), SettingLevel.Distributed);
+        _repoLocal = new DistributedSettings(_repoDistributed, new GitExtSettingsCache(_level1), SettingLevel.Local);
 
         _externalLinksStorage = new ExternalLinksStorage();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _userRoaming.SettingsCache.Dispose();
         _repoDistributed.SettingsCache.Dispose();
@@ -54,14 +60,10 @@ public class ExternalLinksManagerIntegrationTests : IDisposable
         // 3 come from the distributed
         manager.GetEffectiveSettings().Should().HaveCount(4);
 
-        ExternalLinkDefinition definition = new()
-        {
-            Name = "test",
-            SearchPattern = "pattern"
-        };
+        ExternalLinkDefinition definition = new() { Name = "test", SearchPattern = "pattern" };
         manager.Add(definition);
 
-        IReadOnlyList<ExternalLinkDefinition> effectiveSettings = manager.GetEffectiveSettings();
+        var effectiveSettings = manager.GetEffectiveSettings();
 
         // 2 comes from the user roaming settings
         // 3 come from the distributed
@@ -84,14 +86,10 @@ public class ExternalLinksManagerIntegrationTests : IDisposable
         // 1 comes from the local
         manager.GetEffectiveSettings().Should().HaveCount(5);
 
-        ExternalLinkDefinition definition = new()
-        {
-            Name = "test",
-            SearchPattern = "pattern"
-        };
+        ExternalLinkDefinition definition = new() { Name = "test", SearchPattern = "pattern" };
         manager.Add(definition);
 
-        IReadOnlyList<ExternalLinkDefinition> effectiveSettings = manager.GetEffectiveSettings();
+        var effectiveSettings = manager.GetEffectiveSettings();
 
         // 1 comes from the local
         // 3 come from the distributed
@@ -116,14 +114,10 @@ public class ExternalLinksManagerIntegrationTests : IDisposable
         // 1 comes from the local
         manager.GetEffectiveSettings().Should().HaveCount(5);
 
-        ExternalLinkDefinition definition = new()
-        {
-            Name = "Stash",
-            SearchPattern = "pattern"
-        };
+        ExternalLinkDefinition definition = new() { Name = "Stash", SearchPattern = "pattern" };
         manager.Add(definition);
 
-        IReadOnlyList<ExternalLinkDefinition> effectiveSettings = manager.GetEffectiveSettings();
+        var effectiveSettings = manager.GetEffectiveSettings();
 
         // 1 comes from the user roaming settings
         // 4 come from the distributed
@@ -144,7 +138,7 @@ public class ExternalLinksManagerIntegrationTests : IDisposable
 
         ExternalLinksManager manager = new(_repoLocal);
 
-        IReadOnlyList<ExternalLinkDefinition> effective = manager.GetEffectiveSettings();
+        var effective = manager.GetEffectiveSettings();
 
         // 1 comes from the user roaming settings
         // 3 come from the distributed
@@ -155,7 +149,7 @@ public class ExternalLinksManagerIntegrationTests : IDisposable
 
         manager.Save();
 
-        IReadOnlyList<ExternalLinkDefinition> effectiveSettings = manager.GetEffectiveSettings();
+        var effectiveSettings = manager.GetEffectiveSettings();
 
         // 0 comes from the user roaming settings
         // 3 come from the distributed

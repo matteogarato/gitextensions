@@ -1,29 +1,37 @@
 ﻿using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.HighlightingStrategy;
+using ICSharpCode.TextEditor.Document.LineManager;
 
 namespace GitUI.Theming;
 
-public class ThemeBasedHighlighting : IHighlightingStrategyUsingRuleSets
+public class ThemeBasedHighlighting(IHighlightingStrategy original) : IHighlightingStrategyUsingRuleSets
 {
-    private readonly IHighlightingStrategy _original;
-
-    public ThemeBasedHighlighting(IHighlightingStrategy original) =>
-        _original = original;
-
-    public HighlightColor? GetColorFor(string name) =>
-        _original.GetColorFor(name)?.Transform();
-
-    public string Name => _original.Name;
-
-    public string[] Extensions => _original.Extensions;
-
-    public Dictionary<string, string> Properties => _original.Properties;
-
-    public void MarkTokens(IDocument document)
+    HighlightColor? IHighlightingStrategy.GetColorFor(string name)
     {
-        _original.MarkTokens(document);
-        foreach (LineSegment line in document.LineSegmentCollection)
+        return original.GetColorFor(name)?.Transform();
+    }
+
+    string IHighlightingStrategy.Name
+    {
+        get => original.Name;
+    }
+
+    string[] IHighlightingStrategy.Extensions
+    {
+        get => original.Extensions;
+    }
+
+    Dictionary<string, string> IHighlightingStrategy.Properties
+    {
+        get => original.Properties;
+    }
+
+    void IHighlightingStrategy.MarkTokens(IDocument document)
+    {
+        original.MarkTokens(document);
+        foreach (var line in document.LineSegmentCollection)
         {
-            foreach (TextWord word in line.Words)
+            foreach (var word in line.Words)
             {
                 if (word.SyntaxColor is not null)
                 {
@@ -33,12 +41,12 @@ public class ThemeBasedHighlighting : IHighlightingStrategyUsingRuleSets
         }
     }
 
-    public void MarkTokens(IDocument document, List<LineSegment> lines)
+    void IHighlightingStrategy.MarkTokens(IDocument document, List<LineSegment> lines)
     {
-        _original.MarkTokens(document, lines);
-        foreach (LineSegment line in lines)
+        original.MarkTokens(document, lines);
+        foreach (var line in lines)
         {
-            foreach (TextWord word in line.Words)
+            foreach (var word in line.Words)
             {
                 if (word.SyntaxColor is not null)
                 {
@@ -48,13 +56,18 @@ public class ThemeBasedHighlighting : IHighlightingStrategyUsingRuleSets
         }
     }
 
-    public HighlightRuleSet GetRuleSet(Span span) =>
-        (_original as IHighlightingStrategyUsingRuleSets ??
-            throw new NotSupportedException())
-        .GetRuleSet(span);
+    HighlightRuleSet IHighlightingStrategyUsingRuleSets.GetRuleSet(Span span)
+    {
+        return (original as IHighlightingStrategyUsingRuleSets ??
+                throw new NotSupportedException())
+            .GetRuleSet(span);
+    }
 
-    public HighlightColor GetColor(IDocument document, LineSegment keyWord, int index, int length) =>
-        (_original as IHighlightingStrategyUsingRuleSets ??
-            throw new NotSupportedException())
-        .GetColor(document, keyWord, index, length);
+    HighlightColor IHighlightingStrategyUsingRuleSets.GetColor(IDocument document, LineSegment keyWord, int index,
+        int length)
+    {
+        return (original as IHighlightingStrategyUsingRuleSets ??
+                throw new NotSupportedException())
+            .GetColor(document, keyWord, index, length);
+    }
 }

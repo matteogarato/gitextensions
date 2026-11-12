@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using Microsoft;
 
 namespace GitUI.UserControls.RevisionGrid.Graph;
 
@@ -21,42 +20,99 @@ public interface IRevisionGraphRow
 // Segments are not the same as lanes.A crossing segment is a lane, but multiple segments can connect to the revision.
 // Therefore, a single lane can have multiple segments.
 [DebuggerDisplay("{Revision}")]
-public sealed class RevisionGraphRow : IRevisionGraphRow
+public sealed class RevisionGraphRow(
+    RevisionGraphRevision revision,
+    IReadOnlyList<RevisionGraphSegment> segments,
+    bool mergeGraphLanesHavingCommonParent)
+    : IRevisionGraphRow
 {
-    private static readonly Lane _noLane = new(Index: -1, LaneSharing.ExclusiveOrPrimary);
-
-    public RevisionGraphRow(RevisionGraphRevision revision, IReadOnlyList<RevisionGraphSegment> segments, bool mergeGraphLanesHavingCommonParent)
-    {
-        Revision = revision;
-        Segments = segments;
-        _mergeGraphLanesHavingCommonParent = mergeGraphLanesHavingCommonParent;
-    }
-
-    public RevisionGraphRevision Revision { get; }
-
-    public IReadOnlyList<RevisionGraphSegment> Segments { get; }
-
-    private readonly bool _mergeGraphLanesHavingCommonParent;
+    private static readonly Lane _noLane = new(-1, LaneSharing.ExclusiveOrPrimary);
 
     /// <summary>
-    /// This dictionary contains a cached list of all segments and the lane index the segment is in for this row.
-    /// </summary>
-    private Dictionary<RevisionGraphSegment, Lane>? _segmentLanes;
-
-    /// <summary>
-    /// Contains the gaps created by. <cref>MoveLanesRight</cref>
+    ///     Contains the gaps created by. <cref>MoveLanesRight</cref>
     /// </summary>
     private HashSet<int>? _gaps;
 
     /// <summary>
-    /// The cached lanecount.
+    ///     The cached lanecount.
     /// </summary>
     private int _laneCount;
 
     /// <summary>
-    /// The cached revisionlane.
+    ///     The cached revisionlane.
     /// </summary>
     private int _revisionLane;
+
+    /// <summary>
+    ///     This dictionary contains a cached list of all segments and the lane index the segment is in for this row.
+    /// </summary>
+    private Dictionary<RevisionGraphSegment, Lane>? _segmentLanes;
+
+    RevisionGraphRevision IRevisionGraphRow.Revision { get; } = revision;
+
+    IReadOnlyList<RevisionGraphSegment> IRevisionGraphRow.Segments { get; } = segments;
+
+    int IRevisionGraphRow.GetCurrentRevisionLane()
+    {
+        BuildSegmentLanes();
+        return Math.Max(0, _revisionLane);
+    }
+
+    int IRevisionGraphRow.GetLaneCount()
+    {
+        BuildSegmentLanes();
+        return _laneCount;
+    }
+
+    IEnumerable<RevisionGraphSegment> IRevisionGraphRow.GetSegmentsForIndex(int index)
+    {
+        BuildSegmentLanes();
+        foreach (var keyValue in _segmentLanes!)
+        {
+            if (keyValue.Value.Index == index)
+            {
+                yield return keyValue.Key;
+            }
+        }
+    }
+
+    Lane IRevisionGraphRow.GetLaneForSegment(RevisionGraphSegment revisionGraphRevision)
+    {
+        BuildSegmentLanes();
+        if (_segmentLanes!.TryGetValue(revisionGraphRevision, out var lane))
+        {
+            return lane;
+        }
+
+        return _noLane;
+    }
+
+    void IRevisionGraphRow.MoveLanesRight(int fromLane, int by)
+    {
+        for (; by > 0; --by, ++fromLane)
+        {
+            MoveLanesRight(fromLane);
+        }
+    }
+
+    /// <summary>
+    ///     Determines the segment leading to the row's first parent.
+    /// </summary>
+    /// <returns>
+    ///     The segment leading to this row's first parent (if any) if this row is the parent row of
+    ///     <paramref name="segment" />;
+    ///     otherwise, the supplied <paramref name="segment" />.
+    /// </returns>
+    RevisionGraphSegment IRevisionGraphRow.FirstParentOrSelf(RevisionGraphSegment segment)
+    {
+        if (segment.Parent != Revision
+            || GetLaneForSegment(segment).Sharing != LaneSharing.ExclusiveOrPrimary)
+        {
+            return segment;
+        }
+
+        return Segments.FirstOrDefault(s => s.Child == Revision, segment);
+    }
 
     // The row contains ordered segments. This method sorts the segments per lane.
     // Segments that cross this row (start above and end below) get there own private lane.
@@ -79,13 +135,13 @@ public sealed class RevisionGraphRow : IRevisionGraphRow
                 return;
             }
 
-            _segmentLanes = new(capacity: Segments.Count);
+            _segmentLanes = new Dictionary<RevisionGraphSegment, Lane>(Segments.Count);
             _laneCount = 0;
             _revisionLane = -1;
-            bool hasStart = false;
-            bool hasEnd = false;
+            var hasStart = false;
+            var hasEnd = false;
 
-            foreach (RevisionGraphSegment segment in Segments)
+            foreach (var segment in Segments)
             {
                 _segmentLanes.Add(segment, CreateOrReuseLane(segment));
             }
@@ -178,9 +234,9 @@ public sealed class RevisionGraphRow : IRevisionGraphRow
                 // |       <-- processed row: merge into a singe lane to simplify graph
                 // |
                 // *
-                if (_mergeGraphLanesHavingCommonParent)
+                if (mergeGraphLanesHavingCommonParent)
                 {
-                    foreach (KeyValuePair<RevisionGraphSegment, Lane> searchParent in _segmentLanes)
+                    foreach (var searchParent in _segmentLanes)
                     {
                         // If there is another segment with the same parent, and it is not this row's revision, merge into one lane.
                         if (searchParent.Value.Index != _revisionLane && searchParent.Key.Parent == segment.Parent)
@@ -201,7 +257,8 @@ public sealed class RevisionGraphRow : IRevisionGraphRow
                         return LaneSharing.Entire;
                     }
 
-                    segment.IsSecondarySharedLaneAtLeastSinceScore = Math.Min(segment.IsSecondarySharedLaneAtLeastSinceScore, revisionScore);
+                    segment.IsSecondarySharedLaneAtLeastSinceScore =
+                        Math.Min(segment.IsSecondarySharedLaneAtLeastSinceScore, revisionScore);
                     return LaneSharing.DifferentStart;
                 }
             }
@@ -213,52 +270,9 @@ public sealed class RevisionGraphRow : IRevisionGraphRow
         }
     }
 
-    public int GetCurrentRevisionLane()
-    {
-        BuildSegmentLanes();
-        return Math.Max(0, _revisionLane);
-    }
-
-    public int GetLaneCount()
-    {
-        BuildSegmentLanes();
-        return _laneCount;
-    }
-
-    public IEnumerable<RevisionGraphSegment> GetSegmentsForIndex(int index)
-    {
-        BuildSegmentLanes();
-        foreach (KeyValuePair<RevisionGraphSegment, Lane> keyValue in _segmentLanes!)
-        {
-            if (keyValue.Value.Index == index)
-            {
-                yield return keyValue.Key;
-            }
-        }
-    }
-
-    public Lane GetLaneForSegment(RevisionGraphSegment revisionGraphRevision)
-    {
-        BuildSegmentLanes();
-        if (_segmentLanes!.TryGetValue(revisionGraphRevision, out Lane lane))
-        {
-            return lane;
-        }
-
-        return _noLane;
-    }
-
-    public void MoveLanesRight(int fromLane, int by)
-    {
-        for (; by > 0; --by, ++fromLane)
-        {
-            MoveLanesRight(fromLane);
-        }
-    }
-
     public void MoveLanesRight(int fromLane)
     {
-        int nextGap = _gaps?.Min(lane => lane > fromLane ? lane : null) ?? int.MaxValue;
+        var nextGap = _gaps?.Min(lane => lane > fromLane ? lane : null) ?? int.MaxValue;
 
         if (_revisionLane >= fromLane && _revisionLane < nextGap)
         {
@@ -266,7 +280,11 @@ public sealed class RevisionGraphRow : IRevisionGraphRow
         }
 
         Validates.NotNull(_segmentLanes);
-        RevisionGraphSegment[] segmentsToBeMoved = [.. _segmentLanes.Where(keyValue => keyValue.Value.Index >= fromLane && keyValue.Value.Index < nextGap).Select(keyValue => keyValue.Key)];
+        RevisionGraphSegment[] segmentsToBeMoved =
+        [
+            .. _segmentLanes.Where(keyValue => keyValue.Value.Index >= fromLane && keyValue.Value.Index < nextGap)
+                .Select(keyValue => keyValue.Key)
+        ];
         if (segmentsToBeMoved.Length == 0)
         {
             return;
@@ -283,28 +301,10 @@ public sealed class RevisionGraphRow : IRevisionGraphRow
             ++_laneCount;
         }
 
-        foreach (RevisionGraphSegment segment in segmentsToBeMoved)
+        foreach (var segment in segmentsToBeMoved)
         {
-            Lane lane = _segmentLanes[segment];
+            var lane = _segmentLanes[segment];
             _segmentLanes[segment] = new Lane(lane.Index + 1, lane.Sharing);
         }
-    }
-
-    /// <summary>
-    /// Determines the segment leading to the row's first parent.
-    /// </summary>
-    /// <returns>
-    /// The segment leading to this row's first parent (if any) if this row is the parent row of <paramref name="segment"/>;
-    /// otherwise, the supplied <paramref name="segment"/>.
-    /// </returns>
-    public RevisionGraphSegment FirstParentOrSelf(RevisionGraphSegment segment)
-    {
-        if (segment.Parent != Revision
-            || GetLaneForSegment(segment).Sharing != LaneSharing.ExclusiveOrPrimary)
-        {
-            return segment;
-        }
-
-        return Segments.FirstOrDefault(s => s.Child == Revision, defaultValue: segment);
     }
 }

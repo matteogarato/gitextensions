@@ -1,22 +1,19 @@
 using System.ComponentModel;
 using GitExtUtils.GitUI;
-using Microsoft;
 
 namespace GitUI.UserControls;
 
 /// <summary>
-///  A <see cref="TreeView"/> with basic support for selecting multiple <see cref="TreeNode"/>s.
+///     A <see cref="TreeView" /> with basic support for selecting multiple <see cref="TreeNode" />s.
 /// </summary>
 public class MultiSelectTreeView : NativeTreeView
 {
-    private bool _mouseClickHandled = false;
-    private TreeNode? _multiselectionStartNode = null;
+    private bool _mouseClickHandled;
+    private TreeNode? _multiselectionStartNode;
     private HashSet<TreeNode> _selectedNodes = [];
-    private bool _settingFocusedNode = false;
-    private TreeNode? _toBeFocusedNode = null;
-    private int _updateSuspendCount = 0;
-
-    public event EventHandler? SelectedNodesChanged;
+    private bool _settingFocusedNode;
+    private TreeNode? _toBeFocusedNode;
+    private int _updateSuspendCount;
 
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -73,8 +70,8 @@ public class MultiSelectTreeView : NativeTreeView
             }
             else
             {
-                bool alreadyFocused = FocusedNode == value;
-                bool alreadySelected = _selectedNodes.Count == 1 && _selectedNodes.First() == value;
+                var alreadyFocused = FocusedNode == value;
+                var alreadySelected = _selectedNodes.Count == 1 && _selectedNodes.First() == value;
                 if (alreadyFocused && alreadySelected)
                 {
                     return;
@@ -101,11 +98,21 @@ public class MultiSelectTreeView : NativeTreeView
 
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public IReadOnlySet<TreeNode> SelectedNodes => _selectedNodes;
+    public IReadOnlySet<TreeNode> SelectedNodes
+    {
+        get => _selectedNodes;
+    }
+
+    public bool UpdateSuspended
+    {
+        get => _updateSuspendCount > 0;
+    }
+
+    public event EventHandler? SelectedNodesChanged;
 
     public void SetSelectedNodes(HashSet<TreeNode> selectedNodes, TreeNode? focusedNode)
     {
-        bool focusedNodeUnchanged = FocusedNode == focusedNode;
+        var focusedNodeUnchanged = FocusedNode == focusedNode;
         if (_selectedNodes.SequenceEqual(selectedNodes) && focusedNodeUnchanged)
         {
             return;
@@ -123,8 +130,6 @@ public class MultiSelectTreeView : NativeTreeView
 
         Invalidate();
     }
-
-    public bool UpdateSuspended => _updateSuspendCount > 0;
 
     public new void BeginUpdate()
     {
@@ -150,9 +155,9 @@ public class MultiSelectTreeView : NativeTreeView
 
         if (!_settingFocusedNode && !_mouseClickHandled)
         {
-            if (ModifierKeys == Keys.Shift && FocusedNode is TreeNode newFocusedNode)
+            if (ModifierKeys == Keys.Shift && FocusedNode is { } newFocusedNode)
             {
-                UpdateSelection(newFocusedNode, replace: true, addRange: true);
+                UpdateSelection(newFocusedNode, true, true);
             }
             else
             {
@@ -189,7 +194,7 @@ public class MultiSelectTreeView : NativeTreeView
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        Keys modifierKeys = ModifierKeys;
+        var modifierKeys = ModifierKeys;
 
         if (e.Button != MouseButtons.Left
 
@@ -197,10 +202,11 @@ public class MultiSelectTreeView : NativeTreeView
             || (modifierKeys | Keys.Control | Keys.Shift) != (Keys.Control | Keys.Shift)
 
             // or no node clicked
-            || HitTest(e.Location).Node is not TreeNode newFocusedNode
+            || HitTest(e.Location).Node is not { } newFocusedNode
 
             // or starting drag operation
-            || (_selectedNodes.Contains(newFocusedNode) && modifierKeys == Keys.None && !ShallHandleRootIconClick(e.X, newFocusedNode, modifierKeys)))
+            || (_selectedNodes.Contains(newFocusedNode) && modifierKeys == Keys.None &&
+                !ShallHandleRootIconClick(e.X, newFocusedNode, modifierKeys)))
         {
             _mouseClickHandled = false;
             base.OnMouseDown(e);
@@ -213,7 +219,7 @@ public class MultiSelectTreeView : NativeTreeView
         {
             if (newFocusedNode.IsExpanded)
             {
-                newFocusedNode.Collapse(ignoreChildren: true);
+                newFocusedNode.Collapse(true);
 
                 // Collapsing changes TreeView.SelectedNode without invoking AfterSelectHandler, need to explicitly emit SelectedNodesChanged
                 OnSelectionChanged();
@@ -227,7 +233,7 @@ public class MultiSelectTreeView : NativeTreeView
             return;
         }
 
-        UpdateSelection(newFocusedNode, replace: !modifierKeys.HasFlag(Keys.Control), addRange: modifierKeys.HasFlag(Keys.Shift));
+        UpdateSelection(newFocusedNode, !modifierKeys.HasFlag(Keys.Control), modifierKeys.HasFlag(Keys.Shift));
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -238,7 +244,7 @@ public class MultiSelectTreeView : NativeTreeView
             {
                 this.InvokeAndForget(async () =>
                 {
-                    await Task.Delay(millisecondsDelay: 100);
+                    await Task.Delay(100);
 
                     if (_toBeFocusedNode?.TreeView == this)
                     {
@@ -255,10 +261,10 @@ public class MultiSelectTreeView : NativeTreeView
                 return;
             }
 
-            Keys modifierKeys = ModifierKeys;
+            var modifierKeys = ModifierKeys;
             if (e.Button == MouseButtons.Left
                 && modifierKeys == Keys.None
-                && HitTest(e.Location).Node is TreeNode newFocusedNode
+                && HitTest(e.Location).Node is { } newFocusedNode
                 && !ShallHandleRootIconClick(e.X, newFocusedNode, modifierKeys))
             {
                 // Explicit click on the same single item needs to be notified upstream.
@@ -289,7 +295,7 @@ public class MultiSelectTreeView : NativeTreeView
 
     private void OnSelectionChanged()
     {
-        if (SelectedNodes.Count <= 1 && FocusedNode is TreeNode focusedNode)
+        if (SelectedNodes.Count <= 1 && FocusedNode is { } focusedNode)
         {
             _multiselectionStartNode = focusedNode;
         }
@@ -300,13 +306,14 @@ public class MultiSelectTreeView : NativeTreeView
     private bool ShallHandleRootIconClick(int x, TreeNode newFocusedNode, Keys modifierKeys)
     {
         Validates.NotNull(ImageList);
-        int spacing = DpiUtil.Scale(8);
-        return modifierKeys == Keys.None && !ShowRootLines && newFocusedNode.Parent is null && x <= (spacing + ImageList.ImageSize.Width);
+        var spacing = DpiUtil.Scale(8);
+        return modifierKeys == Keys.None && !ShowRootLines && newFocusedNode.Parent is null &&
+               x <= spacing + ImageList.ImageSize.Width;
     }
 
     private void UpdateSelection(TreeNode newFocusedNode, bool replace, bool addRange)
     {
-        bool changed = false;
+        var changed = false;
 
         if (replace)
         {
@@ -329,9 +336,9 @@ public class MultiSelectTreeView : NativeTreeView
         {
             changed = true;
             _multiselectionStartNode ??= newFocusedNode;
-            TreeNode? lastNode = _multiselectionStartNode;
-            bool foundFirstNode = false;
-            foreach (TreeNode node in this.Items())
+            var lastNode = _multiselectionStartNode;
+            var foundFirstNode = false;
+            foreach (var node in this.Items())
             {
                 if (!foundFirstNode)
                 {

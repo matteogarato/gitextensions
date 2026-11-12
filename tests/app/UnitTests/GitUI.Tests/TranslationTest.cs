@@ -3,6 +3,7 @@ using GitExtensions.Extensibility.Translations.Xliff;
 using GitUI;
 
 namespace GitUITests;
+
 public sealed class TranslationTest : IDisposable
 {
     public TranslationTest()
@@ -10,7 +11,7 @@ public sealed class TranslationTest : IDisposable
         GitModuleForm.IsUnitTestActive = true;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         GitModuleForm.IsUnitTestActive = false;
     }
@@ -18,21 +19,21 @@ public sealed class TranslationTest : IDisposable
     [StaFact]
     public void CreateInstanceOfClass()
     {
-        UserEnvironmentInformation.Initialise("0123456789012345678901234567890123456789", isDirty: false);
+        UserEnvironmentInformation.Initialise("0123456789012345678901234567890123456789", false);
 
-        Dictionary<string, List<Type>> translatableTypes = TranslationUtil.GetTranslatableTypes();
+        var translatableTypes = TranslationUtil.GetTranslatableTypes();
 
         List<(string typeName, Exception exception)> problems = [];
 
-        foreach (List<Type> types in translatableTypes.Values)
+        foreach (var types in translatableTypes.Values)
         {
             TranslationFile translation = new();
 
-            foreach (Type type in types)
+            foreach (var type in types)
             {
                 try
                 {
-                    using ITranslate obj = (ITranslate)TranslationUtil.CreateInstanceOfClass(type)!;
+                    using var obj = (ITranslate)TranslationUtil.CreateInstanceOfClass(type)!;
                     obj.AddTranslationItems(translation);
                     obj.TranslateItems(translation);
                 }

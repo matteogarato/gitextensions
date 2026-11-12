@@ -7,7 +7,7 @@ internal interface ISimplePromptCreator
 
 internal sealed class SimplePromptCreator : ISimplePromptCreator
 {
-    public IUserInputPrompt Create(string? title, string? label, string? defaultValue)
+    IUserInputPrompt ISimplePromptCreator.Create(string? title, string? label, string? defaultValue)
     {
         return new SimplePrompt(title, label, defaultValue);
     }

@@ -1,29 +1,28 @@
 ﻿using AwesomeAssertions.Execution;
 using CommonTestUtils;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
-using GitExtensions.UITests;
 using GitUI;
 using GitUI.CommandsDialogs;
+using GitUI.UserControls.RevisionGrid;
 using NSubstitute;
-using static GitUI.CommandsDialogs.FormBrowse;
-using Xunit;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace UITests.CommandsDialogs;
 
-public class SplitterPersistenceTests : System.IDisposable
+public class SplitterPersistenceTests : IDisposable
 {
-    private IWindowPositionManager _windowPositionManager = null!;
-    private MemorySettings _settings = null!;
+    // Created once for each test
+    private readonly GitUICommands _commands = null!;
 
     // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
+    private readonly MemorySettings _settings = null!;
+    private readonly IWindowPositionManager _windowPositionManager = null!;
 
-    // Created once for each test
-    private GitUICommands _commands = null!;
     public SplitterPersistenceTests()
     {
-        _settings = new();
+        _settings = new MemorySettings();
 
         // Stop loading custom diff tools
         AppSettings.ShowAvailableDiffTools = false;
@@ -35,7 +34,13 @@ public class SplitterPersistenceTests : System.IDisposable
 
         _referenceRepository = new ReferenceRepository();
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -52,13 +57,12 @@ public class SplitterPersistenceTests : System.IDisposable
     {
         AppSettings.CommitInfoPosition.Should().Be(CommitInfoPosition.BelowList);
 
-        await RunFormTestAsync(
-            async form =>
-            {
-                TestAccessor ta = form.GetTestAccessor();
+        await RunFormTestAsync(async form =>
+        {
+            var ta = form.GetTestAccessor();
 
-                await WaitForRevisionsToBeLoadedAsync(ta.RevisionGrid);
-            });
+            await WaitForRevisionsToBeLoadedAsync(ta.RevisionGrid);
+        });
     }
 
     [WinFormsTheory]
@@ -69,11 +73,11 @@ public class SplitterPersistenceTests : System.IDisposable
     {
         AppSettings.CommitInfoPosition = commitInfoPosition;
 
-        int leftPanelWidth = 300;
-        int revisionGridHeight = 125;
-        int commitInfoWidth = 124;
-        int fileTreeWidth = 127;
-        int diffListWidth = 126;
+        var leftPanelWidth = 300;
+        var revisionGridHeight = 125;
+        var commitInfoWidth = 124;
+        var fileTreeWidth = 127;
+        var diffListWidth = 126;
         int expectedCommitInfoWidth;
 
         switch (commitInfoPosition)
@@ -104,41 +108,35 @@ public class SplitterPersistenceTests : System.IDisposable
 
         SplitterInfo splitterInfoMainSplitContainer = new(_settings, "MainSplitContainer")
         {
-            Size = 911,
-            Distance = leftPanelWidth
+            Size = 911, Distance = leftPanelWidth
         };
 
         SplitterInfo splitterInfoRightSplitContainer = new(_settings, "RightSplitContainer")
         {
-            Size = 507,
-            Distance = revisionGridHeight
+            Size = 507, Distance = revisionGridHeight
         };
 
         SplitterInfo splitterInfoRevisionsSplitContainer = new(_settings, "RevisionsSplitContainer")
         {
-            Size = 645,
-            Distance = commitInfoWidth
+            Size = 645, Distance = commitInfoWidth
         };
 
         SplitterInfo splitterInfoFileTreeSplitContainer = new(_settings, "FileTreeSplitContainer")
         {
-            Size = 643,
-            Distance = fileTreeWidth
+            Size = 643, Distance = fileTreeWidth
         };
 
         SplitterInfo splitterInfoDiffSplitContainer = new(_settings, "DiffSplitContainer")
         {
-            Size = 643,
-            Distance = diffListWidth
+            Size = 643, Distance = diffListWidth
         };
 
-        await RunFormTestAsync(
-            async form =>
-            {
-                TestAccessor ta = form.GetTestAccessor();
+        await RunFormTestAsync(async form =>
+        {
+            var ta = form.GetTestAccessor();
 
-                await WaitForRevisionsToBeLoadedAsync(ta.RevisionGrid);
-            });
+            await WaitForRevisionsToBeLoadedAsync(ta.RevisionGrid);
+        });
 
         using (new AssertionScope())
         {
@@ -154,8 +152,8 @@ public class SplitterPersistenceTests : System.IDisposable
     {
         Dictionary<string, string> splitters = [];
 
-        UITest.RunForm(
-            showForm: () =>
+        UiTest.RunForm(
+            () =>
             {
 #pragma warning disable CS0618 // Type or member is obsolete
                 FormBrowse form = new(_commands, new BrowseArguments(), _settings);
@@ -165,7 +163,8 @@ public class SplitterPersistenceTests : System.IDisposable
                 {
                     // Collect the persisted splitter settings in a dictionary so that we can perform snapshot validation
                     // instead of manually validating each individual setting.
-                    foreach (SplitterManager.SplitterData splitterData in form.GetTestAccessor().SplitterManager.GetTestAccessor().Splitters)
+                    foreach (var splitterData in form.GetTestAccessor().SplitterManager
+                                 .GetTestAccessor().Splitters)
                     {
                         splitters[splitterData.SizeSettingsKey] = null!;
                         splitters[splitterData.DpiSettingsKey] = null!;
@@ -176,12 +175,12 @@ public class SplitterPersistenceTests : System.IDisposable
                     }
                 };
 
-                GitExtensionsForm.GitExtensionsFormTestAccessor test = form.GetGitExtensionsFormTestAccessor();
+                var test = form.GetGitExtensionsFormTestAccessor();
                 test.WindowPositionManager = _windowPositionManager;
 
                 if (Application.MessageLoop)
                 {
-                    form.Show(owner: null);
+                    form.Show(null);
                 }
                 else
                 {
@@ -191,7 +190,7 @@ public class SplitterPersistenceTests : System.IDisposable
             testDriverAsync);
 
         // Snapshot validation
-        foreach (string key in splitters.Keys)
+        foreach (var key in splitters.Keys)
         {
             if (key.EndsWith("Collapsed"))
             {
@@ -208,7 +207,7 @@ public class SplitterPersistenceTests : System.IDisposable
 
     private static async Task WaitForRevisionsToBeLoadedAsync(RevisionGridControl revisionGridControl)
     {
-        UITest.ProcessUntil("Loading Revisions", () => revisionGridControl.GetTestAccessor().IsDataLoadComplete);
+        UiTest.ProcessUntil("Loading Revisions", () => revisionGridControl.GetTestAccessor().IsDataLoadComplete);
         try
         {
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
@@ -221,8 +220,8 @@ public class SplitterPersistenceTests : System.IDisposable
 
     private record SplitterInfo
     {
-        private readonly MemorySettings _settings;
         private readonly string _settingName;
+        private readonly MemorySettings _settings;
 
         public SplitterInfo(MemorySettings settings, string settingName)
         {
@@ -232,12 +231,35 @@ public class SplitterPersistenceTests : System.IDisposable
 
         // These are a copy from SplitterManager.SplitterData
 
-        public string SizeSettingsKey => _settingName + "_Size";
-        public string DpiSettingsKey => _settingName + "_Dpi";
-        public string DistanceSettingsKey => _settingName + "_Distance";
-        public string FontSizeSettingsKey => _settingName + "_FontSize";
-        public string Panel1CollapsedSettingsKey => _settingName + "_Panel1Collapsed";
-        public string Panel2CollapsedSettingsKey => _settingName + "_Panel2Collapsed";
+        public string SizeSettingsKey
+        {
+            get => _settingName + "_Size";
+        }
+
+        public string DpiSettingsKey
+        {
+            get => _settingName + "_Dpi";
+        }
+
+        public string DistanceSettingsKey
+        {
+            get => _settingName + "_Distance";
+        }
+
+        public string FontSizeSettingsKey
+        {
+            get => _settingName + "_FontSize";
+        }
+
+        public string Panel1CollapsedSettingsKey
+        {
+            get => _settingName + "_Panel1Collapsed";
+        }
+
+        public string Panel2CollapsedSettingsKey
+        {
+            get => _settingName + "_Panel2Collapsed";
+        }
 
         public int Distance
         {
@@ -250,10 +272,5 @@ public class SplitterPersistenceTests : System.IDisposable
             get => _settings.GetInt(SizeSettingsKey) ?? throw new InvalidOperationException();
             set => _settings.SetInt(SizeSettingsKey, value);
         }
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

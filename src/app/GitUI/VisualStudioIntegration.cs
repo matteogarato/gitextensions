@@ -2,22 +2,26 @@
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using EnvDTE;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitUI;
 
 internal static class VisualStudioIntegration
 {
-    private const uint E_FAIL = 0x8000_4005;
-    private const uint RPC_E_CALL_REJECTED = 0x8001_0001;
+    private const uint _eFail = 0x8000_4005;
+    private const uint _rpcECallRejected = 0x8001_0001;
+
+    private static string? _devEnvPath;
 
     static VisualStudioIntegration()
     {
         ThreadHelper.FileAndForget(async () =>
         {
-            string vswhere = $@"{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)}\Microsoft Visual Studio\Installer\vswhere.exe";
+            var vswhere =
+                $@"{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)}\Microsoft Visual Studio\Installer\vswhere.exe";
             if (!File.Exists(vswhere))
             {
                 return;
@@ -36,6 +40,11 @@ internal static class VisualStudioIntegration
             ];
             _devEnvPath = await executable.GetOutputAsync(arguments);
         });
+    }
+
+    public static bool IsVisualStudioInstalled
+    {
+        get => _devEnvPath is not null;
     }
 
     public static void Init()
@@ -58,10 +67,10 @@ internal static class VisualStudioIntegration
 
                     break;
                 }
-                catch (COMException exception) when ((uint)exception.HResult == RPC_E_CALL_REJECTED)
+                catch (COMException exception) when ((uint)exception.HResult == _rpcECallRejected)
                 {
                     Trace.WriteLine(exception);
-                    Form? activeForm = Form.ActiveForm;
+                    var activeForm = Form.ActiveForm;
                     await activeForm!.SwitchToMainThreadAsync();
                     if (!MessageBoxes.ConfirmRetryOpenVisualStudio(activeForm))
                     {
@@ -74,7 +83,7 @@ internal static class VisualStudioIntegration
 
             if (_devEnvPath is not null)
             {
-                using IProcess process = new Executable(_devEnvPath).Start(filePath);
+                using var process = new Executable(_devEnvPath).Start(filePath);
             }
         });
     }
@@ -90,9 +99,9 @@ internal static class VisualStudioIntegration
 
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-        foreach (DTE dte in GetVisualStudioInstances())
+        foreach (var dte in GetVisualStudioInstances())
         {
-            ProjectItem projectItem = dte.Solution.FindProjectItem(filePath);
+            var projectItem = dte.Solution.FindProjectItem(filePath);
 
             if (projectItem is not null)
             {
@@ -104,7 +113,7 @@ internal static class VisualStudioIntegration
                     {
                         dte.ExecuteCommand("Edit.GoTo", lineNumber.ToString());
                     }
-                    catch (COMException exception) when ((uint)exception.HResult == E_FAIL)
+                    catch (COMException exception) when ((uint)exception.HResult == _eFail)
                     {
                         Debug.WriteLine(exception);
                     }
@@ -120,37 +129,33 @@ internal static class VisualStudioIntegration
         return false;
     }
 
-    public static bool IsVisualStudioInstalled => _devEnvPath is not null;
-
-    private static string? _devEnvPath;
-
     private static IEnumerable<DTE> GetVisualStudioInstances()
     {
         // The DTE object must be retrieved from the main thread. Otherwise it denies to get DTE.MainWindow.HWnd sometimes.
         ThreadHelper.ThrowIfNotOnUIThread();
 
-        int retVal = NativeMethods.GetRunningObjectTable(0, out IRunningObjectTable rot);
+        var retVal = NativeMethods.GetRunningObjectTable(0, out var rot);
 
         if (retVal != 0)
         {
             yield break;
         }
 
-        rot.EnumRunning(out IEnumMoniker enumMoniker);
+        rot.EnumRunning(out var enumMoniker);
 
         const int count = 1;
 
-        IMoniker[] moniker = new IMoniker[count];
+        var moniker = new IMoniker[count];
 
-        while (enumMoniker.Next(count, moniker, pceltFetched: IntPtr.Zero) == 0)
+        while (enumMoniker.Next(count, moniker, IntPtr.Zero) == 0)
         {
-            NativeMethods.CreateBindCtx(reserved: 0, out IBindCtx bindCtx);
+            NativeMethods.CreateBindCtx(0, out var bindCtx);
 
             string? displayName = null;
 
             try
             {
-                moniker[0].GetDisplayName(bindCtx, pmkToLeft: null, out displayName);
+                moniker[0].GetDisplayName(bindCtx, null, out displayName);
             }
             catch (UnauthorizedAccessException)
             {
@@ -160,7 +165,7 @@ internal static class VisualStudioIntegration
             // Display name example: "!VisualStudio.DTE.16.0:73424"
             if (displayName?.StartsWith("!VisualStudio") == true)
             {
-                rot.GetObject(moniker[0], out object obj);
+                rot.GetObject(moniker[0], out var obj);
 
                 if (obj is DTE dte)
                 {

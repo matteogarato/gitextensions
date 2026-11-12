@@ -2,36 +2,32 @@
 
 namespace GitUI.UserControls.RevisionGrid;
 
-internal sealed class ParentChildNavigationHistory
+internal sealed class ParentChildNavigationHistory(Action<ObjectId> setSelectedObjectId)
 {
-    private enum NavigationDirection
-    {
-        Parent,
-        Child
-    }
-
-    private readonly Action<ObjectId> _setSelectedObjectId;
-    private NavigationDirection? _direction;
     private readonly Stack<ObjectId> _childHistory = new();
     private readonly Stack<ObjectId> _parentHistory = new();
 
-    public ParentChildNavigationHistory(Action<ObjectId> setSelectedObjectId)
+    private NavigationDirection? _direction;
+
+    public bool HasPreviousChild
     {
-        _setSelectedObjectId = setSelectedObjectId;
+        get => _childHistory.Count > 0;
     }
 
-    public bool HasPreviousChild => _childHistory.Count > 0;
-    public bool HasPreviousParent => _parentHistory.Count > 0;
+    public bool HasPreviousParent
+    {
+        get => _parentHistory.Count > 0;
+    }
 
     public void NavigateToPreviousParent(ObjectId current)
     {
-        ObjectId parent = _parentHistory.Pop();
+        var parent = _parentHistory.Pop();
         Navigate(current, parent, NavigationDirection.Parent);
     }
 
     public void NavigateToPreviousChild(ObjectId current)
     {
-        ObjectId child = _childHistory.Pop();
+        var child = _childHistory.Pop();
         Navigate(current, child, NavigationDirection.Child);
     }
 
@@ -57,7 +53,7 @@ internal sealed class ParentChildNavigationHistory
             _childHistory.Push(current);
         }
 
-        _setSelectedObjectId(to);
+        setSelectedObjectId(to);
         _direction = null;
     }
 
@@ -73,5 +69,11 @@ internal sealed class ParentChildNavigationHistory
         {
             Clear();
         }
+    }
+
+    private enum NavigationDirection
+    {
+        Parent,
+        Child
     }
 }

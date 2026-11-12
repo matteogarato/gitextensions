@@ -1,4 +1,4 @@
-namespace NetSpell.SpellChecker.Dictionary.Phonetic;
+namespace SpellChecker.Dictionary.Phonetic;
 
 /// <summary>
 ///     This class hold the settings for a phonetic rule

@@ -2,38 +2,45 @@ using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Validates branch operations and maps them onto the shared <see cref="Commands"/> builders,
-///  so the Avalonia UI uses the same git semantics as the WinForms branch dialogs.
+///     Validates branch operations and maps them onto the shared <see cref="Commands" /> builders,
+///     so the Avalonia UI uses the same git semantics as the WinForms branch dialogs.
 /// </summary>
 public static class BranchWorkflow
 {
     public static bool CanCheckout(IGitRef? gitRef)
-        => gitRef is { IsTag: false, IsSelected: false } && (gitRef.IsHead || gitRef.IsRemote);
+    {
+        return gitRef is { IsTag: false, IsSelected: false } && (gitRef.IsHead || gitRef.IsRemote);
+    }
 
     public static bool CanCheckoutRevision(GitRevision? revision)
-        => revision is not null && !revision.IsArtificial;
+    {
+        return revision is not null && !revision.IsArtificial;
+    }
 
     public static string GetSuggestedBranchName(IGitRef? selectedRef, GitRevision? selectedRevision)
     {
         IEnumerable<IGitRef> references = selectedRef is not null
             ? [selectedRef]
             : selectedRevision?.Refs ?? [];
-        IGitRef? preferredRef = references.FirstOrDefault(gitRef => !gitRef.IsTag) ?? references.FirstOrDefault();
+        var preferredRef = references.FirstOrDefault(gitRef => !gitRef.IsTag) ?? references.FirstOrDefault();
         return preferredRef?.LocalName ?? string.Empty;
     }
 
     public static bool CanDelete(IGitRef? gitRef)
-        => gitRef is { IsTag: false, IsSelected: false } && (gitRef.IsHead || gitRef.IsRemote);
+    {
+        return gitRef is { IsTag: false, IsSelected: false } && (gitRef.IsHead || gitRef.IsRemote);
+    }
 
     public static bool CanDeleteRemoteBranch(IGitRef? gitRef)
-        => gitRef is { IsRemote: true, IsTag: false }
-            && !string.IsNullOrWhiteSpace(gitRef.Remote)
-            && !string.Equals(gitRef.LocalName, "HEAD", StringComparison.Ordinal);
+    {
+        return gitRef is { IsRemote: true, IsTag: false }
+               && !string.IsNullOrWhiteSpace(gitRef.Remote)
+               && !string.Equals(gitRef.LocalName, "HEAD", StringComparison.Ordinal);
+    }
 
     public static IGitRef? FindTrackingBranch(IGitRef remoteBranch, IEnumerable<IGitRef> localBranches)
     {
@@ -44,64 +51,76 @@ public static class BranchWorkflow
     }
 
     public static bool CanForceDelete(IGitRef? gitRef)
-        => gitRef is { IsHead: true, IsRemote: false, IsTag: false, IsSelected: false };
+    {
+        return gitRef is { IsHead: true, IsRemote: false, IsTag: false, IsSelected: false };
+    }
 
     /// <summary>
-    ///  Finds a worktree that currently has the specified local branch checked out.
+    ///     Finds a worktree that currently has the specified local branch checked out.
     /// </summary>
     /// <param name="gitRef">The branch reference to find.</param>
     /// <param name="worktrees">The repository's known worktrees.</param>
-    /// <returns>The matching worktree, or <see langword="null"/> when the branch is not checked out.</returns>
+    /// <returns>The matching worktree, or <see langword="null" /> when the branch is not checked out.</returns>
     public static GitWorktree? FindWorktreeUsingBranch(IGitRef gitRef, IReadOnlyList<GitWorktree> worktrees)
-        => gitRef.IsHead
+    {
+        return gitRef.IsHead
             ? worktrees.FirstOrDefault(worktree =>
                 worktree.HeadType is GitWorktreeHeadType.Branch
                 && !worktree.IsDeleted
                 && string.Equals(worktree.Branch, gitRef.Name, StringComparison.Ordinal))
             : null;
+    }
 
     /// <summary>
-    ///  Indicates whether <paramref name="gitRef"/> is a local branch that can be renamed.
+    ///     Indicates whether <paramref name="gitRef" /> is a local branch that can be renamed.
     /// </summary>
     /// <param name="gitRef">The selected reference.</param>
-    /// <returns><see langword="true"/> if the reference is a local branch; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the reference is a local branch; otherwise, <see langword="false" />.</returns>
     public static bool CanRename(IGitRef? gitRef)
-        => gitRef is { IsHead: true, IsRemote: false, IsTag: false };
+    {
+        return gitRef is { IsHead: true, IsRemote: false, IsTag: false };
+    }
 
     /// <summary>
-    ///  Returns a user-facing error if <paramref name="branchName"/> cannot be created, otherwise <see langword="null"/>.
+    ///     Returns a user-facing error if <paramref name="branchName" /> cannot be created, otherwise <see langword="null" />.
     /// </summary>
     public static string? ValidateNewBranchName(IGitModule module, string? branchName)
     {
-        if (string.IsNullOrWhiteSpace(branchName))
-        {
-            return TranslatedStrings.EnterBranchNameError;
-        }
-
-        return module.CheckBranchFormat(branchName.Trim()) ? null : TranslatedStrings.InvalidBranchNameError;
+        return string.IsNullOrWhiteSpace(branchName) ? TranslatedStrings.EnterBranchNameError :
+            module.CheckBranchFormat(branchName.Trim()) ? null : TranslatedStrings.InvalidBranchNameError;
     }
 
     public static ArgumentString BuildCreate(string branchName, ObjectId objectId, bool checkout)
-        => Commands.Branch(branchName, objectId, checkout);
+    {
+        return Commands.Branch(branchName, objectId, checkout);
+    }
 
     public static ArgumentString BuildCreateOrphan(string branchName, ObjectId startPoint)
-        => Commands.CreateOrphan(branchName, startPoint);
+    {
+        return Commands.CreateOrphan(branchName, startPoint);
+    }
 
     /// <summary>
-    ///  Local branches are checked out directly; a remote branch gets a tracking local branch of the same name.
+    ///     Local branches are checked out directly; a remote branch gets a tracking local branch of the same name.
     /// </summary>
-    public static IGitCommand BuildCheckout(IGitRef gitRef, LocalChangesAction localChanges = LocalChangesAction.DontChange)
+    public static IGitCommand BuildCheckout(IGitRef gitRef,
+        LocalChangesAction localChanges = LocalChangesAction.DontChange)
     {
         return gitRef.IsRemote
-            ? Commands.CheckoutBranch(gitRef.Name, remote: true, localChanges, CheckoutNewBranchMode.Create, gitRef.LocalName)
+            ? Commands.CheckoutBranch(gitRef.Name, remote: true, localChanges, CheckoutNewBranchMode.Create,
+                gitRef.LocalName)
             : Commands.CheckoutBranch(gitRef.Name, remote: false, localChanges);
     }
 
     public static IGitCommand BuildCheckoutRevision(ObjectId objectId)
-        => Commands.CheckoutBranch(objectId.ToString(), remote: false);
+    {
+        return Commands.CheckoutBranch(objectId.ToString(), false);
+    }
 
     public static IGitCommand BuildDelete(IGitRef gitRef, bool force)
-        => Commands.DeleteBranch([gitRef], force);
+    {
+        return Commands.DeleteBranch([gitRef], force);
+    }
 
     public static IGitCommand BuildDeleteRemoteBranch(IGitRef gitRef)
     {
@@ -114,13 +133,15 @@ public static class BranchWorkflow
     }
 
     /// <summary>
-    ///  Builds the Git command arguments to rename a branch.
+    ///     Builds the Git command arguments to rename a branch.
     /// </summary>
     /// <param name="branchName">The existing branch name.</param>
     /// <param name="newBranchName">The replacement branch name.</param>
     /// <returns>The command arguments.</returns>
     public static ArgumentString BuildRename(string branchName, string newBranchName)
-        => Commands.RenameBranch(branchName, newBranchName);
+    {
+        return Commands.RenameBranch(branchName, newBranchName);
+    }
 
     internal static string NormaliseBranchName(
         string branchName,

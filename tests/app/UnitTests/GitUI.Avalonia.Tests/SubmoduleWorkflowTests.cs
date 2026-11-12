@@ -1,71 +1,68 @@
 using System.ComponentModel.Design;
-using GitCommands;
+using System.IO.Abstractions;
 using GitCommands.Git;
-using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
 using GitUI.CommandsDialogs;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class SubmoduleWorkflowTests : IDisposable
 {
-    private readonly ServiceContainer _serviceContainer = new();
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"ge-submodule-{Guid.NewGuid():N}");
     private readonly IGitExecutorProvider _executorProvider;
+    private readonly string _root = Path.Combine(Path.GetTempPath(), $"ge-submodule-{Guid.NewGuid():N}");
+    private readonly ServiceContainer _serviceContainer = new();
 
     public SubmoduleWorkflowTests()
     {
         ThreadHelper.JoinableTaskContext = new JoinableTaskContext();
-        System.IO.Abstractions.IFileSystem fileSystem = new System.IO.Abstractions.FileSystem();
+        IFileSystem fileSystem = new FileSystem();
         GitDirectoryResolver gitDirectoryResolver = new(fileSystem);
-        _serviceContainer.AddService<System.IO.Abstractions.IFileSystem>(fileSystem);
+        _serviceContainer.AddService(fileSystem);
         _serviceContainer.AddService<IGitDirectoryResolver>(gitDirectoryResolver);
         GitCommands.ServiceContainerRegistry.RegisterServices(_serviceContainer);
         _executorProvider = _serviceContainer.GetRequiredService<IGitExecutorProvider>();
         Directory.CreateDirectory(_root);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _serviceContainer.Dispose();
-        Directory.Delete(_root, recursive: true);
+        Directory.Delete(_root, true);
     }
 
     [Fact]
     public void BuildAdd_should_clone_and_stage_a_submodule()
     {
-        GitModule parent = CreateRepository(Path.Combine(_root, "parent"));
-        GitModule child = CreateRepository(Path.Combine(_root, "child"));
+        var parent = CreateRepository(Path.Combine(_root, "parent"));
+        var child = CreateRepository(Path.Combine(_root, "child"));
         Commit(parent, "parent");
         Commit(child, "child");
 
         const string submodulePath = "libraries/child";
-        ExecutionResult result = parent.GitExecutable.Execute(
+        var result = parent.GitExecutable.Execute(
             SubmoduleWorkflow.BuildAdd(
                 child.WorkingDir,
                 submodulePath,
-                branch: null,
-                force: false,
-                configs: Commands.GetAllowFileConfig()),
+                null,
+                false,
+                Commands.GetAllowFileConfig()),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.ExitedSuccessfully.Should().BeTrue(result.AllOutput);
-        parent.GitExecutable.GetOutput($"ls-files --stage -- {submodulePath}")
-            .Should().Contain("160000");
-        parent.GitExecutable.GetOutput("diff --cached --name-only -- .gitmodules").Trim()
-            .Should().Be(".gitmodules");
-        parent.GetSubmodulesInfo().OfType<IGitSubmoduleInfo>()
+        ((bool)result.ExitedSuccessfully).Should().BeTrue(result.AllOutput);
+        ((string)parent.GitExecutable.GetOutput($"ls-files --stage -- {submodulePath}")).Should().Contain("160000");
+        ((string)parent.GitExecutable.GetOutput("diff --cached --name-only -- .gitmodules").Trim()).Should()
+            .Be(".gitmodules");
+        Enumerable.OfType<IGitSubmoduleInfo>(parent.GetSubmodulesInfo())
             .Should().ContainSingle(info => info.LocalPath == submodulePath && info.IsInitialized);
     }
 
     [Fact]
     public void Update_should_initialize_a_deinitialized_submodule()
     {
-        GitModule parent = CreateRepository(Path.Combine(_root, "parent"));
-        GitModule child = CreateRepository(Path.Combine(_root, "child"));
+        var parent = CreateRepository(Path.Combine(_root, "parent"));
+        var child = CreateRepository(Path.Combine(_root, "child"));
         Commit(parent, "parent");
         Commit(child, "child");
 
@@ -74,20 +71,17 @@ public sealed class SubmoduleWorkflowTests : IDisposable
         Commit(parent, "add submodule");
         parent.GitExecutable.RunCommand(new GitArgumentBuilder("submodule")
         {
-            "deinit",
-            "-f",
-            "--",
-            submodulePath.QuoteNE(),
+            "deinit", "-f", "--", submodulePath.QuoteNe()
         });
 
-        string submodulePathOnDisk = parent.GetSubmoduleFullPath(submodulePath);
+        var submodulePathOnDisk = parent.GetSubmoduleFullPath(submodulePath);
         File.Exists(Path.Combine(submodulePathOnDisk, ".git")).Should().BeFalse();
 
-        ExecutionResult result = parent.GitExecutable.Execute(
+        var result = parent.GitExecutable.Execute(
             Commands.SubmoduleUpdate(submodulePath, Commands.GetAllowFileConfig()),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.ExitedSuccessfully.Should().BeTrue(result.AllOutput);
+        ((bool)result.ExitedSuccessfully).Should().BeTrue(result.AllOutput);
         File.Exists(Path.Combine(submodulePathOnDisk, ".git")).Should().BeTrue();
         parent.GetSubmodule(submodulePath).GetCurrentCheckout().Should().Be(child.GetCurrentCheckout());
     }
@@ -95,9 +89,9 @@ public sealed class SubmoduleWorkflowTests : IDisposable
     [Fact]
     public void Update_should_initialize_nested_submodules_recursively()
     {
-        GitModule parent = CreateRepository(Path.Combine(_root, "parent"));
-        GitModule child = CreateRepository(Path.Combine(_root, "child"));
-        GitModule nested = CreateRepository(Path.Combine(_root, "nested"));
+        var parent = CreateRepository(Path.Combine(_root, "parent"));
+        var child = CreateRepository(Path.Combine(_root, "child"));
+        var nested = CreateRepository(Path.Combine(_root, "nested"));
         Commit(parent, "parent");
         Commit(child, "child");
         Commit(nested, "nested");
@@ -109,14 +103,14 @@ public sealed class SubmoduleWorkflowTests : IDisposable
         AddSubmodule(parent, child, submodulePath);
         Commit(parent, "add submodule");
 
-        string nestedPathOnDisk = Path.Combine(parent.GetSubmoduleFullPath(submodulePath), nestedPath);
+        var nestedPathOnDisk = Path.Combine(parent.GetSubmoduleFullPath(submodulePath), nestedPath);
         File.Exists(Path.Combine(nestedPathOnDisk, ".git")).Should().BeFalse();
 
-        ExecutionResult result = parent.GitExecutable.Execute(
+        var result = parent.GitExecutable.Execute(
             Commands.SubmoduleUpdate(submodulePath, Commands.GetAllowFileConfig()),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.ExitedSuccessfully.Should().BeTrue(result.AllOutput);
+        ((bool)result.ExitedSuccessfully).Should().BeTrue(result.AllOutput);
         File.Exists(Path.Combine(nestedPathOnDisk, ".git")).Should().BeTrue();
         parent.GetSubmodule(submodulePath).GetSubmodule(nestedPath).GetCurrentCheckout()
             .Should().Be(nested.GetCurrentCheckout());
@@ -125,8 +119,8 @@ public sealed class SubmoduleWorkflowTests : IDisposable
     [Fact]
     public void Sync_should_update_the_submodule_remote_from_gitmodules()
     {
-        GitModule parent = CreateRepository(Path.Combine(_root, "parent"));
-        GitModule child = CreateRepository(Path.Combine(_root, "child"));
+        var parent = CreateRepository(Path.Combine(_root, "parent"));
+        var child = CreateRepository(Path.Combine(_root, "child"));
         Commit(parent, "parent");
         Commit(child, "child");
 
@@ -136,25 +130,22 @@ public sealed class SubmoduleWorkflowTests : IDisposable
         Commit(parent, "add submodule");
         parent.GitExecutable.RunCommand(new GitArgumentBuilder("config")
         {
-            "-f",
-            ".gitmodules",
-            $"submodule.{submodulePath}.url",
-            synchronizedUrl.Quote(),
+            "-f", ".gitmodules", $"submodule.{submodulePath}.url", synchronizedUrl.Quote()
         });
 
-        ExecutionResult result = parent.GitExecutable.Execute(
+        var result = parent.GitExecutable.Execute(
             Commands.SubmoduleSync(submodulePath),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.ExitedSuccessfully.Should().BeTrue(result.AllOutput);
-        parent.GetSetting($"submodule.{submodulePath}.url").Should().Be(synchronizedUrl);
+        ((bool)result.ExitedSuccessfully).Should().BeTrue(result.AllOutput);
+        ((string)parent.GetSetting($"submodule.{submodulePath}.url")).Should().Be(synchronizedUrl);
     }
 
     [Fact]
     public void Remove_should_unstage_the_gitlink_and_remove_the_last_submodule_configuration()
     {
-        GitModule parent = CreateRepository(Path.Combine(_root, "parent"));
-        GitModule child = CreateRepository(Path.Combine(_root, "child"));
+        var parent = CreateRepository(Path.Combine(_root, "parent"));
+        var child = CreateRepository(Path.Combine(_root, "child"));
         Commit(parent, "parent");
         Commit(child, "child");
 
@@ -162,26 +153,27 @@ public sealed class SubmoduleWorkflowTests : IDisposable
         AddSubmodule(parent, child, submodulePath);
         Commit(parent, "add submodule");
 
-        IGitSubmoduleInfo submodule = parent.GetSubmodulesInfo()
-            .OfType<IGitSubmoduleInfo>()
+        var submodule = Enumerable
+            .OfType<IGitSubmoduleInfo>(parent.GetSubmodulesInfo())
             .Single(info => info.LocalPath == submodulePath);
 
         SubmoduleWorkflow.Remove(parent, submodule);
 
-        parent.GitExecutable.GetOutput($"ls-files --stage -- {submodulePath}").Should().BeEmpty();
-        parent.GitExecutable.GetOutput("ls-files --stage -- .gitmodules").Should().NotBeEmpty();
-        parent.GetSetting("submodule.libraries/child.url").Should().BeEmpty();
+        ((string)parent.GitExecutable.GetOutput($"ls-files --stage -- {submodulePath}")).Should().BeEmpty();
+        ((string)parent.GitExecutable.GetOutput("ls-files --stage -- .gitmodules")).Should().NotBeEmpty();
+        ((string)parent.GetSetting("submodule.libraries/child.url")).Should().BeEmpty();
         File.ReadAllText(Path.Combine(parent.WorkingDir, ".gitmodules")).Should().BeEmpty();
         Directory.Exists(parent.GetSubmoduleFullPath(submodulePath)).Should().BeTrue();
-        GitModule.TryFindGitWorkingDir(parent.GetSubmoduleFullPath(submodulePath)).Should().NotBeNull();
+        ((string)GitCommands.GitModule.TryFindGitWorkingDir(parent.GetSubmoduleFullPath(submodulePath))).Should()
+            .NotBeNull();
     }
 
     [Fact]
     public void Remove_should_keep_other_submodule_configurations_staged()
     {
-        GitModule parent = CreateRepository(Path.Combine(_root, "parent"));
-        GitModule firstChild = CreateRepository(Path.Combine(_root, "first-child"));
-        GitModule secondChild = CreateRepository(Path.Combine(_root, "second-child"));
+        var parent = CreateRepository(Path.Combine(_root, "parent"));
+        var firstChild = CreateRepository(Path.Combine(_root, "first-child"));
+        var secondChild = CreateRepository(Path.Combine(_root, "second-child"));
         Commit(parent, "parent");
         Commit(firstChild, "first child");
         Commit(secondChild, "second child");
@@ -192,26 +184,26 @@ public sealed class SubmoduleWorkflowTests : IDisposable
         AddSubmodule(parent, secondChild, secondPath);
         Commit(parent, "add submodules");
 
-        IGitSubmoduleInfo firstSubmodule = parent.GetSubmodulesInfo()
-            .OfType<IGitSubmoduleInfo>()
+        var firstSubmodule = Enumerable
+            .OfType<IGitSubmoduleInfo>(parent.GetSubmodulesInfo())
             .Single(info => info.LocalPath == firstPath);
 
         SubmoduleWorkflow.Remove(parent, firstSubmodule);
 
-        string gitmodules = File.ReadAllText(Path.Combine(parent.WorkingDir, ".gitmodules"));
+        var gitmodules = File.ReadAllText(Path.Combine(parent.WorkingDir, ".gitmodules"));
         gitmodules.Should().Contain($"[submodule \"{secondPath}\"]");
         gitmodules.Should().NotContain($"[submodule \"{firstPath}\"]");
-        parent.GitExecutable.GetOutput("diff --cached --name-only -- .gitmodules").Trim()
-            .Should().Be(".gitmodules");
-        parent.GitExecutable.GetOutput($"ls-files --stage -- {firstPath}").Should().BeEmpty();
-        parent.GitExecutable.GetOutput($"ls-files --stage -- {secondPath}").Should().NotBeEmpty();
+        ((string)parent.GitExecutable.GetOutput("diff --cached --name-only -- .gitmodules").Trim()).Should()
+            .Be(".gitmodules");
+        ((string)parent.GitExecutable.GetOutput($"ls-files --stage -- {firstPath}")).Should().BeEmpty();
+        ((string)parent.GitExecutable.GetOutput($"ls-files --stage -- {secondPath}")).Should().NotBeEmpty();
         Directory.Exists(parent.GetSubmoduleFullPath(firstPath)).Should().BeTrue();
     }
 
-    private GitModule CreateRepository(string path)
+    private GitCommands.GitModule CreateRepository(string path)
     {
         Directory.CreateDirectory(path);
-        GitModule module = new(_executorProvider, path);
+        GitCommands.GitModule module = new(_executorProvider, path);
         module.Init(bare: false, shared: false);
         module.SetSetting("user.name", "Avalonia Test");
         module.SetSetting("user.email", "avalonia@example.com");
@@ -219,25 +211,22 @@ public sealed class SubmoduleWorkflowTests : IDisposable
         return module;
     }
 
-    private static void Commit(GitModule module, string message)
+    private static void Commit(GitCommands.GitModule module, string message)
     {
         module.GitExecutable.RunCommand(new GitArgumentBuilder("commit")
         {
-            "--quiet",
-            "--allow-empty",
-            "-m",
-            message.Quote(),
+            "--quiet", "--allow-empty", "-m", message.Quote()
         });
     }
 
-    private static void AddSubmodule(GitModule parent, GitModule child, string path)
+    private static void AddSubmodule(GitCommands.GitModule parent, GitCommands.GitModule child, string path)
     {
-        ExecutionResult result = parent.GitExecutable.Execute(SubmoduleWorkflow.BuildAdd(
+        var result = parent.GitExecutable.Execute(SubmoduleWorkflow.BuildAdd(
             child.WorkingDir,
             path,
-            branch: null,
-            force: false,
-            configs: Commands.GetAllowFileConfig()));
-        result.ExitedSuccessfully.Should().BeTrue(result.AllOutput);
+            null,
+            false,
+            Commands.GetAllowFileConfig()));
+        ((bool)result.ExitedSuccessfully).Should().BeTrue(result.AllOutput);
     }
 }

@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 
 namespace GitCommandsTests.Git;
 
@@ -10,7 +10,8 @@ public sealed class GitRefNameTests
         GitRefName.GetFullBranchName(null).Should().Be(null);
         GitRefName.GetFullBranchName("").Should().Be("");
         GitRefName.GetFullBranchName("    ").Should().Be("");
-        GitRefName.GetFullBranchName("4e0f0fe3f6add43557913c354de02560b8faec32").Should().Be("4e0f0fe3f6add43557913c354de02560b8faec32");
+        GitRefName.GetFullBranchName("4e0f0fe3f6add43557913c354de02560b8faec32").Should()
+            .Be("4e0f0fe3f6add43557913c354de02560b8faec32");
         GitRefName.GetFullBranchName("master").Should().Be("refs/heads/master");
         GitRefName.GetFullBranchName(" master ").Should().Be("refs/heads/master");
         GitRefName.GetFullBranchName("refs/heads/master").Should().Be("refs/heads/master");
@@ -48,7 +49,8 @@ public sealed class GitRefNameTests
 
         GitRefName.GetFullBranchName("refs/foo").Should().Be("refs/foo");
 
-        GitRefName.GetFullBranchName("4e0f0fe3f6add43557913c354de02560b8faec32").Should().Be("4e0f0fe3f6add43557913c354de02560b8faec32");
+        GitRefName.GetFullBranchName("4e0f0fe3f6add43557913c354de02560b8faec32").Should()
+            .Be("4e0f0fe3f6add43557913c354de02560b8faec32");
 
         GitRefName.GetFullBranchName("").Should().Be("");
         GitRefName.GetFullBranchName("    ").Should().Be("");

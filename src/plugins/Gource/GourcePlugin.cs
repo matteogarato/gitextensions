@@ -2,11 +2,12 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
 using GitExtensions.Plugins.Gource.Properties;
+using GitExtUtils.GitUI;
 using GitUI;
 using ResourceManager;
 
@@ -15,31 +16,15 @@ namespace GitExtensions.Plugins.Gource;
 [Export(typeof(IGitPlugin))]
 public class GourcePlugin : GitPluginBase, IGitPluginForRepository
 {
-    #region Translation
-    private readonly TranslationString _currentDirectoryIsNotValidGit = new("The current directory is not a valid git repository.\n\n" +
-        "Gource can be only be started from a valid git repository.");
-    private readonly TranslationString _resetConfigPath = new("Cannot find Gource in the configured path: {0}.\n\n" +
-        "Do you want to reset the configured path?");
-    private readonly TranslationString _gource = new("Gource");
-    private readonly TranslationString _doYouWantDownloadGource = new("There is no path to Gource configured.\n\n" +
-        "Do you want to automatically download Gource?");
-    private readonly TranslationString _download = new("Download");
-    private readonly TranslationString _cannotFindGource = new("Cannot find Gource.\n" +
-        "Please download Gource and set the path in the plugins settings dialog.");
-    private readonly TranslationString _bytesDownloaded = new("{0} bytes downloaded.");
-    private readonly TranslationString _gourceDownloadedAndUnzipped = new("Gource has been downloaded and unzipped.");
-    private readonly TranslationString _downloadingFailed = new("Downloading failed.\n" +
-        "Please download Gource and set the path in the plugins settings dialog.");
-    #endregion
-
-    private readonly StringSetting _gourcePath = new("Path to Gource", "");
-    private readonly StringSetting _gourceArguments = new("Arguments", "--hide filenames --user-image-dir \"$(AVATARS)\"");
-
     private static readonly HttpClient _httpClient = new(new HttpClientHandler
     {
-        UseProxy = true,
-        DefaultProxyCredentials = CredentialCache.DefaultCredentials
+        UseProxy = true, DefaultProxyCredentials = CredentialCache.DefaultCredentials
     });
+
+    private readonly StringSetting _gourceArguments =
+        new("Arguments", "--hide filenames --user-image-dir \"$(AVATARS)\"");
+
+    private readonly StringSetting _gourcePath = new("Path to Gource", "");
 
     public GourcePlugin() : base(true)
     {
@@ -48,85 +33,6 @@ public class GourcePlugin : GitPluginBase, IGitPluginForRepository
         Translate(AppSettings.CurrentTranslation);
         Icon = Resources.IconGource;
     }
-
-    #region IGitPlugin Members
-
-    public override IEnumerable<ISetting> GetSettings()
-    {
-        // return all settings or introduce implementation based on reflection on GitPluginBase level
-        yield return _gourcePath;
-        yield return _gourceArguments;
-    }
-
-    public override bool Execute(GitUIEventArgs args)
-    {
-        if (!args.GitModule.IsValidGitWorkingDir())
-        {
-            MessageBoxes.ShowError(args.OwnerForm, _currentDirectoryIsNotValidGit.Text);
-            return false;
-        }
-
-        string pathToGource = _gourcePath.ValueOrDefault(Settings);
-
-        if (!string.IsNullOrEmpty(pathToGource) && !File.Exists(pathToGource))
-        {
-            DialogResult result = MessageBoxes.Show(
-                args.OwnerForm,
-                string.Format(_resetConfigPath.Text, pathToGource), _gource.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (result == DialogResult.Yes)
-            {
-                Settings.SetValue(_gourcePath.Name, _gourcePath.DefaultValue);
-                pathToGource = _gourcePath.DefaultValue;
-            }
-        }
-
-        if (string.IsNullOrEmpty(pathToGource))
-        {
-            if (MessageBoxes.Show(
-                    args.OwnerForm, _doYouWantDownloadGource.Text, _download.Text,
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-            {
-                string gourceUrl = ThreadHelper.JoinableTaskFactory.Run(() => SearchForGourceUrlAsync(args.OwnerForm));
-
-                if (string.IsNullOrEmpty(gourceUrl))
-                {
-                    MessageBoxes.ShowError(args.OwnerForm, _cannotFindGource.Text);
-                    return false;
-                }
-
-                string downloadDir = Path.GetTempPath();
-                string fileName = Path.Join(downloadDir, "gource.zip");
-                int downloadSize = ThreadHelper.JoinableTaskFactory.Run(() => DownloadFileAsync(args.OwnerForm, gourceUrl, fileName));
-                if (downloadSize > 0)
-                {
-                    MessageBoxes.Show(args.OwnerForm, string.Format(_bytesDownloaded.Text, downloadSize), "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    Directory.CreateDirectory(Path.Join(downloadDir, "gource"));
-                    UnZipFiles(args.OwnerForm, fileName, Path.Join(downloadDir, "gource"), true);
-
-                    string newGourcePath = Path.Join(downloadDir, "gource\\gource.exe");
-                    if (File.Exists(newGourcePath))
-                    {
-                        MessageBoxes.Show(args.OwnerForm, _gourceDownloadedAndUnzipped.Text, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        pathToGource = newGourcePath;
-                    }
-                }
-                else
-                {
-                    MessageBoxes.ShowError(args.OwnerForm, _downloadingFailed.Text);
-                }
-            }
-        }
-
-        using GourceStart gourceStart = new(pathToGource, args, _gourceArguments.ValueOrDefault(Settings));
-        gourceStart.ShowDialog(args.OwnerForm);
-        Settings.SetValue(_gourceArguments.Name, gourceStart.GourceArguments);
-        Settings.SetValue(_gourcePath.Name, gourceStart.PathToGource);
-
-        return false;
-    }
-
-    #endregion
 
     private static void UnZipFiles(IWin32Window? owner, string zipPathAndFile, string outputFolder, bool deleteZipFile)
     {
@@ -137,31 +43,31 @@ public class GourcePlugin : GitPluginBase, IGitPluginForRepository
                 Directory.CreateDirectory(outputFolder);
             }
 
-            string outputFolderFullPath = Path.GetFullPath(string.IsNullOrEmpty(outputFolder) ? "." : outputFolder);
+            var outputFolderFullPath = Path.GetFullPath(string.IsNullOrEmpty(outputFolder) ? "." : outputFolder);
 
-            using (ZipArchive archive = ZipFile.OpenRead(zipPathAndFile))
+            using (var archive = ZipFile.OpenRead(zipPathAndFile))
             {
-                foreach (ZipArchiveEntry entry in archive.Entries)
+                foreach (var entry in archive.Entries)
                 {
                     if (string.IsNullOrEmpty(entry.Name) || entry.FullName.Contains(".ini"))
                     {
                         continue;
                     }
 
-                    string destinationPath = Path.Combine(outputFolder, entry.FullName).Replace("\\ ", "\\");
-                    string fullDestinationPath = Path.GetFullPath(destinationPath);
+                    var destinationPath = Path.Combine(outputFolder, entry.FullName).Replace("\\ ", "\\");
+                    var fullDestinationPath = Path.GetFullPath(destinationPath);
                     if (!fullDestinationPath.StartsWith(outputFolderFullPath, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
 
-                    string? fullDirPath = Path.GetDirectoryName(fullDestinationPath);
+                    var fullDirPath = Path.GetDirectoryName(fullDestinationPath);
                     if (fullDirPath is not null && !Directory.Exists(fullDirPath))
                     {
                         Directory.CreateDirectory(fullDirPath);
                     }
 
-                    entry.ExtractToFile(fullDestinationPath, overwrite: true);
+                    entry.ExtractToFile(fullDestinationPath, true);
                 }
             }
 
@@ -180,8 +86,8 @@ public class GourcePlugin : GitPluginBase, IGitPluginForRepository
     {
         try
         {
-            using Stream remoteStream = await _httpClient.GetStreamAsync(remoteFilename);
-            using FileStream localStream = File.Create(localFilename);
+            using var remoteStream = await _httpClient.GetStreamAsync(remoteFilename);
+            using var localStream = File.Create(localFilename);
             await remoteStream.CopyToAsync(localStream);
 
             return (int)localStream.Position;
@@ -203,7 +109,7 @@ public class GourcePlugin : GitPluginBase, IGitPluginForRepository
 
         try
         {
-            string url = await FindWin64AssetAsync(latestApiUrl);
+            var url = await FindWin64AssetAsync(latestApiUrl);
             if (!string.IsNullOrEmpty(url))
             {
                 return url;
@@ -222,18 +128,18 @@ public class GourcePlugin : GitPluginBase, IGitPluginForRepository
         {
             using HttpRequestMessage request = new(HttpMethod.Get, apiUrl);
             request.Headers.UserAgent.ParseAdd("GitExtensions");
-            using HttpResponseMessage response = await _httpClient.SendAsync(request);
+            using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 return string.Empty;
             }
 
-            string json = await response.Content.ReadAsStringAsync();
-            using JsonDocument doc = JsonDocument.Parse(json);
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
 
-            foreach (JsonElement asset in doc.RootElement.GetProperty("assets").EnumerateArray())
+            foreach (var asset in doc.RootElement.GetProperty("assets").EnumerateArray())
             {
-                string name = asset.GetProperty("name").GetString() ?? string.Empty;
+                var name = asset.GetProperty("name").GetString() ?? string.Empty;
                 if (name.StartsWith("gource-", StringComparison.OrdinalIgnoreCase)
                     && name.EndsWith(win64ZipSuffix, StringComparison.OrdinalIgnoreCase))
                 {
@@ -244,4 +150,114 @@ public class GourcePlugin : GitPluginBase, IGitPluginForRepository
             return string.Empty;
         }
     }
+
+    #region Translation
+
+    private readonly TranslationString _currentDirectoryIsNotValidGit = new(
+        "The current directory is not a valid git repository.\n\n" +
+        "Gource can be only be started from a valid git repository.");
+
+    private readonly TranslationString _resetConfigPath = new("Cannot find Gource in the configured path: {0}.\n\n" +
+                                                              "Do you want to reset the configured path?");
+
+    private readonly TranslationString _gource = new("Gource");
+
+    private readonly TranslationString _doYouWantDownloadGource = new("There is no path to Gource configured.\n\n" +
+                                                                      "Do you want to automatically download Gource?");
+
+    private readonly TranslationString _download = new("Download");
+
+    private readonly TranslationString _cannotFindGource = new("Cannot find Gource.\n" +
+                                                               "Please download Gource and set the path in the plugins settings dialog.");
+
+    private readonly TranslationString _bytesDownloaded = new("{0} bytes downloaded.");
+    private readonly TranslationString _gourceDownloadedAndUnzipped = new("Gource has been downloaded and unzipped.");
+
+    private readonly TranslationString _downloadingFailed = new("Downloading failed.\n" +
+                                                                "Please download Gource and set the path in the plugins settings dialog.");
+
+    #endregion
+
+    #region IGitPlugin Members
+
+    public override IEnumerable<ISetting> GetSettings()
+    {
+        // return all settings or introduce implementation based on reflection on GitPluginBase level
+        yield return _gourcePath;
+        yield return _gourceArguments;
+    }
+
+    public override bool Execute(GitUiEventArgs args)
+    {
+        if (!args.GitModule.IsValidGitWorkingDir())
+        {
+            MessageBoxes.ShowError(args.OwnerForm, _currentDirectoryIsNotValidGit.Text);
+            return false;
+        }
+
+        var pathToGource = _gourcePath.ValueOrDefault(Settings);
+
+        if (!string.IsNullOrEmpty(pathToGource) && !File.Exists(pathToGource))
+        {
+            var result = MessageBoxes.Show(
+                args.OwnerForm,
+                string.Format(_resetConfigPath.Text, pathToGource), _gource.Text, MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                Settings.SetValue(_gourcePath.Name, _gourcePath.DefaultValue);
+                pathToGource = _gourcePath.DefaultValue;
+            }
+        }
+
+        if (string.IsNullOrEmpty(pathToGource))
+        {
+            if (MessageBoxes.Show(
+                    args.OwnerForm, _doYouWantDownloadGource.Text, _download.Text,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                var gourceUrl = ThreadHelper.JoinableTaskFactory.Run(() => SearchForGourceUrlAsync(args.OwnerForm));
+
+                if (string.IsNullOrEmpty(gourceUrl))
+                {
+                    MessageBoxes.ShowError(args.OwnerForm, _cannotFindGource.Text);
+                    return false;
+                }
+
+                var downloadDir = Path.GetTempPath();
+                var fileName = Path.Join(downloadDir, "gource.zip");
+                var downloadSize =
+                    ThreadHelper.JoinableTaskFactory.Run(() => DownloadFileAsync(args.OwnerForm, gourceUrl, fileName));
+                if (downloadSize > 0)
+                {
+                    MessageBoxes.Show(args.OwnerForm, string.Format(_bytesDownloaded.Text, downloadSize), "Information",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Directory.CreateDirectory(Path.Join(downloadDir, "gource"));
+                    UnZipFiles(args.OwnerForm, fileName, Path.Join(downloadDir, "gource"), true);
+
+                    var newGourcePath = Path.Join(downloadDir, "gource\\gource.exe");
+                    if (File.Exists(newGourcePath))
+                    {
+                        MessageBoxes.Show(args.OwnerForm, _gourceDownloadedAndUnzipped.Text, "Information",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        pathToGource = newGourcePath;
+                    }
+                }
+                else
+                {
+                    MessageBoxes.ShowError(args.OwnerForm, _downloadingFailed.Text);
+                }
+            }
+        }
+
+        using GourceStart gourceStart = new(pathToGource, args, _gourceArguments.ValueOrDefault(Settings));
+        gourceStart.ShowDialog(args.OwnerForm);
+        Settings.SetValue(_gourceArguments.Name, gourceStart.GourceArguments);
+        Settings.SetValue(_gourcePath.Name, gourceStart.PathToGource);
+
+        return false;
+    }
+
+    #endregion
 }

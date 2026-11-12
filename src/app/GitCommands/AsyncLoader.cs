@@ -1,23 +1,34 @@
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitCommands;
 
 public sealed class AsyncLoader : IDisposable
 {
-    public event EventHandler<AsyncErrorEventArgs>? LoadingError;
-
     private readonly CancellationTokenSequence _cancellationSequence = new();
 
     private int _disposed;
 
     /// <summary>
-    /// Gets and sets an amount of time to delay calling <c>loadContent</c> actions after a call to one of the <c>Load</c> overloads.
+    ///     Gets and sets an amount of time to delay calling <c>loadContent</c> actions after a call to one of the <c>Load</c>
+    ///     overloads.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="TimeSpan.Zero"/>.
+    ///     Defaults to <see cref="TimeSpan.Zero" />.
     /// </remarks>
     public TimeSpan Delay { get; set; }
+
+    void IDisposable.Dispose()
+    {
+        if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _cancellationSequence?.Dispose();
+    }
+
+    public event EventHandler<AsyncErrorEventArgs>? LoadingError;
 
     public Task LoadAsync(Action loadContent, Action onLoaded)
     {
@@ -45,7 +56,7 @@ public sealed class AsyncLoader : IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
 
         // Create a new cancellation token, which requests cancellation of any prior operation
-        CancellationToken token = _cancellationSequence.Next();
+        var token = _cancellationSequence.Next();
 
         T result;
 
@@ -54,11 +65,11 @@ public sealed class AsyncLoader : IDisposable
             // Defer the load operation if requested
             if (Delay > TimeSpan.Zero)
             {
-                await Task.Delay(Delay, token).ConfigureAwait(continueOnCapturedContext: false);
+                await Task.Delay(Delay, token).ConfigureAwait(false);
             }
             else
             {
-                await TaskScheduler.Default.SwitchTo(alwaysYield: true);
+                await TaskScheduler.Default.SwitchTo(true);
             }
 
             // Bail early if cancelled, returning default value for type
@@ -118,26 +129,11 @@ public sealed class AsyncLoader : IDisposable
 
         _cancellationSequence.CancelCurrent();
     }
-
-    public void Dispose()
-    {
-        if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
-        {
-            return;
-        }
-
-        _cancellationSequence?.Dispose();
-    }
 }
 
-public sealed class AsyncErrorEventArgs : EventArgs
+public sealed class AsyncErrorEventArgs(Exception exception) : EventArgs
 {
-    public Exception Exception { get; }
+    public Exception Exception { get; } = exception;
 
     public bool Handled { get; set; } = true;
-
-    public AsyncErrorEventArgs(Exception exception)
-    {
-        Exception = exception;
-    }
 }

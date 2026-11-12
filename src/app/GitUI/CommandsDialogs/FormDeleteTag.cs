@@ -9,7 +9,7 @@ namespace GitUI.CommandsDialogs;
 
 public partial class FormDeleteTag : GitModuleForm
 {
-    public FormDeleteTag(IGitUICommands commands, string? tag)
+    public FormDeleteTag(IGitUiCommands commands, string? tag)
         : base(commands)
     {
         InitializeComponent();
@@ -53,15 +53,15 @@ public partial class FormDeleteTag : GitModuleForm
 
     private void RemoveRemoteTag(string tagName)
     {
-        string pushCmd = string.Format("push \"{0}\" :refs/tags/{1}", remotesComboboxControl1.SelectedRemote, tagName);
+        var pushCmd = string.Format("push \"{0}\" :refs/tags/{1}", remotesComboboxControl1.SelectedRemote, tagName);
 
-        bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePush, this);
+        var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePush, this);
         if (!success)
         {
             return;
         }
 
-        using FormRemoteProcess form = new(UICommands, pushCmd);
+        using FormRemoteProcess form = new(UiCommands, pushCmd);
         ////Remote = currentRemote,
         ////Text = string.Format(_deleteFromCaption.Text, currentRemote),
         form.ShowDialog();

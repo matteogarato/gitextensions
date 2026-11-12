@@ -1,16 +1,16 @@
 ﻿using System.Runtime.InteropServices;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
+using GitExtUtils.GitUI;
 using GitUI;
 using GitUI.Infrastructure;
 using Microsoft.VisualStudio.Threading;
-using Xunit;
 
-namespace GitUITests.Infrastructure;
+namespace UITests.Infrastructure;
 
 public sealed class PuttyHelpersTests
 {
-    private const string Plink = "plink.exe";
+    private const string _plink = "plink.exe";
 
     [WinFormsFact]
     public async Task StartPageantIfConfigured_throw_if_not_UI_thread()
@@ -27,8 +27,8 @@ public sealed class PuttyHelpersTests
             () => ((Action)(() => PuttyHelpers.StartPageantIfConfigured(() => null)))
                 .Should()
                 .Throw<UserExternalOperationException>()
-                .WithMessage(TranslatedStrings.ErrorSshPuTTYNotConfigured),
-            pageant: "foo.exe");
+                .WithMessage(TranslatedStrings.ErrorSshPuTtyNotConfigured),
+            "foo.exe");
     }
 
     [WinFormsFact]
@@ -40,7 +40,7 @@ public sealed class PuttyHelpersTests
                 .Throw<UserExternalOperationException>()
                 .WithMessage(TranslatedStrings.ErrorFileNotFound)
                 .WithInnerException<FileNotFoundException>(),
-            pageant: Plink);
+            _plink);
     }
 
     [WinFormsTheory]
@@ -50,23 +50,23 @@ public sealed class PuttyHelpersTests
     public Task StartPageantIfConfigured_returns_false_if_key_empty(string? bogusKey)
     {
         // Copy notepad.exe from %SYSTEM32%\notepad.exe to be our plink.exe
-        string notepadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "notepad.exe");
-        string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var notepadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "notepad.exe");
+        var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempPath);
-        string plinkfile = Path.Combine(tempPath, Plink);
-        File.Copy(notepadPath, plinkfile, overwrite: true);
+        var plinkfile = Path.Combine(tempPath, _plink);
+        File.Copy(notepadPath, plinkfile, true);
 
         try
         {
             return RunTestAsync(
                 () => PuttyHelpers.StartPageantIfConfigured(() => bogusKey).Should().BeFalse(),
-                pageant: plinkfile);
+                plinkfile);
         }
         finally
         {
             try
             {
-                Directory.Delete(tempPath, recursive: true);
+                Directory.Delete(tempPath, true);
             }
             catch
             {
@@ -79,11 +79,11 @@ public sealed class PuttyHelpersTests
     public Task StartPageantIfConfigured_throws_if_key_not_empty_but_absent()
     {
         // Copy notepad.exe from %SYSTEM32%\notepad.exe to be our plink.exe
-        string notepadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "notepad.exe");
-        string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var notepadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "notepad.exe");
+        var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempPath);
-        string plinkfile = Path.Combine(tempPath, Plink);
-        File.Copy(notepadPath, plinkfile, overwrite: true);
+        var plinkfile = Path.Combine(tempPath, _plink);
+        File.Copy(notepadPath, plinkfile, true);
 
         try
         {
@@ -93,13 +93,13 @@ public sealed class PuttyHelpersTests
                     .Throw<UserExternalOperationException>()
                     .WithMessage(TranslatedStrings.ErrorSshKeyNotFound)
                     .WithInnerException<FileNotFoundException>(),
-                pageant: plinkfile);
+                plinkfile);
         }
         finally
         {
             try
             {
-                Directory.Delete(tempPath, recursive: true);
+                Directory.Delete(tempPath, true);
             }
             catch
             {
@@ -114,8 +114,8 @@ public sealed class PuttyHelpersTests
         await form.SwitchToMainThreadAsync();
         form.Dispose();
 
-        string configuredSshPath = AppSettings.SshPath;
-        string configuredPageant = AppSettings.Pageant;
+        var configuredSshPath = AppSettings.SshPath;
+        var configuredPageant = AppSettings.Pageant;
 
         try
         {

@@ -2,9 +2,10 @@
 using GitUI.CommandsDialogs;
 
 namespace GitUITests.CommandsDialogs;
+
 public class FormRemotesControllerTests
 {
-    private FormRemotesController _controller = null!;
+    private readonly FormRemotesController _controller = null!;
 
     public FormRemotesControllerTests()
     {
@@ -15,12 +16,13 @@ public class FormRemotesControllerTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("\t")]
-    public void RemoteDelete_should_not_throw_or_mutate_list_of_remotes_if_oldRemoteUrl_null_or_empty(string? oldRemoteUrl)
+    public void RemoteDelete_should_not_throw_or_mutate_list_of_remotes_if_oldRemoteUrl_null_or_empty(
+        string? oldRemoteUrl)
     {
         List<Repository> remotes =
         [
-            new Repository("a"),
-            new Repository("b")
+            new("a"),
+            new("b")
         ];
 
         _controller.RemoteDelete(remotes, oldRemoteUrl);
@@ -33,8 +35,8 @@ public class FormRemotesControllerTests
     {
         List<Repository> remotes =
         [
-            new Repository("a"),
-            new Repository("b")
+            new("a"),
+            new("b")
         ];
 
         _controller.RemoteDelete(remotes, "foo");
@@ -47,8 +49,8 @@ public class FormRemotesControllerTests
     {
         List<Repository> remotes =
         [
-            new Repository("a"),
-            new Repository("b")
+            new("a"),
+            new("b")
         ];
 
         _controller.RemoteDelete(remotes, "b");
@@ -61,12 +63,13 @@ public class FormRemotesControllerTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("\t")]
-    public void RemoteUpdate_should_not_throw_or_mutate_list_of_remotes_if_newRemoteUrl_null_or_empty(string? newRemoteUrl)
+    public void RemoteUpdate_should_not_throw_or_mutate_list_of_remotes_if_newRemoteUrl_null_or_empty(
+        string? newRemoteUrl)
     {
         List<Repository> remotes =
         [
-            new Repository("a"),
-            new Repository("b")
+            new("a"),
+            new("b")
         ];
 
         _controller.RemoteUpdate(remotes, "who cares", newRemoteUrl);
@@ -81,14 +84,14 @@ public class FormRemotesControllerTests
     {
         List<Repository> remotes =
         [
-            new Repository("a"),
-            new Repository("b")
+            new("a"),
+            new("b")
         ];
 
         _controller.RemoteUpdate(remotes, "a", "a1");
 
         remotes.Should().HaveCount(2);
-        remotes.Select(r => r.Path).Should().BeEquivalentTo(["a1", "b"]);
+        remotes.Select(r => r.Path).Should().BeEquivalentTo("a1", "b");
     }
 
     [Fact]
@@ -96,9 +99,9 @@ public class FormRemotesControllerTests
     {
         List<Repository> remotes =
         [
-            new Repository("a"),
-            new Repository("b"),
-            new Repository("c")
+            new("a"),
+            new("b"),
+            new("c")
         ];
 
         _controller.RemoteUpdate(remotes, "c", "a1");

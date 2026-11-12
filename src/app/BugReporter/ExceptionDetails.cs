@@ -19,28 +19,16 @@ internal partial class ExceptionDetails : UserControl
 
     public int InformationColumnWidth
     {
-        get
-        {
-            return exceptionDetailsListView.Columns[1].Width;
-        }
+        get => exceptionDetailsListView.Columns[1].Width;
 
-        set
-        {
-            exceptionDetailsListView.Columns[1].Width = value;
-        }
+        set => exceptionDetailsListView.Columns[1].Width = value;
     }
 
     public int PropertyColumnWidth
     {
-        get
-        {
-            return exceptionDetailsListView.Columns[0].Width;
-        }
+        get => exceptionDetailsListView.Columns[0].Width;
 
-        set
-        {
-            exceptionDetailsListView.Columns[0].Width = value;
-        }
+        set => exceptionDetailsListView.Columns[0].Width = value;
     }
 
     internal void Initialize(SerializableException exception)
@@ -54,7 +42,7 @@ internal partial class ExceptionDetails : UserControl
 
         if (exception.InnerExceptions is not null)
         {
-            foreach (SerializableException innerException in exception.InnerExceptions)
+            foreach (var innerException in exception.InnerExceptions)
             {
                 FillInnerExceptionTree(innerException, exceptionTreeView.Nodes[0]);
             }
@@ -66,7 +54,7 @@ internal partial class ExceptionDetails : UserControl
 
     private void DisplayExceptionDetails(TreeNode node)
     {
-        SerializableException exception = _exceptionDetailsList[node];
+        var exception = _exceptionDetailsList[node];
         exceptionDetailsListView.SuspendLayout();
         exceptionDetailsListView.Items.Clear();
 
@@ -107,17 +95,18 @@ internal partial class ExceptionDetails : UserControl
 
         if (exception.Data is not null)
         {
-            foreach (KeyValuePair<object, object> pair in exception.Data)
+            foreach (var pair in exception.Data)
             {
-                exceptionDetailsListView.Items.Add(string.Format("Data[\"{0}\"]", pair.Key)).SubItems.Add(pair.Value.ToString());
+                exceptionDetailsListView.Items.Add(string.Format("Data[\"{0}\"]", pair.Key)).SubItems
+                    .Add(pair.Value.ToString());
             }
         }
 
         if (exception.ExtendedInformation is not null)
         {
-            foreach (KeyValuePair<string, object> info in exception.ExtendedInformation)
+            foreach (var info in exception.ExtendedInformation)
             {
-                ListViewItem item = exceptionDetailsListView.Items.Add(info.Key);
+                var item = exceptionDetailsListView.Items.Add(info.Key);
                 item.UseItemStyleForSubItems = false;
                 item.Font = new Font(Font, FontStyle.Bold);
                 item.SubItems.Add(info.Value.ToString());
@@ -130,7 +119,8 @@ internal partial class ExceptionDetails : UserControl
     private void ExceptionDetailsListView_DoubleClick(object sender, EventArgs e)
     {
         using ExceptionDetailView detailView = new();
-        detailView.ShowDialog(exceptionDetailsListView.SelectedItems[0].Text, exceptionDetailsListView.SelectedItems[0].SubItems[1].Text);
+        detailView.ShowDialog(exceptionDetailsListView.SelectedItems[0].Text,
+            exceptionDetailsListView.SelectedItems[0].SubItems[1].Text);
     }
 
     private void ExceptionDetailsListView_ItemMouseHover(object sender, ListViewItemMouseHoverEventArgs e)
@@ -155,17 +145,15 @@ internal partial class ExceptionDetails : UserControl
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
     {
-        private readonly ExceptionDetails _form;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(ExceptionDetails form)
+    internal readonly struct TestAccessor(ExceptionDetails form)
+    {
+        public ListView ExceptionDetailsListView
         {
-            _form = form;
+            get => form.exceptionDetailsListView;
         }
-
-        public ListView ExceptionDetailsListView => _form.exceptionDetailsListView;
     }
 }

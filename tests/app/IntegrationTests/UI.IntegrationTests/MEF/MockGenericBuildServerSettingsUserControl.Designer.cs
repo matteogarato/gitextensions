@@ -1,4 +1,4 @@
-﻿namespace UITests.CommandsDialogs.SettingsDialog.Pages;
+﻿namespace UITests.MEF;
 
 partial class MockGenericBuildServerSettingsUserControl
 {

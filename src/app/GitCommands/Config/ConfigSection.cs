@@ -4,15 +4,14 @@ using GitExtensions.Extensibility.Configurations;
 namespace GitCommands.Config;
 
 /// <summary>
-///   ConfigSection
-///   Sections can be defined as:
-///   [section "subsection"] (subsection is case sensitive)
-///   or
-///   [section.subsection] (subsection is case insensitive)
-///
-///   Case insensitive sections are deprecated. Dot separated subsections are treated
-///   as case insensitive only when loaded from config file. Dot separated subsections
-///   added from code, are treated as case sensitive.
+///     ConfigSection
+///     Sections can be defined as:
+///     [section "subsection"] (subsection is case sensitive)
+///     or
+///     [section.subsection] (subsection is case insensitive)
+///     Case insensitive sections are deprecated. Dot separated subsections are treated
+///     as case insensitive only when loaded from config file. Dot separated subsections
+///     added from code, are treated as case sensitive.
 /// </summary>
 public class ConfigSection : IConfigSection
 {
@@ -22,7 +21,7 @@ public class ConfigSection : IConfigSection
     {
         _configKeys = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
-        int slashIndex = name.IndexOf('\"');
+        var slashIndex = name.IndexOf('\"');
 
         if (slashIndex != -1)
         {
@@ -40,7 +39,7 @@ public class ConfigSection : IConfigSection
         else
         {
             // [section.subsection] case insensitive
-            int subSectionIndex = name.IndexOf('.');
+            var subSectionIndex = name.IndexOf('.');
 
             if (subSectionIndex < 1)
             {
@@ -58,21 +57,23 @@ public class ConfigSection : IConfigSection
         }
     }
 
-    public string SectionName { get; set; }
-    public string? SubSection { get; set; }
     public bool SubSectionCaseSensitive { get; }
 
-    public IDictionary<string, IReadOnlyList<string>> AsDictionary()
+    string IConfigSection.SectionName { get; set; }
+    string? IConfigSection.SubSection { get; set; }
+
+    IDictionary<string, IReadOnlyList<string>> IConfigSection.AsDictionary()
     {
-        return _configKeys.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<string>)kv.Value, StringComparer.OrdinalIgnoreCase);
+        return _configKeys.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<string>)kv.Value,
+            StringComparer.OrdinalIgnoreCase);
     }
 
-    public bool HasValue(string key)
+    bool IConfigSection.HasValue(string key)
     {
         return _configKeys.ContainsKey(key);
     }
 
-    public void SetValue(string key, string? value)
+    void IConfigSection.SetValue(string key, string? value)
     {
         if (string.IsNullOrEmpty(value))
         {
@@ -84,9 +85,9 @@ public class ConfigSection : IConfigSection
         }
     }
 
-    public void AddValue(string key, string value)
+    void IConfigSection.AddValue(string key, string value)
     {
-        if (!_configKeys.TryGetValue(key, out List<string>? list))
+        if (!_configKeys.TryGetValue(key, out var list))
         {
             list = [];
             _configKeys[key] = list;
@@ -95,9 +96,9 @@ public class ConfigSection : IConfigSection
         list.Add(value);
     }
 
-    public string GetValue(string key, string defaultValue)
+    string IConfigSection.GetValue(string key, string defaultValue)
     {
-        if (_configKeys.TryGetValue(key, out List<string>? list))
+        if (_configKeys.TryGetValue(key, out var list))
         {
             if (list.Count > 0)
             {
@@ -108,17 +109,27 @@ public class ConfigSection : IConfigSection
         return defaultValue;
     }
 
-    public IReadOnlyList<string> GetValues(string key)
+    IReadOnlyList<string> IConfigSection.GetValues(string key)
     {
-        return _configKeys.TryGetValue(key, out List<string>? configKey) ? configKey : [];
+        return _configKeys.TryGetValue(key, out var configKey) ? configKey : [];
+    }
+
+    bool IConfigSection.Equals(IConfigSection other)
+    {
+        var sc = SubSectionCaseSensitive
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
+
+        return string.Equals(SectionName, other.SectionName, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(SubSection, other.SubSection, sc);
     }
 
     public override string ToString()
     {
-        string result = "[" + SectionName;
+        var result = "[" + SectionName;
         if (!string.IsNullOrEmpty(SubSection))
         {
-            string escSubSection = SubSection.Replace("\"", "\\\"");
+            var escSubSection = SubSection.Replace("\"", "\\\"");
             escSubSection = escSubSection.Replace("\\", "\\\\");
 
             if (!SubSectionCaseSensitive)
@@ -132,30 +143,21 @@ public class ConfigSection : IConfigSection
         result += "]";
         return result;
     }
-
-    public bool Equals(IConfigSection other)
-    {
-        StringComparison sc = SubSectionCaseSensitive
-            ? StringComparison.Ordinal
-            : StringComparison.OrdinalIgnoreCase;
-
-        return string.Equals(SectionName, other.SectionName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(SubSection, other.SubSection, sc);
-    }
 }
 
 public static class ConfigSectionExt
 {
     public static bool GetValueAsBool(this IConfigSection section, string name, bool defaultValue)
     {
-        bool result = defaultValue;
+        var result = defaultValue;
 
         if (section.HasValue(name))
         {
-            string value = section.GetValue(name);
+            var value = section.GetValue(name);
             if (!bool.TryParse(value, out result))
             {
-                Trace.WriteLine($"Warning: Could not parse boolean value '{value}' for '{section.SectionName}.{name}'. Using default '{defaultValue}'.");
+                Trace.WriteLine(
+                    $"Warning: Could not parse boolean value '{value}' for '{section.SectionName}.{name}'. Using default '{defaultValue}'.");
                 result = false;
             }
         }

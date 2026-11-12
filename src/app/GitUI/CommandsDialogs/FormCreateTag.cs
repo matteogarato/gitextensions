@@ -11,24 +11,25 @@ namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormCreateTag : GitModuleForm
 {
-    private readonly TranslationString _messageCaption = new("Tag");
-    private readonly TranslationString _noRevisionSelected = new("Select 1 revision to create the tag on.");
-    private readonly TranslationString _pushToCaption = new("Push tag to '{0}'");
     private static readonly TranslationString _trsLightweight = new("Lightweight tag");
     private static readonly TranslationString _trsAnnotated = new("Annotated tag");
     private static readonly TranslationString _trsSignDefault = new("Sign with default GPG");
     private static readonly TranslationString _trsSignSpecificKey = new("Sign with specific GPG");
 
     private readonly IGitTagController _gitTagController;
+    private readonly TranslationString _messageCaption = new("Tag");
+    private readonly TranslationString _noRevisionSelected = new("Select 1 revision to create the tag on.");
+    private readonly TranslationString _pushToCaption = new("Push tag to '{0}'");
     private string _currentRemote = "";
 
-    public FormCreateTag(IGitUICommands commands, ObjectId objectId)
+    public FormCreateTag(IGitUiCommands commands, ObjectId objectId)
         : base(commands)
     {
         InitializeComponent();
         InitializeComplete();
 
-        annotate.Items.AddRange([_trsLightweight.Text, _trsAnnotated.Text, _trsSignDefault.Text, _trsSignSpecificKey.Text]);
+        annotate.Items.AddRange(_trsLightweight.Text, _trsAnnotated.Text, _trsSignDefault.Text,
+            _trsSignSpecificKey.Text);
         annotate.SelectedIndex = 0;
 
         tagMessage.MistakeFont = new Font(tagMessage.MistakeFont, FontStyle.Underline);
@@ -67,7 +68,7 @@ public sealed partial class FormCreateTag : GitModuleForm
     {
         try
         {
-            string tagName = CreateTag();
+            var tagName = CreateTag();
 
             if (pushTag.Checked && !string.IsNullOrEmpty(tagName))
             {
@@ -82,21 +83,22 @@ public sealed partial class FormCreateTag : GitModuleForm
 
     private string CreateTag()
     {
-        ObjectId objectId = commitPickerSmallControl1.SelectedObjectId;
+        var objectId = commitPickerSmallControl1.SelectedObjectId;
 
         if (objectId.IsZero)
         {
-            MessageBoxes.Show(this, _noRevisionSelected.Text, _messageCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _noRevisionSelected.Text, _messageCaption.Text, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return "";
         }
 
         GitCreateTagArgs createTagArgs = new(textBoxTagName.Text,
-                                                 objectId,
-                                                 GetSelectedOperation(annotate.SelectedIndex),
-                                                 tagMessage.Text,
-                                                 textBoxGpgKey.Text,
-                                                 ForceTag.Checked);
-        bool success = _gitTagController.CreateTag(createTagArgs, this);
+            objectId,
+            GetSelectedOperation(annotate.SelectedIndex),
+            tagMessage.Text,
+            textBoxGpgKey.Text,
+            ForceTag.Checked);
+        var success = _gitTagController.CreateTag(createTagArgs, this);
         if (!success)
         {
             return "";
@@ -108,18 +110,17 @@ public sealed partial class FormCreateTag : GitModuleForm
 
     private void PushTag(string tagName)
     {
-        ArgumentString pushCmd = Commands.PushTag(_currentRemote, tagName, false);
+        var pushCmd = Commands.PushTag(_currentRemote, tagName, false);
 
-        bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePush, this);
+        var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePush, this);
         if (!success)
         {
             return;
         }
 
-        using FormRemoteProcess form = new(UICommands, pushCmd)
+        using FormRemoteProcess form = new(UiCommands, pushCmd)
         {
-            Remote = _currentRemote,
-            Text = string.Format(_pushToCaption.Text, _currentRemote),
+            Remote = _currentRemote, Text = string.Format(_pushToCaption.Text, _currentRemote)
         };
         form.ShowDialog();
 
@@ -131,10 +132,10 @@ public sealed partial class FormCreateTag : GitModuleForm
 
     private void AnnotateDropDownChanged(object sender, EventArgs e)
     {
-        TagOperation tagOperation = GetSelectedOperation(annotate.SelectedIndex);
+        var tagOperation = GetSelectedOperation(annotate.SelectedIndex);
         textBoxGpgKey.Enabled = tagOperation == TagOperation.SignWithSpecificKey;
         keyIdLbl.Enabled = tagOperation == TagOperation.SignWithSpecificKey;
-        bool providesMessage = tagOperation.CanProvideMessage();
+        var providesMessage = tagOperation.CanProvideMessage();
         tagMessage.Enabled = providesMessage;
         tagMessage.BorderStyle = providesMessage ? BorderStyle.FixedSingle : BorderStyle.None;
     }

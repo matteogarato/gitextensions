@@ -7,10 +7,10 @@ public sealed class SubmoduleFolderNodeTests
     [Fact]
     public void CompactSingleChildFolders_should_merge_chain_of_single_child_folders()
     {
-        SubmoduleFolderNode root = CreateFolder("extension");
-        SubmoduleFolderNode child1 = CreateFolder("src");
-        SubmoduleFolderNode child2 = CreateFolder("test");
-        SubmoduleFolderNode child3 = CreateFolder("assets");
+        var root = CreateFolder("extension");
+        var child1 = CreateFolder("src");
+        var child2 = CreateFolder("test");
+        var child3 = CreateFolder("assets");
 
         root.Nodes.AddNode(child1);
         child1.Nodes.AddNode(child2);
@@ -25,8 +25,8 @@ public sealed class SubmoduleFolderNodeTests
     [Fact]
     public void CompactSingleChildFolders_should_stop_at_non_folder_child()
     {
-        SubmoduleFolderNode root = CreateFolder("a");
-        SubmoduleFolderNode child = CreateFolder("b");
+        var root = CreateFolder("a");
+        var child = CreateFolder("b");
         DummyNode leaf = new();
 
         root.Nodes.AddNode(child);
@@ -41,9 +41,9 @@ public sealed class SubmoduleFolderNodeTests
     [Fact]
     public void CompactSingleChildFolders_should_not_compact_when_multiple_children()
     {
-        SubmoduleFolderNode root = CreateFolder("Externals");
-        SubmoduleFolderNode child1 = CreateFolder("a");
-        SubmoduleFolderNode child2 = CreateFolder("b");
+        var root = CreateFolder("Externals");
+        var child1 = CreateFolder("a");
+        var child2 = CreateFolder("b");
 
         root.Nodes.AddNode(child1);
         root.Nodes.AddNode(child2);
@@ -57,7 +57,7 @@ public sealed class SubmoduleFolderNodeTests
     [Fact]
     public void CompactSingleChildFolders_should_not_compact_when_no_children()
     {
-        SubmoduleFolderNode root = CreateFolder("empty");
+        var root = CreateFolder("empty");
 
         root.CompactSingleChildFolders();
 
@@ -68,9 +68,9 @@ public sealed class SubmoduleFolderNodeTests
     [Fact]
     public void CompactSingleChildFolders_should_preserve_grandchildren_of_multi_child_node()
     {
-        SubmoduleFolderNode root = CreateFolder("a");
-        SubmoduleFolderNode child = CreateFolder("b");
-        SubmoduleFolderNode grandchild = CreateFolder("c");
+        var root = CreateFolder("a");
+        var child = CreateFolder("b");
+        var grandchild = CreateFolder("c");
         DummyNode leaf1 = new();
         DummyNode leaf2 = new();
 
@@ -87,6 +87,6 @@ public sealed class SubmoduleFolderNodeTests
 
     private static SubmoduleFolderNode CreateFolder(string name)
     {
-        return new SubmoduleFolderNode(tree: null!, name);
+        return new SubmoduleFolderNode(null!, name);
     }
 }

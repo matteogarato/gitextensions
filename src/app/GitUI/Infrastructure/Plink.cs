@@ -1,6 +1,8 @@
 ﻿using System.Text;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
+using GitExtUtils.GitUI;
 
 namespace GitUI.Infrastructure;
 
@@ -60,7 +62,8 @@ public sealed class Plink
 
     public Plink(Executable? executable = null)
     {
-        ThrowIfFileNotFound(AppSettings.Plink, $"'{AppSettings.Plink}'\r\n\r\n{TranslatedStrings.ErrorSshPuTTYInstalled}");
+        ThrowIfFileNotFound(AppSettings.Plink,
+            $"'{AppSettings.Plink}'\r\n\r\n{TranslatedStrings.ErrorSshPuTtyInstalled}");
 
         _executable = executable ?? new Executable("cmd.exe");
     }
@@ -74,14 +77,15 @@ public sealed class Plink
     {
         host = GetPlinkCompatibleUrl(host);
 
-        string args = $"/k \"\"{AppSettings.Plink}\" -T {host}\"";
+        var args = $"/k \"\"{AppSettings.Plink}\" -T {host}\"";
 
-        using IProcess process = _executable.Start(args, createWindow: true, redirectInput: false, redirectOutput: false, outputEncoding: null);
+        using var process = _executable.Start(args, createWindow: true, redirectInput: false,
+            redirectOutput: false, outputEncoding: null);
         return await process.WaitForExitAsync() == 0;
     }
 
     /// <summary>
-    /// Transforms the given input Url to make it compatible with Plink, if necessary
+    ///     Transforms the given input Url to make it compatible with Plink, if necessary
     /// </summary>
     internal static string GetPlinkCompatibleUrl(string inputUrl)
     {
@@ -120,7 +124,8 @@ public sealed class Plink
         if (!File.Exists(filePath))
         {
             throw new UserExternalOperationException(errorMessage,
-                new ExternalOperationException(innerException: new FileNotFoundException(heading ?? TranslatedStrings.ErrorFileNotFound)));
+                new ExternalOperationException(
+                    innerException: new FileNotFoundException(heading ?? TranslatedStrings.ErrorFileNotFound)));
         }
     }
 }

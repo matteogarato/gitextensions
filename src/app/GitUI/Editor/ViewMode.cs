@@ -1,7 +1,7 @@
 namespace GitUI.Editor;
 
 /// <summary>
-/// The type of information currently shown in the file viewer.
+///     The type of information currently shown in the file viewer.
 /// </summary>
 public enum ViewMode
 {

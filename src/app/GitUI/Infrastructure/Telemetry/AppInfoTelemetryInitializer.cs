@@ -1,36 +1,33 @@
 ﻿using System.Diagnostics;
-using GitCommands;
+using GitCommands.Settings;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 
 namespace GitUI.Infrastructure.Telemetry;
 
-internal sealed class AppInfoTelemetryInitializer : ITelemetryInitializer
+internal sealed class AppInfoTelemetryInitializer(bool isDirty) : ITelemetryInitializer
 {
-    private readonly bool _isDirty;
-    private static readonly string AppCurrentTranslationKey = nameof(AppSettings.CurrentTranslation).FormatKey();
-    private static readonly string AppEnvironmentKey = "Environment".FormatKey();
-    private static readonly string AppIsPortableKey = "IsPortable".FormatKey();
-    private static readonly string AppIsReleaseKey = "IsRelease".FormatKey();
-    private static readonly string AppStartWithRecentWorkingDirKey = nameof(AppSettings.StartWithRecentWorkingDir).FormatKey();
+    private static readonly string _appCurrentTranslationKey = nameof(AppSettings.CurrentTranslation).FormatKey();
+    private static readonly string _appEnvironmentKey = "Environment".FormatKey();
+    private static readonly string _appIsPortableKey = "IsPortable".FormatKey();
+    private static readonly string _appIsReleaseKey = "IsRelease".FormatKey();
 
-    public AppInfoTelemetryInitializer(bool isDirty)
-    {
-        _isDirty = isDirty;
-    }
+    private static readonly string _appStartWithRecentWorkingDirKey =
+        nameof(AppSettings.StartWithRecentWorkingDir).FormatKey();
 
-    public void Initialize(ITelemetry telemetry)
+    void ITelemetryInitializer.Initialize(ITelemetry telemetry)
     {
         telemetry.Context.Component.Version = AppSettings.ProductVersion;
-        telemetry.Context.GlobalProperties[AppIsReleaseKey] = (!_isDirty).ToString();
-        telemetry.Context.GlobalProperties[AppIsPortableKey] = AppSettings.IsPortable().ToString();
-        telemetry.Context.GlobalProperties[AppCurrentTranslationKey] = AppSettings.CurrentTranslation;
-        telemetry.Context.GlobalProperties[AppStartWithRecentWorkingDirKey] = AppSettings.StartWithRecentWorkingDir.ToString();
+        telemetry.Context.GlobalProperties[_appIsReleaseKey] = (!isDirty).ToString();
+        telemetry.Context.GlobalProperties[_appIsPortableKey] = AppSettings.IsPortable().ToString();
+        telemetry.Context.GlobalProperties[_appCurrentTranslationKey] = AppSettings.CurrentTranslation;
+        telemetry.Context.GlobalProperties[_appStartWithRecentWorkingDirKey] =
+            AppSettings.StartWithRecentWorkingDir.ToString();
 
         // Always default to development if we're in the debugger
         if (Debugger.IsAttached)
         {
-            telemetry.Context.GlobalProperties[AppEnvironmentKey] = "development";
+            telemetry.Context.GlobalProperties[_appEnvironmentKey] = "development";
         }
     }
 }

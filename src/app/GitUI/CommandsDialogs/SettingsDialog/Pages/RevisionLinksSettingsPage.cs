@@ -3,7 +3,6 @@ using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
 using GitExtUtils.GitUI;
 using GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
@@ -14,7 +13,7 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
     private ExternalLinksManager? _externalLinksManager;
 
     public RevisionLinksSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
         InitializeComponent();
         CaptionCol.Width = DpiUtil.Scale(150);
@@ -24,6 +23,11 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
         CaptionCol.DataPropertyName = nameof(ExternalLinkFormat.Caption);
         URICol.DataPropertyName = nameof(ExternalLinkFormat.Format);
         LoadTemplatesInMenu();
+    }
+
+    private ExternalLinkDefinition? SelectedLinkDefinition
+    {
+        get => _NO_TRANSLATE_Categories.SelectedItem as ExternalLinkDefinition;
     }
 
     protected override void SettingsToPage()
@@ -64,14 +68,12 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
     {
         Validates.NotNull(_externalLinksManager);
 
-        IReadOnlyList<ExternalLinkDefinition> effectiveLinkDefinitions = _externalLinksManager.GetEffectiveSettings();
+        var effectiveLinkDefinitions = _externalLinksManager.GetEffectiveSettings();
 
         _NO_TRANSLATE_Categories.DataSource = null;
         _NO_TRANSLATE_Categories.DisplayMember = nameof(ExternalLinkDefinition.Name);
         _NO_TRANSLATE_Categories.DataSource = effectiveLinkDefinitions;
     }
-
-    private ExternalLinkDefinition? SelectedLinkDefinition => _NO_TRANSLATE_Categories.SelectedItem as ExternalLinkDefinition;
 
     private void CategoryChanged()
     {
@@ -97,14 +99,18 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
             splitContainer1.Panel2.Enabled = true;
             _NO_TRANSLATE_Name.Text = SelectedLinkDefinition.Name;
             EnabledChx.Checked = SelectedLinkDefinition.Enabled;
-            MessageChx.Checked = SelectedLinkDefinition.SearchInParts.Contains(ExternalLinkDefinition.RevisionPart.Message);
-            LocalBranchChx.Checked = SelectedLinkDefinition.SearchInParts.Contains(ExternalLinkDefinition.RevisionPart.LocalBranches);
-            RemoteBranchChx.Checked = SelectedLinkDefinition.SearchInParts.Contains(ExternalLinkDefinition.RevisionPart.RemoteBranches);
+            MessageChx.Checked =
+                SelectedLinkDefinition.SearchInParts.Contains(ExternalLinkDefinition.RevisionPart.Message);
+            LocalBranchChx.Checked =
+                SelectedLinkDefinition.SearchInParts.Contains(ExternalLinkDefinition.RevisionPart.LocalBranches);
+            RemoteBranchChx.Checked =
+                SelectedLinkDefinition.SearchInParts.Contains(ExternalLinkDefinition.RevisionPart.RemoteBranches);
             _NO_TRANSLATE_SearchPatternEdit.Text = SelectedLinkDefinition.SearchPattern;
             _NO_TRANSLATE_NestedPatternEdit.Text = SelectedLinkDefinition.NestedSearchPattern;
             _NO_TRANSLATE_RemotePatern.Text = SelectedLinkDefinition.RemoteSearchPattern;
-            chxURL.Checked = SelectedLinkDefinition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.URL);
-            chxPushURL.Checked = SelectedLinkDefinition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.PushURL);
+            chxURL.Checked = SelectedLinkDefinition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.Url);
+            chxPushURL.Checked =
+                SelectedLinkDefinition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.PushUrl);
             _NO_TRANSLATE_UseRemotes.Text = SelectedLinkDefinition.UseRemotesPattern;
             chkOnlyFirstRemote.Checked = SelectedLinkDefinition.UseOnlyFirstRemote;
             LinksGrid.DataSource = SelectedLinkDefinition.LinkFormats;
@@ -120,7 +126,7 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
             UseRemotesPattern = "upstream|origin",
             UseOnlyFirstRemote = true,
             SearchInParts = { ExternalLinkDefinition.RevisionPart.Message },
-            RemoteSearchInParts = { ExternalLinkDefinition.RemotePart.URL }
+            RemoteSearchInParts = { ExternalLinkDefinition.RemotePart.Url }
         };
         Validates.NotNull(_externalLinksManager);
         _externalLinksManager.Add(definition);
@@ -132,7 +138,8 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
 
     private void LoadTemplatesInMenu()
     {
-        foreach (ICloudProviderExternalLinkDefinitionExtractor externalLinkDefinitionExtractor in new CloudProviderExternalLinkDefinitionExtractorFactory().GetAllExtractor())
+        foreach (var externalLinkDefinitionExtractor in
+                 new CloudProviderExternalLinkDefinitionExtractorFactory().GetAllExtractor())
         {
             Add.DropDownItems.Add(new ToolStripMenuItem(
                 string.Format(_addTemplate.Text, externalLinkDefinitionExtractor.ServiceName),
@@ -152,9 +159,9 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
         }
 
         string[] remoteNames = ["upstream", "fork", "origin"];
-        foreach (string remoteName in remoteNames)
+        foreach (var remoteName in remoteNames)
         {
-            Remote remoteFound = remotes.FirstOrDefault(r => r.Name == remoteName);
+            var remoteFound = remotes.FirstOrDefault(r => r.Name == remoteName);
             if (remoteFound.Name is not null)
             {
                 return remoteFound;
@@ -164,15 +171,19 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
         return remotes[0];
     }
 
-    private void ExtractExternalLinkDefinitions(ICloudProviderExternalLinkDefinitionExtractor externalLinkDefinitionExtractor)
+    private void ExtractExternalLinkDefinitions(
+        ICloudProviderExternalLinkDefinitionExtractor externalLinkDefinitionExtractor)
     {
         Validates.NotNull(Module);
         Validates.NotNull(_externalLinksManager);
 
         IReadOnlyList<Remote> remotes = ThreadHelper.JoinableTaskFactory.Run(Module.GetRemotesAsync).ToList();
-        Remote selectedRemote = FindRemoteByPreference([.. remotes.Where(r => externalLinkDefinitionExtractor.IsValidRemoteUrl(r.FetchUrl))]);
+        var selectedRemote = FindRemoteByPreference([
+            .. remotes.Where(r => externalLinkDefinitionExtractor.IsValidRemoteUrl(r.FetchUrl))
+        ]);
 
-        IList<ExternalLinkDefinition> externalLinkDefinitions = externalLinkDefinitionExtractor.GetDefinitions(selectedRemote.FetchUrl);
+        var externalLinkDefinitions =
+            externalLinkDefinitionExtractor.GetDefinitions(selectedRemote.FetchUrl);
         _externalLinksManager.AddRange(externalLinkDefinitions);
 
         ReloadCategories();
@@ -189,7 +200,7 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
 
         Validates.NotNull(_externalLinksManager);
 
-        int idx = _NO_TRANSLATE_Categories.SelectedIndex;
+        var idx = _NO_TRANSLATE_Categories.SelectedIndex;
 
         _externalLinksManager.Remove(SelectedLinkDefinition);
 
@@ -207,7 +218,7 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
     {
         if (SelectedLinkDefinition is not null)
         {
-            ExternalLinkDefinition selected = SelectedLinkDefinition;
+            var selected = SelectedLinkDefinition;
             selected.Name = _NO_TRANSLATE_Name.Text;
             ReloadCategories();
             _NO_TRANSLATE_Categories.SelectedItem = selected;
@@ -285,11 +296,11 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
         {
             if (chxURL.Checked)
             {
-                SelectedLinkDefinition.RemoteSearchInParts.Add(ExternalLinkDefinition.RemotePart.URL);
+                SelectedLinkDefinition.RemoteSearchInParts.Add(ExternalLinkDefinition.RemotePart.Url);
             }
             else
             {
-                SelectedLinkDefinition.RemoteSearchInParts.Remove(ExternalLinkDefinition.RemotePart.URL);
+                SelectedLinkDefinition.RemoteSearchInParts.Remove(ExternalLinkDefinition.RemotePart.Url);
             }
         }
     }
@@ -300,11 +311,11 @@ public sealed partial class RevisionLinksSettingsPage : DistributedSettingsPage
         {
             if (chxPushURL.Checked)
             {
-                SelectedLinkDefinition.RemoteSearchInParts.Add(ExternalLinkDefinition.RemotePart.PushURL);
+                SelectedLinkDefinition.RemoteSearchInParts.Add(ExternalLinkDefinition.RemotePart.PushUrl);
             }
             else
             {
-                SelectedLinkDefinition.RemoteSearchInParts.Remove(ExternalLinkDefinition.RemotePart.PushURL);
+                SelectedLinkDefinition.RemoteSearchInParts.Remove(ExternalLinkDefinition.RemotePart.PushUrl);
             }
         }
     }

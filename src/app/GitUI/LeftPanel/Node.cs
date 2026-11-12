@@ -1,11 +1,17 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.LeftPanel.Interfaces;
-using Microsoft;
 
 namespace GitUI.LeftPanel;
 
 internal abstract class Node : NodeBase, INode
 {
+    private TreeNode? _treeViewNode;
+
+    protected Node(Tree? tree)
+    {
+        Nodes = new Nodes(tree);
+    }
+
     protected Tree Tree
     {
         get
@@ -15,19 +21,15 @@ internal abstract class Node : NodeBase, INode
         }
     }
 
-    protected IGitUICommands UICommands => Tree.UICommands;
-
-    protected Node(Tree? tree)
+    protected IGitUiCommands UiCommands
     {
-        Nodes = new Nodes(tree);
+        get => Tree.UiCommands;
     }
 
-    private TreeNode? _treeViewNode;
-
     /// <summary>
-    /// The tree node representing this node.
-    /// Note that it may not always be set and which <see cref="Node"/> it represents may change
-    /// because <see cref="Nodes.FillTreeViewNode(TreeNode)"/> recycles <see cref="TreeNode"/>s.
+    ///     The tree node representing this node.
+    ///     Note that it may not always be set and which <see cref="Node" /> it represents may change
+    ///     because <see cref="Nodes.FillTreeViewNode(TreeNode)" /> recycles <see cref="TreeNode" />s.
     /// </summary>
     protected internal override TreeNode TreeViewNode
     {
@@ -68,7 +70,7 @@ internal abstract class Node : NodeBase, INode
         _treeViewNode.Name = NodeName();
 
         // Check before if value has changed because that's a costly operation
-        string updatedText = DisplayText();
+        var updatedText = DisplayText();
         if (updatedText != _treeViewNode.Text)
         {
             _treeViewNode.Text = updatedText;
@@ -76,17 +78,17 @@ internal abstract class Node : NodeBase, INode
     }
 
     /// <summary>
-    ///  Navigates the revision grid to the specified ref (commit SHA, branch name, tag, etc.)
-    ///  and returns focus to the tree view.
+    ///     Navigates the revision grid to the specified ref (commit SHA, branch name, tag, etc.)
+    ///     and returns focus to the tree view.
     /// </summary>
     protected void GoToRevision(string @ref)
     {
-        TreeView? treeView = TreeViewNode.TreeView;
-        bool toggleSelection = Control.ModifierKeys.HasFlag(Keys.Control);
+        var treeView = TreeViewNode.TreeView;
+        var toggleSelection = Control.ModifierKeys.HasFlag(Keys.Control);
 
         treeView?.BeginInvoke(() =>
         {
-            UICommands.BrowseRepo?.GoToRef(@ref, showNoRevisionMsg: true, toggleSelection: toggleSelection);
+            UiCommands.BrowseRepo?.GoToRef(@ref, true, toggleSelection);
             treeView.Focus();
         });
     }
@@ -123,7 +125,7 @@ internal abstract class Node : NodeBase, INode
 
     public static void OnNode<T>(TreeNode? treeNode, Action<T> action) where T : class, INode
     {
-        T? node = GetNodeSafe<T>(treeNode);
+        var node = GetNodeSafe<T>(treeNode);
 
         if (node is not null)
         {

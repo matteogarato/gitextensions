@@ -7,22 +7,18 @@ using GitCommands.DiffMergeTools;
 using GitCommands.Settings;
 using GitExtensions.Extensibility.Configurations;
 using GitExtensions.Extensibility.Settings;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
 {
-    private readonly TranslationString _selectFile = new("Select file");
     private readonly GitConfigSettingsPageController _controller;
+    private readonly TranslationString _selectFile = new("Select file");
     private DiffMergeToolConfigurationManager? _diffMergeToolConfigurationManager;
 
-    [GeneratedRegex(@"\$(?:LOCAL|REMOTE|BASE|MERGED)", RegexOptions.ExplicitCapture)]
-    private static partial Regex WslRebaseRegex { get; }
-
     public GitConfigSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
         InitializeComponent();
 
@@ -44,6 +40,9 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         _controller = new GitConfigSettingsPageController();
     }
 
+    [GeneratedRegex(@"\$(?:LOCAL|REMOTE|BASE|MERGED)", RegexOptions.ExplicitCapture)]
+    private static partial Regex WslRebaseRegex { get; }
+
     private string? AdaptCommandIfWsl(string? command)
     {
         if (string.IsNullOrEmpty(command) || !PathUtil.IsWslPath(Module?.WorkingDir))
@@ -52,11 +51,12 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         }
 
         // Replace "D:" with "/mnt/d"
-        int colonIndex = command.IndexOf(':');
+        var colonIndex = command.IndexOf(':');
         if (colonIndex == (command[0] == '"' ? 2 : 1))
         {
-            int windowsDriveIndex = colonIndex - 1;
-            command = $"{command[..windowsDriveIndex]}/mnt/{char.ToLower(command[windowsDriveIndex])}{command[(colonIndex + 1)..]}";
+            var windowsDriveIndex = colonIndex - 1;
+            command =
+                $"{command[..windowsDriveIndex]}/mnt/{char.ToLower(command[windowsDriveIndex])}{command[(colonIndex + 1)..]}";
         }
 
         return WslRebaseRegex.Replace(command, @"$(wslpath -aw $&)").ToPosixPath();
@@ -75,7 +75,11 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         if (OperatingSystem.IsWindows())
         {
             cbxCredentialHelper.Items.AddRange(PathUtil.IsWslPath(Module?.WorkingDir)
-                ? [.. FindGitCredentialHelpers().Select(path => path.ToWslPath().Replace(" ", @"\ ")), .. linuxCredentialHelpers]
+                ?
+                [
+                    .. FindGitCredentialHelpers().Select(path => path.ToWslPath().Replace(" ", @"\ ")),
+                    .. linuxCredentialHelpers
+                ]
                 : [.. FindGitCredentialHelpers().Select(GetCredentialHelperName)]);
         }
         else
@@ -83,7 +87,7 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
             cbxCredentialHelper.Items.AddRange(linuxCredentialHelpers);
         }
 
-        cbxCredentialHelper.Items.AddRange(["store", "cache"]);
+        cbxCredentialHelper.Items.AddRange("store", "cache");
 
         GlobalEditor.Items.AddRange([.. EditorHelper.GetEditors().Select(AdaptCommandIfWsl).WhereNotNull()]);
 
@@ -93,7 +97,7 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         {
             try
             {
-                string? gitDir = Path.GetDirectoryName(AppSettings.GitCommand);
+                var gitDir = Path.GetDirectoryName(AppSettings.GitCommand);
                 if (gitDir?.EndsWith("bin") is true)
                 {
                     gitDir = Path.GetDirectoryName(gitDir);
@@ -113,7 +117,7 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
 
         static string GetCredentialHelperName(string path)
         {
-            string name = Path.GetFileNameWithoutExtension(path);
+            var name = Path.GetFileNameWithoutExtension(path);
             return name.StartsWith(gitCredentialHelperPrefix) ? name[gitCredentialHelperPrefix.Length..] : path;
         }
     }
@@ -125,7 +129,7 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
 
     public override void OnPageShown()
     {
-        bool canFindGitCmd = CheckSettingsLogic.CanFindGitCmd();
+        var canFindGitCmd = CheckSettingsLogic.CanFindGitCmd();
 
         GlobalUserName.Enabled = canFindGitCmd;
         GlobalUserEmail.Enabled = canFindGitCmd;
@@ -140,9 +144,9 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         {
             // Unselect has no effect in SettingsToPage because ComboBox asynchronously lives its own life
             ComboBox[] comboBoxes = [cbxCredentialHelper, GlobalEditor];
-            foreach (ComboBox comboBox in comboBoxes)
+            foreach (var comboBox in comboBoxes)
             {
-                comboBox.Select(start: comboBox.Text.Length, length: 0);
+                comboBox.Select(comboBox.Text.Length, 0);
             }
         }
     }
@@ -152,8 +156,8 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         Validates.NotNull(_diffMergeToolConfigurationManager);
         Validates.NotNull(CurrentSettings);
 
-        string? mergeTool = _diffMergeToolConfigurationManager.ConfiguredMergeTool;
-        string? diffTool = _diffMergeToolConfigurationManager.ConfiguredDiffTool;
+        var mergeTool = _diffMergeToolConfigurationManager.ConfiguredMergeTool;
+        var diffTool = _diffMergeToolConfigurationManager.ConfiguredDiffTool;
 
         Global_FilesEncoding.SelectedItem = new GitEncodingSettingsGetter(CurrentSettings).FilesEncoding;
 
@@ -163,31 +167,32 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         txtCommitTemplatePath.Text = CurrentSettings.GetValue("commit.template");
 
         // Hide credential helper because EffectiveGitConfigSettings can only return the last value
-        GitConfigSettings? gitConfigSettings = TryGetGitConfigSettings(CurrentSettings);
-        bool showCredentialHelper = gitConfigSettings is not null;
+        var gitConfigSettings = TryGetGitConfigSettings(CurrentSettings);
+        var showCredentialHelper = gitConfigSettings is not null;
         lblCredentialHelper.Visible = showCredentialHelper;
         cbxCredentialHelper.Visible = showCredentialHelper;
         cbxCredentialHelper.Enabled = showCredentialHelper;
         if (gitConfigSettings is not null)
         {
-            IReadOnlyList<string> values = gitConfigSettings.GetValues(SettingKeyString.CredentialHelper);
+            var values = gitConfigSettings.GetValues(SettingKeyString.CredentialHelper);
             cbxCredentialHelper.Enabled = values.Count <= 1;
             cbxCredentialHelper.Text = string.Join(", ", values);
         }
 
         _NO_TRANSLATE_cboMergeTool.Text = mergeTool;
         txtMergeToolPath.Text = _diffMergeToolConfigurationManager.GetToolPath(mergeTool, DiffMergeToolType.Merge);
-        txtMergeToolCommand.Text = _diffMergeToolConfigurationManager.GetToolCommand(mergeTool, DiffMergeToolType.Merge);
+        txtMergeToolCommand.Text =
+            _diffMergeToolConfigurationManager.GetToolCommand(mergeTool, DiffMergeToolType.Merge);
 
         _NO_TRANSLATE_cboDiffTool.Text = diffTool;
         txtDiffToolPath.Text = _diffMergeToolConfigurationManager.GetToolPath(diffTool, DiffMergeToolType.Diff);
         txtDiffToolCommand.Text = _diffMergeToolConfigurationManager.GetToolCommand(diffTool, DiffMergeToolType.Diff);
 
-        AutoCRLFType? autocrlf = ((ISettingsValueGetter)CurrentSettings).GetValue<AutoCRLFType>("core.autocrlf");
+        var autocrlf = ((ISettingsValueGetter)CurrentSettings).GetValue<AutoCrlfType>("core.autocrlf");
 
-        globalAutoCrlfFalse.Checked = autocrlf is AutoCRLFType.@false;
-        globalAutoCrlfInput.Checked = autocrlf is AutoCRLFType.input;
-        globalAutoCrlfTrue.Checked = autocrlf is AutoCRLFType.@true;
+        globalAutoCrlfFalse.Checked = autocrlf is AutoCrlfType.False;
+        globalAutoCrlfInput.Checked = autocrlf is AutoCrlfType.Input;
+        globalAutoCrlfTrue.Checked = autocrlf is AutoCrlfType.True;
         globalAutoCrlfNotSet.Checked = autocrlf is null;
 
         base.SettingsToPage();
@@ -205,8 +210,8 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
     }
 
     /// <summary>
-    /// silently does not save some settings if Git is not configured correctly
-    /// (user notification is done elsewhere).
+    ///     silently does not save some settings if Git is not configured correctly
+    ///     (user notification is done elsewhere).
     /// </summary>
     protected override void PageToSettings()
     {
@@ -233,10 +238,11 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         Validates.NotNull(_diffMergeToolConfigurationManager);
 
         // TODO: why use GUI???
-        string diffTool = _NO_TRANSLATE_cboDiffTool.Text;
+        var diffTool = _NO_TRANSLATE_cboDiffTool.Text;
         if (!string.IsNullOrWhiteSpace(diffTool))
         {
-            _diffMergeToolConfigurationManager.ConfigureDiffMergeTool(diffTool, DiffMergeToolType.Diff, txtDiffToolPath.Text, txtDiffToolCommand.Text);
+            _diffMergeToolConfigurationManager.ConfigureDiffMergeTool(diffTool, DiffMergeToolType.Diff,
+                txtDiffToolPath.Text, txtDiffToolCommand.Text);
         }
         else
         {
@@ -244,22 +250,23 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         }
 
         // TODO: merge.guitool???
-        string mergeTool = _NO_TRANSLATE_cboMergeTool.Text;
+        var mergeTool = _NO_TRANSLATE_cboMergeTool.Text;
         if (!string.IsNullOrWhiteSpace(mergeTool))
         {
-            _diffMergeToolConfigurationManager.ConfigureDiffMergeTool(mergeTool, DiffMergeToolType.Merge, txtMergeToolPath.Text, txtMergeToolCommand.Text);
+            _diffMergeToolConfigurationManager.ConfigureDiffMergeTool(mergeTool, DiffMergeToolType.Merge,
+                txtMergeToolPath.Text, txtMergeToolCommand.Text);
         }
         else
         {
             _diffMergeToolConfigurationManager.UnsetCurrentTool(DiffMergeToolType.Merge);
         }
 
-        AutoCRLFType? autoCRLFType =
-            globalAutoCrlfFalse.Checked ? AutoCRLFType.@false
-            : globalAutoCrlfInput.Checked ? AutoCRLFType.input
-            : globalAutoCrlfTrue.Checked ? AutoCRLFType.@true
+        AutoCrlfType? autoCrlfType =
+            globalAutoCrlfFalse.Checked ? AutoCrlfType.False
+            : globalAutoCrlfInput.Checked ? AutoCrlfType.Input
+            : globalAutoCrlfTrue.Checked ? AutoCrlfType.True
             : null;
-        CurrentSettings.SetValue("core.autocrlf", autoCRLFType?.ToString());
+        CurrentSettings.SetValue("core.autocrlf", autoCrlfType?.ToString());
     }
 
     private string BrowseDiffMergeTool(string toolName, string path, DiffMergeToolType toolType)
@@ -267,30 +274,30 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         Validates.NotNull(_diffMergeToolConfigurationManager);
 
         DiffMergeToolConfiguration diffMergeToolConfig = default;
-        int index = toolType == DiffMergeToolType.Diff ? _NO_TRANSLATE_cboDiffTool.SelectedIndex : _NO_TRANSLATE_cboMergeTool.SelectedIndex;
+        var index = toolType == DiffMergeToolType.Diff
+            ? _NO_TRANSLATE_cboDiffTool.SelectedIndex
+            : _NO_TRANSLATE_cboMergeTool.SelectedIndex;
         if (index > -1)
         {
             diffMergeToolConfig = _diffMergeToolConfigurationManager.LoadDiffMergeToolConfig(toolName, null);
         }
 
-        string initialDirectory = _controller.GetInitialDirectory(path, diffMergeToolConfig.Path);
+        var initialDirectory = _controller.GetInitialDirectory(path, diffMergeToolConfig.Path);
 
-        string filter = !string.IsNullOrWhiteSpace(diffMergeToolConfig.ExeFileName)
+        var filter = !string.IsNullOrWhiteSpace(diffMergeToolConfig.ExeFileName)
             ? $"{toolName}|{diffMergeToolConfig.ExeFileName}"
             : "*.exe;*.cmd;*.bat|*.exe;*.cmd;*.bat";
 
         using OpenFileDialog dialog = new()
         {
-            Filter = filter,
-            InitialDirectory = initialDirectory,
-            Title = _selectFile.Text
+            Filter = filter, InitialDirectory = initialDirectory, Title = _selectFile.Text
         };
         return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : path;
     }
 
     private void SuggestDiffToolCommand()
     {
-        string toolName = _NO_TRANSLATE_cboDiffTool.Text;
+        var toolName = _NO_TRANSLATE_cboDiffTool.Text;
         if (string.IsNullOrWhiteSpace(toolName))
         {
             txtDiffToolCommand.Text = string.Empty;
@@ -298,13 +305,14 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         }
 
         Validates.NotNull(_diffMergeToolConfigurationManager);
-        DiffMergeToolConfiguration diffMergeToolConfig = _diffMergeToolConfigurationManager.LoadDiffMergeToolConfig(toolName, txtDiffToolPath.Text);
+        var diffMergeToolConfig =
+            _diffMergeToolConfigurationManager.LoadDiffMergeToolConfig(toolName, txtDiffToolPath.Text);
         txtDiffToolCommand.Text = AdaptCommandIfWsl(diffMergeToolConfig.FullDiffCommand);
     }
 
     private void SuggestMergeToolCommand()
     {
-        string toolName = _NO_TRANSLATE_cboMergeTool.Text;
+        var toolName = _NO_TRANSLATE_cboMergeTool.Text;
         if (string.IsNullOrWhiteSpace(toolName))
         {
             txtMergeToolCommand.Text = string.Empty;
@@ -312,15 +320,20 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         }
 
         Validates.NotNull(_diffMergeToolConfigurationManager);
-        DiffMergeToolConfiguration diffMergeToolConfig = _diffMergeToolConfigurationManager.LoadDiffMergeToolConfig(toolName, txtMergeToolPath.Text);
+        var diffMergeToolConfig =
+            _diffMergeToolConfigurationManager.LoadDiffMergeToolConfig(toolName, txtMergeToolPath.Text);
         txtMergeToolCommand.Text = AdaptCommandIfWsl(diffMergeToolConfig.FullMergeCommand);
     }
 
     private void btnMergeToolCommandSuggest_Click(object sender, EventArgs e)
-        => SuggestMergeToolCommand();
+    {
+        SuggestMergeToolCommand();
+    }
 
     private void btnDiffToolCommandSuggest_Click(object sender, EventArgs e)
-        => SuggestDiffToolCommand();
+    {
+        SuggestDiffToolCommand();
+    }
 
     private void txtDiffMergeToolPath_LostFocus(object sender, EventArgs e)
     {
@@ -338,7 +351,6 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         if (sender == txtMergeToolPath)
         {
             txtMergeToolPath.Text = txtMergeToolPath.Text.ToPosixPath();
-            return;
         }
     }
 
@@ -350,8 +362,9 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         }
 
         // we only want to suggest command for known built-in tool types
-        string toolName = _NO_TRANSLATE_cboMergeTool.Text;
-        if (!string.IsNullOrWhiteSpace(toolName) && RegisteredDiffMergeTools.All(DiffMergeToolType.Merge).Contains(toolName))
+        var toolName = _NO_TRANSLATE_cboMergeTool.Text;
+        if (!string.IsNullOrWhiteSpace(toolName) &&
+            RegisteredDiffMergeTools.All(DiffMergeToolType.Merge).Contains(toolName))
         {
             SuggestMergeToolCommand();
         }
@@ -365,8 +378,9 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         }
 
         // we only want to suggest command for known built-in tool types
-        string toolName = _NO_TRANSLATE_cboDiffTool.Text;
-        if (!string.IsNullOrWhiteSpace(toolName) && RegisteredDiffMergeTools.All(DiffMergeToolType.Diff).Contains(toolName))
+        var toolName = _NO_TRANSLATE_cboDiffTool.Text;
+        if (!string.IsNullOrWhiteSpace(toolName) &&
+            RegisteredDiffMergeTools.All(DiffMergeToolType.Diff).Contains(toolName))
         {
             SuggestDiffToolCommand();
         }
@@ -374,13 +388,15 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
 
     private void btnMergeToolBrowse_Click(object sender, EventArgs e)
     {
-        txtMergeToolPath.Text = BrowseDiffMergeTool(_NO_TRANSLATE_cboMergeTool.Text, txtMergeToolPath.Text, DiffMergeToolType.Merge).ToPosixPath();
+        txtMergeToolPath.Text =
+            BrowseDiffMergeTool(_NO_TRANSLATE_cboMergeTool.Text, txtMergeToolPath.Text, DiffMergeToolType.Merge)
+                .ToPosixPath();
         SuggestMergeToolCommand();
     }
 
     private void cboDiffTool_TextChanged(object sender, EventArgs e)
     {
-        string toolName = _NO_TRANSLATE_cboDiffTool.Text;
+        var toolName = _NO_TRANSLATE_cboDiffTool.Text;
 
         txtDiffToolPath.Enabled =
             btnDiffToolBrowse.Enabled =
@@ -395,7 +411,8 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         Validates.NotNull(_diffMergeToolConfigurationManager);
 
         string toolPath;
-        if (string.IsNullOrWhiteSpace(toolName) || string.IsNullOrWhiteSpace(toolPath = _diffMergeToolConfigurationManager.GetToolPath(toolName, DiffMergeToolType.Diff)))
+        if (string.IsNullOrWhiteSpace(toolName) || string.IsNullOrWhiteSpace(toolPath =
+                _diffMergeToolConfigurationManager.GetToolPath(toolName, DiffMergeToolType.Diff)))
         {
             txtDiffToolPath.Text =
                 txtDiffToolCommand.Text = string.Empty;
@@ -408,7 +425,7 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
 
     private void cboMergeTool_TextChanged(object sender, EventArgs e)
     {
-        string toolName = _NO_TRANSLATE_cboMergeTool.Text;
+        var toolName = _NO_TRANSLATE_cboMergeTool.Text;
 
         txtMergeToolPath.Enabled =
             btnMergeToolBrowse.Enabled =
@@ -423,7 +440,8 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
         Validates.NotNull(_diffMergeToolConfigurationManager);
 
         string toolPath;
-        if (string.IsNullOrWhiteSpace(toolName) || string.IsNullOrWhiteSpace(toolPath = _diffMergeToolConfigurationManager.GetToolPath(toolName, DiffMergeToolType.Merge)))
+        if (string.IsNullOrWhiteSpace(toolName) || string.IsNullOrWhiteSpace(toolPath =
+                _diffMergeToolConfigurationManager.GetToolPath(toolName, DiffMergeToolType.Merge)))
         {
             txtMergeToolPath.Text =
                 txtMergeToolCommand.Text = string.Empty;
@@ -436,7 +454,9 @@ public partial class GitConfigSettingsPage : GitConfigBaseSettingsPage
 
     private void btnDiffToolBrowse_Click(object sender, EventArgs e)
     {
-        txtDiffToolPath.Text = BrowseDiffMergeTool(_NO_TRANSLATE_cboDiffTool.Text, txtDiffToolPath.Text, DiffMergeToolType.Diff).ToPosixPath();
+        txtDiffToolPath.Text =
+            BrowseDiffMergeTool(_NO_TRANSLATE_cboDiffTool.Text, txtDiffToolPath.Text, DiffMergeToolType.Diff)
+                .ToPosixPath();
         SuggestDiffToolCommand();
     }
 

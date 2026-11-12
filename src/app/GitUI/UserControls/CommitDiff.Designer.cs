@@ -18,7 +18,7 @@ partial class CommitDiff
         splitContainer1 = new SplitContainer();
         commitInfo = new GitUI.CommitInfo.CommitInfo();
         splitContainer2 = new SplitContainer();
-        DiffFiles = new GitUI.FileStatusList();
+        DiffFiles = new FileStatusList();
         DiffText = new GitUI.Editor.FileViewer();
         ((System.ComponentModel.ISupportInitialize)(splitContainer1)).BeginInit();
         splitContainer1.Panel1.SuspendLayout();

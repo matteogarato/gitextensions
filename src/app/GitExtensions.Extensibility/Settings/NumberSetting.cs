@@ -1,48 +1,60 @@
 ﻿namespace GitExtensions.Extensibility.Settings;
 
-public class NumberSetting<T> : ISetting
+public class NumberSetting<T>(string name, string caption, T defaultValue) : ISetting
 {
     public NumberSetting(string name, T defaultValue)
         : this(name, name, defaultValue)
     {
     }
 
-    public NumberSetting(string name, string caption, T defaultValue)
+    public T DefaultValue { get; } = defaultValue;
+    public Control? CustomControl { get; set; }
+
+    public object? this[SettingsSource settings]
     {
-        Name = name;
-        Caption = caption;
-        DefaultValue = defaultValue;
+        get
+        {
+            var stringValue = settings.GetValue(Name);
+
+            if (string.IsNullOrEmpty(stringValue))
+            {
+                return null;
+            }
+
+            _ = TryConvertFromString(stringValue, out var result);
+            return result;
+        }
+
+        set => settings.SetValue(Name, value?.ToString());
     }
 
-    public string Name { get; }
-    public string Caption { get; }
-    public T DefaultValue { get; }
-    public Control? CustomControl { get; set; }
+    string ISetting.Name { get; } = name;
+    string ISetting.Caption { get; } = caption;
 
     // TODO: honestly, NumericUpDownBinding might be a better choice than TextBox in general since its internal type is `decimal`.
     //       We would just need to appropriately choose an increment based on NumberSetting's type.
     internal static bool TryConvertFromString(string value, out object? result)
     {
-        Type type = typeof(T);
-        if (type == typeof(int) && int.TryParse(value, out int intResult))
+        var type = typeof(T);
+        if (type == typeof(int) && int.TryParse(value, out var intResult))
         {
             result = intResult;
             return true;
         }
 
-        if (type == typeof(float) && float.TryParse(value, out float floatResult))
+        if (type == typeof(float) && float.TryParse(value, out var floatResult))
         {
             result = floatResult;
             return true;
         }
 
-        if (type == typeof(double) && double.TryParse(value, out double doubleResult))
+        if (type == typeof(double) && double.TryParse(value, out var doubleResult))
         {
             result = doubleResult;
             return true;
         }
 
-        if (type == typeof(long) && long.TryParse(value, out long longResult))
+        if (type == typeof(long) && long.TryParse(value, out var longResult))
         {
             result = longResult;
             return true;
@@ -52,34 +64,14 @@ public class NumberSetting<T> : ISetting
         return false;
     }
 
-    public object? this[SettingsSource settings]
-    {
-        get
-        {
-            string? stringValue = settings.GetValue(Name);
-
-            if (string.IsNullOrEmpty(stringValue))
-            {
-                return null;
-            }
-
-            _ = TryConvertFromString(stringValue, out object? result);
-            return result;
-        }
-
-        set => settings.SetValue(Name, value?.ToString());
-    }
-
     public T ValueOrDefault(SettingsSource settings)
     {
-        object? settingVal = this[settings];
+        var settingVal = this[settings];
         if (settingVal is null)
         {
             return DefaultValue;
         }
-        else
-        {
-            return (T)settingVal;
-        }
+
+        return (T)settingVal;
     }
 }

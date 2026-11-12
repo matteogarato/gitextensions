@@ -1,13 +1,12 @@
 using System.ComponentModel.Design;
 using System.Diagnostics;
-using GitCommands;
+using System.IO.Abstractions;
 using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class ConflictResolutionTests
 {
@@ -15,7 +14,7 @@ public sealed class ConflictResolutionTests
     public async Task GetConflictsAsync_should_list_conflict_and_stage_resolution_in_real_repository()
     {
         ThreadHelper.JoinableTaskContext = new JoinableTaskContext();
-        string directory = Path.Combine(Path.GetTempPath(), $"ge-conflict-{Guid.NewGuid():N}");
+        var directory = Path.Combine(Path.GetTempPath(), $"ge-conflict-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         using ServiceContainer serviceContainer = new();
         try
@@ -34,7 +33,7 @@ public sealed class ConflictResolutionTests
             Git(directory, "checkout -q main");
             File.WriteAllText(Path.Combine(directory, "conflict.txt"), "main\n");
             Git(directory, "commit -q -am main-change");
-            Git(directory, "merge feature", expectedExitCode: 1);
+            Git(directory, "merge feature", 1);
 
             GitModule module = new(serviceContainer.GetRequiredService<IGitExecutorProvider>(), directory);
             IReadOnlyList<ConflictData> conflicts = await module.GetConflictsAsync();
@@ -49,35 +48,33 @@ public sealed class ConflictResolutionTests
         }
         finally
         {
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(directory, recursive: true);
+            Directory.Delete(directory, true);
         }
     }
 
     private static void RegisterServices(ServiceContainer serviceContainer)
     {
         GitExtUtils.ServiceContainerRegistry.RegisterServices(serviceContainer);
-        System.IO.Abstractions.FileSystem fileSystem = new();
+        FileSystem fileSystem = new();
         GitDirectoryResolver gitDirectoryResolver = new(fileSystem);
-        serviceContainer.AddService<System.IO.Abstractions.IFileSystem>(fileSystem);
+        serviceContainer.AddService<IFileSystem>(fileSystem);
         serviceContainer.AddService<IGitDirectoryResolver>(gitDirectoryResolver);
         GitCommands.ServiceContainerRegistry.RegisterServices(serviceContainer);
-        GitUI.ServiceContainerRegistry.RegisterServices(serviceContainer);
+        ServiceContainerRegistry.RegisterServices(serviceContainer);
     }
 
     private static string Git(string workingDirectory, string arguments, int expectedExitCode = 0)
     {
-        using Process process = Process.Start(new ProcessStartInfo("git", arguments)
+        using var process = Process.Start(new ProcessStartInfo("git", arguments)
         {
-            WorkingDirectory = workingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            WorkingDirectory = workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true
         })!;
-        string output = process.StandardOutput.ReadToEnd().Trim();
+        var output = process.StandardOutput.ReadToEnd().Trim();
         process.WaitForExit();
         process.ExitCode.Should().Be(expectedExitCode, process.StandardError.ReadToEnd());
         return output;

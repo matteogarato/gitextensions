@@ -3,22 +3,20 @@ using GitExtensions.Extensibility.Settings.UserControls;
 
 namespace GitExtensions.Extensibility.Settings;
 
-public class CredentialsSetting : ICredentialsManager, ISetting
+public class CredentialsSetting(string name, string caption, Func<string?> getWorkingDir)
+    : ICredentialsManager, ISetting
 {
+    private readonly CredentialsManager _credentialsManager = new(getWorkingDir);
     private readonly NetworkCredential _defaultValue = new();
-    private readonly CredentialsManager _credentialsManager;
+    public CredentialsControl? CustomControl { get; set; }
 
-    public CredentialsSetting(string name, string caption, Func<string?> getWorkingDir)
+    void ICredentialsManager.Save()
     {
-        Name = name;
-        Caption = caption;
-
-        _credentialsManager = new(getWorkingDir);
+        _credentialsManager.Save();
     }
 
-    public string Name { get; }
-    public string Caption { get; }
-    public CredentialsControl? CustomControl { get; set; }
+    string ISetting.Name { get; } = name;
+    string ISetting.Caption { get; } = caption;
 
     public NetworkCredential GetValueOrDefault(SettingsSource settings)
     {
@@ -29,18 +27,16 @@ public class CredentialsSetting : ICredentialsManager, ISetting
     {
         if (settings.SettingLevel == SettingLevel.Effective)
         {
-            NetworkCredential currentCredentials = GetValueOrDefault(settings);
+            var currentCredentials = GetValueOrDefault(settings);
             if (currentCredentials.UserName == userName && currentCredentials.Password == password)
             {
                 return;
             }
         }
 
-        NetworkCredential? newCredentials = string.IsNullOrWhiteSpace(userName)
+        var newCredentials = string.IsNullOrWhiteSpace(userName)
             ? null
             : new NetworkCredential(userName, password);
         _credentialsManager.SetCredentials(settings.SettingLevel, Name, newCredentials);
     }
-
-    public void Save() => _credentialsManager.Save();
 }

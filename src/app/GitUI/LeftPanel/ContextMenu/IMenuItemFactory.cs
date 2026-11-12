@@ -6,7 +6,7 @@ namespace GitUI.LeftPanel.ContextMenu;
 internal interface IMenuItemFactory
 {
     /// <summary>
-    /// Creates a menu item control.
+    ///     Creates a menu item control.
     /// </summary>
     /// <typeparam name="TMenuItem">The menu item control type.</typeparam>
     /// <typeparam name="TNode">The node type (branch, tag etc).</typeparam>
@@ -15,7 +15,8 @@ internal interface IMenuItemFactory
     /// <param name="toolTip">Menu item tooltip.</param>
     /// <param name="icon">The image to show on the menu item.</param>
     /// <returns>A new instance of the menu item control.</returns>
-    TMenuItem CreateMenuItem<TMenuItem, TNode>(Action<TNode> onClick, TranslationString text, TranslationString toolTip, Bitmap? icon = null)
+    TMenuItem CreateMenuItem<TMenuItem, TNode>(Action<TNode> onClick, TranslationString text, TranslationString toolTip,
+        Bitmap? icon = null)
         where TMenuItem : ToolStripItem, new()
         where TNode : class, INode;
 }

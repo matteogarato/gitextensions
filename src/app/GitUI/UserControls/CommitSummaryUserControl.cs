@@ -1,29 +1,29 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
-using GitUIPluginInterfaces;
 using ResourceManager;
 using ResourceManager.CommitDataRenders;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls;
 
 /// <summary>
-/// TODO: replace with some better looking RTF control (similar to Commit Tab in main window)
-///       Tried RichTextBox: strangely it does not show any formatting, just plain text.
+///     TODO: replace with some better looking RTF control (similar to Commit Tab in main window)
+///     Tried RichTextBox: strangely it does not show any formatting, just plain text.
 /// </summary>
 public partial class CommitSummaryUserControl : GitExtensionsControl
 {
-    private const int MaxBranchTagLength = 75;
-    private readonly TranslationString _noRevision = new("No revision");
-    private readonly TranslationString _notAvailable = new("n/a");
-    private readonly IDateFormatter _dateFormatter = new DateFormatter();
-    private readonly string _tagsCaption;
-    private readonly string _branchesCaption;
-    private readonly Color _tagsBackColor = Color.LightSteelBlue.AdaptBackColor();
+    private const int _maxBranchTagLength = 75;
     private readonly Color _branchesBackColor = Color.LightSalmon.AdaptBackColor();
-    private GitRevision? _revision;
+    private readonly string _branchesCaption;
+    private readonly IDateFormatter _dateFormatter = new DateFormatter();
+    private readonly int _messageHeight;
 
     private readonly int _messageY;
-    private readonly int _messageHeight;
+    private readonly TranslationString _noRevision = new("No revision");
+    private readonly TranslationString _notAvailable = new("n/a");
+    private readonly Color _tagsBackColor = Color.LightSteelBlue.AdaptBackColor();
+    private readonly string _tagsCaption;
+    private GitRevision? _revision;
 
     public CommitSummaryUserControl()
     {
@@ -42,7 +42,7 @@ public partial class CommitSummaryUserControl : GitExtensionsControl
     }
 
     /// <summary>
-    /// Gets or sets a revision for which to show a summary.
+    ///     Gets or sets a revision for which to show a summary.
     /// </summary>
     public GitRevision? Revision
     {
@@ -69,7 +69,8 @@ public partial class CommitSummaryUserControl : GitExtensionsControl
                     labelTags.BackColor = _tagsBackColor;
                     labelTags.SetForeColorForBackColor();
                     labelTags.Font = new Font(labelTags.Font, FontStyle.Bold);
-                    string tagListStr = string.Join(", ", tagList.Select(h => h.LocalName)).ShortenTo(MaxBranchTagLength);
+                    var tagListStr = string.Join(", ", tagList.Select(h => h.LocalName))
+                        .ShortenTo(_maxBranchTagLength);
                     labelTags.Text = tagListStr;
                 }
                 else
@@ -83,7 +84,8 @@ public partial class CommitSummaryUserControl : GitExtensionsControl
                     labelBranches.BackColor = _branchesBackColor;
                     labelBranches.SetForeColorForBackColor();
                     labelBranches.Font = new Font(labelBranches.Font, FontStyle.Bold);
-                    string branchesListStr = string.Join(", ", branchesList.Select(h => h.LocalName)).ShortenTo(MaxBranchTagLength);
+                    var branchesListStr = string.Join(", ", branchesList.Select(h => h.LocalName))
+                        .ShortenTo(_maxBranchTagLength);
                     labelBranches.Text = branchesListStr;
                 }
                 else

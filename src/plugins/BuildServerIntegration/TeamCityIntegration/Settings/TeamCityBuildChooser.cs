@@ -1,13 +1,9 @@
-﻿using Microsoft;
-
-namespace TeamCityIntegration.Settings;
+﻿namespace GitExtensions.Plugins.TeamCityIntegration.Settings;
 
 public partial class TeamCityBuildChooser : Form
 {
     private readonly TeamCityAdapter _teamCityAdapter = new();
     private TreeNode? _previouslySelectedProject;
-    public string TeamCityProjectName { get; private set; }
-    public string TeamCityBuildIdFilter { get; private set; }
 
     public TeamCityBuildChooser(string teamCityServerUrl, string teamCityProjectName, string teamCityBuildIdFilter)
     {
@@ -17,15 +13,18 @@ public partial class TeamCityBuildChooser : Form
         TeamCityBuildIdFilter = teamCityBuildIdFilter;
         _teamCityAdapter.InitializeHttpClient(teamCityServerUrl);
 
-        Project? rootProject = _teamCityAdapter.GetProjectsTree();
+        var rootProject = _teamCityAdapter.GetProjectsTree();
 
         if (rootProject is not null)
         {
-            TreeNode rootTreeNode = LoadTreeView(treeViewTeamCityProjects, rootProject);
+            var rootTreeNode = LoadTreeView(treeViewTeamCityProjects, rootProject);
 
             rootTreeNode.Expand();
         }
     }
+
+    public string TeamCityProjectName { get; private set; }
+    public string TeamCityBuildIdFilter { get; private set; }
 
     private void TeamCityBuildChooser_Load(object sender, EventArgs e)
     {
@@ -40,25 +39,22 @@ public partial class TeamCityBuildChooser : Form
         }
 
         _previouslySelectedProject.Expand();
-        treeViewTeamCityProjects.SelectedNode = _previouslySelectedProject.Nodes.Find(TeamCityBuildIdFilter, false).FirstOrDefault()
+        treeViewTeamCityProjects.SelectedNode =
+            _previouslySelectedProject.Nodes.Find(TeamCityBuildIdFilter, false).FirstOrDefault()
             ?? _previouslySelectedProject;
     }
 
     private TreeNode LoadTreeView(TreeView treeView, Project rootProject)
     {
         treeView.Nodes.Clear();
-        TreeNode rootNode = ConvertProjectInTreeNode(rootProject);
+        var rootNode = ConvertProjectInTreeNode(rootProject);
         treeView.Nodes.Add(rootNode);
         return rootNode;
     }
 
     private TreeNode ConvertProjectInTreeNode(Project project)
     {
-        TreeNode projectNode = new(project.Name)
-        {
-            Name = project.Name,
-            Tag = project,
-        };
+        TreeNode projectNode = new(project.Name) { Name = project.Name, Tag = project };
 
         projectNode.Nodes.AddRange([.. project.SubProjects!.Select(ConvertProjectInTreeNode).OrderBy(p => p.Name)]);
         if (projectNode.Nodes.Count == 0)
@@ -81,7 +77,7 @@ public partial class TeamCityBuildChooser : Form
 
     private void LoadProjectBuilds(TreeNode treeNode)
     {
-        Project project = (Project)treeNode.Tag!;
+        var project = (Project)treeNode.Tag!;
         if (project.Builds is null)
         {
             Validates.NotNull(project.Id);
@@ -94,12 +90,12 @@ public partial class TeamCityBuildChooser : Form
                 treeNode.Nodes.RemoveAt(0);
             }
 
-            TreeNode[] buildNodes = [.. project.Builds.Select(b => new TreeNode(b.DisplayName)
-            {
-                Name = b.Id,
-                ForeColor = SystemColors.Highlight,
-                Tag = b
-            }).OrderBy(b => b.Name)];
+            TreeNode[] buildNodes =
+            [
+                .. project.Builds.Select(b =>
+                        new TreeNode(b.DisplayName) { Name = b.Id, ForeColor = SystemColors.Highlight, Tag = b })
+                    .OrderBy(b => b.Name)
+            ];
             treeNode.Nodes.AddRange(buildNodes);
         }
     }

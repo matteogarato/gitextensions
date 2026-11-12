@@ -1,10 +1,11 @@
 ﻿using GitCommands;
 
 namespace GitCommandsTests;
+
 public class FullPathResolverTests
 {
+    private readonly FullPathResolver _resolver = null!;
     private readonly string _workingDir = @"c:\dev\repo";
-    private FullPathResolver _resolver = null!;
 
     public FullPathResolverTests()
     {
@@ -31,7 +32,7 @@ public class FullPathResolverTests
     [InlineData(@"folder\", 10000)]
     public void Resolve_should_return_long_full_path(string dir, int repeats)
     {
-        string path = string.Concat(Enumerable.Repeat(dir, repeats)) + "filename.txt";
+        var path = string.Concat(Enumerable.Repeat(dir, repeats)) + "filename.txt";
         _resolver.Resolve(path).Should().Be($"{_workingDir}\\{path}");
     }
 
@@ -39,7 +40,8 @@ public class FullPathResolverTests
     [InlineData(@"file")]
     [InlineData("folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
     [InlineData("folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder#\\filename.txt")]
-    [InlineData("folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
+    [InlineData(
+        "folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\folder\\filename.txt")]
     public void Resolve_should_return_full_path(string? path)
     {
         _resolver.Resolve(path).Should().Be($"{_workingDir}\\{path}");
@@ -70,6 +72,7 @@ public class FullPathResolverTests
     public void Resolve_does_not_throw_on_invalid_workingDir(string? workingDir)
     {
         FullPathResolver resolver = new(() => workingDir!);
-        resolver.Resolve("file.txt").Should().Be(Path.Combine(Environment.CurrentDirectory, "file.txt").Replace("/", "\\"));
+        resolver.Resolve("file.txt").Should()
+            .Be(Path.Combine(Environment.CurrentDirectory, "file.txt").Replace("/", "\\"));
     }
 }

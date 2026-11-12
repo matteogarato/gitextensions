@@ -5,19 +5,14 @@ using System.Xml;
 namespace GitCommands.Settings;
 
 [DebuggerDisplay("{_byNameMap.Count} cached {" + nameof(SettingsFilePath) + ",nq}")]
-public class GitExtSettingsCache : FileSettingsCache
+public class GitExtSettingsCache(string settingsFilePath, bool autoSave = true)
+    : FileSettingsCache(settingsFilePath, autoSave)
 {
     private readonly XmlSerializableDictionary<string, string> _encodedNameMap = [];
 
-    public GitExtSettingsCache(string settingsFilePath, bool autoSave = true)
-        : base(settingsFilePath, autoSave)
-    {
-    }
-
     public static GitExtSettingsCache FromCache(string settingsFilePath)
     {
-        Lazy<GitExtSettingsCache> createSettingsCache = new(
-            () => new GitExtSettingsCache(settingsFilePath, autoSave: true));
+        Lazy<GitExtSettingsCache> createSettingsCache = new(() => new GitExtSettingsCache(settingsFilePath, true));
 
         return FromCache(settingsFilePath, createSettingsCache);
     }
@@ -28,10 +23,8 @@ public class GitExtSettingsCache : FileSettingsCache
         {
             return FromCache(settingsFilePath);
         }
-        else
-        {
-            return new GitExtSettingsCache(settingsFilePath, autoSave: false);
-        }
+
+        return new GitExtSettingsCache(settingsFilePath, false);
     }
 
     protected override void ClearImpl()
@@ -50,15 +43,11 @@ public class GitExtSettingsCache : FileSettingsCache
 
     protected override void ReadSettings(string fileName)
     {
-        XmlReaderSettings readerSettings = new()
-        {
-            IgnoreWhitespace = true,
-            CheckCharacters = false
-        };
+        XmlReaderSettings readerSettings = new() { IgnoreWhitespace = true, CheckCharacters = false };
 
         // StreamReader required for \\wsl$\ that is an illegal URI
         using StreamReader sr = new(fileName);
-        using XmlReader xr = XmlReader.Create(sr, readerSettings);
+        using var xr = XmlReader.Create(sr, readerSettings);
         try
         {
             _encodedNameMap.ReadXml(xr);
@@ -83,7 +72,7 @@ public class GitExtSettingsCache : FileSettingsCache
 
     protected override string? GetValueImpl(string key)
     {
-        _encodedNameMap.TryGetValue(key, out string? value);
+        _encodedNameMap.TryGetValue(key, out var value);
         return value;
     }
 }

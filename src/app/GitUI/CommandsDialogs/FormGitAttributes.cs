@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using ResourceManager;
@@ -8,25 +9,29 @@ namespace GitUI.CommandsDialogs;
 
 public partial class FormGitAttributes : GitModuleForm
 {
-    private readonly TranslationString _noWorkingDir =
-        new(".gitattributes is only supported when there is a working directory.");
-    private readonly TranslationString _noWorkingDirCaption =
-        new("No working directory");
-
     private readonly TranslationString _cannotAccessGitattributes =
         new("Failed to save .gitattributes." + Environment.NewLine + "Check if file is accessible.");
+
     private readonly TranslationString _cannotAccessGitattributesCaption =
         new("Failed to save .gitattributes");
 
+    private readonly IFullPathResolver _fullPathResolver;
+
+    private readonly TranslationString _noWorkingDir =
+        new(".gitattributes is only supported when there is a working directory.");
+
+    private readonly TranslationString _noWorkingDirCaption =
+        new("No working directory");
+
     private readonly TranslationString _saveFileQuestion =
         new("Save changes to .gitattributes?");
+
     private readonly TranslationString _saveFileQuestionCaption =
         new("Save changes?");
 
     public string GitAttributesFile = string.Empty;
-    private readonly IFullPathResolver _fullPathResolver;
 
-    public FormGitAttributes(IGitUICommands commands)
+    public FormGitAttributes(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -45,7 +50,7 @@ public partial class FormGitAttributes : GitModuleForm
     {
         try
         {
-            string? path = _fullPathResolver.Resolve(".gitattributes");
+            var path = _fullPathResolver.Resolve(".gitattributes");
             if (File.Exists(path))
             {
                 _NO_TRANSLATE_GitAttributesText.ViewFileAsync(path);
@@ -93,11 +98,12 @@ public partial class FormGitAttributes : GitModuleForm
 
     private void FormGitAttributesClosing(object sender, FormClosingEventArgs e)
     {
-        bool needToClose = false;
+        var needToClose = false;
 
         if (!IsFileUpToDate())
         {
-            switch (MessageBoxes.Show(this, _saveFileQuestion.Text, _saveFileQuestionCaption.Text, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
+            switch (MessageBoxes.Show(this, _saveFileQuestion.Text, _saveFileQuestionCaption.Text,
+                        MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
             {
                 case DialogResult.Yes:
                     if (SaveFile())
@@ -129,7 +135,8 @@ public partial class FormGitAttributes : GitModuleForm
             return;
         }
 
-        MessageBoxes.Show(this, _noWorkingDir.Text, _noWorkingDirCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBoxes.Show(this, _noWorkingDir.Text, _noWorkingDirCaption.Text, MessageBoxButtons.OK,
+            MessageBoxIcon.Error);
         Close();
     }
 

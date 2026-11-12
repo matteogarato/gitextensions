@@ -1,24 +1,28 @@
 ﻿using CommonTestUtils;
-using GitCommands;
+using GitCommands.Settings;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.LeftPanel;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormBrowse_LeftPanelTests : System.IDisposable, IClassFixture<FormBrowse_LeftPanelTestsFixture>
+public class FormBrowseLeftPanelTests : IDisposable, IClassFixture<FormBrowseLeftPanelTestsFixture>
 {
-    private const string RemoteName = "remote1";
+    private const string _remoteName = "remote1";
+    private GitUiCommands _commands = null!;
+    private ReferenceRepository _referenceRepository = null!;
 
     // Created once for each test
     private ReferenceRepository _remoteReferenceRepository = null!;
-    private ReferenceRepository _referenceRepository = null!;
-    private GitUICommands _commands = null!;
 
-    public FormBrowse_LeftPanelTests(FormBrowse_LeftPanelTestsFixture fixture)
+    public FormBrowseLeftPanelTests(FormBrowseLeftPanelTestsFixture fixture)
     {
         InitializeTest();
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void InitializeTest()
@@ -27,10 +31,11 @@ public class FormBrowse_LeftPanelTests : System.IDisposable, IClassFixture<FormB
 
         _referenceRepository = new ReferenceRepository();
 
-        _referenceRepository.Module.AddRemote(RemoteName, _remoteReferenceRepository.Module.WorkingDir);
-        _referenceRepository.Fetch(RemoteName);
+        _referenceRepository.Module.AddRemote(_remoteName, _remoteReferenceRepository.Module.WorkingDir);
+        _referenceRepository.Fetch(_remoteName);
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
 
         _referenceRepository.CreateCommit("Commit1", "Commit1");
         _referenceRepository.CreateBranch("Branch1", _referenceRepository.CommitHash!);
@@ -54,10 +59,10 @@ public class FormBrowse_LeftPanelTests : System.IDisposable, IClassFixture<FormB
         {
             contextMenu.Items.Count.Should().BeGreaterThan(5);
 
-            int count = contextMenu.Items.Count;
+            var count = contextMenu.Items.Count;
 
             // Assert items from bottom to the top
-            ToolStripItem item = contextMenu.Items[--count];
+            var item = contextMenu.Items[--count];
             item.Text.Should().Be("Run script");
             item.Enabled.Should().BeFalse("because this test includes no user scripts");
 
@@ -78,54 +83,48 @@ public class FormBrowse_LeftPanelTests : System.IDisposable, IClassFixture<FormB
 
     private void RunRepoObjectsTreeTest(Action<ContextMenuStrip> testDriver)
     {
-        string branchName = _referenceRepository.Module.GetCurrentBranchName();
+        var branchName = _referenceRepository.Module.GetCurrentBranchName();
 
-        RunFormTest(
-            async form =>
-            {
-                await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
+        RunFormTest(async form =>
+        {
+            await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-                RepoObjectsTree.TestAccessor ta = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor();
+            var ta = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor();
 
-                // We are running several tests one after another to speed up the test execution
-                // as we don't need to re-create the host form
+            // We are running several tests one after another to speed up the test execution
+            // as we don't need to re-create the host form
 
-                ContextMenuStrip contextMenu = ta.ContextMenu;
+            var contextMenu = ta.ContextMenu;
 
-                ta.SelectNode<LocalBranchNode>([TranslatedStrings.Branches, branchName]);
-                ta.OpenContextMenu();
-                testDriver(contextMenu);
+            ta.SelectNode<LocalBranchNode>([TranslatedStrings.Branches, branchName]);
+            ta.OpenContextMenu();
+            testDriver(contextMenu);
 
-                ta.SelectNode<RemoteBranchNode>([TranslatedStrings.Remotes, RemoteName, branchName]);
-                ta.OpenContextMenu();
-                testDriver(contextMenu);
+            ta.SelectNode<RemoteBranchNode>([TranslatedStrings.Remotes, _remoteName, branchName]);
+            ta.OpenContextMenu();
+            testDriver(contextMenu);
 
-                ta.SelectNode<TagNode>([TranslatedStrings.Tags, "Branch1"]);
-                ta.OpenContextMenu();
-                testDriver(contextMenu);
-            });
+            ta.SelectNode<TagNode>([TranslatedStrings.Tags, "Branch1"]);
+            ta.OpenContextMenu();
+            testDriver(contextMenu);
+        });
     }
 
     private void RunFormTest(Func<FormBrowse, Task> testDriverAsync)
     {
-        UITest.RunForm(
-            showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+        UiTest.RunForm(
+            () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }
 
-public sealed class FormBrowse_LeftPanelTestsFixture : System.IDisposable
+public sealed class FormBrowseLeftPanelTestsFixture : IDisposable
 {
     // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
+    private readonly bool _originalShowAuthorAvatarColumn;
+    private readonly bool _showAvailableDiffTools;
 
-    public FormBrowse_LeftPanelTestsFixture()
+    public FormBrowseLeftPanelTestsFixture()
     {
         // Remember the current settings...
         _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
@@ -141,7 +140,7 @@ public sealed class FormBrowse_LeftPanelTestsFixture : System.IDisposable
         AppSettings.RepoObjectsTreeShowStashes = true;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
         AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;

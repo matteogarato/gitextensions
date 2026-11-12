@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Text;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
@@ -9,21 +9,20 @@ using ResourceManager;
 namespace GitExtensions.Plugins.ReleaseNotesGenerator;
 
 /// <summary>
-/// Test on GE repository from "2.00" to "2.10". Should display 687 items.
+///     Test on GE repository from "2.00" to "2.10". Should display 687 items.
 /// </summary>
 public partial class ReleaseNotesGeneratorForm : GitExtensionsFormBase
 {
+    private const string _mostRecentHint = "most recent changes are listed on top";
+    private readonly TranslationString _caption = new("Invalid input");
     private readonly TranslationString _commitLogFrom = new("Commit log from '{0}' to '{1}' ({2}):");
     private readonly TranslationString _fromCommitNotSpecified = new("'From' commit must be specified");
-    private readonly TranslationString _toCommitNotSpecified = new("'To' commit must be specified");
-    private readonly TranslationString _caption = new("Invalid input");
-
-    private const string MostRecentHint = "most recent changes are listed on top";
-    private readonly GitUIEventArgs _gitUiCommands;
-    private IEnumerable<LogLine> _lastGeneratedLogLines = [];
     private readonly IGitLogLineParser _gitLogLineParser;
+    private readonly GitUiEventArgs _gitUiCommands;
+    private readonly TranslationString _toCommitNotSpecified = new("'To' commit must be specified");
+    private IEnumerable<LogLine> _lastGeneratedLogLines = [];
 
-    public ReleaseNotesGeneratorForm(GitUIEventArgs gitUiCommands)
+    public ReleaseNotesGeneratorForm(GitUiEventArgs gitUiCommands)
     {
         InitializeComponent();
         InitializeComplete();
@@ -58,14 +57,16 @@ public partial class ReleaseNotesGeneratorForm : GitExtensionsFormBase
 
         GitArgumentBuilder args = new("log")
         {
-            string.Format(_NO_TRANSLATE_textBoxGitLogArguments.Text, textBoxRevFrom.Text, _NO_TRANSLATE_textBoxRevTo.Text)
+            string.Format(_NO_TRANSLATE_textBoxGitLogArguments.Text, textBoxRevFrom.Text,
+                _NO_TRANSLATE_textBoxRevTo.Text)
         };
 
-        string result = _gitUiCommands.GitModule.GitExecutable.GetOutput(args);
+        var result = _gitUiCommands.GitModule.GitExecutable.GetOutput(args);
 
         if (OperatingSystem.IsWindows())
         {
-            result = string.Join(Environment.NewLine, result.Split([Environment.NewLine], StringSplitOptions.None).SelectMany(l => l.Split('\n')));
+            result = string.Join(Environment.NewLine,
+                result.Split([Environment.NewLine], StringSplitOptions.None).SelectMany(l => l.Split('\n')));
         }
 
         textBoxResult.Text = result;
@@ -94,42 +95,44 @@ public partial class ReleaseNotesGeneratorForm : GitExtensionsFormBase
 
     private void buttonCopyAsPlainText_Click(object sender, EventArgs e)
     {
-        string result = CreateTextTable(_lastGeneratedLogLines, true, true);
+        var result = CreateTextTable(_lastGeneratedLogLines);
         ClipboardUtil.TrySetText(result);
     }
 
     private void buttonCopyAsTextTableSpace_Click(object sender, EventArgs e)
     {
-        string result = CreateTextTable(_lastGeneratedLogLines, true, false);
+        var result = CreateTextTable(_lastGeneratedLogLines, true, false);
         ClipboardUtil.TrySetText(result);
     }
 
     private void buttonCopyAsHtml_Click(object sender, EventArgs e)
     {
-        string headerHtml = string.Format("<p>Commit log from '{0}' to '{1}' ({2}):</p>", textBoxRevFrom.Text, _NO_TRANSLATE_textBoxRevTo.Text, MostRecentHint);
-        string tableHtml = CreateHtmlTable(_lastGeneratedLogLines);
+        var headerHtml = string.Format("<p>Commit log from '{0}' to '{1}' ({2}):</p>", textBoxRevFrom.Text,
+            _NO_TRANSLATE_textBoxRevTo.Text, _mostRecentHint);
+        var tableHtml = CreateHtmlTable(_lastGeneratedLogLines);
         HtmlFragment.CopyToClipboard(headerHtml + tableHtml);
     }
 
-    private string CreateTextTable(IEnumerable<LogLine> logLines, bool suppressEmptyLines = true, bool separateColumnWithTabInsteadOfSpaces = true)
+    private string CreateTextTable(IEnumerable<LogLine> logLines, bool suppressEmptyLines = true,
+        bool separateColumnWithTabInsteadOfSpaces = true)
     {
-        string headerText = string.Format(_commitLogFrom.Text,
-            textBoxRevFrom.Text, _NO_TRANSLATE_textBoxRevTo.Text, MostRecentHint);
+        var headerText = string.Format(_commitLogFrom.Text,
+            textBoxRevFrom.Text, _NO_TRANSLATE_textBoxRevTo.Text, _mostRecentHint);
 
-        string colSeparatorFirstLine = separateColumnWithTabInsteadOfSpaces ? "\t" : " ";
-        string colSeparatorRestLines = separateColumnWithTabInsteadOfSpaces ? "\t" : "        ";
+        var colSeparatorFirstLine = separateColumnWithTabInsteadOfSpaces ? "\t" : " ";
+        var colSeparatorRestLines = separateColumnWithTabInsteadOfSpaces ? "\t" : "        ";
 
         StringBuilder stringBuilder = new();
 
-        foreach (LogLine logLine in logLines)
+        foreach (var logLine in logLines)
         {
-            string message = string.Join(Environment.NewLine + colSeparatorRestLines,
-                logLine.MessageLines.Where(
-                a => !suppressEmptyLines || !string.IsNullOrWhiteSpace(a)));
-            stringBuilder.AppendFormat("{0}{1}{2}{3}", logLine.Commit, colSeparatorFirstLine, message, Environment.NewLine);
+            var message = string.Join(Environment.NewLine + colSeparatorRestLines,
+                logLine.MessageLines.Where(a => !suppressEmptyLines || !string.IsNullOrWhiteSpace(a)));
+            stringBuilder.AppendFormat("{0}{1}{2}{3}", logLine.Commit, colSeparatorFirstLine, message,
+                Environment.NewLine);
         }
 
-        string result = headerText + Environment.NewLine + stringBuilder;
+        var result = headerText + Environment.NewLine + stringBuilder;
         return result;
     }
 
@@ -137,10 +140,11 @@ public partial class ReleaseNotesGeneratorForm : GitExtensionsFormBase
     {
         StringBuilder stringBuilder = new();
         stringBuilder.Append("<table>\r\n");
-        foreach (LogLine logLine in logLines)
+        foreach (var logLine in logLines)
         {
-            string message = string.Join("<br/>", logLine.MessageLines.Select(a => WebUtility.HtmlEncode(a)));
-            stringBuilder.AppendFormat("<tr>\r\n  <td>{0}</td>\r\n  <td>{1}</td>\r\n</tr>\r\n", logLine.Commit, message);
+            var message = string.Join("<br/>", logLine.MessageLines.Select(a => WebUtility.HtmlEncode(a)));
+            stringBuilder.AppendFormat("<tr>\r\n  <td>{0}</td>\r\n  <td>{1}</td>\r\n</tr>\r\n", logLine.Commit,
+                message);
         }
 
         stringBuilder.Append("</table>");

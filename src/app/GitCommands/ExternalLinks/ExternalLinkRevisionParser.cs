@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using GitCommands.Remotes;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitCommands.ExternalLinks;
 
@@ -9,30 +9,26 @@ public interface IExternalLinkRevisionParser
     IEnumerable<ExternalLink> Parse(GitRevision revision, ExternalLinkDefinition definition);
 }
 
-public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
+public sealed class ExternalLinkRevisionParser(IConfigFileRemoteSettingsManager remotesManager)
+    : IExternalLinkRevisionParser
 {
-    private readonly IConfigFileRemoteSettingsManager _remotesManager;
-
-    public ExternalLinkRevisionParser(IConfigFileRemoteSettingsManager remotesManager)
+    IEnumerable<ExternalLink> IExternalLinkRevisionParser.Parse(GitRevision revision, ExternalLinkDefinition definition)
     {
-        _remotesManager = remotesManager;
-    }
-
-    public IEnumerable<ExternalLink> Parse(GitRevision revision, ExternalLinkDefinition definition)
-    {
-        IEnumerable<Match?> remoteMatches = ParseRemotes(definition);
+        var remoteMatches = ParseRemotes(definition);
         return remoteMatches.SelectMany(remoteMatch => ParseRevision(revision, definition, remoteMatch));
     }
 
-    private static IEnumerable<ConfigFileRemote> GetMatchingRemotes(ExternalLinkDefinition definition, IEnumerable<ConfigFileRemote> remotes)
+    private static IEnumerable<ConfigFileRemote> GetMatchingRemotes(ExternalLinkDefinition definition,
+        IEnumerable<ConfigFileRemote> remotes)
     {
         if (string.IsNullOrWhiteSpace(definition.UseRemotesPattern) || definition.UseRemotesRegex?.Value is null)
         {
             return remotes;
         }
 
-        IEnumerable<ConfigFileRemote> matchingRemotes = remotes.Where(r => definition.UseRemotesRegex.Value.IsMatch(r.Name!))
-                                                        .OrderBy(r => definition.UseRemotesPattern.IndexOf(r.Name!, StringComparison.OrdinalIgnoreCase));
+        IEnumerable<ConfigFileRemote> matchingRemotes = remotes
+            .Where(r => definition.UseRemotesRegex.Value.IsMatch(r.Name!))
+            .OrderBy(r => definition.UseRemotesPattern.IndexOf(r.Name!, StringComparison.OrdinalIgnoreCase));
         if (definition.UseOnlyFirstRemote)
         {
             matchingRemotes = matchingRemotes.Take(1);
@@ -45,7 +41,8 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
     {
         List<Match?> allMatches = [];
 
-        if (string.IsNullOrWhiteSpace(definition.RemoteSearchPattern) || definition.RemoteSearchPatternRegex?.Value is null)
+        if (string.IsNullOrWhiteSpace(definition.RemoteSearchPattern) ||
+            definition.RemoteSearchPatternRegex?.Value is null)
         {
             allMatches.Add(null);
             return allMatches;
@@ -53,12 +50,12 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
 
         List<string> remoteUrls = [];
 
-        IEnumerable<ConfigFileRemote> remotes = _remotesManager.LoadRemotes(false);
-        IEnumerable<ConfigFileRemote> matchingRemotes = GetMatchingRemotes(definition, remotes);
+        var remotes = remotesManager.LoadRemotes(false);
+        var matchingRemotes = GetMatchingRemotes(definition, remotes);
 
-        foreach (ConfigFileRemote remote in matchingRemotes)
+        foreach (var remote in matchingRemotes)
         {
-            if (definition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.URL))
+            if (definition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.Url))
             {
                 if (!string.IsNullOrWhiteSpace(remote.Url))
                 {
@@ -66,7 +63,7 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
                 }
             }
 
-            if (definition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.PushURL))
+            if (definition.RemoteSearchInParts.Contains(ExternalLinkDefinition.RemotePart.PushUrl))
             {
                 if (!string.IsNullOrWhiteSpace(remote.PushUrl))
                 {
@@ -75,12 +72,12 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
             }
         }
 
-        foreach (string url in remoteUrls.Distinct())
+        foreach (var url in remoteUrls.Distinct())
         {
-            MatchCollection matches = definition.RemoteSearchPatternRegex.Value.Matches(url);
-            for (int i = 0; i < matches.Count; i++)
+            var matches = definition.RemoteSearchPatternRegex.Value.Matches(url);
+            for (var i = 0; i < matches.Count; i++)
             {
-                Match match = matches[i];
+                var match = matches[i];
                 if (match.Success)
                 {
                     allMatches.Add(match);
@@ -91,7 +88,8 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
         return allMatches;
     }
 
-    private static IEnumerable<ExternalLink> ParseRevision(GitRevision revision, ExternalLinkDefinition definition, Match? remoteMatch)
+    private static IEnumerable<ExternalLink> ParseRevision(GitRevision revision, ExternalLinkDefinition definition,
+        Match? remoteMatch)
     {
         List<IEnumerable<ExternalLink>> links = [];
 
@@ -119,19 +117,21 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
         return links.SelectMany(list => list);
     }
 
-    private static IEnumerable<ExternalLink> ParseRevisionPart(GitRevision revision, ExternalLinkDefinition definition, Match? remoteMatch, string? part)
+    private static IEnumerable<ExternalLink> ParseRevisionPart(GitRevision revision, ExternalLinkDefinition definition,
+        Match? remoteMatch, string? part)
     {
-        if (string.IsNullOrEmpty(definition.SearchPattern) || definition.SearchPatternRegex?.Value is null || part is null)
+        if (string.IsNullOrEmpty(definition.SearchPattern) || definition.SearchPatternRegex?.Value is null ||
+            part is null)
         {
             yield break;
         }
 
         List<Match> allMatches = [];
 
-        MatchCollection matches = definition.SearchPatternRegex.Value.Matches(part);
-        for (int i = 0; i < matches.Count; i++)
+        var matches = definition.SearchPatternRegex.Value.Matches(part);
+        for (var i = 0; i < matches.Count; i++)
         {
-            Match match = matches[i];
+            var match = matches[i];
             if (match.Success)
             {
                 if (string.IsNullOrEmpty(definition.NestedSearchPattern))
@@ -140,9 +140,9 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
                 }
                 else if (definition.NestedSearchPatternRegex?.Value is not null)
                 {
-                    MatchCollection nestedMatches = definition.NestedSearchPatternRegex.Value.Matches(match.Value);
+                    var nestedMatches = definition.NestedSearchPatternRegex.Value.Matches(match.Value);
 
-                    for (int n = 0; n < nestedMatches.Count; n++)
+                    for (var n = 0; n < nestedMatches.Count; n++)
                     {
                         allMatches.Add(nestedMatches[n]);
                     }
@@ -150,9 +150,9 @@ public sealed class ExternalLinkRevisionParser : IExternalLinkRevisionParser
             }
         }
 
-        foreach (Match match in allMatches.Where(m => m.Success))
+        foreach (var match in allMatches.Where(m => m.Success))
         {
-            foreach (ExternalLinkFormat format in definition.LinkFormats)
+            foreach (var format in definition.LinkFormats)
             {
                 yield return format.Apply(remoteMatch, match, revision);
             }

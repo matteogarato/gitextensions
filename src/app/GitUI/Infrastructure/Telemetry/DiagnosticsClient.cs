@@ -1,7 +1,7 @@
 // The original idea and the implementation are borrowed from  https://github.com/NuGetPackageExplorer/NuGetPackageExplorer
 // Credits to https://github.com/clairernovotny
 
-using GitCommands;
+using GitCommands.Settings;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 
@@ -11,9 +11,12 @@ public static class DiagnosticsClient
 {
     private static bool _initialized;
     private static TelemetryClient? _client;
-    private static TelemetryConfiguration _telemetryConfiguration = TelemetryConfiguration.CreateDefault();
+    private static readonly TelemetryConfiguration _telemetryConfiguration = TelemetryConfiguration.CreateDefault();
 
-    private static bool Enabled => _initialized && (AppSettings.TelemetryEnabled ?? false);
+    private static bool Enabled
+    {
+        get => _initialized && (AppSettings.TelemetryEnabled ?? false);
+    }
 
     public static void Initialize(bool isDirty)
     {
@@ -38,7 +41,8 @@ public static class DiagnosticsClient
         _initialized = true;
     }
 
-    public static void TrackEvent(string eventName, IDictionary<string, string>? properties = null, IDictionary<string, double>? metrics = null)
+    public static void TrackEvent(string eventName, IDictionary<string, string>? properties = null,
+        IDictionary<string, double>? metrics = null)
     {
         if (!Enabled)
         {
@@ -88,6 +92,6 @@ public static class DiagnosticsClient
         _client!.Flush();
 
         // Allow time for flushing:
-        System.Threading.Thread.Sleep(1000);
+        Thread.Sleep(1000);
     }
 }

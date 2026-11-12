@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Plugins.CreateLocalBranches.Properties;
@@ -17,7 +17,7 @@ public class CreateLocalBranchesPlugin : GitPluginBase, IGitPluginForRepository
         Icon = Resources.IconCreateLocalBranches;
     }
 
-    public override bool Execute(GitUIEventArgs args)
+    public override bool Execute(GitUiEventArgs args)
     {
         using CreateLocalBranchesForm frm = new(args);
         frm.ShowDialog(args.OwnerForm);

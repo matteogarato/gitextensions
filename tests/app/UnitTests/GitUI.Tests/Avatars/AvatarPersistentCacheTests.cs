@@ -1,19 +1,21 @@
 ﻿using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
-using GitCommands;
+using GitCommands.Settings;
 using GitUI.Avatars;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.Avatars;
+
 public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
 {
-    private string _avatarImageCachePath = AppSettings.AvatarImageCachePath;
-    private string _email1AvatarPath = null!;
-    private IFileSystem _fileSystem = null!;
-    private DirectoryBase _directory = null!;
-    private FileBase _file = null!;
-    private FileInfoBase _fileInfo = null!;
-    private IFileInfoFactory _fileInfoFactory = null!;
+    private readonly string _avatarImageCachePath = AppSettings.AvatarImageCachePath;
+    private readonly DirectoryBase _directory = null!;
+    private readonly string _email1AvatarPath = null!;
+    private readonly FileBase _file = null!;
+    private readonly FileInfoBase _fileInfo = null!;
+    private readonly IFileInfoFactory _fileInfoFactory = null!;
+    private readonly IFileSystem _fileSystem = null!;
 
     public AvatarPersistentCacheTests()
     {
@@ -30,8 +32,8 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
 
         AppSettings.AvatarProvider = AvatarProvider.Default;
 
-        _cache = new FileSystemAvatarCache(_inner, _fileSystem);
-        _email1AvatarPath = Path.Combine(_avatarImageCachePath, $"{_email1}.{_size}px.png");
+        Cache = new FileSystemAvatarCache(Inner, _fileSystem);
+        _email1AvatarPath = Path.Combine(_avatarImageCachePath, $"{Email1}.{Size}px.png");
     }
 
     [Fact]
@@ -39,9 +41,9 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
     {
         MockFileSystem fileSystem = new();
         fileSystem.Directory.Exists(_avatarImageCachePath).Should().BeFalse();
-        _cache = new FileSystemAvatarCache(_inner, fileSystem);
+        Cache = new FileSystemAvatarCache(Inner, fileSystem);
 
-        (await _cache.GetAvatarAsync(_email1, _name1, _size)).Should().BeSameAs(_img1);
+        (await Cache.GetAvatarAsync(Email1, Name1, Size)).Should().BeSameAs(Img1);
 
         fileSystem.Directory.Exists(_avatarImageCachePath).Should().BeTrue();
     }
@@ -51,9 +53,9 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
     {
         MockFileSystem fileSystem = new();
         fileSystem.Directory.Exists(_avatarImageCachePath).Should().BeFalse();
-        _cache = new FileSystemAvatarCache(_inner, fileSystem);
+        Cache = new FileSystemAvatarCache(Inner, fileSystem);
 
-        (await _cache.GetAvatarAsync(_email1, _name1, _size)).Should().BeSameAs(_img1);
+        (await Cache.GetAvatarAsync(Email1, Name1, Size)).Should().BeSameAs(Img1);
 
         fileSystem.Directory.Exists(_avatarImageCachePath).Should().BeTrue();
         fileSystem.File.Exists(_email1AvatarPath).Should().BeTrue();
@@ -67,7 +69,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         _fileSystem.File.OpenWrite(Arg.Any<string>()).Returns(_ => (Stream)new MemoryStream());
         _fileSystem.File.Delete(Arg.Any<string>());
 
-        await MissAsync(_email1, _name1);
+        await MissAsync(Email1, Name1);
 
         _fileSystem.File.Received(1).Delete(_email1AvatarPath);
 
@@ -77,7 +79,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         _fileInfo.ClearReceivedCalls();
         _file.ClearReceivedCalls();
 
-        Image? image = await _cache.GetAvatarAsync(_email1, _name1, 16);
+        var image = await Cache.GetAvatarAsync(Email1, Name1, 16);
 
         image.Should().NotBeNull();
         _ = _fileInfo.Received(1).LastWriteTime;
@@ -90,7 +92,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
     {
         _directory.Exists(Arg.Any<string>()).Returns(false);
 
-        await _cacheCleaner.ClearCacheAsync();
+        await CacheCleaner.ClearCacheAsync();
 
         _directory.DidNotReceive().GetFiles(Arg.Any<string>());
     }
@@ -99,13 +101,13 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
     public async Task ClearCacheAsync_should_remove_all()
     {
         MockFileSystem fileSystem = new();
-        _cache = new FileSystemAvatarCache(_inner, fileSystem);
+        Cache = new FileSystemAvatarCache(Inner, fileSystem);
 
         fileSystem.AddFile(Path.Combine(_avatarImageCachePath, "a@a.com.16px.png"), new MockFileData(""));
         fileSystem.AddFile(Path.Combine(_avatarImageCachePath, "b@b.com.16px.png"), new MockFileData(""));
         fileSystem.AllFiles.Should().HaveCount(2);
 
-        await _cacheCleaner.ClearCacheAsync();
+        await CacheCleaner.ClearCacheAsync();
 
         fileSystem.AllFiles.Should().BeEmpty();
     }
@@ -118,7 +120,7 @@ public sealed class AvatarPersistentCacheTests : AvatarCacheTestBase
         _file.When(x => x.Delete(Arg.Any<string>()))
             .Do(x => throw new DivideByZeroException());
 
-        Func<Task> act = () => _cacheCleaner.ClearCacheAsync();
+        var act = () => CacheCleaner.ClearCacheAsync();
         act.Should().NotThrowAsync();
     }
 }

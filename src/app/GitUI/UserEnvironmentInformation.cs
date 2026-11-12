@@ -2,8 +2,8 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtUtils;
 using GitExtUtils.GitUI;
@@ -12,17 +12,22 @@ namespace GitUI;
 
 public static partial class UserEnvironmentInformation
 {
-    private static readonly string DOTNET_CMD = "dotnet";
+    private static readonly string _dotnetCmd = "dotnet";
     private static bool _alreadySet;
     private static bool _dirty;
     private static string? _sha;
 
-    [GeneratedRegex(@"^Microsoft\.WindowsDesktop\.App\s+(?<version>[\w.-]+)\s+.*$", RegexOptions.Multiline | RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"^Microsoft\.WindowsDesktop\.App\s+(?<version>[\w.-]+)\s+.*$",
+        RegexOptions.Multiline | RegexOptions.ExplicitCapture)]
     private static partial Regex DesktopAppRegex { get; }
+
     [GeneratedRegex(@"^", RegexOptions.Multiline | RegexOptions.ExplicitCapture)]
     private static partial Regex LineStartRegex { get; }
 
-    public static void CopyInformation() => ClipboardUtil.TrySetText(GetInformation() + GetDotnetVersionInfo());
+    public static void CopyInformation()
+    {
+        ClipboardUtil.TrySetText(GetInformation() + GetDotnetVersionInfo());
+    }
 
     public static string GetInformation()
     {
@@ -41,7 +46,8 @@ public static partial class UserEnvironmentInformation
             gitVer = null;
         }
 
-        string gitVersionInfo = GetGitVersionInfo(gitVer, GitVersion.LastSupportedVersion, GitVersion.LastRecommendedVersion);
+        var gitVersionInfo =
+            GetGitVersionInfo(gitVer, GitVersion.LastSupportedVersion, GitVersion.LastRecommendedVersion);
 
         // Build and open FormAbout design to make sure info still looks good if you change this code.
         StringBuilder sb = new();
@@ -51,13 +57,15 @@ public static partial class UserEnvironmentInformation
         sb.Append("- Git ").AppendLine(gitVersionInfo);
         sb.Append("- ").Append(Environment.OSVersion).AppendLine();
         sb.Append("- ").AppendLine(RuntimeInformation.FrameworkDescription);
-        sb.Append("- DPI ").Append(DpiUtil.DpiX).Append("dpi (").Append(DpiUtil.ScaleX == 1 ? "no" : $"{Math.Round(DpiUtil.ScaleX * 100)}%").AppendLine(" scaling)");
+        sb.Append("- DPI ").Append(DpiUtil.DpiX).Append("dpi (")
+            .Append(DpiUtil.ScaleX == 1 ? "no" : $"{Math.Round(DpiUtil.ScaleX * 100)}%").AppendLine(" scaling)");
         sb.Append("- Portable: ").Append(AppSettings.IsPortable()).AppendLine();
 
         return sb.ToString();
     }
 
-    public static string GetGitVersionInfo(string? gitVersion, GitVersion lastSupportedVersion, GitVersion recommendedVersion)
+    public static string GetGitVersionInfo(string? gitVersion, GitVersion lastSupportedVersion,
+        GitVersion recommendedVersion)
     {
         if (string.IsNullOrWhiteSpace(gitVersion))
         {
@@ -80,20 +88,21 @@ public static partial class UserEnvironmentInformation
 
     private static string GetDotnetDesktopRuntimeEntries()
     {
-        Executable dotnet = new(DOTNET_CMD);
-        ArgumentString args = new ArgumentBuilder()
-        {
-            "--list-runtimes"
-        };
+        Executable dotnet = new(_dotnetCmd);
+        ArgumentString args = new ArgumentBuilder { "--list-runtimes" };
 
         return dotnet.GetOutput(args);
     }
 
     private static IEnumerable<Match> GetDotnetDesktopRuntimeMatches(string versions)
-        => DesktopAppRegex.Matches(versions).Cast<Match>();
+    {
+        return DesktopAppRegex.Matches(versions);
+    }
 
     public static IEnumerable<Version> GetDotnetDesktopRuntimeVersions()
-        => GetDotnetDesktopRuntimeVersions(GetDotnetDesktopRuntimeEntries());
+    {
+        return GetDotnetDesktopRuntimeVersions(GetDotnetDesktopRuntimeEntries());
+    }
 
     internal static IEnumerable<Version> GetDotnetDesktopRuntimeVersions(string versions)
     {
@@ -114,7 +123,7 @@ public static partial class UserEnvironmentInformation
         {
             try
             {
-                int suffixPos = version.IndexOf('-');
+                var suffixPos = version.IndexOf('-');
                 if (suffixPos > 0)
                 {
                     version = version[..suffixPos];
@@ -138,8 +147,8 @@ public static partial class UserEnvironmentInformation
         sb.AppendLine("```");
         try
         {
-            IEnumerable<Match> desktopAppMatches = GetDotnetDesktopRuntimeMatches(GetDotnetDesktopRuntimeEntries());
-            string desktopAppLines = string.Join(Environment.NewLine, desktopAppMatches);
+            var desktopAppMatches = GetDotnetDesktopRuntimeMatches(GetDotnetDesktopRuntimeEntries());
+            var desktopAppLines = string.Join(Environment.NewLine, desktopAppMatches);
             desktopAppLines = LineStartRegex.Replace(desktopAppLines, "    ");
             sb.AppendLine($"{desktopAppLines}");
         }

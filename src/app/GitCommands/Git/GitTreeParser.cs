@@ -6,24 +6,24 @@ namespace GitCommands.Git;
 
 public interface IGitTreeParser
 {
+    /// <summary>
+    ///     "git ls-tree --format" default, optimized codepath if empty
+    ///     Set explicitly for "git ls-tree"
+    ///     -z required too
+    /// </summary>
+    string GitTreeFormat { get; }
+
     IEnumerable<GitItem> Parse(string? tree);
 
     /// <summary>
-    /// Parse ls-files --stage
-    /// Should only be used with Git lessthan 2.38.0 without --format support
+    ///     Parse ls-files --stage
+    ///     Should only be used with Git lessthan 2.38.0 without --format support
     /// </summary>
     /// <param name="tree">String to parse</param>
     /// <returns>GitItems</returns>
     IEnumerable<GitItem> ParseLsFiles(string? tree);
 
     GitItem? ParseSingle(string? rawItem);
-
-    /// <summary>
-    /// "git ls-tree --format" default, optimized codepath if empty
-    /// Set explicitly for "git ls-tree"
-    /// -z required too
-    /// </summary>
-    string GitTreeFormat { get; }
 }
 
 public sealed partial class GitTreeParser : IGitTreeParser
@@ -37,7 +37,8 @@ public sealed partial class GitTreeParser : IGitTreeParser
     // 160000 commit 6868f2b4a39fc894c44711c8903407da596acbf5  GitExtensionsDoc
     // 100644 blob 7e4eb9dc6a1531a6ee37d8efa6bf570e4bf61146    README.md
     // 100644 blob 5b0965cd097b8c48b66dd456337852640fa429c8    stylecop.json
-    [GeneratedRegex(@"^(?<mode>\d{6}) (?<type>(blob|tree|commit)+) (?<objectid>[0-9a-f]{40})\t(?<name>.+)$", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"^(?<mode>\d{6}) (?<type>(blob|tree|commit)+) (?<objectid>[0-9a-f]{40})\t(?<name>.+)$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex TreeLineRegex { get; }
 
     // $ git ls-files --stage
@@ -49,18 +50,18 @@ public sealed partial class GitTreeParser : IGitTreeParser
     [GeneratedRegex(@"^(?<mode>\d{6}) (?<objectid>[0-9a-f]{40}) (?:[0-9])\t(?<name>.+)$", RegexOptions.ExplicitCapture)]
     private static partial Regex LsFilesLineRegex { get; }
 
-    public string GitTreeFormat { get; } = "%(objectmode) %(objecttype) %(objectname)%x09%(path)";
+    string IGitTreeParser.GitTreeFormat { get; } = "%(objectmode) %(objecttype) %(objectname)%x09%(path)";
 
-    public IEnumerable<GitItem> Parse(string? tree)
+    IEnumerable<GitItem> IGitTreeParser.Parse(string? tree)
     {
         if (string.IsNullOrWhiteSpace(tree))
         {
             yield break;
         }
 
-        foreach ((int beginning, int length) in tree.LazySplitRanges('\0', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var (beginning, length) in tree.LazySplitRanges('\0', StringSplitOptions.RemoveEmptyEntries))
         {
-            Match match = TreeLineRegex.Match(tree, beginning, length);
+            var match = TreeLineRegex.Match(tree, beginning, length);
             if (match.Success)
             {
                 yield return ParseSingleFromSuccessfulMatch(match);
@@ -68,38 +69,27 @@ public sealed partial class GitTreeParser : IGitTreeParser
         }
     }
 
-    public GitItem? ParseSingle(string? rawItem)
+    GitItem? IGitTreeParser.ParseSingle(string? rawItem)
     {
         if (rawItem is null)
         {
             return null;
         }
 
-        Match match = TreeLineRegex.Match(rawItem);
+        var match = TreeLineRegex.Match(rawItem);
         return match.Success ? ParseSingleFromSuccessfulMatch(match) : null;
     }
 
-    private static GitItem ParseSingleFromSuccessfulMatch(Match match)
-    {
-        int mode = int.Parse(match.Groups["mode"].ValueSpan);
-        ObjectId objectId = ObjectId.Parse(match.Groups["objectid"].ValueSpan);
-        string name = match.Groups["name"].Value;
-
-        Enum.TryParse(match.Groups["type"].ValueSpan, ignoreCase: true, out GitObjectType type);
-
-        return new GitItem(mode, type, objectId, name);
-    }
-
-    public IEnumerable<GitItem> ParseLsFiles(string? tree)
+    IEnumerable<GitItem> IGitTreeParser.ParseLsFiles(string? tree)
     {
         if (string.IsNullOrWhiteSpace(tree))
         {
             yield break;
         }
 
-        foreach ((int beginning, int length) in tree.LazySplitRanges('\0', StringSplitOptions.RemoveEmptyEntries))
+        foreach ((var beginning, var length) in tree.LazySplitRanges('\0', StringSplitOptions.RemoveEmptyEntries))
         {
-            Match match = LsFilesLineRegex.Match(tree, beginning, length);
+            var match = LsFilesLineRegex.Match(tree, beginning, length);
             if (match.Success)
             {
                 yield return ParseSingleLsFromSuccessfulMatch(match);
@@ -107,13 +97,24 @@ public sealed partial class GitTreeParser : IGitTreeParser
         }
     }
 
+    private static GitItem ParseSingleFromSuccessfulMatch(Match match)
+    {
+        var mode = int.Parse(match.Groups["mode"].ValueSpan);
+        var objectId = ObjectId.Parse(match.Groups["objectid"].ValueSpan);
+        var name = match.Groups["name"].Value;
+
+        Enum.TryParse(match.Groups["type"].ValueSpan, true, out GitObjectType type);
+
+        return new GitItem(mode, type, objectId, name);
+    }
+
     private static GitItem ParseSingleLsFromSuccessfulMatch(Match match)
     {
-        int mode = int.Parse(match.Groups["mode"].ValueSpan);
-        ObjectId objectId = ObjectId.Parse(match.Groups["objectid"].ValueSpan);
-        string name = match.Groups["name"].Value;
+        var mode = int.Parse(match.Groups["mode"].ValueSpan);
+        var objectId = ObjectId.Parse(match.Groups["objectid"].ValueSpan);
+        var name = match.Groups["name"].Value;
 
-        GitObjectType type = mode == 160000
+        var type = mode == 160000
             ? GitObjectType.Commit
             : mode == 040000
                 ? GitObjectType.Tree

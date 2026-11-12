@@ -1,23 +1,17 @@
 ﻿namespace GitExtensions.Extensibility.Git;
 
 /// <summary>
-/// Event arguments for batch progress updating
+///     Event arguments for batch progress updating
 /// </summary>
-public sealed class BatchProgressEventArgs : EventArgs
+public sealed class BatchProgressEventArgs(int batchItemsProcessed, bool executionResult) : EventArgs
 {
-    public BatchProgressEventArgs(int batchItemsProcessed, bool executionResult)
-    {
-        ProcessedCount = batchItemsProcessed;
-        ExecutionResult = executionResult;
-    }
+    /// <summary>
+    ///     Number of items processed in this batch event
+    /// </summary>
+    public int ProcessedCount { get; } = batchItemsProcessed;
 
     /// <summary>
-    /// Number of items processed in this batch event
+    ///     Batch execution result
     /// </summary>
-    public int ProcessedCount { get; }
-
-    /// <summary>
-    /// Batch execution result
-    /// </summary>
-    public bool ExecutionResult { get; }
+    public bool ExecutionResult { get; } = executionResult;
 }

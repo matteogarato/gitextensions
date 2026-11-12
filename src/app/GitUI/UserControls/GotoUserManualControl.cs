@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 using ResourceManager;
 
 namespace GitUI.UserControls;
@@ -8,24 +8,21 @@ public partial class GotoUserManualControl : GitExtensionsControl
     private readonly TranslationString _gotoUserManualControlTooltip =
         new("Read more about this feature at {0}");
 
+    private bool _isLoaded;
+
+    private string _manualSectionAnchorName = null!;
+
+    private string _manualSectionSubfolder = null!;
+
     public GotoUserManualControl()
     {
         InitializeComponent();
         InitializeComplete();
     }
 
-    private bool _isLoaded;
-
-    private void GotoUserManualControl_Load(object sender, EventArgs e)
-    {
-        _isLoaded = true;
-        UpdateTooltip();
-    }
-
-    private string _manualSectionAnchorName = null!;
     public string ManualSectionAnchorName
     {
-        get { return _manualSectionAnchorName; }
+        get => _manualSectionAnchorName;
         set
         {
             _manualSectionAnchorName = value;
@@ -36,10 +33,9 @@ public partial class GotoUserManualControl : GitExtensionsControl
         }
     }
 
-    private string _manualSectionSubfolder = null!;
     public string ManualSectionSubfolder
     {
-        get { return _manualSectionSubfolder; }
+        get => _manualSectionSubfolder;
         set
         {
             _manualSectionSubfolder = value;
@@ -50,16 +46,22 @@ public partial class GotoUserManualControl : GitExtensionsControl
         }
     }
 
+    private void GotoUserManualControl_Load(object sender, EventArgs e)
+    {
+        _isLoaded = true;
+        UpdateTooltip();
+    }
+
     private void UpdateTooltip()
     {
-        string caption = string.Format(_gotoUserManualControlTooltip.Text, GetUrl());
+        var caption = string.Format(_gotoUserManualControlTooltip.Text, GetUrl());
         toolTip1.SetToolTip(pictureBoxHelpIcon, caption);
         toolTip1.SetToolTip(linkLabelHelp, caption);
     }
 
     private void OpenManual()
     {
-        string url = GetUrl();
+        var url = GetUrl();
         OsShellUtil.OpenUrlInDefaultBrowser(url);
     }
 

@@ -1,8 +1,4 @@
-﻿using System.Windows.Forms;
-using GitUI.Hotkey;
-using GitUI.UserControls.RevisionGrid;
-
-namespace GitUI;
+﻿namespace GitUI.UserControls.RevisionGrid;
 
 partial class RevisionGridControl
 {

@@ -1,21 +1,27 @@
 ﻿using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormInitTests : System.IDisposable
+public class FormInitTests : IDisposable
 {
-    // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
-
     // Created once for each test
-    private GitUICommands _commands = null!;
+    private readonly GitUiCommands _commands = null!;
+
+    // Created once for the fixture
+    private readonly ReferenceRepository _referenceRepository = null!;
+
     public FormInitTests()
     {
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -26,7 +32,7 @@ public class FormInitTests : System.IDisposable
     [WinFormsFact]
     public void Should_show_supplied_path()
     {
-        string currentDir = "bla";
+        var currentDir = "bla";
         RunFormTest(
             form =>
             {
@@ -54,7 +60,7 @@ public class FormInitTests : System.IDisposable
     [InlineData(@"foo\bar")]
     public void IsRootedDirectoryPath_should_detect_invalid_paths(string? input)
     {
-        string currentDir = "bla";
+        var currentDir = "bla";
         RunFormTest(
             form =>
             {
@@ -70,7 +76,7 @@ public class FormInitTests : System.IDisposable
     [InlineData(@"  c:\foo\bar  ")]
     public void IsRootedDirectoryPath_returns_true_on_valid_paths(string? input)
     {
-        string currentDir = "bla";
+        var currentDir = "bla";
         RunFormTest(
             form =>
             {
@@ -92,16 +98,11 @@ public class FormInitTests : System.IDisposable
 
     private void RunFormTest(Func<FormInit, Task> testDriverAsync, string path)
     {
-        UITest.RunForm(
+        UiTest.RunForm(
             () =>
             {
                 _commands.StartInitializeDialog(owner: null, path).Should().BeTrue();
             },
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

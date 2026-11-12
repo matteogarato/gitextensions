@@ -1,6 +1,6 @@
-﻿namespace System;
+﻿namespace GitCommands.Git;
 
-internal static partial class NativeMethods
+internal static class NativeMethods
 {
-    internal const int STATUS_CONTROL_C_EXIT = -1073741510; // 0xC000013A
+    internal const int StatusControlCExit = -1073741510; // 0xC000013A
 }

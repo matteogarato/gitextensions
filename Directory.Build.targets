@@ -1,25 +1,25 @@
 <Project>
-  <Import Project="eng\Tests.targets" />
+  <Import Project="eng\Tests.targets"/>
 
   <ItemGroup Condition="'$(EnableStyleCopAnalyzers)' != 'false'">
-    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableVisualStudioThreading)' != 'false'">
-    <PackageReference Include="Microsoft.VisualStudio.Threading" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Stop transitive consumption of JetBrains annotations -->
-    <PackageReference Update="JetBrains.Annotations" PrivateAssets="all" />
+    <PackageReference Update="JetBrains.Annotations" PrivateAssets="all"/>
   </ItemGroup>
 
   <!-- Avalonia/Linux port: allow compiling the net10.0-windows flavor on
@@ -35,12 +35,12 @@
        real WinForms. The global usings below replace the implicit System.Windows.Forms and
        System.Drawing usings that UseWindowsForms provides on the Windows flavor. -->
   <ItemGroup Condition="'$(UseGitExtensionsShims)' == 'true' and '$(TargetFramework)' == 'net10.0'">
-    <Using Include="GitExtensions.Shims.WinForms" />
-    <Using Include="System.Drawing" />
-    <ProjectReference Include="$(RepoRoot)src\app\GitExtensions.Shims.WinForms\GitExtensions.Shims.WinForms.csproj" />
+    <Using Include="GitExtensions.Shims.WinForms"/>
+    <Using Include="System.Drawing"/>
+    <ProjectReference Include="$(RepoRoot)src\app\GitExtensions.Shims.WinForms\GitExtensions.Shims.WinForms.csproj"/>
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)eng\avalonia\WinFormsDependencyGuard.targets"
-          Condition="'$(AvaloniaApplication)' == 'true' or '$(BuildAvalonia)' == 'true'" />
+          Condition="'$(AvaloniaApplication)' == 'true' or '$(BuildAvalonia)' == 'true'"/>
 
 </Project>

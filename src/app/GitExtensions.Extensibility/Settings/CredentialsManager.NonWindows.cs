@@ -24,12 +24,13 @@ internal class CredentialsManager : ICredentialsManager
         _getWorkingDir = getWorkingDir;
     }
 
-    public void Save()
+    void ICredentialsManager.Save()
     {
         // Nothing can have been queued because SetCredentials always throws on this platform.
     }
 
-    protected internal NetworkCredential GetCredentialOrDefault(SettingLevel settingLevel, string name, NetworkCredential defaultValue)
+    protected internal NetworkCredential GetCredentialOrDefault(SettingLevel settingLevel, string name,
+        NetworkCredential defaultValue)
     {
         return defaultValue;
     }

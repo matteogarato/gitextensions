@@ -1,5 +1,5 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 

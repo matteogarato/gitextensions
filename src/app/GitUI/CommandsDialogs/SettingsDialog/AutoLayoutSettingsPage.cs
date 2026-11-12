@@ -8,8 +8,23 @@ public abstract partial class AutoLayoutSettingsPage : DistributedSettingsPage, 
     private ISettingsLayout? _settingsLayout;
 
     public AutoLayoutSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
+    }
+
+    void ISettingsLayout.AddSettingControl(ISettingControlBinding controlBinding)
+    {
+        GetSettingsLayout().AddSettingControl(controlBinding);
+    }
+
+    Control ISettingsLayout.GetControl()
+    {
+        throw new NotImplementedException();
+    }
+
+    void ISettingsLayout.AddSettingsLayout(ISettingsLayout layout)
+    {
+        GetSettingsLayout().AddSettingsLayout(layout);
     }
 
     protected virtual ISettingsLayout GetSettingsLayout()
@@ -38,32 +53,12 @@ public abstract partial class AutoLayoutSettingsPage : DistributedSettingsPage, 
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 3,
-            ColumnStyles =
-            {
-                new ColumnStyle(),
-                new ColumnStyle(SizeType.Percent, 100F),
-                new ColumnStyle()
-            },
+            ColumnStyles = { new ColumnStyle(), new ColumnStyle(SizeType.Percent, 100F), new ColumnStyle() },
             Dock = DockStyle.Top,
             Location = new Point(0, 0),
             RowCount = 0,
             Size = new Size(951, 518)
         };
-    }
-
-    public void AddSettingControl(ISettingControlBinding controlBinding)
-    {
-        GetSettingsLayout().AddSettingControl(controlBinding);
-    }
-
-    public Control GetControl()
-    {
-        throw new NotImplementedException();
-    }
-
-    public void AddSettingsLayout(ISettingsLayout layout)
-    {
-        GetSettingsLayout().AddSettingsLayout(layout);
     }
 }
 
@@ -75,48 +70,39 @@ public interface ISettingsLayout
     void AddControlBinding(ISettingControlBinding controlBinding);
 }
 
-public abstract class BaseSettingsLayout : ISettingsLayout
+public abstract class BaseSettingsLayout(ISettingsLayout parentLayout) : ISettingsLayout
 {
-    public readonly ISettingsLayout ParentLayout;
+    public readonly ISettingsLayout ParentLayout = parentLayout;
 
-    protected BaseSettingsLayout(ISettingsLayout parentLayout)
-    {
-        ParentLayout = parentLayout;
-    }
-
-    public void AddControlBinding(ISettingControlBinding aControlBinding)
+    void ISettingsLayout.AddControlBinding(ISettingControlBinding aControlBinding)
     {
         ParentLayout.AddControlBinding(aControlBinding);
     }
 
-    public void AddSettingControl(ISettingControlBinding aControlBinding)
+    void ISettingsLayout.AddSettingControl(ISettingControlBinding aControlBinding)
     {
         AddControlBinding(aControlBinding);
         AddSettingControlImpl(aControlBinding);
     }
 
-    public abstract void AddSettingControlImpl(ISettingControlBinding controlBinding);
     public abstract void AddSettingsLayout(ISettingsLayout layout);
     public abstract Control GetControl();
+
+    public abstract void AddSettingControlImpl(ISettingControlBinding controlBinding);
 }
 
-public class TableSettingsLayout : BaseSettingsLayout
+public class TableSettingsLayout(ISettingsLayout parentLayout, TableLayoutPanel panel)
+    : BaseSettingsLayout(parentLayout)
 {
-    protected TableLayoutPanel Panel { get; }
     private int _currentRow = -1;
-
-    public TableSettingsLayout(ISettingsLayout parentLayout, TableLayoutPanel panel)
-        : base(parentLayout)
-    {
-        Panel = panel;
-    }
+    protected TableLayoutPanel Panel { get; } = panel;
 
     public override void AddSettingControlImpl(ISettingControlBinding controlBinding)
     {
         _currentRow++;
-        TableLayoutPanel tableLayout = Panel;
+        var tableLayout = Panel;
 
-        string caption = controlBinding.Caption();
+        var caption = controlBinding.Caption();
 
         if (caption is not null)
         {
@@ -131,7 +117,7 @@ public class TableSettingsLayout : BaseSettingsLayout
             tableLayout.Controls.Add(label, 0, _currentRow);
         }
 
-        Control control = controlBinding.GetControl();
+        var control = controlBinding.GetControl();
         control.Dock = DockStyle.Fill;
         tableLayout.Controls.Add(control, 1, _currentRow);
     }
@@ -139,7 +125,7 @@ public class TableSettingsLayout : BaseSettingsLayout
     public override void AddSettingsLayout(ISettingsLayout layout)
     {
         _currentRow++;
-        Control control = layout.GetControl();
+        var control = layout.GetControl();
         control.Dock = DockStyle.Fill;
         Panel.Controls.Add(control, 1, _currentRow);
     }

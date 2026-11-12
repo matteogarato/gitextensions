@@ -4,10 +4,12 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 internal sealed class GitConfigSettingsPageController
 {
-    public string GetInitialDirectory(string path, string toolPreferredPath) =>
-        CalculateInitialDirectory(path) ??
-        CalculateInitialDirectory(toolPreferredPath) ??
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+    public string GetInitialDirectory(string path, string toolPreferredPath)
+    {
+        return CalculateInitialDirectory(path) ??
+               CalculateInitialDirectory(toolPreferredPath) ??
+               Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+    }
 
     private static string? CalculateInitialDirectory(string suppliedPath)
     {
@@ -26,7 +28,7 @@ internal sealed class GitConfigSettingsPageController
 
         // Path.GetDirectoryName returns directory information for path, or null if path denotes a root directory or is null.
         // Returns Empty if path does not contain directory information.
-        string initialDirectory = Path.GetDirectoryName(suppliedPath) ?? suppliedPath;
+        var initialDirectory = Path.GetDirectoryName(suppliedPath) ?? suppliedPath;
         if (!string.IsNullOrWhiteSpace(initialDirectory) && Directory.Exists(initialDirectory))
         {
             return initialDirectory.EnsureTrailingPathSeparator();

@@ -1,5 +1,5 @@
-using GitCommands;
 using GitCommands.Config;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
@@ -10,47 +10,34 @@ using ResourceManager;
 namespace GitUI.HelperDialogs;
 
 /// <summary>
-/// Form that handles Plink exceptions.
+///     Form that handles Plink exceptions.
 /// </summary>
 public partial class FormRemoteProcess : FormProcess
 {
-    #region Translation
-    private readonly TranslationString _fingerprintNotRegistredText =
-        new(@"The fingerprint of this host is not registered by PuTTY.
-This causes this process to hang, and that why it is automatically stopped.
-
-When the connection is opened detached from Git and Git Extensions, the host's fingerprint can be registered.
-You could also manually add the host's fingerprint or run Test Connection from the remotes dialog.
-
-Do you want to register the host's fingerprint and restart the process?");
-    private readonly TranslationString _fingerprintNotRegistredTextCaption =
-        new("Host Fingerprint not registered");
-    #endregion
-
     private bool _restart;
     private string _urlTryingToConnect = string.Empty;
 
-    public FormRemoteProcess(IGitUICommands commands, ArgumentString arguments)
-        : base(commands, arguments, commands.Module.WorkingDir, input: null, useDialogSettings: true)
+    public FormRemoteProcess(IGitUiCommands commands, ArgumentString arguments)
+        : base(commands, arguments, commands.Module.WorkingDir, null, true)
     {
         Commands = commands ?? throw new ArgumentNullException(nameof(commands));
     }
 
-    public static bool ShowDialog(IWin32Window? owner, IGitUICommands commands, ArgumentString arguments)
+    public bool Plink { get; set; }
+
+    private IGitUiCommands Commands { get; }
+
+    public static bool ShowDialog(IWin32Window? owner, IGitUiCommands commands, ArgumentString arguments)
     {
         using FormRemoteProcess formRemoteProcess = new(commands, arguments);
         formRemoteProcess.ShowDialog(owner);
         return !formRemoteProcess.ErrorOccurred();
     }
 
-    public bool Plink { get; set; }
-
-    private IGitUICommands Commands { get; }
-
     /// <summary>
-    /// When cloning a remote using putty, sometimes an error occurs that the fingerprint is not known.
-    /// This is fixed by trying to connect from the command line, and choose yes when asked for storing
-    /// the fingerprint. Just a dirty fix...
+    ///     When cloning a remote using putty, sometimes an error occurs that the fingerprint is not known.
+    ///     This is fixed by trying to connect from the command line, and choose yes when asked for storing
+    ///     the fingerprint. Just a dirty fix...
     /// </summary>
     public void SetUrlTryingToConnect(string url)
     {
@@ -75,7 +62,7 @@ Do you want to register the host's fingerprint and restart the process?");
         // An error occurred!
         if (isError && Plink)
         {
-            string output = GetOutputString();
+            var output = GetOutputString();
 
             // there might be another error, this condition is too weak
             /*
@@ -89,13 +76,14 @@ Do you want to register the host's fingerprint and restart the process?");
             // If the authentication failed because of a missing key, ask the user to supply one.
             if (output.Contains("FATAL ERROR") && output.Contains("authentication"))
             {
-                if (FormPuttyError.AskForKey(this, out string? loadedKey))
+                if (FormPuttyError.AskForKey(this, out var loadedKey))
                 {
                     // To prevent future authentication errors, save this key for this remote.
                     if (!string.IsNullOrEmpty(loadedKey) && !string.IsNullOrEmpty(Remote) &&
                         string.IsNullOrEmpty(Commands.Module.GetSetting("remote.{0}.puttykeyfile")))
                     {
-                        Commands.Module.SetSetting(string.Format("remote.{0}.puttykeyfile", Remote), loadedKey.ConvertPathToGitSetting()!);
+                        Commands.Module.SetSetting(string.Format("remote.{0}.puttykeyfile", Remote),
+                            loadedKey.ConvertPathToGitSetting()!);
                     }
 
                     // Retry the command.
@@ -104,7 +92,8 @@ Do you want to register the host's fingerprint and restart the process?");
                 }
             }
 
-            if (output.Contains("the server's host key is not cached in the registry", StringComparison.OrdinalIgnoreCase))
+            if (output.Contains("the server's host key is not cached in the registry",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 string remoteUrl;
 
@@ -146,7 +135,8 @@ Do you want to register the host's fingerprint and restart the process?");
     {
         if (Plink && e.Text.Contains("If you trust this host, enter \"y\" to add the key to"))
         {
-            if (MessageBoxes.Show(this, _fingerprintNotRegistredText.Text, _fingerprintNotRegistredTextCaption.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            if (MessageBoxes.Show(this, _fingerprintNotRegistredText.Text, _fingerprintNotRegistredTextCaption.Text,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 string remoteUrl;
                 if (string.IsNullOrEmpty(_urlTryingToConnect))
@@ -172,4 +162,20 @@ Do you want to register the host's fingerprint and restart the process?");
 
         base.DataReceived(sender, e);
     }
+
+    #region Translation
+
+    private readonly TranslationString _fingerprintNotRegistredText =
+        new(@"The fingerprint of this host is not registered by PuTTY.
+This causes this process to hang, and that why it is automatically stopped.
+
+When the connection is opened detached from Git and Git Extensions, the host's fingerprint can be registered.
+You could also manually add the host's fingerprint or run Test Connection from the remotes dialog.
+
+Do you want to register the host's fingerprint and restart the process?");
+
+    private readonly TranslationString _fingerprintNotRegistredTextCaption =
+        new("Host Fingerprint not registered");
+
+    #endregion
 }

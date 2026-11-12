@@ -1,4 +1,4 @@
-﻿using GitUIPluginInterfaces;
+﻿using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitCommands.Git.Extensions;
 

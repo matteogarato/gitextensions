@@ -3,7 +3,7 @@
 public static class DateTimeUtils
 {
     /// <summary>
-    /// Parse unix time string
+    ///     Parse unix time string
     /// </summary>
     /// <param name="unixTime">Unix time string</param>
     /// <returns>DateTime (local time)</returns>
@@ -13,7 +13,7 @@ public static class DateTimeUtils
     }
 
     /// <summary>
-    /// Parse unix time char span
+    ///     Parse unix time char span
     /// </summary>
     /// <param name="unixTime">Unix time char span</param>
     /// <returns>DateTime (local time)</returns>
@@ -23,7 +23,7 @@ public static class DateTimeUtils
     }
 
     /// <summary>
-    /// Convert from DateTime to native Git time format (unix time)
+    ///     Convert from DateTime to native Git time format (unix time)
     /// </summary>
     /// <param name="dateTime">DateTime</param>
     /// <returns>Unix time (seconds since 1970)</returns>

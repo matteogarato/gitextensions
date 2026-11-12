@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
-using GitCommands;
-using GitExtensions.Extensibility;
+using ConEmuWinForms;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.ConsoleEmulation;
 using GitUI.ConsoleEmulation.PlainText;
-using GitUI.Models;
 using GitUI.Properties;
 using GitUI.UserControls;
 using Microsoft.WindowsAPICodePack.Taskbar;
@@ -15,13 +15,14 @@ namespace GitUI.HelperDialogs;
 public partial class FormStatus : GitExtensionsDialog
 {
     private readonly bool _useDialogSettings;
-    private bool _errorOccurred;
-
-    private protected Action<FormStatus>? ProcessCallback;
     private protected Action<FormStatus>? AbortCallback;
 
-    public FormStatus(IGitUICommands commands, IConsoleEmulatorsRegistry consoleEmulatorsRegistry, bool useDialogSettings)
-        : base(commands, enablePositionRestore: true)
+    private protected Action<FormStatus>? ProcessCallback;
+    private bool _errorOccurred;
+
+    public FormStatus(IGitUiCommands commands, IConsoleEmulatorsRegistry consoleEmulatorsRegistry,
+        bool useDialogSettings)
+        : base(commands, true)
     {
         ArgumentNullException.ThrowIfNull(commands);
 
@@ -63,13 +64,32 @@ public partial class FormStatus : GitExtensionsDialog
     public string? ProcessString { get; protected init; }
     public string? ProcessArguments { get; set; }
 
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            // disable the control box close button
+            var mdiCp = base.CreateParams;
+            mdiCp.ClassStyle |= NativeMethods.CpNocloseButton;
+            return mdiCp;
+        }
+    }
+
+    private protected IConsoleCommandRunner ConsoleCommandRunner { get; }
+
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Gets the logged output text. Note that this is a separate string from what you see in the console output control.
+    ///     For instance, progress messages might be skipped; other messages might be added manually.
+    /// </summary>
+    private protected FormStatusOutputLog OutputLog { get; } = new();
+
+    /// <summary>
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
     {
-        if (disposing && (components is not null))
+        if (disposing && components is not null)
         {
             components.Dispose();
 
@@ -78,25 +98,6 @@ public partial class FormStatus : GitExtensionsDialog
 
         base.Dispose(disposing);
     }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            // disable the control box close button
-            CreateParams mdiCp = base.CreateParams;
-            mdiCp.ClassStyle |= NativeMethods.CP_NOCLOSE_BUTTON;
-            return mdiCp;
-        }
-    }
-
-    private protected IConsoleCommandRunner ConsoleCommandRunner { get; }
-
-    /// <summary>
-    /// Gets the logged output text. Note that this is a separate string from what you see in the console output control.
-    /// For instance, progress messages might be skipped; other messages might be added manually.
-    /// </summary>
-    private protected FormStatusOutputLog OutputLog { get; } = new();
 
     public bool ErrorOccurred()
     {
@@ -114,14 +115,14 @@ public partial class FormStatus : GitExtensionsDialog
         ProcessCallback?.Invoke(this);
     }
 
-    public static void ShowErrorDialog(IWin32Window owner, IGitUICommands commands, string text, params string[] output)
+    public static void ShowErrorDialog(IWin32Window owner, IGitUiCommands commands, string text, params string[] output)
     {
-        using FormStatus form = new(commands, consoleEmulatorsRegistry: PlainTextConsoleEmulatorsRegistry.Instance, useDialogSettings: true);
+        using FormStatus form = new(commands, PlainTextConsoleEmulatorsRegistry.Instance, true);
         form.Text = text;
         if (output?.Length > 0)
         {
-            IPlainTextConsoleCommandRunner commandRunner = (IPlainTextConsoleCommandRunner)form.ConsoleCommandRunner;
-            foreach (string line in output)
+            var commandRunner = (IPlainTextConsoleCommandRunner)form.ConsoleCommandRunner;
+            foreach (var line in output)
             {
                 commandRunner.WriteOutputText(line);
             }
@@ -136,7 +137,7 @@ public partial class FormStatus : GitExtensionsDialog
         form.StartPosition = FormStartPosition.CenterParent;
 
         // We know that an operation (whatever it may have been) has failed, so set the error state.
-        form.Done(isSuccess: false);
+        form.Done(false);
 
         form.ShowDialog(owner);
     }
@@ -168,7 +169,7 @@ public partial class FormStatus : GitExtensionsDialog
             try
             {
                 RunProcessInfo runProcessInfo = new(ProcessString!, ProcessArguments!, GetOutputString(), DateTime.Now);
-                UICommands.GetRequiredService<IOutputHistoryRecorder>().RecordHistory(runProcessInfo);
+                UiCommands.GetRequiredService<IOutputHistoryRecorder>().RecordHistory(runProcessInfo);
             }
             catch (Exception exception)
             {
@@ -182,17 +183,18 @@ public partial class FormStatus : GitExtensionsDialog
             Ok.Focus();
             AcceptButton = Ok;
             Abort.Enabled = false;
-            TaskbarProgress.SetProgress(isSuccess ? TaskbarProgressBarState.Normal : TaskbarProgressBarState.Error, 100, 100);
+            TaskbarProgress.SetProgress(isSuccess ? TaskbarProgressBarState.Normal : TaskbarProgressBarState.Error, 100,
+                100);
 
-            Bitmap image = isSuccess ? Images.StatusBadgeSuccess : Images.StatusBadgeError;
+            var image = isSuccess ? Images.StatusBadgeSuccess : Images.StatusBadgeError;
             SetIcon(image);
 
-            if (isSuccess && (_useDialogSettings && AppSettings.CloseProcessDialog))
+            if (isSuccess && _useDialogSettings && AppSettings.CloseProcessDialog)
             {
                 Close();
             }
         }
-        catch (ConEmu.WinForms.GuiMacroExecutor.GuiMacroException guiMacroException)
+        catch (GuiMacroExecutor.GuiMacroException guiMacroException)
         {
             // Do nothing
             Trace.WriteLine(guiMacroException);
@@ -213,7 +215,7 @@ public partial class FormStatus : GitExtensionsDialog
 
     private void SetIcon(Bitmap image)
     {
-        Icon? oldIcon = Icon;
+        var oldIcon = Icon;
         Icon = image.ToIcon();
         oldIcon?.Dispose();
     }
@@ -223,8 +225,8 @@ public partial class FormStatus : GitExtensionsDialog
         // This has to happen on the UI thread
         await this.SwitchToMainThreadAsync();
 
-        int index = text.LastIndexOf('%');
-        if (index > 4 && int.TryParse(text.AsSpan(index - 3, 3), out int progressValue) && progressValue >= 0)
+        var index = text.LastIndexOf('%');
+        if (index > 4 && int.TryParse(text.AsSpan(index - 3, 3), out var progressValue) && progressValue >= 0)
         {
             ProgressBar.Style = ProgressBarStyle.Blocks;
             ProgressBar.Value = Math.Min(100, progressValue);
@@ -262,8 +264,9 @@ public partial class FormStatus : GitExtensionsDialog
         try
         {
             AbortCallback?.Invoke(this);
-            OutputLog.Append(Environment.NewLine + "Aborted");  // TODO: write to display control also, if we pull the function up to this base class
-            Done(isSuccess: false);
+            OutputLog.Append(Environment.NewLine +
+                             "Aborted"); // TODO: write to display control also, if we pull the function up to this base class
+            Done(false);
             DialogResult = DialogResult.Abort;
         }
         catch
@@ -277,7 +280,7 @@ public partial class FormStatus : GitExtensionsDialog
 
         // Maintain the invariant: if changing to "don't keep" and conditions are such that the dialog would have closed in dont-keep mode, then close it
         // Not checking for UseDialogSettings because checkbox is only visible with True
-        if ((!KeepDialogOpen.Checked /* keep off */) && Ok.Enabled /* done */ && (!_errorOccurred /* and successful */))
+        if (!KeepDialogOpen.Checked /* keep off */ && Ok.Enabled /* done */ && !_errorOccurred /* and successful */)
         {
             Close();
         }

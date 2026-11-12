@@ -1,41 +1,41 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
-internal sealed class ColorsSettingsPageController
+internal sealed class ColorsSettingsPageController(
+    IColorsSettingsPage page,
+    IThemeRepository themeRepository,
+    IThemePathProvider themePathProvider)
 {
-    private readonly IColorsSettingsPage _page;
-    private readonly IThemeRepository _themeRepository;
-    private readonly IThemePathProvider _themePathProvider;
     private int _updateThemeSettingsCounter;
 
-    public ColorsSettingsPageController(
-        IColorsSettingsPage page, IThemeRepository themeRepository,
-        IThemePathProvider themePathProvider)
+    private bool IsCurrentWinAppMode
     {
-        _page = page;
-        _themeRepository = themeRepository;
-        _themePathProvider = themePathProvider;
+        get => page.SelectedThemeId == ThemeId.WindowsAppColorModeId &&
+               ThemeModule.Settings.Theme.Id == ThemeId.ColorModeThemeId;
     }
 
-    private bool IsCurrentWinAppMode => _page.SelectedThemeId == ThemeId.WindowsAppColorModeId && ThemeModule.Settings.Theme.Id == ThemeId.ColorModeThemeId;
-
     public bool SettingsAreModified
-        => !(_page.SelectedThemeId == ThemeModule.Settings.Theme.Id || IsCurrentWinAppMode)
-            || !(_page.UseSystemVisualStyle == ThemeModule.Settings.UseSystemVisualStyle || IsCurrentWinAppMode || ThemeModule.Settings.Theme.Id == ThemeId.DefaultLight)
-            || !_page.SelectedThemeVariations.SequenceEqual(AppSettings.ThemeVariations);
+    {
+        get => !(page.SelectedThemeId == ThemeModule.Settings.Theme.Id || IsCurrentWinAppMode)
+               || !(page.UseSystemVisualStyle == ThemeModule.Settings.UseSystemVisualStyle || IsCurrentWinAppMode ||
+                    ThemeModule.Settings.Theme.Id == ThemeId.DefaultLight)
+               || !page.SelectedThemeVariations.SequenceEqual(AppSettings.ThemeVariations);
+    }
 
     public void ShowThemeSettings()
     {
         BeginUpdateThemeSettings();
-        _page.PopulateThemeMenu(Enumerable.Repeat(ThemeId.WindowsAppColorModeId, 1).Concat(_themeRepository.GetThemeIds()));
-        _page.SelectedThemeId = AppSettings.ThemeId;
-        _page.SelectedThemeVariations = AppSettings.ThemeVariations;
-        _page.UseSystemVisualStyle = IsCurrentWinAppMode
+        page.PopulateThemeMenu(
+            Enumerable.Repeat(ThemeId.WindowsAppColorModeId, 1).Concat(themeRepository.GetThemeIds()));
+        page.SelectedThemeId = AppSettings.ThemeId;
+        page.SelectedThemeVariations = AppSettings.ThemeVariations;
+        page.UseSystemVisualStyle = IsCurrentWinAppMode
             ? ThemeId.DefaultLight == ThemeId.ColorModeThemeId
-            : _page.SelectedThemeId == ThemeId.DefaultLight
+            : page.SelectedThemeId == ThemeId.DefaultLight
                 ? true
                 : AppSettings.UseSystemVisualStyle;
 
@@ -44,12 +44,12 @@ internal sealed class ColorsSettingsPageController
 
     public void ApplyThemeSettings()
     {
-        AppSettings.ThemeId = _page.SelectedThemeId;
-        AppSettings.ThemeVariations = _page.SelectedThemeVariations;
-        if (_page.SelectedThemeId != ThemeId.WindowsAppColorModeId && _page.SelectedThemeId != ThemeId.DefaultLight)
+        AppSettings.ThemeId = page.SelectedThemeId;
+        AppSettings.ThemeVariations = page.SelectedThemeVariations;
+        if (page.SelectedThemeId != ThemeId.WindowsAppColorModeId && page.SelectedThemeId != ThemeId.DefaultLight)
         {
             // set only if UseSystemVisualStyle is not overridden
-            AppSettings.UseSystemVisualStyle = _page.UseSystemVisualStyle;
+            AppSettings.UseSystemVisualStyle = page.UseSystemVisualStyle;
         }
     }
 
@@ -62,23 +62,24 @@ internal sealed class ColorsSettingsPageController
 
         BeginUpdateThemeSettings();
 
-        if (_page.SelectedThemeId == ThemeId.WindowsAppColorModeId)
+        if (page.SelectedThemeId == ThemeId.WindowsAppColorModeId)
         {
             // Display the value forced in ThemeModule.LoadThemeSettings(),
-            _page.UseSystemVisualStyle = ThemeId.ColorModeThemeId == ThemeId.DefaultLight || _page.SelectedThemeId == ThemeId.DefaultLight;
+            page.UseSystemVisualStyle = ThemeId.ColorModeThemeId == ThemeId.DefaultLight ||
+                                        page.SelectedThemeId == ThemeId.DefaultLight;
         }
-        else if (_page.SelectedThemeId == ThemeId.DefaultLight)
+        else if (page.SelectedThemeId == ThemeId.DefaultLight)
         {
-            _page.UseSystemVisualStyle = true;
-            _page.SelectedThemeVariations = ThemeVariations.None;
+            page.UseSystemVisualStyle = true;
+            page.SelectedThemeVariations = ThemeVariations.None;
         }
         else
         {
             try
             {
                 // override default (at least dark in .NET10 requires overrides).
-                Theme theme = _themeRepository.GetTheme(_page.SelectedThemeId, _page.SelectedThemeVariations);
-                _page.UseSystemVisualStyle = theme.SystemColorMode == SystemColorMode.Classic;
+                var theme = themeRepository.GetTheme(page.SelectedThemeId, page.SelectedThemeVariations);
+                page.UseSystemVisualStyle = theme.SystemColorMode == SystemColorMode.Classic;
             }
             catch (Exception)
             {
@@ -89,11 +90,15 @@ internal sealed class ColorsSettingsPageController
         EndUpdateThemeSettings();
     }
 
-    public void HandleUseSystemVisualStyleChanged() =>
+    public void HandleUseSystemVisualStyleChanged()
+    {
         UpdateThemeSettings();
+    }
 
-    public void HandleUseColorblindVariationChanged() =>
+    public void HandleUseColorblindVariationChanged()
+    {
         UpdateThemeSettings();
+    }
 
     public void UpdateThemeSettings()
     {
@@ -101,28 +106,34 @@ internal sealed class ColorsSettingsPageController
         EndUpdateThemeSettings();
     }
 
-    public void BeginUpdateThemeSettings() =>
+    public void BeginUpdateThemeSettings()
+    {
         _updateThemeSettingsCounter++;
+    }
 
-    public bool IsThemeSettingsUpdating() =>
-        _updateThemeSettingsCounter > 0;
+    public bool IsThemeSettingsUpdating()
+    {
+        return _updateThemeSettingsCounter > 0;
+    }
 
     public void EndUpdateThemeSettings()
     {
-        int counter = --_updateThemeSettingsCounter;
+        var counter = --_updateThemeSettingsCounter;
         if (counter < 0)
         {
-            throw new InvalidOperationException($"{nameof(EndUpdateThemeSettings)} must be called after {nameof(BeginUpdateThemeSettings)}");
+            throw new InvalidOperationException(
+                $"{nameof(EndUpdateThemeSettings)} must be called after {nameof(BeginUpdateThemeSettings)}");
         }
 
-        ThemeId themeId = _page.SelectedThemeId == ThemeId.WindowsAppColorModeId
+        var themeId = page.SelectedThemeId == ThemeId.WindowsAppColorModeId
             ? ThemeId.ColorModeThemeId
-            : _page.SelectedThemeId;
+            : page.SelectedThemeId;
 
         if (counter == 0)
         {
-            _page.LabelRestartIsNeededVisible = SettingsAreModified;
-            _page.IsChoosingVisualStyleEnabled = _page.SelectedThemeId != ThemeId.WindowsAppColorModeId && themeId != ThemeId.DefaultLight;
+            page.LabelRestartIsNeededVisible = SettingsAreModified;
+            page.IsChoosingVisualStyleEnabled = page.SelectedThemeId != ThemeId.WindowsAppColorModeId &&
+                                                themeId != ThemeId.DefaultLight;
         }
 
         if (themeId == ThemeId.DefaultLight)
@@ -133,25 +144,27 @@ internal sealed class ColorsSettingsPageController
 
         try
         {
-            _ = _themeRepository.GetTheme(themeId, _page.SelectedThemeVariations);
+            _ = themeRepository.GetTheme(themeId, page.SelectedThemeVariations);
         }
         catch (Exception ex)
         {
-            _page.ShowThemeLoadingErrorMessage(themeId, _page.SelectedThemeVariations, ex);
+            page.ShowThemeLoadingErrorMessage(themeId, page.SelectedThemeVariations, ex);
         }
     }
 
-    public void ShowAppThemesDirectory() =>
-        OsShellUtil.SelectPathInFileExplorer(_themePathProvider.AppThemesDirectory);
+    public void ShowAppThemesDirectory()
+    {
+        OsShellUtil.SelectPathInFileExplorer(themePathProvider.AppThemesDirectory);
+    }
 
     public void ShowUserThemesDirectory()
     {
-        if (_themePathProvider.UserThemesDirectory is not null)
+        if (themePathProvider.UserThemesDirectory is not null)
         {
             // Make sure the directory exists before we try to open it
-            Directory.CreateDirectory(_themePathProvider.UserThemesDirectory);
+            Directory.CreateDirectory(themePathProvider.UserThemesDirectory);
 
-            OsShellUtil.SelectPathInFileExplorer(_themePathProvider.UserThemesDirectory);
+            OsShellUtil.SelectPathInFileExplorer(themePathProvider.UserThemesDirectory);
         }
     }
 }

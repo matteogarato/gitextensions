@@ -2,24 +2,57 @@
 
 public abstract class ShellDescriptor : IShellDescriptor
 {
-    /// <inheritdoc/>
-    public string? ExecutableCommandLine { get; protected set; }
+    /// <inheritdoc />
+    protected string? ExecutableCommandLine { get; set; }
 
-    /// <inheritdoc/>
-    public string ExecutableName { get; protected set; } = null!;
+    /// <inheritdoc />
+    protected string ExecutableName { get; set; } = null!;
 
-    /// <inheritdoc/>
-    public string? ExecutablePath { get; protected set; }
+    /// <inheritdoc />
+    protected string? ExecutablePath { get; set; }
 
-    /// <inheritdoc/>
-    public bool HasExecutable => ExecutablePath is not null;
+    /// <inheritdoc />
+    protected Image Icon { get; set; } = null!;
 
-    /// <inheritdoc/>
-    public Image Icon { get; protected set; } = null!;
+    /// <inheritdoc />
+    protected string Name { get; set; } = null!;
 
-    /// <inheritdoc/>
-    public string Name { get; protected set; } = null!;
+    /// <inheritdoc />
+    string? IShellDescriptor.ExecutableCommandLine
+    {
+        get => ExecutableCommandLine;
+    }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
+    string IShellDescriptor.ExecutableName
+    {
+        get => ExecutableName;
+    }
+
+    /// <inheritdoc />
+    string? IShellDescriptor.ExecutablePath
+    {
+        get => ExecutablePath;
+    }
+
+    /// <inheritdoc />
+    bool IShellDescriptor.HasExecutable
+    {
+        get => ExecutablePath is not null;
+    }
+
+    /// <inheritdoc />
+    Image IShellDescriptor.Icon
+    {
+        get => Icon;
+    }
+
+    /// <inheritdoc />
+    string IShellDescriptor.Name
+    {
+        get => Name;
+    }
+
+    /// <inheritdoc />
     public abstract string GetChangeDirCommand(string path);
 }

@@ -6,26 +6,20 @@ using Microsoft.Win32.SafeHandles;
 namespace GitExtUtils.GitUI;
 
 /// <summary>
-/// Utility class related to DPI settings, primarily used for scaling dimensions on high-DPI displays.
+///     Utility class related to DPI settings, primarily used for scaling dimensions on high-DPI displays.
 /// </summary>
 public static class DpiUtil
 {
-    public static int DpiX { get; }
-    public static int DpiY { get; }
-
-    public static float ScaleX { get; }
-    public static float ScaleY { get; }
-
     static DpiUtil()
     {
-        using DeviceContextSafeHandle hdc = GetDC(IntPtr.Zero);
+        using var hdc = GetDC(IntPtr.Zero);
         try
         {
-            const int LOGPIXELSX = 88;
-            const int LOGPIXELSY = 90;
+            const int logpixelsx = 88;
+            const int logpixelsy = 90;
 
-            DpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-            DpiY = GetDeviceCaps(hdc, LOGPIXELSY);
+            DpiX = GetDeviceCaps(hdc, logpixelsx);
+            DpiY = GetDeviceCaps(hdc, logpixelsy);
 
             ScaleX = DpiX / 96.0f;
             ScaleY = DpiY / 96.0f;
@@ -40,19 +34,31 @@ public static class DpiUtil
         }
     }
 
-    /// <summary>
-    /// Gets whether the current scaling factor is not integer.
-    /// </summary>
-    public static bool IsFractional => Math.Floor(ScaleX) != ScaleX || Math.Floor(ScaleY) != ScaleY;
+    public static int DpiX { get; }
+    public static int DpiY { get; }
+
+    public static float ScaleX { get; }
+    public static float ScaleY { get; }
 
     /// <summary>
-    /// Gets whether the current pixel density is not 96 DPI.
+    ///     Gets whether the current scaling factor is not integer.
     /// </summary>
-    public static bool IsNonStandard => DpiX != 96 || DpiY != 96;
+    public static bool IsFractional
+    {
+        get => Math.Floor(ScaleX) != ScaleX || Math.Floor(ScaleY) != ScaleY;
+    }
 
     /// <summary>
-    /// Returns a scaled copy of <paramref name="size"/> which takes equivalent
-    /// screen space at the current DPI as the original would at 96 DPI.
+    ///     Gets whether the current pixel density is not 96 DPI.
+    /// </summary>
+    public static bool IsNonStandard
+    {
+        get => DpiX != 96 || DpiY != 96;
+    }
+
+    /// <summary>
+    ///     Returns a scaled copy of <paramref name="size" /> which takes equivalent
+    ///     screen space at the current DPI as the original would at 96 DPI.
     /// </summary>
     public static Size Scale(Size size)
     {
@@ -61,12 +67,12 @@ public static class DpiUtil
     }
 
     /// <summary>
-    /// Returns a scaled copy of <paramref name="size"/> which takes equivalent
-    /// screen space at the current DPI as the original would at <paramref name="originalDpi"/>.
+    ///     Returns a scaled copy of <paramref name="size" /> which takes equivalent
+    ///     screen space at the current DPI as the original would at <paramref name="originalDpi" />.
     /// </summary>
     public static Size Scale(Size size, int originalDpi)
     {
-        float scale = (float)DpiX / originalDpi;
+        var scale = (float)DpiX / originalDpi;
 
         return new Size(
             (int)(size.Width * scale),
@@ -74,8 +80,8 @@ public static class DpiUtil
     }
 
     /// <summary>
-    /// Modifies <paramref name="size"/> in place so that it takes equivalent screen
-    /// space at the current DPI as the original value would at 96 DPI.
+    ///     Modifies <paramref name="size" /> in place so that it takes equivalent screen
+    ///     space at the current DPI as the original value would at 96 DPI.
     /// </summary>
     public static void Scale(ref Size size)
     {
@@ -84,41 +90,47 @@ public static class DpiUtil
     }
 
     /// <summary>
-    /// Returns a scaled copy of measurement <paramref name="i"/> which has
-    /// equivalent length on screen at the current DPI as the original would
-    /// at 96 DPI.
+    ///     Returns a scaled copy of measurement <paramref name="i" /> which has
+    ///     equivalent length on screen at the current DPI as the original would
+    ///     at 96 DPI.
     /// </summary>
     /// <param name="i">The value to scale.</param>
-    /// <param name="ceiling">If <see langword="true" />, uses ceiling rounding to ensure the result is never smaller than the scaled value.</param>
+    /// <param name="ceiling">
+    ///     If <see langword="true" />, uses ceiling rounding to ensure the result is never smaller than the
+    ///     scaled value.
+    /// </param>
     public static int Scale(int i, bool ceiling)
     {
         return ceiling ? (int)Math.Ceiling(i * ScaleX) : (int)Math.Round(i * ScaleX);
     }
 
     /// <summary>
-    /// Returns a scaled copy of measurement <paramref name="i"/> which has
-    /// equivalent length on screen at the current DPI as the original would
-    /// at 96 DPI.
+    ///     Returns a scaled copy of measurement <paramref name="i" /> which has
+    ///     equivalent length on screen at the current DPI as the original would
+    ///     at 96 DPI.
     /// </summary>
     /// <param name="i">The value to scale.</param>
-    public static int Scale(int i) => Scale(i, ceiling: false);
+    public static int Scale(int i)
+    {
+        return Scale(i, false);
+    }
 
     /// <summary>
-    /// Returns a scaled copy of <paramref name="i"/> which has equivalent
-    /// length on screen at the current DPI as the original would at
-    /// <paramref name="originalDpi"/>.
+    ///     Returns a scaled copy of <paramref name="i" /> which has equivalent
+    ///     length on screen at the current DPI as the original would at
+    ///     <paramref name="originalDpi" />.
     /// </summary>
     public static int Scale(int i, int originalDpi)
     {
-        float scale = (float)DpiX / originalDpi;
+        var scale = (float)DpiX / originalDpi;
 
         return (int)(i * scale);
     }
 
     /// <summary>
-    /// Returns a scaled copy of measurement <paramref name="i"/> which has
-    /// equivalent length on screen at the current DPI at the original would
-    /// at 96 DPI.
+    ///     Returns a scaled copy of measurement <paramref name="i" /> which has
+    ///     equivalent length on screen at the current DPI at the original would
+    ///     at 96 DPI.
     /// </summary>
     public static float Scale(float i)
     {
@@ -126,20 +138,20 @@ public static class DpiUtil
     }
 
     /// <summary>
-    /// Returns a scaled copy of <paramref name="f"/> which has equivalent
-    /// length on screen at the current DPI as the original would at
-    /// <paramref name="originalDpi"/>.
+    ///     Returns a scaled copy of <paramref name="f" /> which has equivalent
+    ///     length on screen at the current DPI as the original would at
+    ///     <paramref name="originalDpi" />.
     /// </summary>
     public static float Scale(float f, int originalDpi)
     {
-        float scale = (float)DpiX / originalDpi;
+        var scale = (float)DpiX / originalDpi;
 
         return f * scale;
     }
 
     /// <summary>
-    /// Modifies <paramref name="point"/> in place so that it has equivalent physical
-    /// screen position at the current DPI as the original value would at 96 DPI.
+    ///     Modifies <paramref name="point" /> in place so that it has equivalent physical
+    ///     screen position at the current DPI as the original value would at 96 DPI.
     /// </summary>
     public static Point Scale(Point point)
     {
@@ -149,12 +161,12 @@ public static class DpiUtil
     }
 
     /// <summary>
-    /// Modifies <paramref name="point"/> in place so that it has equivalent physical
-    /// screen position at the current DPI as the original value would at <paramref name="originalDpi"/>.
+    ///     Modifies <paramref name="point" /> in place so that it has equivalent physical
+    ///     screen position at the current DPI as the original value would at <paramref name="originalDpi" />.
     /// </summary>
     public static Point Scale(Point point, int originalDpi)
     {
-        float scale = (float)DpiX / originalDpi;
+        var scale = (float)DpiX / originalDpi;
 
         return new Point(
             (int)(point.X * scale),
@@ -162,15 +174,15 @@ public static class DpiUtil
     }
 
     /// <summary>
-    /// Returns a scaled copy of <paramref name="padding"/> which takes equivalent
-    /// screen space at the current DPI as the original would at 96 DPI.
+    ///     Returns a scaled copy of <paramref name="padding" /> which takes equivalent
+    ///     screen space at the current DPI as the original would at 96 DPI.
     /// </summary>
     public static Padding Scale(Padding padding)
     {
         return new Padding((int)(padding.Left * ScaleX),
-                           (int)(padding.Top * ScaleX),
-                           (int)(padding.Right * ScaleX),
-                           (int)(padding.Bottom * ScaleX));
+            (int)(padding.Top * ScaleX),
+            (int)(padding.Right * ScaleX),
+            (int)(padding.Bottom * ScaleX));
     }
 
     [NotNull]
@@ -183,10 +195,10 @@ public static class DpiUtil
             return image;
         }
 
-        Size size = Scale(new Size(image.Width, image.Height));
+        var size = Scale(new Size(image.Width, image.Height));
         Bitmap bitmap = new(size.Width, size.Height);
 
-        using Graphics g = Graphics.FromImage(bitmap);
+        using var g = Graphics.FromImage(bitmap);
 
         // NearestNeighbor is better for 200% and above
         // https://devblogs.microsoft.com/visualstudio/improving-high-dpi-support-for-visual-studio-2013/
@@ -215,10 +227,10 @@ public static class DpiUtil
     private sealed class DeviceContextSafeHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
         /// <summary>
-        /// Called by P/Invoke.
+        ///     Called by P/Invoke.
         /// </summary>
         public DeviceContextSafeHandle()
-            : base(ownsHandle: true)
+            : base(true)
         {
         }
 

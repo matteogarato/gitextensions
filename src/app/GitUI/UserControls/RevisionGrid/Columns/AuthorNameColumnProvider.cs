@@ -1,14 +1,14 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
 internal sealed class AuthorNameColumnProvider : ColumnProvider
 {
-    private readonly RevisionGridControl _grid;
     private readonly AuthorRevisionHighlighting _authorHighlighting;
+    private readonly RevisionGridControl _grid;
 
     public AuthorNameColumnProvider(RevisionGridControl grid, AuthorRevisionHighlighting authorHighlighting)
         : base("Author Name")
@@ -32,13 +32,15 @@ internal sealed class AuthorNameColumnProvider : ColumnProvider
         Column.Visible = AppSettings.ShowAuthorNameColumn;
     }
 
-    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
+    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight,
+        in CellStyle style)
     {
         if (!revision.IsArtificial)
         {
-            Font font = _authorHighlighting.IsHighlighted(revision) ? style.BoldFont : style.NormalFont;
+            var font = _authorHighlighting.IsHighlighted(revision) ? style.BoldFont : style.NormalFont;
 
-            _grid.DrawColumnText(e, (string)e.FormattedValue!, font, style.ForeColor, e.CellBounds.ReduceLeft(ColumnLeftMargin));
+            _grid.DrawColumnText(e, (string)e.FormattedValue!, font, style.ForeColor,
+                e.CellBounds.ReduceLeft(ColumnLeftMargin));
         }
     }
 
@@ -48,7 +50,8 @@ internal sealed class AuthorNameColumnProvider : ColumnProvider
         e.FormattingApplied = true;
     }
 
-    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
+    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision,
+        [NotNullWhen(true)] out string? toolTip)
     {
         if (revision.ObjectId.IsArtificial)
         {

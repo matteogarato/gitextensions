@@ -16,5 +16,8 @@ public class BuildServerAdapterMetadataAttribute : ExportAttribute
 
     public string BuildServerType { get; }
 
-    public virtual string? CanBeLoaded => null;
+    public virtual string? CanBeLoaded
+    {
+        get => null;
+    }
 }

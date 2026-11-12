@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.Design;
-using GitCommands;
+using GitCommands.Settings;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
@@ -23,7 +23,7 @@ public static class ServiceContainerRegistry
         HotkeySettingsManager hotkeySettingsManager = new(scriptsManager);
 
         OutputHistoryModel outputHistoryModel = new(AppSettings.OutputHistoryDepth.Value);
-        serviceContainer.GetRequiredService<ISubscribableTraceListener>().TraceReceived += (in string message) =>
+        serviceContainer.GetRequiredService<ISubscribableTraceListener>().TraceReceived += (in message) =>
         {
             // In release builds, all Trace.Write* output is recorded.
             // In debug builds, forward only exceptions and DebugHelper.Trace messages but not all the noisy Debug.Write* output.
@@ -36,7 +36,8 @@ public static class ServiceContainerRegistry
             }
         };
 
-        serviceContainer.AddService<IWindowsJumpListManager>(new WindowsJumpListManager(serviceContainer.GetRequiredService<IRepositoryDescriptionProvider>()));
+        serviceContainer.AddService<IWindowsJumpListManager>(
+            new WindowsJumpListManager(serviceContainer.GetRequiredService<IRepositoryDescriptionProvider>()));
         serviceContainer.AddService<IScriptsManager>(scriptsManager);
         serviceContainer.AddService<IScriptsRunner>(scriptsManager);
         serviceContainer.AddService<IHotkeySettingsManager>(hotkeySettingsManager);
@@ -46,20 +47,25 @@ public static class ServiceContainerRegistry
         serviceContainer.AddService<IOutputHistoryProvider>(outputHistoryModel);
         serviceContainer.AddService<IOutputHistoryRecorder>(outputHistoryModel);
 
-        IRepositoryCurrentBranchNameCache branchNameCache = new RepositoryCurrentBranchNameCache(new RepositoryCurrentBranchNameProvider(serviceContainer.GetRequiredService<IGitExecutorProvider>()));
+        IRepositoryCurrentBranchNameCache branchNameCache = new RepositoryCurrentBranchNameCache(
+            new RepositoryCurrentBranchNameProvider(serviceContainer.GetRequiredService<IGitExecutorProvider>()));
         InvalidRepositoryRemover invalidRepositoryRemover = new();
-        serviceContainer.AddService<IRepositoryCurrentBranchNameCache>(branchNameCache);
+        serviceContainer.AddService(branchNameCache);
         serviceContainer.AddService<IInvalidRepositoryRemover>(invalidRepositoryRemover);
-        serviceContainer.AddService<IRepositoryHistoryUIService>(new RepositoryHistoryUIService(serviceContainer.GetRequiredService<IGitExecutorProvider>(), branchNameCache, invalidRepositoryRemover));
+        serviceContainer.AddService<IRepositoryHistoryUiService>(new RepositoryHistoryUiService(
+            serviceContainer.GetRequiredService<IGitExecutorProvider>(), branchNameCache, invalidRepositoryRemover));
 
         serviceContainer.AddService<IShellProvider>(new ShellProvider());
 
         serviceContainer.AddService<IConsoleEmulatorsRegistry>(
             new ConsoleEmulatorsRegistry(
-                consoleEmulators: [new ConEmuConsoleEmulator(serviceContainer.GetRequiredService<IShellProvider>()), new MinttyConsoleEmulator()],
-                useConsoleEmulation: AppSettings.UseConsoleEmulatorForCommands,
-                consoleEmulatorName: AppSettings.ConsoleEmulatorName,
-                consoleEmulatorTheme: AppSettings.ConEmuStyle,
-                consoleFont: () => AppSettings.ConEmuConsoleFont));
+                [
+                    new ConEmuConsoleEmulator(serviceContainer.GetRequiredService<IShellProvider>()),
+                    new MinttyConsoleEmulator()
+                ],
+                AppSettings.UseConsoleEmulatorForCommands,
+                AppSettings.ConsoleEmulatorName,
+                AppSettings.ConEmuStyle,
+                () => AppSettings.ConEmuConsoleFont));
     }
 }

@@ -1,17 +1,17 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
-using AppVeyorIntegration;
 using CommonTestUtils;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
+using GitExtensions.Plugins.AppVeyorIntegration;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using NSubstitute;
-using Xunit;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
 namespace AppVeyorIntegrationTests;
+
 public class AppVeyorAdapterTests
 {
     private const string _projectId = "account/repo";
@@ -19,7 +19,7 @@ public class AppVeyorAdapterTests
     [Fact]
     public void Should_return_no_build_Info_When_Api_Json_is_empty()
     {
-        IEnumerable<AppVeyorBuildInfo> buildInfo = new AppVeyorAdapter().ExtractBuildInfo(_projectId, string.Empty);
+        var buildInfo = new AppVeyorAdapter().ExtractBuildInfo(_projectId, string.Empty);
 
         buildInfo.Should().BeEmpty();
     }
@@ -28,19 +28,19 @@ public class AppVeyorAdapterTests
     [Fact]
     public async Task Should_return_a_build_Info_When_Json_content_is_the_one_of_a_pull_request_build()
     {
-        await Verifier.Verify(BuildBuildInfoForFile("AppVeyorResult_pull_request_build.json")).UseDirectory("ApprovedFiles");
+        await Verify(BuildBuildInfoForFile("AppVeyorResult_pull_request_build.json")).UseDirectory("ApprovedFiles");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     [Fact]
     public async Task Should_return_a_build_Info_When_Json_content_is_the_one_of_a_master_build()
     {
-        await Verifier.Verify(BuildBuildInfoForFile("AppVeyorResult_master.json")).UseDirectory("ApprovedFiles");
+        await Verify(BuildBuildInfoForFile("AppVeyorResult_master.json")).UseDirectory("ApprovedFiles");
     }
 
     private string BuildBuildInfoForFile(string filename)
     {
-        string resultString = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+        var resultString = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
             $"{GetType().Namespace}.MockData.{filename}");
         AppVeyorAdapter appVeyorAdapter = new();
         appVeyorAdapter.Initialize(Substitute.For<IBuildServerWatcher>(), Substitute.For<SettingsSource>(), () => { },
@@ -52,7 +52,7 @@ public class AppVeyorAdapterTests
 
     private static string YamlSerialize(List<AppVeyorBuildInfo> buildInfo)
     {
-        ISerializer serializer = new SerializerBuilder()
+        var serializer = new SerializerBuilder()
             .WithTypeConverter(new CommitsYamlTypeConverter())
             .Build();
 
@@ -62,11 +62,11 @@ public class AppVeyorAdapterTests
 
 public class CommitsYamlTypeConverter : IYamlTypeConverter
 {
-    public bool Accepts(Type type)
+    bool IYamlTypeConverter.Accepts(Type type)
     {
         if (type == typeof(ObjectId)
-        || type == typeof(ObjectId[])
-        || type == typeof(DateTime))
+            || type == typeof(ObjectId[])
+            || type == typeof(DateTime))
         {
             return true;
         }
@@ -74,12 +74,12 @@ public class CommitsYamlTypeConverter : IYamlTypeConverter
         return false;
     }
 
-    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+    object IYamlTypeConverter.ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
         throw new NotImplementedException();
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
+    void IYamlTypeConverter.WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
         if (type == typeof(DateTime))
         {
@@ -93,10 +93,10 @@ public class CommitsYamlTypeConverter : IYamlTypeConverter
 
         if (type == typeof(ObjectId[]))
         {
-            ObjectId[] commits = (ObjectId[])value!;
+            var commits = (ObjectId[])value!;
             emitter.Emit(new SequenceStart(null, null, false, SequenceStyle.Block));
 
-            foreach (ObjectId commit in commits)
+            foreach (var commit in commits)
             {
                 emitter.Emit(new Scalar(null, commit.ToString()));
             }

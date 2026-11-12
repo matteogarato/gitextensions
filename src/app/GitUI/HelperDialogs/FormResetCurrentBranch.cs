@@ -1,18 +1,15 @@
-﻿using GitCommands;
+﻿using System.ComponentModel;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
-using GitUIPluginInterfaces;
 using ResourceManager;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.HelperDialogs;
 
 public partial class FormResetCurrentBranch : GitModuleForm
 {
-    private readonly TranslationString _branchInfo = new("Reset branch '{0}' to revision:");
-    private readonly TranslationString _resetHardWarning = new("You are about to discard ALL local changes, are you sure?");
-    private readonly TranslationString _resetCaption = new("Reset branch");
-
     public enum ResetType
     {
         Soft,
@@ -22,10 +19,13 @@ public partial class FormResetCurrentBranch : GitModuleForm
         Hard
     }
 
-    public static FormResetCurrentBranch Create(IGitUICommands commands, GitRevision revision, ResetType resetType = ResetType.Soft)
-        => new(commands, revision ?? throw new NotSupportedException(TranslatedStrings.NoRevision), resetType);
+    private readonly TranslationString _branchInfo = new("Reset branch '{0}' to revision:");
+    private readonly TranslationString _resetCaption = new("Reset branch");
 
-    private FormResetCurrentBranch(IGitUICommands commands, GitRevision revision, ResetType resetType)
+    private readonly TranslationString _resetHardWarning =
+        new("You are about to discard ALL local changes, are you sure?");
+
+    private FormResetCurrentBranch(IGitUiCommands commands, GitRevision revision, ResetType resetType)
         : base(commands)
     {
         Revision = revision;
@@ -60,6 +60,13 @@ public partial class FormResetCurrentBranch : GitModuleForm
 
     public GitRevision Revision { get; }
 
+    public static FormResetCurrentBranch Create(IGitUiCommands commands, GitRevision revision,
+        ResetType resetType = ResetType.Soft)
+    {
+        return new FormResetCurrentBranch(commands,
+            revision ?? throw new NotSupportedException(TranslatedStrings.NoRevision), resetType);
+    }
+
     private void FormResetCurrentBranch_Load(object sender, EventArgs e)
     {
         _NO_TRANSLATE_BranchInfo.Text = string.Format(_branchInfo.Text, Module.GetSelectedBranch());
@@ -68,27 +75,32 @@ public partial class FormResetCurrentBranch : GitModuleForm
 
     private void Ok_Click(object sender, EventArgs e)
     {
-        bool updateSubmodules = AppSettings.UpdateSubmodulesOnCheckout is true && Module.HasSubmodules() && Revision.ObjectId != Module.GetCurrentCheckout();
+        var updateSubmodules = AppSettings.UpdateSubmodulesOnCheckout is true && Module.HasSubmodules() &&
+                               Revision.ObjectId != Module.GetCurrentCheckout();
 
         if (Soft.Checked)
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Reset(ResetMode.Soft, Revision.Guid, quiet: false), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.Reset(ResetMode.Soft, Revision.Guid, quiet: false),
+                Module.WorkingDir, null, true);
         }
         else if (Mixed.Checked)
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Reset(ResetMode.Mixed, Revision.Guid, quiet: false), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.Reset(ResetMode.Mixed, Revision.Guid, quiet: false),
+                Module.WorkingDir, null, true);
         }
         else if (Hard.Checked)
         {
-            if (MessageBoxes.Show(this, _resetHardWarning.Text, _resetCaption.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
+            if (MessageBoxes.Show(this, _resetHardWarning.Text, _resetCaption.Text, MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Exclamation) == DialogResult.Yes)
             {
-                ObjectId currentCheckout = Module.GetCurrentCheckout();
-                bool success = FormProcess.ShowDialog(this, UICommands, arguments: Commands.Reset(ResetMode.Hard, Revision.Guid, quiet: false), Module.WorkingDir, input: null, useDialogSettings: true);
+                var currentCheckout = Module.GetCurrentCheckout();
+                var success = FormProcess.ShowDialog(this, UiCommands,
+                    Commands.Reset(ResetMode.Hard, Revision.Guid, quiet: false), Module.WorkingDir, null, true);
                 if (success)
                 {
                     if (currentCheckout != Revision.ObjectId)
                     {
-                        UICommands.UpdateSubmodules(this);
+                        UiCommands.UpdateSubmodules(this);
                     }
                 }
             }
@@ -99,19 +111,21 @@ public partial class FormResetCurrentBranch : GitModuleForm
         }
         else if (Merge.Checked)
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Reset(ResetMode.Merge, Revision.Guid, quiet: false), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.Reset(ResetMode.Merge, Revision.Guid, quiet: false),
+                Module.WorkingDir, null, true);
         }
         else if (Keep.Checked)
         {
-            FormProcess.ShowDialog(this, UICommands, arguments: Commands.Reset(ResetMode.Keep, Revision.Guid, quiet: false), Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, Commands.Reset(ResetMode.Keep, Revision.Guid, quiet: false),
+                Module.WorkingDir, null, true);
         }
 
         if (updateSubmodules)
         {
-            UICommands.StartUpdateSubmodulesDialog(this);
+            UiCommands.StartUpdateSubmodulesDialog(this);
         }
 
-        UICommands.RepoChangedNotifier.Notify();
+        UiCommands.RepoChangedNotifier.Notify();
         DialogResult = DialogResult.OK;
         Close();
     }
@@ -122,7 +136,7 @@ public partial class FormResetCurrentBranch : GitModuleForm
         Close();
     }
 
-    private void FormResetCurrentBranch_HelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
+    private void FormResetCurrentBranch_HelpButtonClicked(object sender, CancelEventArgs e)
     {
         string? helpSection = default;
         if (Soft.Checked)
@@ -146,6 +160,7 @@ public partial class FormResetCurrentBranch : GitModuleForm
             helpSection = "--hard";
         }
 
-        OsShellUtil.OpenUrlInDefaultBrowser(@$"https://git-scm.com/docs/git-reset#Documentation/git-reset.txt-{helpSection}");
+        OsShellUtil.OpenUrlInDefaultBrowser(
+            @$"https://git-scm.com/docs/git-reset#Documentation/git-reset.txt-{helpSection}");
     }
 }

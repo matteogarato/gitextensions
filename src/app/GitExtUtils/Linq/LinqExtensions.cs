@@ -13,15 +13,15 @@ public static class LinqExtensions
     }
 
     /// <summary>
-    /// Sorts the elements of a sequence in ascending order by using a specified <paramref name="comparer"/>.
+    ///     Sorts the elements of a sequence in ascending order by using a specified <paramref name="comparer" />.
     /// </summary>
     /// <typeparam name="TSource">The type of the elements of source.</typeparam>
     /// <typeparam name="TKey">The type of the key returned by keySelector.</typeparam>
     /// <param name="source">A sequence of values to order.</param>
     /// <param name="keySelector">A function to extract a key from an element.</param>
     /// <param name="comparer">A function to compare keys.</param>
-    /// <returns>An <see cref="IOrderedEnumerable{TElement}"/> whose elements are sorted according to a key.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="keySelector"/> is <c>null</c>.</exception>
+    /// <returns>An <see cref="IOrderedEnumerable{TElement}" /> whose elements are sorted according to a key.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source" /> or <paramref name="keySelector" /> is <c>null</c>.</exception>
     [LinqTunnel]
     public static IOrderedEnumerable<TSource> OrderBy<TSource, TKey>(
         this IEnumerable<TSource> source,
@@ -32,29 +32,13 @@ public static class LinqExtensions
         return source.OrderBy(keySelector, new DelegateComparer<TKey>(comparer));
     }
 
-    private sealed class DelegateComparer<T> : IComparer<T>
-        where T : notnull
-    {
-        private readonly Func<T, T, int> _comparer;
-
-        public DelegateComparer(Func<T, T, int> comparer)
-        {
-            _comparer = comparer;
-        }
-
-        public int Compare(T? x, T? y)
-        {
-            return _comparer(x!, y!);
-        }
-    }
-
     /// <summary>
-    /// Transforms each element of an array into a new form.
+    ///     Transforms each element of an array into a new form.
     /// </summary>
     /// <typeparam name="TSource">The type of the elements of source.</typeparam>
     /// <param name="source">A sequence of values to invoke a transform function on.</param>
     /// <param name="transformer">A transform function to apply to each element.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="transformer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="source" /> or <paramref name="transformer" /> is <c>null</c>.</exception>
     public static void Transform<TSource>(
         this TSource[] source,
         [InstantHandle] Func<TSource, TSource> transformer)
@@ -62,7 +46,7 @@ public static class LinqExtensions
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(transformer);
 
-        for (int i = 0; i < source.Length; i++)
+        for (var i = 0; i < source.Length; i++)
         {
             source[i] = transformer(source[i]);
         }
@@ -70,7 +54,7 @@ public static class LinqExtensions
 
     public static void AddAll<T>(this IList<T> list, [InstantHandle] IEnumerable<T> elementsToAdd)
     {
-        foreach (T t in elementsToAdd)
+        foreach (var t in elementsToAdd)
         {
             list.Add(t);
         }
@@ -78,7 +62,7 @@ public static class LinqExtensions
 
     public static void ForEach<T>(this IEnumerable<T> enumerable, [InstantHandle] Action<T> action)
     {
-        foreach (T t in enumerable)
+        foreach (var t in enumerable)
         {
             action(t);
         }
@@ -95,24 +79,24 @@ public static class LinqExtensions
         switch (source)
         {
             case IReadOnlyList<T> readOnlyList:
-            {
-                return readOnlyList;
-            }
-
-            case ICollection<T> collection:
-            {
-                if (collection.Count == 0)
                 {
-                    return [];
+                    return readOnlyList;
                 }
 
-                T[] items = new T[collection.Count];
-                collection.CopyTo(items, 0);
-                return items;
-            }
+            case ICollection<T> collection:
+                {
+                    if (collection.Count == 0)
+                    {
+                        return [];
+                    }
+
+                    var items = new T[collection.Count];
+                    collection.CopyTo(items, 0);
+                    return items;
+                }
         }
 
-        using IEnumerator<T> e = source.GetEnumerator();
+        using var e = source.GetEnumerator();
         if (!e.MoveNext())
         {
             return [];
@@ -123,8 +107,7 @@ public static class LinqExtensions
         do
         {
             list.Add(e.Current);
-        }
-        while (e.MoveNext());
+        } while (e.MoveNext());
 
         return list;
     }
@@ -135,9 +118,9 @@ public static class LinqExtensions
         this IEnumerable<T> source,
         [InstantHandle] Func<T, bool> predicate)
     {
-        int index = 0;
+        var index = 0;
 
-        foreach (T element in source)
+        foreach (var element in source)
         {
             if (predicate(element))
             {
@@ -156,9 +139,9 @@ public static class LinqExtensions
         this IReadOnlyList<TSource> source,
         [InstantHandle] Func<TSource, TResult> map)
     {
-        TResult[] array = new TResult[source.Count];
+        var array = new TResult[source.Count];
 
-        for (int i = 0; i < source.Count; i++)
+        for (var i = 0; i < source.Count; i++)
         {
             array[i] = map(source[i]);
         }
@@ -170,7 +153,7 @@ public static class LinqExtensions
     [MustUseReturnValue]
     public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> source)
     {
-        foreach (T? item in source)
+        foreach (var item in source)
         {
             if (item is not null)
             {
@@ -183,12 +166,21 @@ public static class LinqExtensions
     [MustUseReturnValue]
     public static IEnumerable<string> WhereNotNullOrWhiteSpace(this IEnumerable<string?> source)
     {
-        foreach (string? item in source)
+        foreach (var item in source)
         {
             if (!string.IsNullOrWhiteSpace(item))
             {
                 yield return item;
             }
+        }
+    }
+
+    private sealed class DelegateComparer<T>(Func<T, T, int> comparer) : IComparer<T>
+        where T : notnull
+    {
+        int IComparer<T>.Compare(T? x, T? y)
+        {
+            return comparer(x!, y!);
         }
     }
 }

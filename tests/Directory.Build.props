@@ -1,5 +1,5 @@
 <Project>
-  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory)\.., Directory.Build.props))\Directory.Build.props" />
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory)\.., Directory.Build.props))\Directory.Build.props"/>
 
   <PropertyGroup>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -9,6 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Using Include="AwesomeAssertions" />
+    <Using Include="AwesomeAssertions"/>
   </ItemGroup>
 </Project>

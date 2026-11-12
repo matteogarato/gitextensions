@@ -3,7 +3,7 @@ namespace GitExtUtils.GitUI.Theming;
 public readonly struct HslColor
 {
     /// <summary>
-    /// Creates a new HslColor value.
+    ///     Creates a new HslColor value.
     /// </summary>
     /// <param name="hue">Hue, as a value between 0 and 1.</param>
     /// <param name="saturation">Saturation, as a value between 0 and 1.</param>
@@ -26,22 +26,22 @@ public readonly struct HslColor
     }
 
     /// <summary>
-    /// Creates an <see cref="HslColor"/> from an RGB <see cref="Color"/> object.
+    ///     Creates an <see cref="HslColor" /> from an RGB <see cref="Color" /> object.
     /// </summary>
     /// <param name="c">A Color to convert.</param>
     /// <returns>An HSL value.</returns>
     public HslColor(in Color c)
     {
-        double r = c.R / 255d;
-        double g = c.G / 255d;
-        double b = c.B / 255d;
+        var r = c.R / 255d;
+        var g = c.G / 255d;
+        var b = c.B / 255d;
 
-        double max = Math.Max(r, Math.Max(g, b));
-        double min = Math.Min(r, Math.Min(g, b));
+        var max = Math.Max(r, Math.Max(g, b));
+        var min = Math.Min(r, Math.Min(g, b));
 
         double h;
         double s;
-        double l = (max + min) / 2;
+        var l = (max + min) / 2;
 
         if (max.Equals(min))
         {
@@ -49,7 +49,7 @@ public readonly struct HslColor
         }
         else
         {
-            double d = max - min;
+            var d = max - min;
             s = l > 0.5
                 ? d / (2 - max - min)
                 : d / (max + min);
@@ -77,26 +77,37 @@ public readonly struct HslColor
     }
 
     /// <summary>
-    /// Hue as a value between 0 and 1.
+    ///     Hue as a value between 0 and 1.
     /// </summary>
     public double H { get; }
 
     /// <summary>
-    /// Saturation as a value between 0 and 1.
+    ///     Saturation as a value between 0 and 1.
     /// </summary>
     public double S { get; }
 
     /// <summary>
-    /// Luminosity (brightness) as a value between 0 and 1.
+    ///     Luminosity (brightness) as a value between 0 and 1.
     /// </summary>
     public double L { get; }
 
-    public HslColor WithHue(double hue) => new(hue, S, L);
-    public HslColor WithSaturation(double saturation) => new(H, saturation, L);
-    public HslColor WithLuminosity(double luminosity) => new(H, S, luminosity);
+    public HslColor WithHue(double hue)
+    {
+        return new HslColor(hue, S, L);
+    }
+
+    public HslColor WithSaturation(double saturation)
+    {
+        return new HslColor(H, saturation, L);
+    }
+
+    public HslColor WithLuminosity(double luminosity)
+    {
+        return new HslColor(H, S, luminosity);
+    }
 
     /// <summary>
-    /// Converts this HSL color object to a <see cref="Color"/> object based on RGB values.
+    ///     Converts this HSL color object to a <see cref="Color" /> object based on RGB values.
     /// </summary>
     public Color ToColor()
     {
@@ -110,8 +121,8 @@ public readonly struct HslColor
         }
         else
         {
-            double q = L < 0.5 ? L * (1 + S) : L + S - (L * S);
-            double p = (2 * L) - q;
+            var q = L < 0.5 ? L * (1 + S) : L + S - (L * S);
+            var p = (2 * L) - q;
             r = Hue2Rgb(p, q, H + (1 / 3d));
             g = Hue2Rgb(p, q, H);
             b = Hue2Rgb(p, q, H - (1 / 3d));
@@ -144,5 +155,8 @@ public readonly struct HslColor
         }
     }
 
-    public override string ToString() => $"H = {H:#.000}, S = {S:#.000}, L = {L:#.000}";
+    public override string ToString()
+    {
+        return $"H = {H:#.000}, S = {S:#.000}, L = {L:#.000}";
+    }
 }

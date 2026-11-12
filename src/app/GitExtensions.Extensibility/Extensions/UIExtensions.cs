@@ -2,7 +2,7 @@ using System.Text;
 
 namespace GitExtensions.Extensibility.Extensions;
 
-public static class UIExtensions
+public static class UiExtensions
 {
     public static bool? GetNullableChecked(this CheckBox chx)
     {
@@ -10,10 +10,8 @@ public static class UIExtensions
         {
             return null;
         }
-        else
-        {
-            return chx.Checked;
-        }
+
+        return chx.Checked;
     }
 
     public static void SetNullableChecked(this CheckBox chx, bool? @checked)
@@ -31,9 +29,9 @@ public static class UIExtensions
     public static bool IsFixedWidth(this Font ft, Graphics g)
     {
         ReadOnlySpan<char> charSizes = ['i', 'a', 'Z', '%', '#', 'a', 'B', 'l', 'm', ',', '.'];
-        float charWidth = g.MeasureString("I", ft).Width;
+        var charWidth = g.MeasureString("I", ft).Width;
 
-        foreach (char c in charSizes)
+        foreach (var c in charSizes)
         {
             if (Math.Abs(g.MeasureString(c.ToString(), ft).Width - charWidth) > float.Epsilon)
             {
@@ -45,8 +43,8 @@ public static class UIExtensions
     }
 
     /// <summary>
-    /// bodyOrSubject
-    /// Notes:
+    ///     bodyOrSubject
+    ///     Notes:
     ///     notes
     /// </summary>
     public static string FormatBodyAndNotes(string bodyOrSubject, string? notes)
@@ -68,8 +66,8 @@ public static class UIExtensions
 
         sb.AppendLine().AppendLine(notesPrefix);
 
-        ReadOnlySpan<char> notesAsSpan = notes.AsSpan();
-        foreach (Range range in notesAsSpan.Split('\n'))
+        var notesAsSpan = notes.AsSpan();
+        foreach (var range in notesAsSpan.Split('\n'))
         {
             sb.Append(indent).Append(notesAsSpan[range]).Append('\n');
         }

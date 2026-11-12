@@ -14,11 +14,15 @@ public class GitItem : IObjectGitItem
         FileName = Name = name;
     }
 
-    public ObjectId ObjectId { get; }
-    public GitObjectType ObjectType { get; }
-    public string Name { get; }
     public string FileName { get; set; }
     public int Mode { get; }
 
-    public string Guid => ObjectId.ToString();
+    ObjectId IGitItem.ObjectId { get; }
+    GitObjectType IObjectGitItem.ObjectType { get; }
+    string INamedGitItem.Name { get; }
+
+    string IGitItem.Guid
+    {
+        get => ObjectId.ToString();
+    }
 }

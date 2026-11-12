@@ -4,16 +4,14 @@ namespace GitCommands.UserRepositoryHistory;
 
 public class Repository
 {
-    private string? _path;
-
     public enum RepositoryAnchor
     {
-        [XmlEnum(Name = "Pinned")]
-        AnchoredInTop,
-        [XmlEnum(Name = "AllRecent")]
-        AnchoredInRecent,
+        [XmlEnum(Name = "Pinned")] AnchoredInTop,
+        [XmlEnum(Name = "AllRecent")] AnchoredInRecent,
         None
     }
+
+    private string? _path;
 
     // required by XmlSerializer
     private Repository()

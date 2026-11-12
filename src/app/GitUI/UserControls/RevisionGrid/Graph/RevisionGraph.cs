@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Graph;
 
@@ -21,67 +21,93 @@ public class RevisionGraph : IRevisionGraphRowProvider
     private const int _orderSegmentsLookAhead = 50;
     private const int _straightenLanesLookAhead = 20;
 
-    internal RevisionGraphConfig Config { get; private set; } = new();
-
     /// <summary>
-    /// GitRevision which can be displayed.
-    /// This information is added from the update thread but can be accessed by multiple threads.
-    /// </summary>
-    private readonly ConcurrentDictionary<ObjectId, RevisionGraphRevision> _revisionByObjectId = new();
-
-    /// <summary>
-    /// Partial revisions that are seen as parents and have no GitRevision yet.
-    /// These revisions are only accessed from the update thread and are normally empty
-    /// when the loading is completed.
+    ///     Partial revisions that are seen as parents and have no GitRevision yet.
+    ///     These revisions are only accessed from the update thread and are normally empty
+    ///     when the loading is completed.
     /// </summary>
     private readonly Dictionary<ObjectId, RevisionGraphRevision> _incompleteRevisionByObjectId = [];
 
     /// <summary>
-    /// The loading is completed when all revisions are loaded from the log,
-    /// then <see cref="_revisionByObjectId"/> is completely updated.
-    /// </summary>
-    private bool _loadingCompleted;
-
-    /// <summary>
-    /// The max score is used to keep a chronological order during the graph building.
-    /// It is cheaper than doing <c>_nodeByObjectId.Values.Max(n => n.Score)</c>.
-    /// </summary>
-    private int _maxScore;
-
-    /// <summary>
-    /// The node cache is an ordered list of <see cref="_revisionByObjectId"/>.
-    /// This is used so we can draw commits before the graph building is complete.
-    /// </summary>
-    /// <remarks>
-    /// This cache is normally built twice, first time when a few revisions are loaded
-    /// and the first page is to be displayed, very quick.
-    /// The second time is when all revisions are loaded, that may require hundred ms to build.
-    /// </remarks>
-    private ImmutableArray<RevisionGraphRevision> _orderedNodesCache = [];
-
-    /// <summary>
-    /// Mark the <see cref="_orderedNodesCache"/> as dirty. This will trigger a rebuild of the cache.
-    /// </summary>
-    private bool _orderedNodesCacheInvalid = true;
-
-    /// <summary>
-    /// The ordered row cache contains rows with segments stored in lanes.
+    ///     The ordered row cache contains rows with segments stored in lanes.
     /// </summary>
     /// <remarks>This cache is very expensive to build, done only for displayed rows - in a background task.</remarks>
     private readonly List<RevisionGraphRow> _orderedRowCache = [];
 
     /// <summary>
-    /// <see cref="_orderedRowCache"/> is invalid if it contains scores above this value.
+    ///     GitRevision which can be displayed.
+    ///     This information is added from the update thread but can be accessed by multiple threads.
+    /// </summary>
+    private readonly ConcurrentDictionary<ObjectId, RevisionGraphRevision> _revisionByObjectId = new();
+
+    /// <summary>
+    ///     The loading is completed when all revisions are loaded from the log,
+    ///     then <see cref="_revisionByObjectId" /> is completely updated.
+    /// </summary>
+    private bool _loadingCompleted;
+
+    /// <summary>
+    ///     The max score is used to keep a chronological order during the graph building.
+    ///     It is cheaper than doing <c>_nodeByObjectId.Values.Max(n => n.Score)</c>.
+    /// </summary>
+    private int _maxScore;
+
+    /// <summary>
+    ///     The node cache is an ordered list of <see cref="_revisionByObjectId" />.
+    ///     This is used so we can draw commits before the graph building is complete.
+    /// </summary>
+    /// <remarks>
+    ///     This cache is normally built twice, first time when a few revisions are loaded
+    ///     and the first page is to be displayed, very quick.
+    ///     The second time is when all revisions are loaded, that may require hundred ms to build.
+    /// </remarks>
+    private ImmutableArray<RevisionGraphRevision> _orderedNodesCache = [];
+
+    /// <summary>
+    ///     Mark the <see cref="_orderedNodesCache" /> as dirty. This will trigger a rebuild of the cache.
+    /// </summary>
+    private bool _orderedNodesCacheInvalid = true;
+
+    /// <summary>
+    ///     <see cref="_orderedRowCache" /> is invalid if it contains scores above this value.
     /// </summary>
     private int _orderedRowCacheInvalidFromScore = int.MaxValue;
 
-    private int _straightenDiagonalsLookAhead => Config.StraightenGraphDiagonals ? _straightenLanesLookAhead / 2 : 0;
+    internal RevisionGraphConfig Config { get; private set; } = new();
+
+    private int StraightenDiagonalsLookAhead
+    {
+        get => Config.StraightenGraphDiagonals ? _straightenLanesLookAhead / 2 : 0;
+    }
 
     /// <summary>
-    /// The number of rows needed to look ahead for straightening diagonals and lanes.
-    /// Refer to the <cref>CacheTo</cref> function.
+    ///     The number of rows needed to look ahead for straightening diagonals and lanes.
+    ///     Refer to the <cref>CacheTo</cref> function.
     /// </summary>
-    private int _straightenLookAhead => 2 * (_straightenDiagonalsLookAhead + _straightenLanesLookAhead);
+    private int StraightenLookAhead
+    {
+        get => 2 * (StraightenDiagonalsLookAhead + _straightenLanesLookAhead);
+    }
+
+    /// <summary>
+    ///     The number of revisions in <see cref="_revisionByObjectId" />, potentially nodes in the graph.
+    ///     "Cache" to prevent concurrent dictionary access.
+    /// </summary>
+    public int Count { get; private set; }
+
+    public bool OnlyFirstParent { get; set; }
+    public ObjectId HeadId { get; set; }
+
+    IRevisionGraphRow? IRevisionGraphRowProvider.GetSegmentsForRow(int row)
+    {
+        var localOrderedNodesCache = BuildOrderedNodesCache(row);
+        if (IsRowCacheDirty(localOrderedNodesCache) || row < 0 || row >= _orderedRowCache.Count)
+        {
+            return null;
+        }
+
+        return _orderedRowCache[row];
+    }
 
     public void Clear()
     {
@@ -94,40 +120,35 @@ public class RevisionGraph : IRevisionGraphRowProvider
         _orderedNodesCacheInvalid = true;
         _orderedRowCache.Clear();
         _orderedRowCacheInvalidFromScore = int.MaxValue;
-        Config = new();
+        Config = new RevisionGraphConfig();
     }
 
     public void LoadingCompleted()
     {
         _loadingCompleted = true;
 
-        Debug.WriteLineIf(_incompleteRevisionByObjectId.Count > 0, $"Info: RevisionGraph loading completed, {_incompleteRevisionByObjectId.Count} revisions still incomplete. Occurs if git-log is limiting commits.");
+        Debug.WriteLineIf(_incompleteRevisionByObjectId.Count > 0,
+            $"Info: RevisionGraph loading completed, {_incompleteRevisionByObjectId.Count} revisions still incomplete. Occurs if git-log is limiting commits.");
     }
 
     /// <summary>
-    /// The number of revisions in <see cref="_revisionByObjectId"/>, potentially nodes in the graph.
-    /// "Cache" to prevent concurrent dictionary access.
-    /// </summary>
-    public int Count { get; private set; }
-
-    public bool OnlyFirstParent { get; set; }
-    public ObjectId HeadId { get; set; }
-
-    /// <summary>
-    /// Checks whether the given hash is present in the graph.
+    ///     Checks whether the given hash is present in the graph.
     /// </summary>
     /// <param name="objectId">The hash to find.</param>
-    /// <returns><see langword="true"/>, if the given hash if found; otherwise <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="objectId"/> is <see langword="null"/>.</exception>
-    public bool Contains(ObjectId objectId) => _revisionByObjectId.ContainsKey(objectId);
+    /// <returns><see langword="true" />, if the given hash if found; otherwise <see langword="false" />.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="objectId" /> is <see langword="null" />.</exception>
+    public bool Contains(ObjectId objectId)
+    {
+        return _revisionByObjectId.ContainsKey(objectId);
+    }
 
     /// <summary>
-    /// Get the index for the last cached row with with 'straightened' lanes.
+    ///     Get the index for the last cached row with with 'straightened' lanes.
     /// </summary>
     /// <returns>Index for the last row in the row cache with 'straightened' lanes.</returns>
     public int GetCachedCount()
     {
-        int cachedCount = _orderedRowCache.Count;
+        var cachedCount = _orderedRowCache.Count;
         if (cachedCount == 0 || IsRowCacheDirty(BuildOrderedNodesCache(int.MaxValue)))
         {
             return 0;
@@ -136,19 +157,22 @@ public class RevisionGraph : IRevisionGraphRowProvider
         // _loadingCompleted is true when all revisions have been added to _revisionByObjectId.
         // Return the full number of rows only if the straightening of segments has finished, too.
         // Else do not show rows yet which might be affected by the straightening of segments.
-        return _loadingCompleted && cachedCount == Count ? cachedCount : Math.Max(0, cachedCount - _straightenLookAhead);
+        return _loadingCompleted && cachedCount == Count ? cachedCount : Math.Max(0, cachedCount - StraightenLookAhead);
     }
 
     /// <summary>
-    /// Builds the revision graph cache. There are two caches that are built in this method.
-    /// <para>Cache 1: an ordered list of the revisions. This is cheap to build. (<see cref="_orderedNodesCache"/>).</para>
-    /// <para>Cache 2: an ordered list of all prepared graph rows. This is expensive to build. (<see cref="_orderedRowCache"/>).</para>
+    ///     Builds the revision graph cache. There are two caches that are built in this method.
+    ///     <para>Cache 1: an ordered list of the revisions. This is cheap to build. (<see cref="_orderedNodesCache" />).</para>
+    ///     <para>
+    ///         Cache 2: an ordered list of all prepared graph rows. This is expensive to build. (
+    ///         <see cref="_orderedRowCache" />).
+    ///     </para>
     /// </summary>
     /// <param name="currentRowIndex">
-    /// The row that needs to be displayed. This ensures the ordered revisions are available up to this index.
+    ///     The row that needs to be displayed. This ensures the ordered revisions are available up to this index.
     /// </param>
     /// <param name="lastToCacheRowIndex">
-    /// The graph can be built per x rows. This defines the last row index that the graph will build cache to.
+    ///     The graph can be built per x rows. This defines the last row index that the graph will build cache to.
     /// </param>
     public void CacheTo(int currentRowIndex, int lastToCacheRowIndex, CancellationToken cancellationToken = default)
     {
@@ -175,30 +199,34 @@ public class RevisionGraph : IRevisionGraphRowProvider
         // ...
         // last look-ahead row for lane straightening       <-- GetCachedCount() + 2 * _straightenDiagonalsLookAhead + 2 * _straightenLanesLookAhead
         //
-        int lookAhead = _straightenLookAhead;
+        var lookAhead = StraightenLookAhead;
         currentRowIndex += lookAhead;
         lastToCacheRowIndex += lookAhead;
 
         if (_loadingCompleted)
         {
-            int maxRowIndex = Count - 1;
+            var maxRowIndex = Count - 1;
             currentRowIndex = Math.Min(currentRowIndex, maxRowIndex);
             lastToCacheRowIndex = Math.Min(lastToCacheRowIndex, maxRowIndex);
         }
 
-        ImmutableArray<RevisionGraphRevision> orderedNodesCache = BuildOrderedNodesCache(currentRowIndex);
+        var orderedNodesCache = BuildOrderedNodesCache(currentRowIndex);
         BuildOrderedRowCache(orderedNodesCache, lastToCacheRowIndex, cancellationToken);
     }
 
     public bool IsRowRelative(int row)
-        => GetNodeForRow(row)?.IsRelative is true;
+    {
+        return GetNodeForRow(row)?.IsRelative is true;
+    }
 
     public bool TryGetNode(ObjectId objectId, [NotNullWhen(true)] out RevisionGraphRevision? revision)
-        => _revisionByObjectId.TryGetValue(objectId, out revision);
+    {
+        return _revisionByObjectId.TryGetValue(objectId, out revision);
+    }
 
     public bool TryGetRowIndex(ObjectId objectId, out int index)
     {
-        if (!TryGetNode(objectId, out RevisionGraphRevision? revision))
+        if (!TryGetNode(objectId, out var revision))
         {
             index = 0;
             return false;
@@ -221,7 +249,7 @@ public class RevisionGraph : IRevisionGraphRowProvider
     public RevisionGraphRevision? GetNodeForRow(int row)
     {
         // Use a local variable, because the cached list can be reset
-        ImmutableArray<RevisionGraphRevision> localOrderedNodesCache = BuildOrderedNodesCache(row);
+        var localOrderedNodesCache = BuildOrderedNodesCache(row);
         if (row < 0 || row >= localOrderedNodesCache.Length)
         {
             return null;
@@ -230,44 +258,34 @@ public class RevisionGraph : IRevisionGraphRowProvider
         return localOrderedNodesCache[row];
     }
 
-    public IRevisionGraphRow? GetSegmentsForRow(int row)
-    {
-        ImmutableArray<RevisionGraphRevision> localOrderedNodesCache = BuildOrderedNodesCache(row);
-        if (IsRowCacheDirty(localOrderedNodesCache) || row < 0 || row >= _orderedRowCache.Count)
-        {
-            return null;
-        }
-
-        return _orderedRowCache[row];
-    }
-
     public void HighlightBranch(ObjectId id)
     {
         // Clear current highlighting
-        foreach (RevisionGraphRevision revision in _revisionByObjectId.Values)
+        foreach (var revision in _revisionByObjectId.Values)
         {
             revision.IsRelative = false;
         }
 
         // Highlight revision
-        if (TryGetNode(id, out RevisionGraphRevision? revisionGraphRevision))
+        if (TryGetNode(id, out var revisionGraphRevision))
         {
             revisionGraphRevision.MakeRelative();
         }
     }
 
     /// <summary>
-    /// Add a single revision from the git log to the graph, including segments to parents.
+    ///     Add a single revision from the git log to the graph, including segments to parents.
     /// </summary>
     /// <param name="revision">The revision to add.</param>
-    /// <returns><see langword="true"/> if the row cache is invalidated; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the row cache is invalidated; otherwise <see langword="false" />.</returns>
     public bool Add(GitRevision revision)
     {
         int minExistingScore;
 
         // The commits will be sorted by the score (not continuous numbering, there may be gaps).
         // This revision will be ordered after existing, 1+_maxScore is a preliminary score.
-        if (_incompleteRevisionByObjectId.TryGetValue(revision.ObjectId, out RevisionGraphRevision? revisionGraphRevision))
+        if (_incompleteRevisionByObjectId.TryGetValue(revision.ObjectId,
+                out var revisionGraphRevision))
         {
             // This revision was added as a parent, but is now found in the log.
             // Increase the score for this revision to keep the order intact.
@@ -284,14 +302,15 @@ public class RevisionGraph : IRevisionGraphRowProvider
         }
 
         revisionGraphRevision.GitRevision = revision;
-        revisionGraphRevision.ApplyFlags(isCheckedOut: HeadId == revision.ObjectId);
+        revisionGraphRevision.ApplyFlags(HeadId == revision.ObjectId);
 
         // Build the parent/child structure. The parent revisions need to added here.
         if (revision.ParentIds is not null)
         {
-            foreach (ObjectId parentObjectId in revision.ParentIds)
+            foreach (var parentObjectId in revision.ParentIds)
             {
-                if (_incompleteRevisionByObjectId.TryGetValue(parentObjectId, out RevisionGraphRevision? parentRevisionGraphRevision))
+                if (_incompleteRevisionByObjectId.TryGetValue(parentObjectId,
+                        out var parentRevisionGraphRevision))
                 {
                     // Node seen as parent but not in grid (revisionGraphRevision is likely a separate branch).
                     // Set a new preliminary score (checked in AddParents), will be updated when seen in grid.
@@ -329,30 +348,32 @@ public class RevisionGraph : IRevisionGraphRowProvider
     }
 
     /// <summary>
-    /// Insert workTree and index revisions to the graph, offset existing revisions.
+    ///     Insert workTree and index revisions to the graph, offset existing revisions.
     /// </summary>
     /// <param name="workTreeRev">The workTree revision to add.</param>
     /// <param name="indexRev">The index revision to add.</param>
     /// <param name="parents">Parent ids for the revision to find (and insert before).</param>
-    /// <returns><see langword="true"/> if the row cache is invalidated; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the row cache is invalidated; otherwise <see langword="false" />.</returns>
     public bool Insert(GitRevision workTreeRev, GitRevision indexRev, IReadOnlyList<ObjectId> parents)
     {
-        DebugHelpers.Assert(!_revisionByObjectId.ContainsKey(workTreeRev.ObjectId), "Worktree revision was unexpectedly already added to the RevisionGraph.");
-        DebugHelpers.Assert(!_revisionByObjectId.ContainsKey(indexRev.ObjectId), "Index revision was unexpectedly already added to the RevisionGraph.");
+        DebugHelpers.Assert(!_revisionByObjectId.ContainsKey(workTreeRev.ObjectId),
+            "Worktree revision was unexpectedly already added to the RevisionGraph.");
+        DebugHelpers.Assert(!_revisionByObjectId.ContainsKey(indexRev.ObjectId),
+            "Index revision was unexpectedly already added to the RevisionGraph.");
 
         // Where to insert the revision, negative is before existing in the graph.
-        int insertScore = int.MinValue;
+        var insertScore = int.MinValue;
 
         // Find the first parent that is already in the graph.
-        foreach (ObjectId parentId in parents)
+        foreach (var parentId in parents)
         {
-            if (TryGetNode(parentId, out RevisionGraphRevision? parentRev))
+            if (TryGetNode(parentId, out var parentRev))
             {
                 // Insert before this ancestor
                 const int insertRange = 2;
-                int limitScore = parentRev.Score;
+                var limitScore = parentRev.Score;
                 insertScore = limitScore - insertRange;
-                foreach (RevisionGraphRevision graphRevision in _revisionByObjectId.Values)
+                foreach (var graphRevision in _revisionByObjectId.Values)
                 {
                     if (graphRevision.Score < limitScore)
                     {
@@ -371,10 +392,7 @@ public class RevisionGraph : IRevisionGraphRowProvider
             GitRevision = workTreeRev
         };
 
-        RevisionGraphRevision indexGraphRevision = new(indexRev.ObjectId, ++insertScore)
-        {
-            GitRevision = indexRev
-        };
+        RevisionGraphRevision indexGraphRevision = new(indexRev.ObjectId, ++insertScore) { GitRevision = indexRev };
 
         workTreeGraphRevision.AddParent(indexGraphRevision);
         _revisionByObjectId.TryAdd(workTreeRev.ObjectId, workTreeGraphRevision);
@@ -386,10 +404,10 @@ public class RevisionGraph : IRevisionGraphRowProvider
     }
 
     /// <summary>
-    /// Check if the row cache is dirty by comparing to the ordered node cache.
+    ///     Check if the row cache is dirty by comparing to the ordered node cache.
     /// </summary>
     /// <param name="orderedNodesCache">The ordered nodes cache.</param>
-    /// <returns><see langword="true"/> if the row cache is dirty; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the row cache is dirty; otherwise <see langword="false" />.</returns>
     private bool IsRowCacheDirty(ImmutableArray<RevisionGraphRevision> orderedNodesCache)
     {
         if (_orderedRowCache.Count == 0)
@@ -401,7 +419,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
         // We need bounds checking on orderedNodesCache. It should be always larger then the orderedRowCache,
         // but another thread could clear the orderedNodesCache while another is building orderedRowCache.
         // This is not a problem, since all methods use local instances of those caches. We do need to invalidate.
-        if (_orderedRowCacheInvalidFromScore <= _orderedRowCache[^1].Revision.Score || _orderedRowCache.Count > orderedNodesCache.Length)
+        if (_orderedRowCacheInvalidFromScore <= _orderedRowCache[^1].Revision.Score ||
+            _orderedRowCache.Count > orderedNodesCache.Length)
         {
             return true;
         }
@@ -410,18 +429,19 @@ public class RevisionGraph : IRevisionGraphRowProvider
         // is not in the same index in the orderedNodesCache, the order has been changed. Only then rebuilding is
         // required. If the order is changed after this revision, we do not care since it wasn't processed yet.
         // But when filtering revisions, this can mismatch. So check the first revision in addition.
-        int indexToCompare = _orderedRowCache.Count - 1;
+        var indexToCompare = _orderedRowCache.Count - 1;
         return _orderedRowCache[indexToCompare].Revision != orderedNodesCache[indexToCompare]
-            || _orderedRowCache[0].Revision != orderedNodesCache[0];
+               || _orderedRowCache[0].Revision != orderedNodesCache[0];
     }
 
-    private void BuildOrderedRowCache(ImmutableArray<RevisionGraphRevision> orderedNodesCache, int lastToCacheRowIndex, CancellationToken cancellationToken)
+    private void BuildOrderedRowCache(ImmutableArray<RevisionGraphRevision> orderedNodesCache, int lastToCacheRowIndex,
+        CancellationToken cancellationToken)
     {
-        bool orderSegments = Config.ReduceGraphCrossings;
+        var orderSegments = Config.ReduceGraphCrossings;
 
-        int orderedNodesCount = orderedNodesCache.Length;
-        int lastOrderedNodeIndex = orderedNodesCount - 1;
-        bool loadingCompleted = _loadingCompleted;
+        var orderedNodesCount = orderedNodesCache.Length;
+        var lastOrderedNodeIndex = orderedNodesCount - 1;
+        var loadingCompleted = _loadingCompleted;
         _orderedRowCache.Capacity = orderedNodesCount;
         if (IsRowCacheDirty(orderedNodesCache))
         {
@@ -429,24 +449,25 @@ public class RevisionGraph : IRevisionGraphRowProvider
             _orderedRowCache.Clear();
         }
 
-        int maxLastToCacheRowIndex = lastOrderedNodeIndex - (loadingCompleted || !orderSegments ? 0 : _orderSegmentsLookAhead);
+        var maxLastToCacheRowIndex =
+            lastOrderedNodeIndex - (loadingCompleted || !orderSegments ? 0 : _orderSegmentsLookAhead);
         if (lastToCacheRowIndex > maxLastToCacheRowIndex)
         {
             lastToCacheRowIndex = maxLastToCacheRowIndex;
             loadingCompleted = false;
         }
 
-        int startIndex = _orderedRowCache.Count;
+        var startIndex = _orderedRowCache.Count;
         if (startIndex > lastToCacheRowIndex)
         {
             return;
         }
 
-        for (int nextIndex = startIndex; nextIndex <= lastToCacheRowIndex; ++nextIndex)
+        for (var nextIndex = startIndex; nextIndex <= lastToCacheRowIndex; ++nextIndex)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RevisionGraphRevision revision = orderedNodesCache[nextIndex];
-            RevisionGraphSegment[] revisionStartSegments = revision.GetStartSegments();
+            var revision = orderedNodesCache[nextIndex];
+            var revisionStartSegments = revision.GetStartSegments();
             if (orderSegments)
             {
                 revisionStartSegments = Order(revisionStartSegments, orderedNodesCache, nextIndex);
@@ -461,10 +482,10 @@ public class RevisionGraph : IRevisionGraphRowProvider
                 segments = [.. revisionStartSegments];
 
                 RevisionGraphSegment? prevSegment = null;
-                int revisionSegmentsCount = revisionStartSegments.Length;
-                for (int i = 0; i < revisionSegmentsCount; i++)
+                var revisionSegmentsCount = revisionStartSegments.Length;
+                for (var i = 0; i < revisionSegmentsCount; i++)
                 {
-                    RevisionGraphSegment startSegment = revisionStartSegments[i];
+                    var startSegment = revisionStartSegments[i];
                     startSegment.LaneInfo = new LaneInfo(startSegment, prevSegment);
                     prevSegment = startSegment;
                 }
@@ -472,18 +493,21 @@ public class RevisionGraph : IRevisionGraphRowProvider
             else
             {
                 // Copy lanes from last row
-                RevisionGraphRow previousRevisionGraphRow = _orderedRowCache[nextIndex - 1];
+                var previousRevisionGraphRow = _orderedRowCache[nextIndex - 1];
 
                 // Create segments list with the correct capacity
-                segments = new List<RevisionGraphSegment>(previousRevisionGraphRow.Segments.Count + revisionStartSegments.Length);
+                segments = new List<RevisionGraphSegment>(previousRevisionGraphRow.Segments.Count +
+                                                          revisionStartSegments.Length);
 
-                bool startSegmentsAdded = false;
+                var startSegmentsAdded = false;
 
                 // Loop through all segments that do not end in the previous row
-                int prevRevisionSegmentCount = previousRevisionGraphRow.Segments.Count;
-                for (int prevRevisionSegmentIndex = 0; prevRevisionSegmentIndex < prevRevisionSegmentCount; ++prevRevisionSegmentIndex)
+                var prevRevisionSegmentCount = previousRevisionGraphRow.Segments.Count;
+                for (var prevRevisionSegmentIndex = 0;
+                     prevRevisionSegmentIndex < prevRevisionSegmentCount;
+                     ++prevRevisionSegmentIndex)
                 {
-                    RevisionGraphSegment segment = previousRevisionGraphRow.Segments[prevRevisionSegmentIndex];
+                    var segment = previousRevisionGraphRow.Segments[prevRevisionSegmentIndex];
                     if (segment.Parent == previousRevisionGraphRow.Revision)
                     {
                         continue;
@@ -495,14 +519,18 @@ public class RevisionGraph : IRevisionGraphRowProvider
                     // Copy all new segments that start from this node (revision) to this lane.
                     if (revision == segment.Parent)
                     {
-                        RevisionGraphSegment prevSegment = segment;
-                        RevisionGraphSegment? nextSegment = GetNextSegment();
+                        var prevSegment = segment;
+                        var nextSegment = GetNextSegment();
+
                         RevisionGraphSegment? GetNextSegment()
                         {
-                            for (int nextSegmentIndex = prevRevisionSegmentIndex + 1; nextSegmentIndex < prevRevisionSegmentCount; ++nextSegmentIndex)
+                            for (var nextSegmentIndex = prevRevisionSegmentIndex + 1;
+                                 nextSegmentIndex < prevRevisionSegmentCount;
+                                 ++nextSegmentIndex)
                             {
-                                RevisionGraphSegment nextSegment = previousRevisionGraphRow.Segments[nextSegmentIndex];
-                                if (nextSegment.Parent != previousRevisionGraphRow.Revision && nextSegment.Parent != revision)
+                                var nextSegment = previousRevisionGraphRow.Segments[nextSegmentIndex];
+                                if (nextSegment.Parent != previousRevisionGraphRow.Revision &&
+                                    nextSegment.Parent != revision)
                                 {
                                     return nextSegment;
                                 }
@@ -517,13 +545,14 @@ public class RevisionGraph : IRevisionGraphRowProvider
                             segments.AddRange(revisionStartSegments);
                         }
 
-                        int startSegmentsCount = revisionStartSegments.Length;
-                        for (int startSegmentIndex = 0; startSegmentIndex < startSegmentsCount; ++startSegmentIndex)
+                        var startSegmentsCount = revisionStartSegments.Length;
+                        for (var startSegmentIndex = 0; startSegmentIndex < startSegmentsCount; ++startSegmentIndex)
                         {
-                            RevisionGraphSegment startSegment = revisionStartSegments[startSegmentIndex];
+                            var startSegment = revisionStartSegments[startSegmentIndex];
                             if (startSegment == revisionStartSegments[0])
                             {
-                                if (startSegment.LaneInfo is null || startSegment.LaneInfo.StartScore > segment.LaneInfo?.StartScore)
+                                if (startSegment.LaneInfo is null ||
+                                    startSegment.LaneInfo.StartScore > segment.LaneInfo?.StartScore)
                                 {
                                     startSegment.LaneInfo = segment.LaneInfo;
                                 }
@@ -531,8 +560,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
                             else
                             {
                                 startSegment.LaneInfo ??= segment.LaneInfo is null
-                                        ? new LaneInfo(startSegment, prevSegment, nextSegment)
-                                        : new LaneInfo(startSegment, prevSegment, nextSegment, derivedFrom: segment.LaneInfo);
+                                    ? new LaneInfo(startSegment, prevSegment, nextSegment)
+                                    : new LaneInfo(startSegment, prevSegment, nextSegment, segment.LaneInfo);
                             }
 
                             prevSegment = startSegment;
@@ -543,15 +572,15 @@ public class RevisionGraph : IRevisionGraphRowProvider
                 // The startsegments do not connect to any previous row. This means that this is a new branch.
                 if (!startSegmentsAdded)
                 {
-                    RevisionGraphSegment? prevSegment = segments.LastOrDefault();
+                    var prevSegment = segments.LastOrDefault();
 
                     // Add new segments started by this revision to the end
                     segments.AddRange(revisionStartSegments);
 
-                    int revisionStartSegmentsCount = revisionStartSegments.Length;
-                    for (int i = 0; i < revisionStartSegmentsCount; i++)
+                    var revisionStartSegmentsCount = revisionStartSegments.Length;
+                    for (var i = 0; i < revisionStartSegmentsCount; i++)
                     {
-                        RevisionGraphSegment startSegment = revisionStartSegments[i];
+                        var startSegment = revisionStartSegments[i];
                         startSegment.LaneInfo = new LaneInfo(startSegment, prevSegment);
                         prevSegment = startSegment;
                     }
@@ -565,27 +594,35 @@ public class RevisionGraph : IRevisionGraphRowProvider
         // So the straightening algorithm can presume that a previous and a next row do exist.
         // Straighten only lines for which the full look-ahead is loaded.
         loadingCompleted = loadingCompleted && lastToCacheRowIndex == lastOrderedNodeIndex;
-        int straightenLanesStartIndex = Math.Max(1, startIndex - _straightenLanesLookAhead);
-        int straightenLanesLastIndex = loadingCompleted ? lastToCacheRowIndex - 1 : lastToCacheRowIndex - _straightenLanesLookAhead;
-        StraightenLanes(straightenLanesStartIndex, straightenLanesLastIndex, lastLookAheadIndex: lastToCacheRowIndex, _orderedRowCache, Config.StraightenGraphSegmentsLimit);
+        var straightenLanesStartIndex = Math.Max(1, startIndex - _straightenLanesLookAhead);
+        var straightenLanesLastIndex =
+            loadingCompleted ? lastToCacheRowIndex - 1 : lastToCacheRowIndex - _straightenLanesLookAhead;
+        StraightenLanes(straightenLanesStartIndex, straightenLanesLastIndex, lastToCacheRowIndex, _orderedRowCache,
+            Config.StraightenGraphSegmentsLimit);
 
-        int straightenDiagonalsLookAhead = _straightenDiagonalsLookAhead;
+        var straightenDiagonalsLookAhead = StraightenDiagonalsLookAhead;
         if (straightenDiagonalsLookAhead > 0)
         {
-            int straightenDiagonalsStartIndex = Math.Max(1, startIndex - _straightenLanesLookAhead - straightenDiagonalsLookAhead);
-            int straightenDiagonalsLastIndex = loadingCompleted ? lastToCacheRowIndex - 1 : lastToCacheRowIndex - _straightenLanesLookAhead - straightenDiagonalsLookAhead;
-            StraightenDiagonals(straightenDiagonalsStartIndex, straightenDiagonalsLastIndex, lastLookAheadIndex: lastToCacheRowIndex, straightenDiagonalsLookAhead, _orderedRowCache, Config.StraightenGraphSegmentsLimit);
+            var straightenDiagonalsStartIndex =
+                Math.Max(1, startIndex - _straightenLanesLookAhead - straightenDiagonalsLookAhead);
+            var straightenDiagonalsLastIndex = loadingCompleted
+                ? lastToCacheRowIndex - 1
+                : lastToCacheRowIndex - _straightenLanesLookAhead - straightenDiagonalsLookAhead;
+            StraightenDiagonals(straightenDiagonalsStartIndex, straightenDiagonalsLastIndex, lastToCacheRowIndex,
+                straightenDiagonalsLookAhead, _orderedRowCache, Config.StraightenGraphSegmentsLimit);
         }
 
         return;
 
-        static RevisionGraphSegment[] Order(RevisionGraphSegment[] segments, ImmutableArray<RevisionGraphRevision> orderedNodesCache, int nextIndex)
+        static RevisionGraphSegment[] Order(RevisionGraphSegment[] segments,
+            ImmutableArray<RevisionGraphRevision> orderedNodesCache, int nextIndex)
         {
             // Define local function GetRowIndex with precalculated limit here
-            int endIndex = Math.Min(nextIndex + _orderSegmentsLookAhead, orderedNodesCache.Length);
+            var endIndex = Math.Min(nextIndex + _orderSegmentsLookAhead, orderedNodesCache.Length);
+
             int GetRowIndex(RevisionGraphRevision revision)
             {
-                for (int index = nextIndex + 1; index < endIndex; ++index)
+                for (var index = nextIndex + 1; index < endIndex; ++index)
                 {
                     if (orderedNodesCache[index] == revision)
                     {
@@ -596,10 +633,12 @@ public class RevisionGraph : IRevisionGraphRowProvider
                 return int.MaxValue;
             }
 
-            return [.. segments.OrderBy(s => s, (a, b) =>
+            return
+            [
+                .. segments.OrderBy(s => s, (a, b) =>
                 {
-                    int rowA = GetRowIndex(a.Parent);
-                    int rowB = GetRowIndex(b.Parent);
+                    var rowA = GetRowIndex(a.Parent);
+                    var rowB = GetRowIndex(b.Parent);
 
                     // Prefer the one which is the ancestor of the other
                     if (rowA != int.MaxValue && rowB != int.MaxValue)
@@ -608,7 +647,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
                         {
                             return -1;
                         }
-                        else if (rowB > rowA && IsAncestorOf(b.Parent, a.Parent, rowB))
+
+                        if (rowB > rowA && IsAncestorOf(b.Parent, a.Parent, rowB))
                         {
                             return 1;
                         }
@@ -618,7 +658,7 @@ public class RevisionGraph : IRevisionGraphRowProvider
 
                     int Score(RevisionGraphSegment segment, int row)
                     {
-                        int grandParentCount = segment.Parent.ParentCount;
+                        var grandParentCount = segment.Parent.ParentCount;
                         return grandParentCount == 0 ? row // initial revision
                             : grandParentCount >= 2 ? -2_000_000_000 + row // merged into
                             : !segment.Parent.Children.Pop().IsEmpty ? -1_000_000_000 + row // branched from
@@ -632,7 +672,7 @@ public class RevisionGraph : IRevisionGraphRowProvider
                             return true;
                         }
 
-                        foreach (RevisionGraphRevision parent in child.Parents)
+                        foreach (var parent in child.Parents)
                         {
                             if (GetRowIndex(parent) < stopRow && IsAncestorOf(ancestor, parent, stopRow))
                             {
@@ -642,10 +682,12 @@ public class RevisionGraph : IRevisionGraphRowProvider
 
                         return false;
                     }
-                })];
+                })
+            ];
         }
 
-        static void StraightenLanes(int startIndex, int lastStraightenIndex, int lastLookAheadIndex, IReadOnlyList<RevisionGraphRow> localOrderedRowCache, int straightenGraphSegmentsLimit)
+        static void StraightenLanes(int startIndex, int lastStraightenIndex, int lastLookAheadIndex,
+            IReadOnlyList<RevisionGraphRow> localOrderedRowCache, int straightenGraphSegmentsLimit)
         {
             // Try to detect this:
             // | | |<-- previous lane
@@ -669,45 +711,49 @@ public class RevisionGraph : IRevisionGraphRowProvider
             //
             // also if the distance is > 1 but only if the other distance is exactly 1
 
-            int goBackLimit = 1;
-            for (int currentIndex = startIndex; currentIndex <= lastStraightenIndex;)
+            var goBackLimit = 1;
+            for (var currentIndex = startIndex; currentIndex <= lastStraightenIndex;)
             {
                 goBackLimit = Math.Max(goBackLimit, currentIndex - _straightenLanesLookAhead);
 
-                RevisionGraphRow currentRow = localOrderedRowCache[currentIndex];
+                var currentRow = localOrderedRowCache[currentIndex];
                 if (currentRow.Segments.Count > straightenGraphSegmentsLimit)
                 {
                     ++currentIndex;
                     continue;
                 }
 
-                bool moved = false;
-                RevisionGraphRow previousRow = localOrderedRowCache[currentIndex - 1];
-                foreach (RevisionGraphSegment revisionGraphSegment in currentRow.Segments.Take(MaxLanes))
+                var moved = false;
+                var previousRow = localOrderedRowCache[currentIndex - 1];
+                foreach (var revisionGraphSegment in currentRow.Segments.Take(MaxLanes))
                 {
-                    Lane currentRowLane = currentRow.GetLaneForSegment(revisionGraphSegment);
+                    var currentRowLane = currentRow.GetLaneForSegment(revisionGraphSegment);
                     if (currentRowLane.Sharing != LaneSharing.ExclusiveOrPrimary)
                     {
                         continue; // with next revisionGraphSegment
                     }
 
-                    int currentLane = currentRowLane.Index;
-                    int previousLane = previousRow.GetLaneForSegment(revisionGraphSegment).Index;
+                    var currentLane = currentRowLane.Index;
+                    var previousLane = previousRow.GetLaneForSegment(revisionGraphSegment).Index;
                     if (previousLane <= currentLane)
                     {
                         continue; // with next revisionGraphSegment
                     }
 
-                    int straightenedCurrentLane = currentLane + 1;
-                    int lookAheadLane = currentLane;
-                    RevisionGraphSegment segmentOrAncestor = currentRow.FirstParentOrSelf(revisionGraphSegment);
-                    for (int lookAheadIndex = currentIndex + 1; lookAheadLane == currentLane && lookAheadIndex <= Math.Min(currentIndex + _straightenLanesLookAhead, lastLookAheadIndex); ++lookAheadIndex)
+                    var straightenedCurrentLane = currentLane + 1;
+                    var lookAheadLane = currentLane;
+                    var segmentOrAncestor = currentRow.FirstParentOrSelf(revisionGraphSegment);
+                    for (var lookAheadIndex = currentIndex + 1;
+                         lookAheadLane == currentLane && lookAheadIndex <=
+                         Math.Min(currentIndex + _straightenLanesLookAhead, lastLookAheadIndex);
+                         ++lookAheadIndex)
                     {
-                        RevisionGraphRow lookAheadRow = localOrderedRowCache[lookAheadIndex];
+                        var lookAheadRow = localOrderedRowCache[lookAheadIndex];
                         lookAheadLane = lookAheadRow.GetLaneForSegment(segmentOrAncestor).Index;
-                        if ((lookAheadLane == straightenedCurrentLane) || (lookAheadLane > straightenedCurrentLane && previousLane == straightenedCurrentLane))
+                        if (lookAheadLane == straightenedCurrentLane || (lookAheadLane > straightenedCurrentLane &&
+                                                                         previousLane == straightenedCurrentLane))
                         {
-                            for (int moveIndex = currentIndex; moveIndex < lookAheadIndex; ++moveIndex)
+                            for (var moveIndex = currentIndex; moveIndex < lookAheadIndex; ++moveIndex)
                             {
                                 localOrderedRowCache[moveIndex].MoveLanesRight(currentLane);
                             }
@@ -726,18 +772,22 @@ public class RevisionGraph : IRevisionGraphRowProvider
                 }
 
                 // if moved, check again whether the lanes of previous rows can be moved, too
-                currentIndex = moved ? Math.Max(currentIndex - _straightenLanesLookAhead, goBackLimit) : currentIndex + 1;
+                currentIndex =
+                    moved ? Math.Max(currentIndex - _straightenLanesLookAhead, goBackLimit) : currentIndex + 1;
             }
         }
 
-        static void StraightenDiagonals(int startIndex, int lastStraightenIndex, int lastLookAheadIndex, int straightenDiagonalsLookAhead, IList<RevisionGraphRow> localOrderedRowCache, int straightenGraphSegmentsLimit)
+        static void StraightenDiagonals(int startIndex, int lastStraightenIndex, int lastLookAheadIndex,
+            int straightenDiagonalsLookAhead, IList<RevisionGraphRow> localOrderedRowCache,
+            int straightenGraphSegmentsLimit)
         {
-            List<MoveLaneBy> moveLaneBy = new(capacity: straightenDiagonalsLookAhead);
-            int goBackLimit = 1;
-            for (int currentIndex = startIndex; currentIndex <= lastStraightenIndex;)
+            List<MoveLaneBy> moveLaneBy = new(straightenDiagonalsLookAhead);
+            var goBackLimit = 1;
+            for (var currentIndex = startIndex; currentIndex <= lastStraightenIndex;)
             {
                 goBackLimit = Math.Max(goBackLimit, currentIndex - straightenDiagonalsLookAhead);
-                int currentLastLookAheadIndex = Math.Min(currentIndex + straightenDiagonalsLookAhead, lastLookAheadIndex);
+                var currentLastLookAheadIndex =
+                    Math.Min(currentIndex + straightenDiagonalsLookAhead, lastLookAheadIndex);
 
                 IRevisionGraphRow currentRow = localOrderedRowCache[currentIndex];
                 if (currentRow.Segments.Count > straightenGraphSegmentsLimit)
@@ -746,18 +796,18 @@ public class RevisionGraph : IRevisionGraphRowProvider
                     continue;
                 }
 
-                bool moved = false;
+                var moved = false;
                 IRevisionGraphRow previousRow = localOrderedRowCache[currentIndex - 1];
-                foreach (RevisionGraphSegment revisionGraphSegment in currentRow.Segments.Take(MaxLanes))
+                foreach (var revisionGraphSegment in currentRow.Segments.Take(MaxLanes))
                 {
-                    Lane currentRowLane = currentRow.GetLaneForSegment(revisionGraphSegment);
+                    var currentRowLane = currentRow.GetLaneForSegment(revisionGraphSegment);
                     if (currentRowLane.Sharing != LaneSharing.ExclusiveOrPrimary)
                     {
                         continue; // with next revisionGraphSegment
                     }
 
-                    int currentLane = currentRowLane.Index;
-                    int previousLane = previousRow.GetLaneForSegment(revisionGraphSegment).Index;
+                    var currentLane = currentRowLane.Index;
+                    var previousLane = previousRow.GetLaneForSegment(revisionGraphSegment).Index;
 
                     // Unfold one-lane shift to diagonal (cannot be done together with TurnMultiLaneCrossingIntoDiagonal(diagonalDelta: -1))
                     // Try to detect this:
@@ -779,13 +829,14 @@ public class RevisionGraph : IRevisionGraphRowProvider
                     // * <------ end lane
                     if (currentLane == previousLane - 1 && currentIndex + 2 <= currentLastLookAheadIndex)
                     {
-                        RevisionGraphSegment segmentOrAncestor = currentRow.FirstParentOrSelf(revisionGraphSegment);
+                        var segmentOrAncestor = currentRow.FirstParentOrSelf(revisionGraphSegment);
                         IRevisionGraphRow nextRow = localOrderedRowCache[currentIndex + 1];
-                        int nextLane = nextRow.GetLaneForSegment(segmentOrAncestor).Index;
+                        var nextLane = nextRow.GetLaneForSegment(segmentOrAncestor).Index;
                         if (nextLane == currentLane)
                         {
                             segmentOrAncestor = nextRow.FirstParentOrSelf(segmentOrAncestor);
-                            int endLane = localOrderedRowCache[currentIndex + 2].GetLaneForSegment(segmentOrAncestor).Index;
+                            var endLane = localOrderedRowCache[currentIndex + 2].GetLaneForSegment(segmentOrAncestor)
+                                .Index;
                             if (endLane >= 0 && endLane == nextLane - 1 && !IsPrevLaneDiagonal())
                             {
                                 currentRow.MoveLanesRight(currentLane);
@@ -796,8 +847,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
                         }
                     }
 
-                    moved = TurnMultiLaneCrossingIntoDiagonal(diagonalDelta: +1)
-                          || TurnMultiLaneCrossingIntoDiagonal(diagonalDelta: -1);
+                    moved = TurnMultiLaneCrossingIntoDiagonal(+1)
+                            || TurnMultiLaneCrossingIntoDiagonal(-1);
                     if (moved)
                     {
                         break; // from for revisionGraphSegment
@@ -817,16 +868,18 @@ public class RevisionGraph : IRevisionGraphRowProvider
                     // | *   | <-- current lane
                     // |,---´
                     // | <-------- next lane
-                    int deltaPrev = previousLane - currentLane;
+                    var deltaPrev = previousLane - currentLane;
                     if (previousLane >= 0 && Math.Abs(deltaPrev) >= 1)
                     {
-                        RevisionGraphSegment segmentOrAncestor = currentRow.FirstParentOrSelf(revisionGraphSegment);
+                        var segmentOrAncestor = currentRow.FirstParentOrSelf(revisionGraphSegment);
                         IRevisionGraphRow nextRow = localOrderedRowCache[currentIndex + 1];
-                        int nextLane = nextRow.GetLaneForSegment(segmentOrAncestor).Index;
-                        int deltaNext = currentLane - nextLane;
-                        if (nextLane >= 0 && Math.Sign(deltaNext) == Math.Sign(deltaPrev) && Math.Abs(deltaNext + deltaPrev) >= 3 && !IsPrevLaneDiagonal(Math.Sign(deltaPrev)) && !IsNextLaneDiagonal())
+                        var nextLane = nextRow.GetLaneForSegment(segmentOrAncestor).Index;
+                        var deltaNext = currentLane - nextLane;
+                        if (nextLane >= 0 && Math.Sign(deltaNext) == Math.Sign(deltaPrev) &&
+                            Math.Abs(deltaNext + deltaPrev) >= 3 && !IsPrevLaneDiagonal(Math.Sign(deltaPrev)) &&
+                            !IsNextLaneDiagonal())
                         {
-                            int moveBy = deltaNext < 0 ? -deltaNext : deltaPrev;
+                            var moveBy = deltaNext < 0 ? -deltaNext : deltaPrev;
                             currentRow.MoveLanesRight(currentLane, moveBy);
                             currentLane += moveBy;
                             moved = true;
@@ -841,7 +894,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
                             }
 
                             segmentOrAncestor = nextRow.FirstParentOrSelf(segmentOrAncestor);
-                            int nextNextLane = localOrderedRowCache[currentIndex + 2].GetLaneForSegment(segmentOrAncestor).Index;
+                            var nextNextLane = localOrderedRowCache[currentIndex + 2]
+                                .GetLaneForSegment(segmentOrAncestor).Index;
                             return nextNextLane >= 0 && nextNextLane == nextLane - Math.Sign(deltaNext);
                         }
                     }
@@ -855,7 +909,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
                             return false;
                         }
 
-                        int prevPrevLane = localOrderedRowCache[currentIndex - 2].GetLaneForSegment(revisionGraphSegment).Index;
+                        var prevPrevLane = localOrderedRowCache[currentIndex - 2]
+                            .GetLaneForSegment(revisionGraphSegment).Index;
                         return prevPrevLane >= 0 && prevPrevLane == previousLane + diagonalDelta;
                     }
 
@@ -890,16 +945,19 @@ public class RevisionGraph : IRevisionGraphRowProvider
                     bool TurnMultiLaneCrossingIntoDiagonal(int diagonalDelta)
                     {
                         moveLaneBy.Clear();
-                        RevisionGraphSegment segmentOrAncestor = revisionGraphSegment;
-                        int diagonalLane = previousLane >= 0 ? previousLane : currentLane;
-                        for (int lookAheadIndex = currentIndex; lookAheadIndex <= currentLastLookAheadIndex; ++lookAheadIndex)
+                        var segmentOrAncestor = revisionGraphSegment;
+                        var diagonalLane = previousLane >= 0 ? previousLane : currentLane;
+                        for (var lookAheadIndex = currentIndex;
+                             lookAheadIndex <= currentLastLookAheadIndex;
+                             ++lookAheadIndex)
                         {
                             diagonalLane += diagonalDelta;
                             IRevisionGraphRow endRow = localOrderedRowCache[lookAheadIndex];
-                            Lane endLane = endRow.GetLaneForSegment(segmentOrAncestor);
-                            int moveBy = diagonalLane - endLane.Index;
-                            bool lastChance = endLane.Sharing == LaneSharing.DifferentStart;
-                            if (moveBy < 0 || endLane.Index < 0 || !(endLane.Sharing == LaneSharing.ExclusiveOrPrimary || lastChance))
+                            var endLane = endRow.GetLaneForSegment(segmentOrAncestor);
+                            var moveBy = diagonalLane - endLane.Index;
+                            var lastChance = endLane.Sharing == LaneSharing.DifferentStart;
+                            if (moveBy < 0 || endLane.Index < 0 ||
+                                !(endLane.Sharing == LaneSharing.ExclusiveOrPrimary || lastChance))
                             {
                                 return false;
                             }
@@ -926,7 +984,8 @@ public class RevisionGraph : IRevisionGraphRowProvider
                             // * | | <-- keep lane with moveBy == 1
                             // | | |
                             // * | | <-- end lane with moveBy >= 2
-                            if (moveBy >= 2 && moveLaneBy.Count == 2 && lookAheadIndex == currentIndex + 3 && moveLaneBy[1].By == 1)
+                            if (moveBy >= 2 && moveLaneBy.Count == 2 && lookAheadIndex == currentIndex + 3 &&
+                                moveLaneBy[1].By == 1)
                             {
                                 MoveLanes(moveLaneBy.Take(1));
                                 return true;
@@ -956,7 +1015,7 @@ public class RevisionGraph : IRevisionGraphRowProvider
 
                         static void MoveLanes(IEnumerable<MoveLaneBy> moveLaneBy)
                         {
-                            foreach ((IRevisionGraphRow row, int lane, int by) in moveLaneBy)
+                            foreach ((var row, var lane, var by) in moveLaneBy)
                             {
                                 row.MoveLanesRight(lane, by);
                             }
@@ -965,15 +1024,17 @@ public class RevisionGraph : IRevisionGraphRowProvider
                 }
 
                 // if moved, check again whether the lanes of previous rows can be moved, too
-                currentIndex = moved ? Math.Max(currentIndex - straightenDiagonalsLookAhead, goBackLimit) : currentIndex + 1;
+                currentIndex = moved
+                    ? Math.Max(currentIndex - straightenDiagonalsLookAhead, goBackLimit)
+                    : currentIndex + 1;
             }
         }
     }
 
     /// <summary>
-    /// Build the ordered list of nodes from the revisions.
+    ///     Build the ordered list of nodes from the revisions.
     /// </summary>
-    /// <param name="currentRowIndex">The min node index for the row; is automatically limited using <see cref="Count"/>.</param>
+    /// <param name="currentRowIndex">The min node index for the row; is automatically limited using <see cref="Count" />.</param>
     /// <returns>The ordered revision cache.</returns>
     private ImmutableArray<RevisionGraphRevision> BuildOrderedNodesCache(int currentRowIndex)
     {
@@ -1005,16 +1066,16 @@ public class RevisionGraph : IRevisionGraphRowProvider
     }
 
     /// <summary>
-    /// Mark the node and row cache as invalid if the node scores in the ordered node cache have been changed.
+    ///     Mark the node and row cache as invalid if the node scores in the ordered node cache have been changed.
     /// </summary>
     /// <param name="minScore">The minimum score of the modified nodes.</param>
-    /// <returns><see langword="true"/> if the row cache is invalidated; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the row cache is invalidated; otherwise <see langword="false" />.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool MarkCacheAsInvalidIfNeeded(int minScore)
     {
         if (!_orderedNodesCacheInvalid)
         {
-            ImmutableArray<RevisionGraphRevision> localOrderedNodesCache = _orderedNodesCache;
+            var localOrderedNodesCache = _orderedNodesCache;
             if (localOrderedNodesCache.Length > 0 && minScore <= localOrderedNodesCache[^1].Score)
             {
                 _orderedNodesCacheInvalid = true;
@@ -1030,41 +1091,46 @@ public class RevisionGraph : IRevisionGraphRowProvider
         return _orderedNodesCacheInvalid;
     }
 
-    private readonly record struct MoveLaneBy(IRevisionGraphRow Row, int Lane, int By);
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
 
-    internal TestAccessor GetTestAccessor() => new(this);
+    private readonly record struct MoveLaneBy(IRevisionGraphRow Row, int Lane, int By);
 
     internal readonly struct TestAccessor(RevisionGraph revisionGraph)
     {
         /// <summary>
-        /// Validate the topo order in brute force.
+        ///     Validate the topo order in brute force.
         /// </summary>
-        /// <returns><see langword="true"/> if scores for the revisions are validated; otherwise <see langword="false"/>.</returns>
+        /// <returns><see langword="true" /> if scores for the revisions are validated; otherwise <see langword="false" />.</returns>
         public bool ValidateTopoOrder()
         {
-            int nodeIndex = -1;
-            foreach (RevisionGraphRevision node in revisionGraph._revisionByObjectId.Values)
+            var nodeIndex = -1;
+            foreach (var node in revisionGraph._revisionByObjectId.Values)
             {
                 ++nodeIndex;
 
-                int parentIndex = -1;
-                foreach (RevisionGraphRevision parent in node.Parents)
+                var parentIndex = -1;
+                foreach (var parent in node.Parents)
                 {
                     ++parentIndex;
                     if (parent.Score <= node.Score)
                     {
-                        Trace.WriteLine($"Node {nodeIndex}:{node.Score} parent {parentIndex}:{parent.Score} has a lower score");
+                        Trace.WriteLine(
+                            $"Node {nodeIndex}:{node.Score} parent {parentIndex}:{parent.Score} has a lower score");
                         return false;
                     }
                 }
 
-                int childIndex = -1;
-                foreach (RevisionGraphRevision child in node.Children)
+                var childIndex = -1;
+                foreach (var child in node.Children)
                 {
                     ++childIndex;
                     if (node.Score <= child.Score)
                     {
-                        Trace.WriteLine($"Node {nodeIndex}:{node.Score} child {childIndex}:{child.Score} has a higher score");
+                        Trace.WriteLine(
+                            $"Node {nodeIndex}:{node.Score} child {childIndex}:{child.Score} has a higher score");
                         return false;
                     }
                 }

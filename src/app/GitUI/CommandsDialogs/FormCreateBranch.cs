@@ -1,30 +1,30 @@
 ﻿using System.Diagnostics;
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI.HelperDialogs;
-using GitUIPluginInterfaces;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormCreateBranch : GitExtensionsDialog
 {
-    private readonly TranslationString _noRevisionSelected = new("Select 1 revision to create the branch on.");
     private readonly TranslationString _branchNameIsEmpty = new("Enter branch name.");
     private readonly TranslationString _branchNameIsNotValid = new("“{0}” is not valid branch name.");
-    private readonly TranslationString _creatingOrphanBranch = new("Creating orphan branch (repository has no commits)");
-    private readonly GitBranchNameOptions _gitBranchNameOptions = new(AppSettings.AutoNormaliseSymbol);
     private readonly IGitBranchNameNormaliser _branchNameNormaliser;
 
-    public bool CheckoutAfterCreation { get; set; } = true;
-    public bool UserAbleToChangeRevision { get; set; } = true;
-    public bool CouldBeOrphan { get; set; } = true;
+    private readonly TranslationString
+        _creatingOrphanBranch = new("Creating orphan branch (repository has no commits)");
 
-    public FormCreateBranch(IGitUICommands commands, ObjectId objectId, string? newBranchNamePrefix = null)
-        : base(commands, enablePositionRestore: false)
+    private readonly GitBranchNameOptions _gitBranchNameOptions = new(AppSettings.AutoNormaliseSymbol);
+    private readonly TranslationString _noRevisionSelected = new("Select 1 revision to create the branch on.");
+
+    public FormCreateBranch(IGitUiCommands commands, ObjectId objectId, string? newBranchNamePrefix = null)
+        : base(commands, false)
     {
         InitializeComponent();
 
@@ -54,8 +54,9 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
 
             if (string.IsNullOrWhiteSpace(newBranchNamePrefix))
             {
-                GitRevision revision = Module.GetRevision(objectId, shortFormat: true, loadRefs: true);
-                IGitRef? firstRef = revision.Refs.FirstOrDefault(r => !r.IsTag) ?? revision.Refs.FirstOrDefault(r => r.IsTag);
+                var revision = Module.GetRevision(objectId, true, true);
+                var firstRef = revision.Refs.FirstOrDefault(r => !r.IsTag) ??
+                               revision.Refs.FirstOrDefault(r => r.IsTag);
                 newBranchNamePrefix = firstRef?.LocalName;
 
                 commitSummaryUserControl1.Revision = revision;
@@ -71,6 +72,10 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
             BranchNameTextBox.Text = newBranchNamePrefix;
         }
     }
+
+    public bool CheckoutAfterCreation { get; set; } = true;
+    public bool UserAbleToChangeRevision { get; set; } = true;
+    public bool CouldBeOrphan { get; set; } = true;
 
     private void ConfigureForOrphanBranch()
     {
@@ -94,8 +99,8 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
             return;
         }
 
-        int caretPosition = BranchNameTextBox.SelectionStart;
-        string branchName = _branchNameNormaliser.Normalise(BranchNameTextBox.Text, _gitBranchNameOptions);
+        var caretPosition = BranchNameTextBox.SelectionStart;
+        var branchName = _branchNameNormaliser.Normalise(BranchNameTextBox.Text, _gitBranchNameOptions);
         BranchNameTextBox.Text = branchName;
         BranchNameTextBox.SelectionStart = caretPosition;
     }
@@ -106,7 +111,7 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
 
         // ensure all labels are wrapped if required
         // this must happen only after the label texts have been set
-        foreach (Label label in this.FindDescendantsOfType<Label>())
+        foreach (var label in this.FindDescendantsOfType<Label>())
         {
             label.AutoSize = true;
         }
@@ -137,7 +142,7 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
             }
         }
 
-        string branchName = BranchNameTextBox.Text.Trim();
+        var branchName = BranchNameTextBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(branchName))
         {
             MessageBoxes.Show(_branchNameIsEmpty.Text, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -147,29 +152,30 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
 
         if (!Module.CheckBranchFormat(branchName))
         {
-            MessageBoxes.Show(string.Format(_branchNameIsNotValid.Text, branchName), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(string.Format(_branchNameIsNotValid.Text, branchName), Text, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             DialogResult = DialogResult.None;
             return;
         }
 
         try
         {
-            ObjectId originalHash = Module.GetCurrentCheckout();
+            var originalHash = Module.GetCurrentCheckout();
 
-            ArgumentString command = chkCreateOrphan.Checked
+            var command = chkCreateOrphan.Checked
                 ? Commands.CreateOrphan(branchName, objectId)
                 : Commands.Branch(branchName, objectId, chkCheckoutAfterCreate.Checked);
 
-            bool success = FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+            var success = FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
             if (chkCreateOrphan.Checked && success && chkClearOrphan.Checked)
             {
                 // orphan AND orphan creation success AND clear
-                FormProcess.ShowDialog(this, UICommands, arguments: Commands.Remove(), Module.WorkingDir, input: null, useDialogSettings: true);
+                FormProcess.ShowDialog(this, UiCommands, Commands.Remove(), Module.WorkingDir, null, true);
             }
 
             if (success && chkCheckoutAfterCreate.Checked && objectId != originalHash)
             {
-                UICommands.UpdateSubmodules(this);
+                UiCommands.UpdateSubmodules(this);
             }
 
             DialogResult = success ? DialogResult.OK : DialogResult.None;
@@ -182,10 +188,10 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
 
     private void chkCreateOrphan_CheckedChanged(object sender, EventArgs e)
     {
-        bool isOrphan = chkCreateOrphan.Checked;
+        var isOrphan = chkCreateOrphan.Checked;
         chkClearOrphan.Enabled = isOrphan;
 
-        chkCheckoutAfterCreate.Enabled = isOrphan == false; // auto-checkout for orphan
+        chkCheckoutAfterCreate.Enabled = !isOrphan; // auto-checkout for orphan
         if (isOrphan)
         {
             chkCheckoutAfterCreate.Checked = true;
@@ -196,7 +202,7 @@ public sealed partial class FormCreateBranch : GitExtensionsDialog
 
     private void commitPicker_SelectedObjectIdChanged(object sender, EventArgs e)
     {
-        GitRevision revision = Module.GetRevision(commitPicker.SelectedObjectId, shortFormat: true, loadRefs: true);
+        var revision = Module.GetRevision(commitPicker.SelectedObjectId, true, true);
         commitSummaryUserControl1.Revision = revision;
     }
 }

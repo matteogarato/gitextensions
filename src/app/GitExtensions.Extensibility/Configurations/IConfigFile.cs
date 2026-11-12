@@ -1,7 +1,7 @@
 ﻿namespace GitExtensions.Extensibility.Configurations;
 
 /// <summary>
-///  Provides the ability to access the config file.
+///     Provides the ability to access the config file.
 /// </summary>
 public interface IConfigFile : ISubmodulesConfigFile
 {
@@ -20,10 +20,10 @@ public interface IConfigFile : ISubmodulesConfigFile
     string GetValue(string setting, string defaultValue);
 
     /// <summary>
-    /// Gets all configured values for a git setting that accepts multiple values for the same key.
+    ///     Gets all configured values for a git setting that accepts multiple values for the same key.
     /// </summary>
     /// <param name="setting">The git setting key</param>
-    /// <returns>The collection of all the <see cref="string"/> values.</returns>
+    /// <returns>The collection of all the <see cref="string" /> values.</returns>
     IReadOnlyList<string> GetValues(string setting);
 
     void LoadFromString(string str);

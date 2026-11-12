@@ -1,22 +1,21 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using Microsoft;
 
 namespace GitUI.CommandsDialogs;
 
 public sealed class FormFileHistoryController
 {
     /// <summary>
-    /// Gets the exact case used on the file system for an existing file or directory.
+    ///     Gets the exact case used on the file system for an existing file or directory.
     /// </summary>
     /// <param name="path">A relative or absolute path.</param>
     /// <param name="exactPath">The full path using the correct case if the path exists.  Otherwise, null.</param>
     /// <returns>True if the exact path was found.  False otherwise.</returns>
     /// <remarks>
-    /// This supports drive-lettered paths and UNC paths, but a UNC root
-    /// will be returned in lowercase (e.g., \\server\share).
+    ///     This supports drive-lettered paths and UNC paths, but a UNC root
+    ///     will be returned in lowercase (e.g., \\server\share).
     /// </remarks>
-    public bool TryGetExactPath(string? path, [NotNullWhen(returnValue: true)] out string? exactPath)
+    public bool TryGetExactPath(string? path, [NotNullWhen(true)] out string? exactPath)
     {
         if (!File.Exists(path) && !Directory.Exists(path))
         {

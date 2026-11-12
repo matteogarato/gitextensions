@@ -8,22 +8,18 @@ namespace GitCommands;
 public class XmlSerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IXmlSerializable
     where TKey : notnull
 {
-    public XmlSerializableDictionary()
-    {
-    }
-
     #region IXmlSerializable Members
 
-    public XmlSchema? GetSchema()
+    XmlSchema? IXmlSerializable.GetSchema()
     {
         return null;
     }
 
-    public void ReadXml(XmlReader reader)
+    void IXmlSerializable.ReadXml(XmlReader reader)
     {
         XmlSerializer keySerializer = new(typeof(TKey));
         XmlSerializer valueSerializer = new(typeof(TValue));
-        bool wasEmpty = reader.IsEmptyElement;
+        var wasEmpty = reader.IsEmptyElement;
 
         reader.Read();
 
@@ -44,11 +40,11 @@ public class XmlSerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>,
                 reader.ReadStartElement("item");
 
                 reader.ReadStartElement("key");
-                TKey? key = (TKey?)keySerializer.Deserialize(reader);
+                var key = (TKey?)keySerializer.Deserialize(reader);
                 reader.ReadEndElement();
 
                 reader.ReadStartElement("value");
-                TValue? value = (TValue?)valueSerializer.Deserialize(reader);
+                var value = (TValue?)valueSerializer.Deserialize(reader);
                 reader.ReadEndElement();
 
                 reader.ReadEndElement();
@@ -61,12 +57,12 @@ public class XmlSerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>,
         reader.ReadEndElement();
     }
 
-    public void WriteXml(XmlWriter writer)
+    void IXmlSerializable.WriteXml(XmlWriter writer)
     {
         XmlSerializer keySerializer = new(typeof(TKey));
         XmlSerializer valueSerializer = new(typeof(TValue));
 
-        foreach ((TKey key, TValue value) in this.OrderBy(pair => pair.Key))
+        foreach ((var key, var value) in this.OrderBy(pair => pair.Key))
         {
             writer.WriteStartElement("item");
 

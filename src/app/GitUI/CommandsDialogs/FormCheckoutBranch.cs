@@ -1,5 +1,7 @@
-﻿using GitCommands;
+﻿using System.ComponentModel;
+using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
@@ -11,39 +13,24 @@ namespace GitUI.CommandsDialogs;
 
 public partial class FormCheckoutBranch : GitExtensionsDialog
 {
-    #region Translation
-    private readonly TranslationString _customBranchNameIsEmpty =
-        new("Custom branch name is empty.\nEnter valid branch name or select predefined value.");
-    private readonly TranslationString _customBranchNameIsNotValid =
-        new("“{0}” is not valid branch name.\nEnter valid branch name or select predefined value.");
-    private readonly TranslationString _createBranch =
-        new("Cr&eate local branch with same name:");
-    private readonly TranslationString _applyStashedItemsAgainCaption =
-        new("Auto stash");
-    private readonly TranslationString _applyStashedItemsAgain =
-        new("Apply stashed items to working directory again?");
-
-    private readonly TranslationString _resetNonFastForwardBranch =
-        new("You are going to reset the “{0}” branch to a new location discarding ALL the commited changes since the {1} revision.\n\nAre you sure?");
-    private readonly TranslationString _resetCaption = new("Reset branch");
-    #endregion
+    private readonly IGitBranchNameNormaliser _branchNameNormaliser;
 
     private readonly IReadOnlyList<ObjectId>? _containObjectIds;
+    private readonly Dictionary<Control, int> _controls = [];
+    private readonly GitBranchNameOptions _gitBranchNameOptions = new(AppSettings.AutoNormaliseSymbol);
+    private readonly TranslationString _invalidBranchName = new("An existing branch must be selected.");
     private readonly bool _isLoading;
     private readonly string _rbResetBranchDefaultText;
-    private TranslationString _invalidBranchName = new("An existing branch must be selected.");
     private bool? _isDirtyDir;
-    private string _remoteName = "";
-    private string _newLocalBranchName = "";
     private string _localBranchName = "";
-    private readonly IGitBranchNameNormaliser _branchNameNormaliser;
-    private readonly GitBranchNameOptions _gitBranchNameOptions = new(AppSettings.AutoNormaliseSymbol);
-    private readonly Dictionary<Control, int> _controls = [];
 
     private IReadOnlyList<IGitRef>? _localBranches;
+    private string _newLocalBranchName = "";
     private IReadOnlyList<IGitRef>? _remoteBranches;
+    private string _remoteName = "";
 
-    public FormCheckoutBranch(IGitUICommands commands, string branch, bool remote, IReadOnlyList<ObjectId>? containObjectIds = null)
+    public FormCheckoutBranch(IGitUiCommands commands, string branch, bool remote,
+        IReadOnlyList<ObjectId>? containObjectIds = null)
         : base(commands, true)
     {
         _branchNameNormaliser = commands.GetRequiredService<IGitBranchNameNormaliser>();
@@ -52,7 +39,7 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
         _rbResetBranchDefaultText = rbResetBranch.Text;
 
         ApplyLayout();
-        Shown += FormCheckoutBranch_Shown;
+        Shown += FormCheckoutBranchShown;
         _isLoading = true;
 
         try
@@ -103,9 +90,9 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
 
         return;
 
-        void FormCheckoutBranch_Shown(object? sender, EventArgs e)
+        void FormCheckoutBranchShown(object? sender, EventArgs e)
         {
-            Shown -= FormCheckoutBranch_Shown;
+            Shown -= FormCheckoutBranchShown;
             RecalculateSizeConstraints();
         }
     }
@@ -140,11 +127,14 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
         }
     }
 
-    private bool HasUncommittedChanges => _isDirtyDir ?? true;
+    private bool HasUncommittedChanges
+    {
+        get => _isDirtyDir ?? true;
+    }
 
     public DialogResult DoDefaultActionOrShow(IWin32Window? owner)
     {
-        bool localBranchSelected = !string.IsNullOrWhiteSpace(Branches.Text) && !Remotebranch.Checked;
+        var localBranchSelected = !string.IsNullOrWhiteSpace(Branches.Text) && !Remotebranch.Checked;
         if (!AppSettings.AlwaysShowCheckoutBranchDlg && localBranchSelected &&
             (!HasUncommittedChanges || AppSettings.UseDefaultCheckoutBranchAction))
         {
@@ -170,9 +160,9 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
         Width = tlpnlMain.PreferredSize.Width + 50;
 
         int height;
-        for (int i = 0; i < controls1.Length; i++)
+        for (var i = 0; i < controls1.Length; i++)
         {
-            Padding margin = controls1[i].Margin;
+            var margin = controls1[i].Margin;
             height = controls1[i].Height + margin.Top + margin.Bottom;
             _controls.Add(controls1[i], height);
 
@@ -195,7 +185,7 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
 
         if (_containObjectIds is null)
         {
-            IEnumerable<IGitRef> branches = LocalBranch.Checked ? GetLocalBranches() : GetRemoteBranches();
+            var branches = LocalBranch.Checked ? GetLocalBranches() : GetRemoteBranches();
 
             branchNames = branches.Select(b => b.Name);
         }
@@ -220,23 +210,23 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             HashSet<string> result = [];
             if (_containObjectIds.Count > 0)
             {
-                IEnumerable<string> branches = Module.GetAllBranchesWhichContainGivenCommit(_containObjectIds[0],
-                                                                                            getLocal: LocalBranch.Checked,
-                                                                                            getRemote: !LocalBranch.Checked,
-                                                                                            cancellationToken: default)
+                var branches = Module.GetAllBranchesWhichContainGivenCommit(_containObjectIds[0],
+                        LocalBranch.Checked,
+                        !LocalBranch.Checked,
+                        default)
                     .Where(a => !DetachedHeadParser.IsDetachedHead(a) &&
                                 !a.EndsWith("/HEAD"));
                 result.UnionWith(branches);
             }
 
-            for (int index = 1; index < _containObjectIds.Count; index++)
+            for (var index = 1; index < _containObjectIds.Count; index++)
             {
-                ObjectId containObjectId = _containObjectIds[index];
-                IEnumerable<string> branches =
+                var containObjectId = _containObjectIds[index];
+                var branches =
                     Module.GetAllBranchesWhichContainGivenCommit(containObjectId,
-                                                                 getLocal: LocalBranch.Checked,
-                                                                 getRemote: !LocalBranch.Checked,
-                                                                 cancellationToken: default)
+                            LocalBranch.Checked,
+                            !LocalBranch.Checked,
+                            default)
                         .Where(a => !DetachedHeadParser.IsDetachedHead(a) &&
                                     !a.EndsWith("/HEAD"));
                 result.IntersectWith(branches);
@@ -261,10 +251,10 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
         // if the user hits [Enter] at any point, we need to trigger txtCustomBranchName Leave event
         Ok.Focus();
 
-        string branchName = Branches.Text.Trim();
-        bool isRemote = Remotebranch.Checked;
-        string? newBranchName = (string?)null;
-        CheckoutNewBranchMode newBranchMode = CheckoutNewBranchMode.DontCreate;
+        var branchName = Branches.Text.Trim();
+        var isRemote = Remotebranch.Checked;
+        string? newBranchName = null;
+        var newBranchMode = CheckoutNewBranchMode.DontCreate;
 
         if (isRemote)
         {
@@ -281,29 +271,33 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
 
                 if (!Module.CheckBranchFormat(newBranchName))
                 {
-                    MessageBoxes.Show(string.Format(_customBranchNameIsNotValid.Text, newBranchName), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBoxes.Show(string.Format(_customBranchNameIsNotValid.Text, newBranchName), Text,
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                     DialogResult = DialogResult.None;
                     return DialogResult.None;
                 }
             }
             else if (rbResetBranch.Checked)
             {
-                IGitRef localBranchRef = GetLocalBranchRef(_localBranchName);
-                IGitRef remoteBranchRef = GetRemoteBranchRef(branchName);
-                if (localBranchRef is not null && remoteBranchRef is not null && !localBranchRef.ObjectId.IsZero && !remoteBranchRef.ObjectId.IsZero)
+                var localBranchRef = GetLocalBranchRef(_localBranchName);
+                var remoteBranchRef = GetRemoteBranchRef(branchName);
+                if (localBranchRef is not null && remoteBranchRef is not null && !localBranchRef.ObjectId.IsZero &&
+                    !remoteBranchRef.ObjectId.IsZero)
                 {
-                    ObjectId mergeBaseId = Module.GetMergeBase(localBranchRef.ObjectId, remoteBranchRef.ObjectId);
-                    bool isResetFastForward = localBranchRef.ObjectId == mergeBaseId;
+                    var mergeBaseId = Module.GetMergeBase(localBranchRef.ObjectId, remoteBranchRef.ObjectId);
+                    var isResetFastForward = localBranchRef.ObjectId == mergeBaseId;
 
                     if (!isResetFastForward)
                     {
-                        string mergeBaseText = mergeBaseId.IsZero
+                        var mergeBaseText = mergeBaseId.IsZero
                             ? "merge base"
                             : mergeBaseId.ToShortString();
 
-                        string warningMessage = string.Format(_resetNonFastForwardBranch.Text, _localBranchName, mergeBaseText);
+                        var warningMessage = string.Format(_resetNonFastForwardBranch.Text, _localBranchName,
+                            mergeBaseText);
 
-                        if (MessageBoxes.Show(this, warningMessage, _resetCaption.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.No)
+                        if (MessageBoxes.Show(this, warningMessage, _resetCaption.Text, MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Exclamation) == DialogResult.No)
                         {
                             DialogResult = DialogResult.None;
                             return DialogResult.None;
@@ -320,7 +314,7 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             }
         }
 
-        LocalChangesAction localChanges = ChangesMode;
+        var localChanges = ChangesMode;
         if (localChanges != LocalChangesAction.Reset && chkSetLocalChangesActionAsDefault.Checked)
         {
             AppSettings.CheckoutBranchAction = localChanges;
@@ -331,7 +325,7 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             localChanges = LocalChangesAction.DontChange;
         }
 
-        bool stash = false;
+        var stash = false;
         if (localChanges == LocalChangesAction.Stash)
         {
             if (_isDirtyDir is null && Visible)
@@ -342,23 +336,24 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             stash = _isDirtyDir == true;
             if (stash)
             {
-                UICommands.StashSave(owner, AppSettings.IncludeUntrackedFilesInAutoStash);
+                UiCommands.StashSave(owner, AppSettings.IncludeUntrackedFilesInAutoStash);
             }
         }
 
-        ObjectId originalId = Module.GetCurrentCheckout();
+        var originalId = Module.GetCurrentCheckout();
 
-        bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforeCheckout, this);
+        var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforeCheckout, this);
         if (!success)
         {
             return DialogResult.Cancel;
         }
 
-        if (UICommands.StartCommandLineProcessDialog(owner, Commands.CheckoutBranch(branchName, isRemote, localChanges, newBranchMode, newBranchName)))
+        if (UiCommands.StartCommandLineProcessDialog(owner,
+                Commands.CheckoutBranch(branchName, isRemote, localChanges, newBranchMode, newBranchName)))
         {
             if (stash)
             {
-                bool? messageBoxResult = AppSettings.AutoPopStashAfterCheckoutBranch;
+                var messageBoxResult = AppSettings.AutoPopStashAfterCheckoutBranch;
                 if (messageBoxResult is null)
                 {
                     TaskDialogPage page = new()
@@ -367,15 +362,13 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
                         Caption = _applyStashedItemsAgainCaption.Text,
                         Icon = TaskDialogIcon.Information,
                         Buttons = { TaskDialogButton.Yes, TaskDialogButton.No },
-                        Verification = new TaskDialogVerificationCheckBox
-                        {
-                            Text = TranslatedStrings.DontShowAgain
-                        },
+                        Verification =
+                            new TaskDialogVerificationCheckBox { Text = TranslatedStrings.DontShowAgain },
                         AllowCancel = true,
                         SizeToContent = true
                     };
 
-                    TaskDialogButton answer = TaskDialog.ShowDialog(Handle, page);
+                    var answer = TaskDialog.ShowDialog(Handle, page);
                     messageBoxResult = answer == TaskDialogButton.Yes;
 
                     // Dismissing the dialog is not an answer, so it must not be remembered as one
@@ -387,15 +380,15 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
 
                 if (messageBoxResult ?? false)
                 {
-                    UICommands.StashPop(this);
+                    UiCommands.StashPop(this);
                 }
             }
 
-            ObjectId currentId = Module.GetCurrentCheckout();
+            var currentId = Module.GetCurrentCheckout();
 
             if (originalId != currentId)
             {
-                UICommands.UpdateSubmodules(this);
+                UiCommands.UpdateSubmodules(this);
             }
 
             ScriptsRunner.RunEventScripts(ScriptEvent.AfterCheckout, this);
@@ -407,12 +400,14 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
 
         IGitRef GetLocalBranchRef(string name)
         {
-            return GetLocalBranches().FirstOrDefault(head => head.Name.Equals(name, StringComparison.OrdinalIgnoreCase))!;
+            return GetLocalBranches()
+                .FirstOrDefault(head => head.Name.Equals(name, StringComparison.OrdinalIgnoreCase))!;
         }
 
         IGitRef GetRemoteBranchRef(string name)
         {
-            return GetRemoteBranches().FirstOrDefault(head => head.Name.Equals(name, StringComparison.OrdinalIgnoreCase))!;
+            return GetRemoteBranches()
+                .FirstOrDefault(head => head.Name.Equals(name, StringComparison.OrdinalIgnoreCase))!;
         }
     }
 
@@ -447,7 +442,7 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
     {
         lbChanges.Text = "";
 
-        string branch = Branches.Text;
+        var branch = Branches.Text;
         if (string.IsNullOrWhiteSpace(branch) || !Remotebranch.Checked)
         {
             _remoteName = string.Empty;
@@ -458,9 +453,9 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
         {
             _remoteName = GitRefName.GetRemoteName(branch, Module.GetRemoteNames());
             _localBranchName = Module.GetLocalTrackingBranchName(_remoteName, branch) ?? "";
-            string remoteBranchName = _remoteName.Length > 0 ? branch[(_remoteName.Length + 1)..] : branch;
+            var remoteBranchName = _remoteName.Length > 0 ? branch[(_remoteName.Length + 1)..] : branch;
             _newLocalBranchName = string.Concat(_remoteName, "_", remoteBranchName);
-            int i = 2;
+            var i = 2;
             while (LocalBranchExists(_newLocalBranchName))
             {
                 _newLocalBranchName = string.Concat(_remoteName, "_", _localBranchName, "_", i.ToString());
@@ -468,7 +463,7 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             }
         }
 
-        bool existsLocalBranch = LocalBranchExists(_localBranchName);
+        var existsLocalBranch = LocalBranchExists(_localBranchName);
 
         rbResetBranch.Text = existsLocalBranch ? _rbResetBranchDefaultText : _createBranch.Text;
         branchName.Text = "'" + _localBranchName + "'";
@@ -483,9 +478,9 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             ThreadHelper.FileAndForget(async () =>
             {
                 // not applicable if there is no checkout yet
-                string aheadBehindInfo = "";
+                var aheadBehindInfo = "";
 
-                ObjectId currentCheckout = Module.GetCurrentCheckout();
+                var currentCheckout = Module.GetCurrentCheckout();
                 if (!currentCheckout.IsZero)
                 {
                     aheadBehindInfo = Module.GetCommitCountString(currentCheckout, branch);
@@ -527,9 +522,10 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
 
         tlpnlRemoteOptions.Visible = Remotebranch.Checked;
         tlpnlMain.RowStyles[2].Height = Remotebranch.Checked ? _controls[tlpnlRemoteOptions] : 0;
-        tlpnlMain.Height = _controls.Select(c => c.Key.Visible ? c.Value : 0).Sum() + tlpnlMain.Padding.Top + tlpnlMain.Padding.Bottom;
-        int height = ControlsPanel.Height + MainPanel.Padding.Top + MainPanel.Padding.Bottom
-                   + tlpnlMain.Height + tlpnlMain.Margin.Top + tlpnlMain.Margin.Bottom + DpiUtil.Scale(30);
+        tlpnlMain.Height = _controls.Select(c => c.Key.Visible ? c.Value : 0).Sum() + tlpnlMain.Padding.Top +
+                           tlpnlMain.Padding.Bottom;
+        var height = ControlsPanel.Height + MainPanel.Padding.Top + MainPanel.Padding.Bottom
+                     + tlpnlMain.Height + tlpnlMain.Margin.Top + tlpnlMain.Margin.Bottom + DpiUtil.Scale(30);
 
         MinimumSize = new Size(tlpnlMain.PreferredSize.Width + DpiUtil.Scale(70), height);
         MaximumSize = new Size(Screen.PrimaryScreen!.Bounds.Width, height);
@@ -553,13 +549,13 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
             return;
         }
 
-        int caretPosition = txtCustomBranchName.SelectionStart;
-        string normalisedBranchName = _branchNameNormaliser.Normalise(txtCustomBranchName.Text, _gitBranchNameOptions);
+        var caretPosition = txtCustomBranchName.SelectionStart;
+        var normalisedBranchName = _branchNameNormaliser.Normalise(txtCustomBranchName.Text, _gitBranchNameOptions);
         txtCustomBranchName.Text = normalisedBranchName;
         txtCustomBranchName.SelectionStart = caretPosition;
     }
 
-    private void Branches_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+    private void Branches_Validating(object sender, CancelEventArgs e)
     {
         e.Cancel = Branches.SelectedIndex == -1 || !Branches.Items.Contains(Branches.Text);
         Errors.SetError(Branches, e.Cancel ? _invalidBranchName.ToString() : "");
@@ -569,4 +565,29 @@ public partial class FormCheckoutBranch : GitExtensionsDialog
     {
         Errors.SetError(Branches, "");
     }
+
+    #region Translation
+
+    private readonly TranslationString _customBranchNameIsEmpty =
+        new("Custom branch name is empty.\nEnter valid branch name or select predefined value.");
+
+    private readonly TranslationString _customBranchNameIsNotValid =
+        new("“{0}” is not valid branch name.\nEnter valid branch name or select predefined value.");
+
+    private readonly TranslationString _createBranch =
+        new("Cr&eate local branch with same name:");
+
+    private readonly TranslationString _applyStashedItemsAgainCaption =
+        new("Auto stash");
+
+    private readonly TranslationString _applyStashedItemsAgain =
+        new("Apply stashed items to working directory again?");
+
+    private readonly TranslationString _resetNonFastForwardBranch =
+        new(
+            "You are going to reset the “{0}” branch to a new location discarding ALL the commited changes since the {1} revision.\n\nAre you sure?");
+
+    private readonly TranslationString _resetCaption = new("Reset branch");
+
+    #endregion
 }

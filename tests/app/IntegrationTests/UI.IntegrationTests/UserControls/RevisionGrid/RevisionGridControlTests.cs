@@ -1,28 +1,35 @@
 ﻿using System.Diagnostics;
 using CommonTestUtils;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
-using GitUIPluginInterfaces;
-using Xunit;
+using GitUI.UserControls.RevisionGrid;
 
-namespace GitExtensions.UITests.UserControls.RevisionGrid;
+namespace UITests.UserControls.RevisionGrid;
 
-public class RevisionGridControlTests : System.IDisposable, IClassFixture<RevisionGridControlTestsFixture>
+public class RevisionGridControlTests : IDisposable, IClassFixture<RevisionGridControlTestsFixture>
 {
-    // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
-    private string _initialCommit = null!;
-    private string _headCommit = null!;
     private string _branch1Commit = null!;
 
     // Created once for each test
-    private GitUICommands _commands = null!;
+    private GitUiCommands _commands = null!;
+    private string _headCommit = null!;
+
+    private string _initialCommit = null!;
+
+    // Created once for the fixture
+    private ReferenceRepository _referenceRepository = null!;
 
     public RevisionGridControlTests(RevisionGridControlTestsFixture fixture)
     {
         InitializeTest();
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void InitializeTest()
@@ -39,7 +46,8 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
         _referenceRepository.CreateCommit("head commit");
         _headCommit = _referenceRepository.CommitHash!;
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
 
         AppSettings.RevisionGraphShowArtificialCommits = true;
     }
@@ -58,8 +66,8 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
         AppSettings.ShowGitNotes = true;
 
         RunSetAndApplyBranchFilterTest(
-            initialFilter: "",
-            grepMessage: "",
+            "",
+            "",
             revisionGridControl =>
             {
                 AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
@@ -71,8 +79,8 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             });
 
         RunSetAndApplyBranchFilterTest(
-            initialFilter: "Branch1",
-            grepMessage: "",
+            "Branch1",
+            "",
             revisionGridControl =>
             {
                 AppSettings.BranchFilterEnabled.Value.Should().BeTrue();
@@ -84,8 +92,8 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             });
 
         RunSetAndApplyBranchFilterTest(
-            initialFilter: "",
-            grepMessage: "Commit1",
+            "",
+            "Commit1",
             revisionGridControl =>
             {
                 AppSettings.BranchFilterEnabled.Value.Should().BeFalse();
@@ -106,13 +114,13 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
         AppSettings.ShowGitNotes = true;
 
         RunSetAndApplyBranchFilterTest(
-            initialFilter: "",
-            grepMessage: "",
+            "",
+            "",
             revisionGridControl =>
             {
                 WaitForRevisionsToBeLoaded(revisionGridControl);
 
-                RevisionGridControl.TestAccessor ta = revisionGridControl.GetTestAccessor();
+                var ta = revisionGridControl.GetTestAccessor();
                 revisionGridControl.CurrentFilter.IsShowFilteredBranchesChecked.Should().BeFalse();
 #if DEBUG
                 // https://github.com/gitextensions/gitextensions/issues/10170
@@ -148,13 +156,13 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
         AppSettings.ShowGitNotes = true;
 
         RunSetAndApplyBranchFilterTest(
-            initialFilter: "Branch1",
-            grepMessage: "",
+            "Branch1",
+            "",
             revisionGridControl =>
             {
                 WaitForRevisionsToBeLoaded(revisionGridControl);
 
-                RevisionGridControl.TestAccessor ta = revisionGridControl.GetTestAccessor();
+                var ta = revisionGridControl.GetTestAccessor();
                 revisionGridControl.CurrentFilter.IsShowFilteredBranchesChecked.Should().BeTrue();
                 ta.VisibleRevisionCount.Should().Be(2);
 
@@ -192,13 +200,15 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             {
                 // If showGitStatusForArtificialCommits is false, we do not update ChangeCount and HasChanges returns false.
                 // Then ToggleBetweenArtificialAndHeadCommits does not check HasChanges and toggles through all three commits.
-                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges != showGitStatusForArtificialCommits
-                    || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges != showGitStatusForArtificialCommits)
+                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges !=
+                       showGitStatusForArtificialCommits
+                       || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges !=
+                       showGitStatusForArtificialCommits)
                 {
                     DoEvents();
                 }
 
-                revisionGridControl.GoToRef(_initialCommit, showNoRevisionMsg: false);
+                revisionGridControl.GoToRef(_initialCommit, false);
                 revisionGridControl.LatestSelectedRevision!.Guid.Should().Be(_initialCommit);
 
                 revisionGridControl.ToggleBetweenArtificialAndHeadCommits();
@@ -227,13 +237,14 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             showGitStatusForArtificialCommits,
             revisionGridControl =>
             {
-                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges != false
-                    || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges != showGitStatusForArtificialCommits)
+                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges
+                       || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges !=
+                       showGitStatusForArtificialCommits)
                 {
                     DoEvents();
                 }
 
-                revisionGridControl.GoToRef(_initialCommit, showNoRevisionMsg: false);
+                revisionGridControl.GoToRef(_initialCommit, false);
                 revisionGridControl.LatestSelectedRevision!.Guid.Should().Be(_initialCommit);
 
                 if (!showGitStatusForArtificialCommits)
@@ -265,13 +276,14 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             showGitStatusForArtificialCommits,
             revisionGridControl =>
             {
-                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges != showGitStatusForArtificialCommits
-                    || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges != false)
+                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges !=
+                       showGitStatusForArtificialCommits
+                       || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges)
                 {
                     DoEvents();
                 }
 
-                revisionGridControl.GoToRef(_initialCommit, showNoRevisionMsg: false);
+                revisionGridControl.GoToRef(_initialCommit, false);
                 revisionGridControl.LatestSelectedRevision!.Guid.Should().Be(_initialCommit);
 
                 revisionGridControl.ToggleBetweenArtificialAndHeadCommits();
@@ -300,13 +312,13 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             showGitStatusForArtificialCommits,
             revisionGridControl =>
             {
-                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges != false
-                    || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges != false)
+                while (revisionGridControl.GetChangeCount(ObjectId.WorkTreeId)!.HasChanges
+                       || revisionGridControl.GetChangeCount(ObjectId.IndexId)!.HasChanges)
                 {
                     DoEvents();
                 }
 
-                revisionGridControl.GoToRef(_initialCommit, showNoRevisionMsg: false);
+                revisionGridControl.GoToRef(_initialCommit, false);
                 revisionGridControl.LatestSelectedRevision!.Guid.Should().Be(_initialCommit);
 
                 if (!showGitStatusForArtificialCommits)
@@ -327,14 +339,15 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             });
     }
 
-    private void RunSetAndApplyBranchFilterTest(string initialFilter, string grepMessage, Action<RevisionGridControl> runTest)
+    private void RunSetAndApplyBranchFilterTest(string initialFilter, string grepMessage,
+        Action<RevisionGridControl> runTest)
     {
         // Disable artificial commits as they appear to destabilise these tests
         AppSettings.RevisionGraphShowArtificialCommits = false;
 
-        UITest.RunForm<FormBrowse>(
-            showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
-            runTestAsync: async formBrowse =>
+        UiTest.RunForm<FormBrowse>(
+            () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+            async formBrowse =>
             {
                 DoEvents();
 
@@ -363,13 +376,14 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
             });
     }
 
-    private void RunToggleBetweenArtificialAndHeadCommitsTest(bool showGitStatusForArtificialCommits, Action<RevisionGridControl> runTest)
+    private void RunToggleBetweenArtificialAndHeadCommitsTest(bool showGitStatusForArtificialCommits,
+        Action<RevisionGridControl> runTest)
     {
         AppSettings.ShowGitStatusForArtificialCommits = showGitStatusForArtificialCommits;
 
-        UITest.RunForm<FormBrowse>(
-            showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
-            runTestAsync: async formBrowse =>
+        UiTest.RunForm<FormBrowse>(
+            () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+            async formBrowse =>
             {
                 DoEvents();
 
@@ -378,7 +392,7 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
 
                 formBrowse.RevisionGridControl.LatestSelectedRevision!.Guid.Should().Be(_headCommit);
 
-                FormBrowse.TestAccessor ta = formBrowse.GetTestAccessor();
+                var ta = formBrowse.GetTestAccessor();
                 ta.CommitInfoTabControl.SelectedTab = ta.TreeTabPage;
 
                 // let the focus events be handled
@@ -404,7 +418,7 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
 
     private static void DoEvents()
     {
-        for (int i = 0; i < 5; ++i)
+        for (var i = 0; i < 5; ++i)
         {
             Thread.Sleep(50);
             Application.DoEvents();
@@ -413,12 +427,7 @@ public class RevisionGridControlTests : System.IDisposable, IClassFixture<Revisi
 
     private static void WaitForRevisionsToBeLoaded(RevisionGridControl revisionGridControl)
     {
-        UITest.ProcessUntil("Loading Revisions", () => revisionGridControl.GetTestAccessor().IsDataLoadComplete);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
+        UiTest.ProcessUntil("Loading Revisions", () => revisionGridControl.GetTestAccessor().IsDataLoadComplete);
     }
 }
 

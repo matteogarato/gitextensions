@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Patches;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI;
@@ -9,20 +9,10 @@ namespace GitUI.CommandsDialogs;
 
 public partial class FormViewPatch : GitModuleForm
 {
-    private sealed class SortablePatchesList : SortableBindingList<Patch>
-    {
-        static SortablePatchesList()
-        {
-            AddSortableProperty(patch => patch.FileNameA, (x, y) => string.Compare(x.FileNameA, y.FileNameA, StringComparison.Ordinal));
-            AddSortableProperty(patch => patch.ChangeType, (x, y) => string.Compare(x.ChangeType.ToString(), y.ChangeType.ToString(), StringComparison.Ordinal));
-            AddSortableProperty(patch => patch.FileType, (x, y) => string.Compare(x.FileType.ToString(), y.FileType.ToString(), StringComparison.Ordinal));
-        }
-    }
-
     private readonly TranslationString _patchFileFilterString = new("Patch file (*.Patch)");
     private readonly TranslationString _patchFileFilterTitle = new("Select patch file");
 
-    public FormViewPatch(IGitUICommands commands)
+    public FormViewPatch(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -51,7 +41,7 @@ public partial class FormViewPatch : GitModuleForm
             return;
         }
 
-        Patch? patch = (Patch?)GridChangedFiles.SelectedRows[0].DataBoundItem;
+        var patch = (Patch?)GridChangedFiles.SelectedRows[0].DataBoundItem;
 
         if (patch is null)
         {
@@ -85,14 +75,28 @@ public partial class FormViewPatch : GitModuleForm
     {
         try
         {
-            string text = System.IO.File.ReadAllText(PatchFileNameEdit.Text, GitModule.LosslessEncoding);
-            List<Patch> patches = [.. PatchProcessor.CreatePatchesFromString(text, new Lazy<Encoding>(() => Module.FilesEncoding))];
+            var text = System.IO.File.ReadAllText(PatchFileNameEdit.Text, GitModule.LosslessEncoding);
+            List<Patch> patches =
+                [.. PatchProcessor.CreatePatchesFromString(text, new Lazy<Encoding>(() => Module.FilesEncoding))];
             SortablePatchesList patchesList = new();
             patchesList.AddRange(patches);
             GridChangedFiles.DataSource = patchesList;
         }
         catch
         {
+        }
+    }
+
+    private sealed class SortablePatchesList : SortableBindingList<Patch>
+    {
+        static SortablePatchesList()
+        {
+            AddSortableProperty(patch => patch.FileNameA,
+                (x, y) => string.Compare(x.FileNameA, y.FileNameA, StringComparison.Ordinal));
+            AddSortableProperty(patch => patch.ChangeType,
+                (x, y) => string.Compare(x.ChangeType.ToString(), y.ChangeType.ToString(), StringComparison.Ordinal));
+            AddSortableProperty(patch => patch.FileType,
+                (x, y) => string.Compare(x.FileType.ToString(), y.FileType.ToString(), StringComparison.Ordinal));
         }
     }
 }

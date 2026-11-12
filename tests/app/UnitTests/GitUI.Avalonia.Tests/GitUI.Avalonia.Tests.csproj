@@ -20,31 +20,31 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <Using Include="Xunit"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- CommonAssemblyInfo.cs declares SupportedOSPlatform("windows7.0"), which the test framework
          translates into a Windows-only platform requirement for every test: on Linux the
          whole assembly is silently discovered as empty. This project is cross-platform. -->
-    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Headless.XUnit" />
+    <PackageReference Include="Avalonia.Headless.XUnit"/>
     <!-- Skia renderer for the golden-image tests: rendered frames are captured and
          compared against the images in GoldenImages/. -->
-    <PackageReference Include="Avalonia.Skia" />
+    <PackageReference Include="Avalonia.Skia"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\LaneNodeLocatorTests.cs" Link="Graph\LaneNodeLocatorTests.cs" />
-    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\LaneInfoProviderTests.cs" Link="Graph\LaneInfoProviderTests.cs" />
-    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\RevisionGraphRowTests.cs" Link="Graph\RevisionGraphRowTests.cs" />
+    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\LaneNodeLocatorTests.cs" Link="Graph\LaneNodeLocatorTests.cs"/>
+    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\LaneInfoProviderTests.cs" Link="Graph\LaneInfoProviderTests.cs"/>
+    <Compile Include="..\GitUI.Tests\UserControls\RevisionGrid\Graph\RevisionGraphRowTests.cs" Link="Graph\RevisionGraphRowTests.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\app\GitExtensions.Avalonia\GitExtensions.Avalonia.csproj" />
+    <ProjectReference Include="..\..\..\..\src\app\GitExtensions.Avalonia\GitExtensions.Avalonia.csproj"/>
   </ItemGroup>
 
 </Project>

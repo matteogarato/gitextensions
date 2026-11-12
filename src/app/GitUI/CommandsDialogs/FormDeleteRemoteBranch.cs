@@ -3,28 +3,30 @@ using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitUI.HelperDialogs;
 using GitUI.Infrastructure;
 using GitUI.ScriptsEngine;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormDeleteRemoteBranch : GitExtensionsDialog
 {
-    private readonly TranslationString _deleteRemoteBranchesCaption = new("Delete remote branches");
-    private readonly TranslationString _confirmDeleteUnmergedRemoteBranchMessage =
-        new("At least one remote branch is unmerged. Are you sure you want to delete it?" + Environment.NewLine + "Deleting a branch can cause commits to be deleted too!");
-    private readonly TranslationString _toDeleteCandidates = new("Local tracking branche(s) candidate to deletion:");
     private readonly TranslationString _andMore = new("and {0} more...");
 
+    private readonly TranslationString _confirmDeleteUnmergedRemoteBranchMessage =
+        new("At least one remote branch is unmerged. Are you sure you want to delete it?" + Environment.NewLine +
+            "Deleting a branch can cause commits to be deleted too!");
+
     private readonly string _defaultRemoteBranch;
+    private readonly TranslationString _deleteRemoteBranchesCaption = new("Delete remote branches");
     private readonly TaskManager _taskManager = ThreadHelper.CreateTaskManager();
+    private readonly TranslationString _toDeleteCandidates = new("Local tracking branche(s) candidate to deletion:");
     private HashSet<string>? _mergedBranches;
 
-    public FormDeleteRemoteBranch(IGitUICommands commands, string defaultRemoteBranch)
-        : base(commands, enablePositionRestore: false)
+    public FormDeleteRemoteBranch(IGitUiCommands commands, string defaultRemoteBranch)
+        : base(commands, false)
     {
         _taskManager.FileAndForget(() => _mergedBranches = [.. Module.GetMergedRemoteBranches()]);
 
@@ -54,11 +56,15 @@ public sealed partial class FormDeleteRemoteBranch : GitExtensionsDialog
         Branches.Focus();
     }
 
-    private List<IGitRef> GetSelectedRemotRefs() => [.. Branches.GetSelectedBranches()];
+    private List<IGitRef> GetSelectedRemotRefs()
+    {
+        return [.. Branches.GetSelectedBranches()];
+    }
+
     private void CheckDeleteTrackingAllowed()
     {
-        string[] localTracking = GetTrackingReferenceOfRemoteRefs(GetSelectedRemotRefs());
-        bool localTrackingBranchesExists = localTracking.Length != 0;
+        var localTracking = GetTrackingReferenceOfRemoteRefs(GetSelectedRemotRefs());
+        var localTrackingBranchesExists = localTracking.Length != 0;
         const int maxDisplayed = 8;
 
         if (!localTrackingBranchesExists)
@@ -73,7 +79,7 @@ public sealed partial class FormDeleteRemoteBranch : GitExtensionsDialog
 
             StringBuilder branchesToDelete = new();
             branchesToDelete.AppendLine(_toDeleteCandidates.Text);
-            foreach (string branch in localTracking.Take(maxDisplayed))
+            foreach (var branch in localTracking.Take(maxDisplayed))
             {
                 branchesToDelete.Append(" - ").AppendLine(branch);
             }
@@ -90,12 +96,19 @@ public sealed partial class FormDeleteRemoteBranch : GitExtensionsDialog
     }
 
     private string[] GetTrackingReferenceOfRemoteRefs(List<IGitRef> remoteRefs)
-        => [.. Module.GetRefs(RefsFilter.Heads)
-                 .Where(b => remoteRefs.Any(r => b.IsTrackingRemote(r)))
-                 .Select(r => r.LocalName)];
+    {
+        return
+        [
+            .. Module.GetRefs(RefsFilter.Heads)
+                .Where(b => remoteRefs.Any(r => b.IsTrackingRemote(r)))
+                .Select(r => r.LocalName)
+        ];
+    }
 
     private void Branches_SelectedValueChanged(object? sender, EventArgs e)
-        => CheckDeleteTrackingAllowed();
+    {
+        CheckDeleteTrackingAllowed();
+    }
 
     private void Delete_Click(object sender, EventArgs e)
     {
@@ -104,42 +117,39 @@ public sealed partial class FormDeleteRemoteBranch : GitExtensionsDialog
             return;
         }
 
-        List<IGitRef> selectedBranches = GetSelectedRemotRefs();
+        var selectedBranches = GetSelectedRemotRefs();
 
         // wait for _mergedBranches to be filled
         _taskManager.JoinPendingOperations();
 
         Validates.NotNull(_mergedBranches);
 
-        bool hasUnmergedBranches = selectedBranches.Any(branch => !_mergedBranches.Contains(branch.CompleteName));
+        var hasUnmergedBranches = selectedBranches.Any(branch => !_mergedBranches.Contains(branch.CompleteName));
         if (hasUnmergedBranches)
         {
             if (MessageBoxes.Show(this,
-                                _confirmDeleteUnmergedRemoteBranchMessage.Text,
-                                _deleteRemoteBranchesCaption.Text,
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Question,
-                                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                    _confirmDeleteUnmergedRemoteBranchMessage.Text,
+                    _deleteRemoteBranchesCaption.Text,
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             {
                 return;
             }
         }
 
-        foreach ((string remote, IEnumerable<IGitRef> branches) in selectedBranches.GroupBy(b => b.Remote))
+        foreach ((var remote, var branches) in selectedBranches.GroupBy(b => b.Remote))
         {
             EnsurePageant(remote);
 
-            bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePush, this);
+            var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePush, this);
             if (!success)
             {
                 return;
             }
 
-            IGitCommand cmd = Commands.DeleteRemoteBranches(remote, branches.Select(x => x.LocalName));
-            using FormRemoteProcess form = new(UICommands, cmd.Arguments)
-            {
-                Remote = remote
-            };
+            var cmd = Commands.DeleteRemoteBranches(remote, branches.Select(x => x.LocalName));
+            using FormRemoteProcess form = new(UiCommands, cmd.Arguments) { Remote = remote };
             form.ShowDialog(Owner);
 
             if (!form.ErrorOccurred() && !Module.InTheMiddleOfAction())
@@ -147,12 +157,12 @@ public sealed partial class FormDeleteRemoteBranch : GitExtensionsDialog
                 ScriptsRunner.RunEventScripts(ScriptEvent.AfterPush, this);
                 if (DeleteLocalTrackingBranch.Checked)
                 {
-                    UICommands.StartDeleteBranchDialog(this, GetTrackingReferenceOfRemoteRefs(selectedBranches));
+                    UiCommands.StartDeleteBranchDialog(this, GetTrackingReferenceOfRemoteRefs(selectedBranches));
                 }
             }
         }
 
-        UICommands.RepoChangedNotifier.Notify();
+        UiCommands.RepoChangedNotifier.Notify();
         Close();
     }
 

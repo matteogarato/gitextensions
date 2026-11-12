@@ -8,46 +8,44 @@ namespace GitExtensions.Plugins.GitImpact;
 
 public partial class ImpactControl : UserControl
 {
-    private static readonly int BlockWidth = DpiUtil.Scale(60);
-    private static readonly int BlockHalfWidth = BlockWidth / 2;
-    private static readonly int TransitionWidth = DpiUtil.Scale(50);
-    private static readonly int TransitionHalfWidth = TransitionWidth / 2;
+    private const int _linesFontSize = 10;
+    private const int _weekFontSize = 8;
+    private static readonly int _blockWidth = DpiUtil.Scale(60);
+    private static readonly int _blockHalfWidth = _blockWidth / 2;
+    private static readonly int _transitionWidth = DpiUtil.Scale(50);
+    private static readonly int _transitionHalfWidth = _transitionWidth / 2;
 
-    private const int LinesFontSize = 10;
-    private const int WeekFontSize = 8;
-
-    private readonly Lock _dataLock = new();
-
-    private ImpactLoader? _impactLoader;
+    // List of authors that determines the drawing order
 
     // <Author, <Commits, Added Lines, Deleted Lines>>
     private readonly Dictionary<string, ImpactLoader.DataPoint> _authors = [];
 
-    // <First weekday of commit date, <Author, <Commits, Added Lines, Deleted Lines>>>
-    private SortedDictionary<DateOnly, Dictionary<string, ImpactLoader.DataPoint>> _impact = [];
-
-    // List of authors that determines the drawing order
-    private readonly List<string> _authorStack = [];
-
-    // The paths for each author
-    private readonly Dictionary<string, GraphicsPath> _paths = [];
-
     // The brush for each author
     private readonly Dictionary<string, SolidBrush> _brushes = [];
 
+    private readonly Lock _dataLock = new();
+
     // The changed-lines-labels for each author
     private readonly Dictionary<string, List<(PointF point, string changeCount)>> _lineLabels = [];
+    private readonly Brush _linesBrush = Brushes.White;
+    private readonly Font _linesFont = new("Arial", _linesFontSize);
+
+    // The paths for each author
+    private readonly Dictionary<string, GraphicsPath> _paths = [];
+    private readonly Pen _selectedAuthorPen = new(SystemColors.WindowText, 2);
+    private readonly Brush _weekBrush = Brushes.Gray;
+
+    private readonly Font _weekFont = new("Arial", _weekFontSize);
 
     // The week-labels
     private readonly List<(PointF point, string date)> _weekLabels = [];
 
-    private readonly Font _weekFont = new("Arial", WeekFontSize);
-    private readonly Brush _weekBrush = Brushes.Gray;
-    private readonly Font _linesFont = new("Arial", LinesFontSize);
-    private readonly Brush _linesBrush = Brushes.White;
-    private readonly Pen _selectedAuthorPen = new(SystemColors.WindowText, 2);
+    // <First weekday of commit date, <Author, <Commits, Added Lines, Deleted Lines>>>
+    private SortedDictionary<DateOnly, Dictionary<string, ImpactLoader.DataPoint>> _impact = [];
 
-    public string SelectedAuthor { get; private set; } = string.Empty;
+    private ImpactLoader? _impactLoader;
+
+    private bool _showSubmodules;
 
     public ImpactControl()
     {
@@ -57,11 +55,28 @@ public partial class ImpactControl : UserControl
 
         // Set DoubleBuffer flag for flicker-free drawing
         SetStyle(ControlStyles.AllPaintingInWmPaint |
-            ControlStyles.UserPaint | ControlStyles.DoubleBuffer, true);
+                 ControlStyles.UserPaint | ControlStyles.DoubleBuffer, true);
 
         MouseWheel += ImpactControl_MouseWheel;
         Disposed += ImpactControl_Disposed;
     }
+
+    public string SelectedAuthor { get; private set; } = string.Empty;
+
+    [DefaultValue(false)]
+    public bool ShowSubmodules
+    {
+        get => _showSubmodules;
+        set
+        {
+            _showSubmodules = value;
+            Stop();
+            Clear();
+            UpdateData();
+        }
+    }
+
+    [Browsable(false)] public List<string> Authors { get; } = [];
 
     public void Init(IGitModule module)
     {
@@ -81,7 +96,7 @@ public partial class ImpactControl : UserControl
             _authors.Clear();
             _impact.Clear();
 
-            _authorStack.Clear();
+            Authors.Clear();
             ClearPaths();
             ClearBrushes();
             _lineLabels.Clear();
@@ -106,19 +121,19 @@ public partial class ImpactControl : UserControl
     {
         lock (_dataLock)
         {
-            foreach (ImpactLoader.Commit commit in commits)
+            foreach (var commit in commits)
             {
                 // UPDATE IMPACT
 
                 // If week does not exist yet in the impact dictionary
-                if (!_impact.TryGetValue(commit.Week, out Dictionary<string, ImpactLoader.DataPoint>? weekData))
+                if (!_impact.TryGetValue(commit.Week, out var weekData))
                 {
                     // Create it
                     _impact.Add(commit.Week, weekData = []);
                 }
 
                 // If author does not exist yet for this week in the impact dictionary
-                if (!weekData.TryGetValue(commit.Author, out ImpactLoader.DataPoint authorWeekData))
+                if (!weekData.TryGetValue(commit.Author, out var authorWeekData))
                 {
                     // Create it
                     weekData.Add(commit.Author, commit.Data);
@@ -132,7 +147,7 @@ public partial class ImpactControl : UserControl
                 // UPDATE AUTHORS
 
                 // If author does not exist yet in the authors dictionary
-                if (!_authors.TryGetValue(commit.Author, out ImpactLoader.DataPoint authorData))
+                if (!_authors.TryGetValue(commit.Author, out var authorData))
                 {
                     // Create it
                     _authors.Add(commit.Author, commit.Data);
@@ -146,10 +161,10 @@ public partial class ImpactControl : UserControl
                 // UPDATE AUTHOR STACK
 
                 // If author does not exist yet in the author_stack
-                if (!_authorStack.Contains(commit.Author))
+                if (!Authors.Contains(commit.Author))
                 {
                     // Add it to the front (drawn first)
-                    _authorStack.Insert(0, commit.Author);
+                    Authors.Insert(0, commit.Author);
                 }
             }
 
@@ -170,25 +185,14 @@ public partial class ImpactControl : UserControl
         }
     }
 
-    private bool _showSubmodules;
-    [DefaultValue(false)]
-    public bool ShowSubmodules
+    private int GetGraphWidth()
     {
-        get => _showSubmodules;
-        set
-        {
-            _showSubmodules = value;
-            Stop();
-            Clear();
-            UpdateData();
-        }
+        return Math.Max(0, (_impact.Count * (_blockWidth + _transitionWidth)) - _transitionWidth);
     }
-
-    private int GetGraphWidth() => Math.Max(0, (_impact.Count * (BlockWidth + TransitionWidth)) - TransitionWidth);
 
     private void UpdateScrollbar()
     {
-        int rightValue = Math.Max(0, _scrollBar.Maximum - _scrollBar.LargeChange - _scrollBar.Value);
+        var rightValue = Math.Max(0, _scrollBar.Maximum - _scrollBar.LargeChange - _scrollBar.Value);
 
         _scrollBar.Minimum = 0;
         _scrollBar.Maximum = (int)(Math.Max(0, GetGraphWidth() - ClientSize.Width) * 1.1);
@@ -225,7 +229,7 @@ public partial class ImpactControl : UserControl
         {
             // Draw paths in order of the author_stack
             // Default: person with least number of changed lines first, others on top
-            foreach (string author in _authorStack)
+            foreach (var author in Authors)
             {
                 if (author == SelectedAuthor)
                 {
@@ -237,19 +241,20 @@ public partial class ImpactControl : UserControl
 
             // Draw selected author data
             DrawAuthorContribution(SelectedAuthor);
-            if (_paths.TryGetValue(SelectedAuthor, out GraphicsPath? selectedAuthorPath))
+            if (_paths.TryGetValue(SelectedAuthor, out var selectedAuthorPath))
             {
                 e.Graphics.DrawPath(_selectedAuthorPen, selectedAuthorPath);
             }
 
-            foreach (string author in _authorStack)
+            foreach (var author in Authors)
             {
                 DrawAuthorLinesLabels(author);
             }
 
             void DrawAuthorContribution(string author)
             {
-                if (_brushes.TryGetValue(author, out SolidBrush? authorBrush) && _paths.TryGetValue(author, out GraphicsPath? authorPath))
+                if (_brushes.TryGetValue(author, out var authorBrush) &&
+                    _paths.TryGetValue(author, out var authorPath))
                 {
                     e.Graphics.FillPath(authorBrush, authorPath);
                 }
@@ -260,12 +265,12 @@ public partial class ImpactControl : UserControl
 
         void DrawAuthorLinesLabels(string author)
         {
-            if (!_lineLabels.TryGetValue(author, out List<(PointF position, string changeCount)>? authorData))
+            if (!_lineLabels.TryGetValue(author, out var authorData))
             {
                 return;
             }
 
-            foreach ((PointF position, string changeCount) in authorData)
+            foreach ((var position, var changeCount) in authorData)
             {
                 e.Graphics.DrawString(changeCount, _linesFont, _linesBrush, position);
             }
@@ -273,7 +278,7 @@ public partial class ImpactControl : UserControl
 
         void DrawWeekLabels()
         {
-            foreach ((PointF point, string date) in _weekLabels)
+            foreach ((var point, var date) in _weekLabels)
             {
                 e.Graphics.DrawString(date, _weekFont, _weekBrush, point);
             }
@@ -289,11 +294,11 @@ public partial class ImpactControl : UserControl
 
     private void UpdatePathsAndLabels()
     {
-        int h_max = 0;
-        int x = 0;
-        Dictionary<string, List<(Rectangle, int changeCount)>> author_points_dict = [];
+        var hMax = 0;
+        var x = 0;
+        Dictionary<string, List<(Rectangle, int changeCount)>> authorPointsDict = [];
 
-        using Graphics g = CreateGraphics();
+        using var g = CreateGraphics();
 
         lock (_dataLock)
         {
@@ -301,23 +306,25 @@ public partial class ImpactControl : UserControl
             _weekLabels.Clear();
 
             // Iterate through weeks
-            foreach ((DateOnly weekDate, Dictionary<string, ImpactLoader.DataPoint> dataByAuthor) in _impact)
+            foreach ((var weekDate, var dataByAuthor) in _impact)
             {
-                int y = 0;
+                var y = 0;
 
                 // Iterate through authors
-                foreach ((string author, ImpactLoader.DataPoint data) in from entry in dataByAuthor orderby entry.Value.ChangedLines descending select entry)
+                foreach ((var author, var data) in from entry in dataByAuthor
+                         orderby entry.Value.ChangedLines descending
+                         select entry)
                 {
                     // Calculate week-author-rectangle
-                    int changedLines = Math.Max(1, data.ChangedLines);
-                    int height = Math.Max(1, (int)Math.Round(Math.Pow(Math.Log(changedLines), 1.5) * 4));
-                    Rectangle rc = new(x, y, BlockWidth, height);
+                    var changedLines = Math.Max(1, data.ChangedLines);
+                    var height = Math.Max(1, (int)Math.Round(Math.Pow(Math.Log(changedLines), 1.5) * 4));
+                    Rectangle rc = new(x, y, _blockWidth, height);
 
                     // Add rectangle to temporary list
-                    if (!author_points_dict.TryGetValue(author, out List<(Rectangle, int changeCount)>? rect))
+                    if (!authorPointsDict.TryGetValue(author, out var rect))
                     {
                         rect = [];
-                        author_points_dict.Add(author, rect);
+                        authorPointsDict.Add(author, rect);
                     }
 
                     rect.Add((rc, data.ChangedLines));
@@ -325,7 +332,7 @@ public partial class ImpactControl : UserControl
                     // Create a new random brush for the author if none exists yet
                     if (!_brushes.ContainsKey(author))
                     {
-                        Color color = Color.FromArgb((int)(author.GetHashCode() | 0xFF000000)).AdaptBackColor();
+                        var color = Color.FromArgb((int)(author.GetHashCode() | 0xFF000000)).AdaptBackColor();
                         _brushes.Add(author, new SolidBrush(color));
                     }
 
@@ -334,28 +341,28 @@ public partial class ImpactControl : UserControl
                 }
 
                 // Remember total height of largest week
-                h_max = Math.Max(h_max, y);
+                hMax = Math.Max(hMax, y);
 
                 // Add week date label
-                string formatedWeekDate = weekDate.ToShortDateString();
+                var formatedWeekDate = weekDate.ToShortDateString();
 
-                _weekLabels.Add((new PointF(x + BlockHalfWidth, y), formatedWeekDate));
+                _weekLabels.Add((new PointF(x + _blockHalfWidth, y), formatedWeekDate));
 
                 // Increase x for next week
-                x += BlockWidth + TransitionWidth;
+                x += _blockWidth + _transitionWidth;
             }
 
             // Pre-calculate height scale factor
-            double height_factor = h_max > 0 ? 0.9 * Height / h_max : 1.0;
+            var heightFactor = hMax > 0 ? 0.9 * Height / hMax : 1.0;
 
             // Scale week label coordinates
-            for (int i = 0; i < _weekLabels.Count; i++)
+            for (var i = 0; i < _weekLabels.Count; i++)
             {
-                (PointF point, string formatedWeekDate) = _weekLabels[i];
+                (var point, var formatedWeekDate) = _weekLabels[i];
 
-                PointF adjustedPoint = new(point.X, point.Y * (float)height_factor);
+                PointF adjustedPoint = new(point.X, point.Y * (float)heightFactor);
 
-                SizeF sz = g.MeasureString(formatedWeekDate, _weekFont);
+                var sz = g.MeasureString(formatedWeekDate, _weekFont);
                 PointF centeredAdjustedPoint = new(adjustedPoint.X - (sz.Width / 2), adjustedPoint.Y + (sz.Height / 2));
 
                 _weekLabels[i] = (centeredAdjustedPoint, formatedWeekDate);
@@ -368,31 +375,33 @@ public partial class ImpactControl : UserControl
             _lineLabels.Clear();
 
             // Add points to each author's GraphicsPath
-            foreach ((string author, List<(Rectangle, int changeCount)> points) in author_points_dict)
+            foreach ((var author, var points) in authorPointsDict)
             {
                 // Scale heights
-                for (int i = 0; i < points.Count; i++)
+                for (var i = 0; i < points.Count; i++)
                 {
-                    (Rectangle unscaledRect, int changeCount) = points[i];
+                    (var unscaledRect, var changeCount) = points[i];
 
-                    Rectangle rect = new(unscaledRect.Left, (int)(unscaledRect.Top * height_factor),
-                        unscaledRect.Width, Math.Max(1, (int)(unscaledRect.Height * height_factor)));
+                    Rectangle rect = new(unscaledRect.Left, (int)(unscaledRect.Top * heightFactor),
+                        unscaledRect.Width, Math.Max(1, (int)(unscaledRect.Height * heightFactor)));
 
                     points[i] = (rect, changeCount);
 
                     // Add lines-changed-labels
-                    if (!_lineLabels.TryGetValue(author, out List<(PointF point, string changeCount)>? authorLineLabels))
+                    if (!_lineLabels.TryGetValue(author,
+                            out var authorLineLabels))
                     {
                         _lineLabels.Add(author, authorLineLabels = []);
                     }
 
-                    if (rect.Height > LinesFontSize * 1.5)
+                    if (rect.Height > _linesFontSize * 1.5)
                     {
-                        PointF adjustedPoint = new(rect.Left + BlockHalfWidth, rect.Top + (rect.Height / 2));
+                        PointF adjustedPoint = new(rect.Left + _blockHalfWidth, rect.Top + (rect.Height / 2));
 
-                        string changeCountText = changeCount.ToString();
-                        SizeF sz = g.MeasureString(changeCountText, _linesFont);
-                        PointF centeredAdjustedPosition = new(adjustedPoint.X - (sz.Width / 2), adjustedPoint.Y - (sz.Height / 2));
+                        var changeCountText = changeCount.ToString();
+                        var sz = g.MeasureString(changeCountText, _linesFont);
+                        PointF centeredAdjustedPosition = new(adjustedPoint.X - (sz.Width / 2),
+                            adjustedPoint.Y - (sz.Height / 2));
 
                         authorLineLabels.Add((centeredAdjustedPosition, changeCountText));
                     }
@@ -402,53 +411,53 @@ public partial class ImpactControl : UserControl
                 GraphicsPath authorGraphicsPath = new();
                 _paths.Add(author, authorGraphicsPath);
 
-                (Rectangle firstRect, int _) = points[0];
+                (var firstRect, _) = points[0];
 
                 // Left border
                 authorGraphicsPath.AddLine(firstRect.Left, firstRect.Bottom,
-                                       firstRect.Left, firstRect.Top);
+                    firstRect.Left, firstRect.Top);
 
                 // Top borders
-                for (int i = 0; i < points.Count; i++)
+                for (var i = 0; i < points.Count; i++)
                 {
-                    (Rectangle rect, int _) = points[i];
+                    (var rect, _) = points[i];
 
                     authorGraphicsPath.AddLine(rect.Left, rect.Top,
-                                               rect.Right, rect.Top);
+                        rect.Right, rect.Top);
 
                     if (i < points.Count - 1)
                     {
-                        (Rectangle nextRect, int _) = points[i + 1];
+                        (var nextRect, _) = points[i + 1];
 
                         authorGraphicsPath.AddBezier(rect.Right, rect.Top,
-                                                     rect.Right + TransitionHalfWidth, rect.Top,
-                                                     rect.Right + TransitionHalfWidth, nextRect.Top,
-                                                     nextRect.Left, nextRect.Top);
+                            rect.Right + _transitionHalfWidth, rect.Top,
+                            rect.Right + _transitionHalfWidth, nextRect.Top,
+                            nextRect.Left, nextRect.Top);
                     }
                 }
 
-                (Rectangle lastRect, int _) = points[^1];
+                (var lastRect, _) = points[^1];
 
                 // Right border
                 authorGraphicsPath.AddLine(lastRect.Right, lastRect.Top,
-                                           lastRect.Right, lastRect.Bottom);
+                    lastRect.Right, lastRect.Bottom);
 
                 // Bottom borders
-                for (int i = points.Count - 1; i >= 0; i--)
+                for (var i = points.Count - 1; i >= 0; i--)
                 {
-                    (Rectangle rect, int _) = points[i];
+                    (var rect, _) = points[i];
 
                     authorGraphicsPath.AddLine(rect.Right, rect.Bottom,
-                                               rect.Left, rect.Bottom);
+                        rect.Left, rect.Bottom);
 
                     if (i > 0)
                     {
-                        (Rectangle prevRect, int _) = points[i - 1];
+                        (var prevRect, _) = points[i - 1];
 
                         authorGraphicsPath.AddBezier(rect.Left, rect.Bottom,
-                                                 rect.Left - TransitionHalfWidth, rect.Bottom,
-                                                 rect.Left - TransitionHalfWidth, prevRect.Bottom,
-                                                 prevRect.Right, prevRect.Bottom);
+                            rect.Left - _transitionHalfWidth, rect.Bottom,
+                            rect.Left - _transitionHalfWidth, prevRect.Bottom,
+                            prevRect.Right, prevRect.Bottom);
                     }
                 }
             }
@@ -456,20 +465,22 @@ public partial class ImpactControl : UserControl
     }
 
     /// <summary>
-    /// Determines if the given coordinates are belonging to any author
+    ///     Determines if the given coordinates are belonging to any author
     /// </summary>
     /// <param name="x">x coordinate</param>
     /// <param name="y">y coordinate</param>
-    /// <returns>true if author has changed and graph should be redrawn
-    /// false, otherwise</returns>
+    /// <returns>
+    ///     true if author has changed and graph should be redrawn
+    ///     false, otherwise
+    /// </returns>
     public bool TrySetAuthorByScreenPosition(int x, int y)
     {
         lock (_dataLock)
         {
-            for (int i = _authorStack.Count - 1; i >= 0; i--)
+            for (var i = Authors.Count - 1; i >= 0; i--)
             {
-                string author = _authorStack[i];
-                if (_paths.TryGetValue(author, out GraphicsPath? authorGraphicsPath)
+                var author = Authors[i];
+                if (_paths.TryGetValue(author, out var authorGraphicsPath)
                     && authorGraphicsPath.IsVisible(x + _scrollBar.Value, y))
                 {
                     if (SelectedAuthor != author)
@@ -477,10 +488,8 @@ public partial class ImpactControl : UserControl
                         SelectedAuthor = author;
                         return true;
                     }
-                    else
-                    {
-                        return false;
-                    }
+
+                    return false;
                 }
             }
         }
@@ -498,7 +507,7 @@ public partial class ImpactControl : UserControl
     {
         lock (_dataLock)
         {
-            if (_brushes.TryGetValue(author, out SolidBrush? brush))
+            if (_brushes.TryGetValue(author, out var brush))
             {
                 return brush.Color;
             }
@@ -507,14 +516,11 @@ public partial class ImpactControl : UserControl
         return Color.Transparent;
     }
 
-    [Browsable(false)]
-    public List<string> Authors => _authorStack;
-
     public ImpactLoader.DataPoint GetAuthorInfo(string author)
     {
         lock (_dataLock)
         {
-            if (_authors.TryGetValue(author, out ImpactLoader.DataPoint info))
+            if (_authors.TryGetValue(author, out var info))
             {
                 return info;
             }
@@ -536,7 +542,7 @@ public partial class ImpactControl : UserControl
 
     private void ClearBrushes()
     {
-        foreach (SolidBrush brush in _brushes.Values)
+        foreach (var brush in _brushes.Values)
         {
             brush.Dispose();
         }
@@ -546,7 +552,7 @@ public partial class ImpactControl : UserControl
 
     private void ClearPaths()
     {
-        foreach (GraphicsPath path in _paths.Values)
+        foreach (var path in _paths.Values)
         {
             path.Dispose();
         }

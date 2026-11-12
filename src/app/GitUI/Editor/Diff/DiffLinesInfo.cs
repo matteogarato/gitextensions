@@ -4,10 +4,13 @@ public sealed class DiffLinesInfo
 {
     private readonly Dictionary<int, DiffLineInfo> _diffLines = [];
 
-    public IReadOnlyDictionary<int, DiffLineInfo> DiffLines => _diffLines;
+    public IReadOnlyDictionary<int, DiffLineInfo> DiffLines
+    {
+        get => _diffLines;
+    }
 
     /// <summary>
-    /// Gets the maximum line number from either left or right version.
+    ///     Gets the maximum line number from either left or right version.
     /// </summary>
     public int MaxLineNumber { get; private set; }
 

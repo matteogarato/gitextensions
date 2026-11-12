@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommitInfo;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommitInfo;
 
 partial class CommitInfoHeader
 {
@@ -29,7 +31,7 @@ partial class CommitInfoHeader
     private void InitializeComponent()
     {
         TableLayoutPanel tableLayoutPanel1;
-        avatarControl = new GitUI.AvatarControl();
+        avatarControl = new AvatarControl();
         rtbRevisionHeader = new RichTextBox();
         tableLayoutPanel1 = new TableLayoutPanel();
         tableLayoutPanel1.SuspendLayout();

@@ -5,21 +5,21 @@ namespace GitUI.UserControls.RevisionGrid;
 
 public partial class FormRevisionFilter : GitExtensionsDialog
 {
+    private readonly TranslationString _author = new("&Author");
+    private readonly TranslationString _branches = new("&Branches");
+    private readonly TranslationString _committer = new("&Committer");
+    private readonly TranslationString _diffContent = new("&Diff contains");
+    private readonly TranslationString _diffContentToolTip = new("SLOW");
     private readonly FilterInfo _filterInfo;
+    private readonly TranslationString _limit = new("&Limit");
+    private readonly TranslationString _message = new("&Message");
+    private readonly TranslationString _pathFilter = new("&Path filter");
 
     private readonly TranslationString _since = new("&Since");
     private readonly TranslationString _until = new("&Until");
-    private readonly TranslationString _author = new("&Author");
-    private readonly TranslationString _committer = new("&Committer");
-    private readonly TranslationString _message = new("&Message");
-    private readonly TranslationString _diffContent = new("&Diff contains");
-    private readonly TranslationString _diffContentToolTip = new("SLOW");
-    private readonly TranslationString _limit = new("&Limit");
-    private readonly TranslationString _pathFilter = new("&Path filter");
-    private readonly TranslationString _branches = new("&Branches");
 
-    public FormRevisionFilter(IGitUICommands commands, FilterInfo filterInfo)
-        : base(commands, enablePositionRestore: false)
+    public FormRevisionFilter(IGitUiCommands commands, FilterInfo filterInfo)
+        : base(commands, false)
     {
         InitializeComponent();
         InitializeComplete();
@@ -42,7 +42,7 @@ public partial class FormRevisionFilter : GitExtensionsDialog
     {
         base.OnLoad(e);
 
-        FilterInfo rawFilterInfo = _filterInfo with { IsRaw = true };
+        var rawFilterInfo = _filterInfo with { IsRaw = true };
 
         SinceCheck.Checked = rawFilterInfo.ByDateFrom;
         Since.Value = rawFilterInfo.DateFrom == DateTime.MinValue ? DateTime.Today : rawFilterInfo.DateFrom;
@@ -140,12 +140,25 @@ public partial class FormRevisionFilter : GitExtensionsDialog
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor(FormRevisionFilter form)
     {
-        public CheckBox FullHistoryCheck => form.FullHistoryCheck;
-        public CheckBox SimplifyMergesCheck => form.SimplifyMergesCheck;
-        public void UpdateFilters() => form.UpdateFilters();
+        public CheckBox FullHistoryCheck
+        {
+            get => form.FullHistoryCheck;
+        }
+
+        public CheckBox SimplifyMergesCheck
+        {
+            get => form.SimplifyMergesCheck;
+        }
+
+        public void UpdateFilters()
+        {
+            form.UpdateFilters();
+        }
     }
 }

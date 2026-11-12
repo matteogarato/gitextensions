@@ -8,7 +8,9 @@
             "lastBuiltRevision": {
                 "SHA1": "d4295d591a45c67d812aa1c4fa17b6a0f2ea3114",
                 "branch": [
-                    { "name": "refs/remotes/origin/master" }
+                    {
+                        "name": "refs/remotes/origin/master"
+                    }
                 ]
             }
         },

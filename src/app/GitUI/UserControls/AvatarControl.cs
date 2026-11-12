@@ -1,32 +1,33 @@
 ﻿using System.ComponentModel;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.Utils;
 using GitExtUtils.GitUI;
 using GitUI.Avatars;
 using GitUI.Properties;
 using ResourceManager;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 public sealed partial class AvatarControl : GitExtensionsControl
 {
+    private readonly IAvatarCacheCleaner _avatarCacheCleaner = AvatarService.CacheCleaner;
+    private readonly IAvatarProvider _avatarProvider = AvatarService.DefaultProvider;
     private readonly CancellationTokenSequence _cancellationTokenSequence = new();
-    private IAvatarProvider _avatarProvider = AvatarService.DefaultProvider;
-    private IAvatarCacheCleaner _avatarCacheCleaner = AvatarService.CacheCleaner;
 
     public AvatarControl()
     {
         InitializeComponent();
         InitializeComplete();
 
-        foreach (AvatarProvider avatarProvider in EnumHelper.GetValues<AvatarProvider>())
+        foreach (var avatarProvider in EnumHelper.GetValues<AvatarProvider>())
         {
             ToolStripMenuItem item = new()
             {
                 CheckOnClick = true,
                 Tag = avatarProvider,
                 Checked = avatarProvider == AppSettings.AvatarProvider,
-                Text = avatarProvider.GetDescription(),
+                Text = avatarProvider.GetDescription()
             };
 
             item.Click += delegate
@@ -41,13 +42,11 @@ public sealed partial class AvatarControl : GitExtensionsControl
         // The cache may also be cleared by another control, e.g. from the settings dialog
         _avatarCacheCleaner.CacheCleared += OnCacheCleared;
 
-        foreach (AvatarFallbackType defaultImageType in EnumHelper.GetValues<AvatarFallbackType>())
+        foreach (var defaultImageType in EnumHelper.GetValues<AvatarFallbackType>())
         {
             ToolStripMenuItem item = new()
             {
-                CheckOnClick = true,
-                Tag = defaultImageType,
-                Text = defaultImageType.GetDescription(),
+                CheckOnClick = true, Tag = defaultImageType, Text = defaultImageType.GetDescription()
             };
 
             item.Click += delegate
@@ -60,18 +59,22 @@ public sealed partial class AvatarControl : GitExtensionsControl
         }
     }
 
+    [Browsable(false)] public string? Email { get; private set; }
+
+    [Browsable(false)] public string? AuthorName { get; private set; }
+
     public void ClearCache()
     {
         ThreadHelper.FileAndForget(async () =>
-                {
-                    AvatarService.UpdateAvatarProvider();
-                    await _avatarCacheCleaner.ClearCacheAsync();
-                    await UpdateAvatarAsync();
-                });
+        {
+            AvatarService.UpdateAvatarProvider();
+            await _avatarCacheCleaner.ClearCacheAsync();
+            await UpdateAvatarAsync();
+        });
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -85,12 +88,6 @@ public sealed partial class AvatarControl : GitExtensionsControl
 
         base.Dispose(disposing);
     }
-
-    [Browsable(false)]
-    public string? Email { get; private set; }
-
-    [Browsable(false)]
-    public string? AuthorName { get; private set; }
 
     public void LoadImage(string? email, string? name)
     {
@@ -106,7 +103,9 @@ public sealed partial class AvatarControl : GitExtensionsControl
     }
 
     private void OnCacheCleared(object? sender, EventArgs e)
-        => ThreadHelper.FileAndForget(UpdateAvatarAsync);
+    {
+        ThreadHelper.FileAndForget(UpdateAvatarAsync);
+    }
 
     private void RefreshImage(Image? image)
     {
@@ -125,7 +124,7 @@ public sealed partial class AvatarControl : GitExtensionsControl
 
         Size = _avatarImage.Size = size;
 
-        string? email = Email;
+        var email = Email;
 
         if (!AppSettings.ShowAuthorAvatarInCommitInfo || string.IsNullOrWhiteSpace(email))
         {
@@ -133,8 +132,8 @@ public sealed partial class AvatarControl : GitExtensionsControl
             return;
         }
 
-        CancellationToken token = _cancellationTokenSequence.Next();
-        Image? image = await _avatarProvider.GetAvatarAsync(email, AuthorName, Math.Max(size.Width, size.Height));
+        var token = _cancellationTokenSequence.Next();
+        var image = await _avatarProvider.GetAvatarAsync(email, AuthorName, Math.Max(size.Width, size.Height));
 
         if (!token.IsCancellationRequested)
         {

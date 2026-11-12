@@ -1,15 +1,15 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
 namespace GitUITests.UserControls.RevisionGrid;
+
 public class GitRefListsForRevisionTests
 {
-    private GitRevision _revision = null!;
-    private IGitModule _module = null!;
-    private IGitRef[] _refs = null!;
+    private readonly IGitModule _module = null!;
+    private readonly IGitRef[] _refs = null!;
+    private readonly GitRevision _revision = null!;
 
     public GitRefListsForRevisionTests()
     {
@@ -19,12 +19,9 @@ public class GitRefListsForRevisionTests
         [
             new GitRef(_module, ObjectId.Random(), $"{GitRefName.RefsTagsPrefix}tag1"),
             new GitRef(_module, ObjectId.Random(), $"{GitRefName.RefsHeadsPrefix}branch1"),
-            new GitRef(_module, ObjectId.Random(), $"{GitRefName.RefsRemotesPrefix}branch1"),
+            new GitRef(_module, ObjectId.Random(), $"{GitRefName.RefsRemotesPrefix}branch1")
         ];
-        _revision = new GitRevision(ObjectId.Random())
-        {
-            Refs = _refs
-        };
+        _revision = new GitRevision(ObjectId.Random()) { Refs = _refs };
     }
 
     [Fact]
@@ -36,7 +33,8 @@ public class GitRefListsForRevisionTests
     [Fact]
     public void ctor_must_throw_if_revision_ref_null()
     {
-        ((Action)(() => new GitRefListsForRevision(new GitRevision(ObjectId.Random()) { Refs = null! }))).Should().Throw<ArgumentNullException>();
+        ((Action)(() => new GitRefListsForRevision(new GitRevision(ObjectId.Random()) { Refs = null! }))).Should()
+            .Throw<ArgumentNullException>();
     }
 
     [Fact]

@@ -1,29 +1,31 @@
 ﻿using System.Diagnostics;
 using System.Drawing.Imaging;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitUI;
 using GitUI.Avatars;
+using ResourceManager;
 
 namespace GitExtensions.Plugins.Gource;
 
-public partial class GourceStart : ResourceManager.GitExtensionsFormBase
+public partial class GourceStart : GitExtensionsFormBase
 {
-    public GourceStart(string pathToGource, GitUIEventArgs gitUIArgs, string gourceArguments)
+    public GourceStart(string pathToGource, GitUiEventArgs gitUiArgs, string gourceArguments)
     {
         InitializeComponent();
         InitializeComplete();
 
         // To accommodate the translation app
-        if (gitUIArgs is null)
+        if (gitUiArgs is null)
         {
             return;
         }
 
         PathToGource = pathToGource;
-        GitUIArgs = gitUIArgs;
-        GitWorkingDir = gitUIArgs.GitModule.WorkingDir;
+        GitUiArgs = gitUiArgs;
+        GitWorkingDir = gitUiArgs.GitModule.WorkingDir;
         GourceArguments = gourceArguments;
 
         WorkingDir.Text = GitWorkingDir;
@@ -31,7 +33,7 @@ public partial class GourceStart : ResourceManager.GitExtensionsFormBase
         Arguments.Text = GourceArguments;
     }
 
-    private GitUIEventArgs GitUIArgs { get; } = null!;
+    private GitUiEventArgs GitUiArgs { get; } = null!;
 
     public string PathToGource { get; set; } = "";
 
@@ -45,9 +47,7 @@ public partial class GourceStart : ResourceManager.GitExtensionsFormBase
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = "\"" + cmd + "\"",
-                Arguments = arguments,
-                WorkingDirectory = WorkingDir.Text
+                FileName = "\"" + cmd + "\"", Arguments = arguments, WorkingDirectory = WorkingDir.Text
             });
         }
         catch (Exception e)
@@ -67,10 +67,10 @@ public partial class GourceStart : ResourceManager.GitExtensionsFormBase
         }
 
         GourceArguments = Arguments.Text;
-        string gourceAvatarsDir = GourceArguments.Contains("$(AVATARS)")
+        var gourceAvatarsDir = GourceArguments.Contains("$(AVATARS)")
             ? ThreadHelper.JoinableTaskFactory.Run(LoadAvatarsAsync)
             : "";
-        string arguments = GourceArguments.Replace("$(AVATARS)", gourceAvatarsDir);
+        var arguments = GourceArguments.Replace("$(AVATARS)", gourceAvatarsDir);
         PathToGource = GourcePath.Text;
         GitWorkingDir = WorkingDir.Text;
 
@@ -80,22 +80,21 @@ public partial class GourceStart : ResourceManager.GitExtensionsFormBase
 
     private async Task<string> LoadAvatarsAsync()
     {
-        string gourceAvatarsDir = Path.Join(Path.GetTempPath(), "GitAvatars");
+        var gourceAvatarsDir = Path.Join(Path.GetTempPath(), "GitAvatars");
 
         Directory.CreateDirectory(gourceAvatarsDir);
 
-        foreach (string file in Directory.GetFiles(gourceAvatarsDir))
+        foreach (var file in Directory.GetFiles(gourceAvatarsDir))
         {
             File.Delete(file);
         }
 
         GitArgumentBuilder args = new("log") { "--pretty=format:\"%aE|%aN\"" };
-        string[] lines = GitUIArgs.GitModule.GitExecutable.GetOutput(args).Split('\n');
+        var lines = GitUiArgs.GitModule.GitExecutable.GetOutput(args).Split('\n');
 
-        IEnumerable<(string email, string name)> authors = lines.Select(
-            line =>
+        var authors = lines.Select(line =>
             {
-                string[] bits = line.Split('|');
+                var bits = line.Split('|');
                 return (email: bits[0], name: bits[1]);
             })
             .Where(t => !string.IsNullOrWhiteSpace(t.email) && !string.IsNullOrWhiteSpace(t.name))
@@ -110,15 +109,15 @@ public partial class GourceStart : ResourceManager.GitExtensionsFormBase
         {
             try
             {
-                Image? image = await AvatarService.DefaultProvider.GetAvatarAsync(author.email, author.name, imageSize: 90);
-                string filename = author.name + ".png";
+                var image = await AvatarService.DefaultProvider.GetAvatarAsync(author.email, author.name, 90);
+                var filename = author.name + ".png";
 
                 if (image is null || filename.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                 {
                     return;
                 }
 
-                string filePath = Path.Join(gourceAvatarsDir, filename);
+                var filePath = Path.Join(gourceAvatarsDir, filename);
                 image.Save(filePath, ImageFormat.Png);
             }
             catch
@@ -131,11 +130,7 @@ public partial class GourceStart : ResourceManager.GitExtensionsFormBase
     private void GourceBrowseClick(object sender, EventArgs e)
     {
         using OpenFileDialog fileDialog =
-            new()
-            {
-                Filter = "Gource (gource.exe)|gource.exe",
-                FileName = GourcePath.Text
-            };
+            new() { Filter = "Gource (gource.exe)|gource.exe", FileName = GourcePath.Text };
         fileDialog.ShowDialog(this);
 
         GourcePath.Text = fileDialog.FileName;

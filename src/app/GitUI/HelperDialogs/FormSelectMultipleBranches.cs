@@ -28,8 +28,8 @@ public partial class FormSelectMultipleBranches : GitExtensionsForm
 
     public void SelectBranch(string name)
     {
-        int index = 0;
-        foreach (object item in Branches.Items)
+        var index = 0;
+        foreach (var item in Branches.Items)
         {
             if (item is IGitRef branch && branch.Name == name)
             {

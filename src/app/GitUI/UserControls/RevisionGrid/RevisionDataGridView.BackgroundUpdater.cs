@@ -1,26 +1,20 @@
-﻿namespace GitUI.UserControls.RevisionGrid;
+﻿using GitExtUtils.GitUI;
+
+namespace GitUI.UserControls.RevisionGrid;
 
 public sealed partial class RevisionDataGridView
 {
     /// <summary>
-    /// Coordinates background update executions. Requested reruns only "queue up" upto one.
+    ///     Coordinates background update executions. Requested reruns only "queue up" upto one.
     /// </summary>
-    private sealed class BackgroundUpdater
+    private sealed class BackgroundUpdater(TaskManager taskManager, Func<Task> operation, int cooldownMilliseconds)
     {
-        private readonly Func<Task> _operation;
-        private readonly int _cooldownMilliseconds;
         private readonly Lock _lock = new();
-        private readonly TaskManager _taskManager;
+        private readonly Func<Task> _operation = operation ?? throw new ArgumentNullException(nameof(operation));
+        private readonly TaskManager _taskManager = taskManager ?? throw new ArgumentNullException(nameof(taskManager));
 
         private volatile bool _executing;
         private volatile bool _rerunRequested;
-
-        public BackgroundUpdater(TaskManager taskManager, Func<Task> operation, int cooldownMilliseconds)
-        {
-            _taskManager = taskManager ?? throw new ArgumentNullException(nameof(taskManager));
-            _operation = operation ?? throw new ArgumentNullException(nameof(operation));
-            _cooldownMilliseconds = cooldownMilliseconds;
-        }
 
         public void ScheduleExecution()
         {
@@ -48,7 +42,7 @@ public sealed partial class RevisionDataGridView
             }
             finally
             {
-                await Task.Delay(_cooldownMilliseconds);
+                await Task.Delay(cooldownMilliseconds);
 
                 lock (_lock)
                 {

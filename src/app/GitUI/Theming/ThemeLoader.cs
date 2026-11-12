@@ -10,61 +10,56 @@ public interface IThemeLoader
     Theme LoadTheme(string themeFileName, ThemeId themeId, in IReadOnlyList<string> allowedClasses);
 }
 
-public class ThemeLoader : IThemeLoader
+public class ThemeLoader(IThemeCssUrlResolver urlResolver, IThemeFileReader themeFileReader)
+    : IThemeLoader
 {
-    private const string ClassSelector = ".";
+    private const string _classSelector = ".";
 
-    private readonly StylesheetParser _parser;
-    private readonly IThemeCssUrlResolver _urlResolver;
-    private readonly IThemeFileReader _themeFileReader;
+    private readonly StylesheetParser _parser = new();
 
-    public ThemeLoader(IThemeCssUrlResolver urlResolver, IThemeFileReader themeFileReader)
-    {
-        _parser = new StylesheetParser();
-        _urlResolver = urlResolver;
-        _themeFileReader = themeFileReader;
-    }
-
-    public Theme LoadTheme(string themeFileName, ThemeId themeId, in IReadOnlyList<string> allowedClasses)
+    Theme IThemeLoader.LoadTheme(string themeFileName, ThemeId themeId, in IReadOnlyList<string> allowedClasses)
     {
         ThemeColors themeColors = new();
-        LoadThemeColors(themeFileName, cssImportChain: [themeFileName], allowedClasses, themeColors);
+        LoadThemeColors(themeFileName, [themeFileName], allowedClasses, themeColors);
         return new Theme(themeColors.AppColors, themeColors.SysColors, themeId);
     }
 
-    private void LoadThemeColors(string themeFileName, string[] cssImportChain, in IReadOnlyList<string> allowedClasses, ThemeColors themeColors)
+    private void LoadThemeColors(string themeFileName, string[] cssImportChain, in IReadOnlyList<string> allowedClasses,
+        ThemeColors themeColors)
     {
         // TODO ExCSS.Stylesheet 4.1 does not handle parse errors.
         // This could be rewritten as a simple regex parser instead.
-        string content = _themeFileReader.ReadThemeFile(themeFileName);
-        Stylesheet stylesheet = _parser.Parse(content);
+        var content = themeFileReader.ReadThemeFile(themeFileName);
+        var stylesheet = _parser.Parse(content);
 
-        foreach (IImportRule importDirective in stylesheet.ImportRules)
+        foreach (var importDirective in stylesheet.ImportRules)
         {
             ImportTheme(themeFileName, importDirective, allowedClasses, cssImportChain, themeColors);
         }
 
-        foreach (StyleRule rule in stylesheet.StyleRules.Cast<StyleRule>())
+        foreach (var rule in stylesheet.StyleRules.Cast<StyleRule>())
         {
             ParseRule(themeFileName, rule, allowedClasses, themeColors);
         }
     }
 
-    private void ImportTheme(string themeFileName, IImportRule importRule, in IReadOnlyList<string> allowedClasses, string[] cssImportChain, ThemeColors themeColors)
+    private void ImportTheme(string themeFileName, IImportRule importRule, in IReadOnlyList<string> allowedClasses,
+        string[] cssImportChain, ThemeColors themeColors)
     {
         string importFilePath;
         try
         {
-            importFilePath = _urlResolver.ResolveCssUrl(importRule.Href);
+            importFilePath = urlResolver.ResolveCssUrl(importRule.Href);
         }
         catch (ThemeCssUrlResolverException ex)
         {
-            throw new ThemeException($"Failed to resolve CSS import {importRule.Href}: {ex.Message}", themeFileName, ex);
+            throw new ThemeException($"Failed to resolve CSS import {importRule.Href}: {ex.Message}", themeFileName,
+                ex);
         }
 
         if (cssImportChain.Any(cssImport => StringComparer.OrdinalIgnoreCase.Equals(cssImport, importFilePath)))
         {
-            string importChainText = string.Concat(
+            var importChainText = string.Concat(
                 cssImportChain
                     .Append(importFilePath)
                     .Select(_ => $"{Environment.NewLine}  -> {_}"));
@@ -75,19 +70,20 @@ public class ThemeLoader : IThemeLoader
         LoadThemeColors(importFilePath, cssImportChain.AppendTo(importFilePath), allowedClasses, themeColors);
     }
 
-    private static void ParseRule(string themeFileName, StyleRule rule, in IReadOnlyList<string> allowedClasses, ThemeColors themeColors)
+    private static void ParseRule(string themeFileName, StyleRule rule, in IReadOnlyList<string> allowedClasses,
+        ThemeColors themeColors)
     {
-        Color color = GetColor(themeFileName, rule);
-        string[] classNames = GetClassNames(themeFileName, rule);
+        var color = GetColor(themeFileName, rule);
+        var classNames = GetClassNames(themeFileName, rule);
 
-        string colorName = classNames[0];
+        var colorName = classNames[0];
         if (!classNames.Skip(1).All(allowedClasses.Contains))
         {
             return;
         }
 
-        themeColors.SpecificityByColor.TryGetValue(colorName, out int previousSpecificity);
-        int specificity = classNames.Length;
+        themeColors.SpecificityByColor.TryGetValue(colorName, out var previousSpecificity);
+        var specificity = classNames.Length;
         if (specificity < previousSpecificity)
         {
             return;
@@ -117,18 +113,18 @@ public class ThemeLoader : IThemeLoader
 
     private static string[] GetClassNames(string themeFileName, StyleRule rule)
     {
-        string selectorText = rule.Selector.Text;
-        if (!selectorText.StartsWith(ClassSelector))
+        var selectorText = rule.Selector.Text;
+        if (!selectorText.StartsWith(_classSelector))
         {
             throw StyleRuleThemeException(rule, themeFileName);
         }
 
-        return selectorText[ClassSelector.Length..].Split([ClassSelector], StringSplitOptions.RemoveEmptyEntries);
+        return selectorText[_classSelector.Length..].Split([_classSelector], StringSplitOptions.RemoveEmptyEntries);
     }
 
     private static Color GetColor(string themeFileName, StyleRule rule)
     {
-        string cssColorValue = rule.Style.Color;
+        var cssColorValue = rule.Style.Color;
         if (cssColorValue == "" && rule.SelectorText.StartsWith($".{nameof(AppColor.GraphBranch1)[..^1]}"))
         {
             return Color.Empty;
@@ -150,14 +146,13 @@ public class ThemeLoader : IThemeLoader
         // Prefer the latter option - less magic.
 
         // cssColorValue is something like 'rgb(180, 180, 180)'
-        int[] rgbValues = [.. cssColorValue.Split('(', ')', ',')
-            .Select(sa => new
-            {
-                Success = int.TryParse(sa, out int value),
-                Value = value
-            })
-            .Where(v => v.Success)
-            .Select(v => v.Value)];
+        int[] rgbValues =
+        [
+            .. cssColorValue.Split('(', ')', ',')
+                .Select(sa => new { Success = int.TryParse(sa, out var value), Value = value })
+                .Where(v => v.Success)
+                .Select(v => v.Value)
+        ];
 
         if (rgbValues.Length != 3)
         {
@@ -168,12 +163,14 @@ public class ThemeLoader : IThemeLoader
     }
 
     private static ThemeException StyleRuleThemeException(StyleRule styleRule, string themePath)
-        => new($"Invalid CSS rule '{styleRule.SelectorText}'", themePath);
+    {
+        return new ThemeException($"Invalid CSS rule '{styleRule.SelectorText}'", themePath);
+    }
 
     private sealed class ThemeColors
     {
         public readonly Dictionary<AppColor, Color> AppColors = [];
-        public readonly Dictionary<KnownColor, Color> SysColors = [];
         public readonly Dictionary<string, int> SpecificityByColor = [];
+        public readonly Dictionary<KnownColor, Color> SysColors = [];
     }
 }

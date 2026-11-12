@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\app\GitExtensions.Extensibility\GitExtensions.Extensibility.csproj" />
-    <ProjectReference Include="..\..\..\CommonTestUtils\CommonTestUtils.csproj" />
+    <ProjectReference Include="..\..\..\..\src\app\GitExtensions.Extensibility\GitExtensions.Extensibility.csproj"/>
+    <ProjectReference Include="..\..\..\CommonTestUtils\CommonTestUtils.csproj"/>
   </ItemGroup>
 
 </Project>

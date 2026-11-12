@@ -13,8 +13,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" />
-    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia"/>
+    <PackageReference Include="Avalonia.Desktop"/>
     <PackageReference Include="GitInfo">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -22,20 +22,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GitUI.Avalonia\GitUI.Avalonia.csproj" AdditionalProperties="BuildAvalonia=true" />
+    <ProjectReference Include="..\GitUI.Avalonia\GitUI.Avalonia.csproj" AdditionalProperties="BuildAvalonia=true"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Cross-platform assemblies must not carry the SupportedOSPlatform("windows7.0")
          attribute from CommonAssemblyInfo.cs; use the platform-neutral variant. -->
-    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
-    <Compile Include="$(RepoRoot)\src\app\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs" />
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs"/>
+    <Compile Include="$(RepoRoot)\src\app\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs"/>
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="..\..\native\GitExtensionsShellEx\Resources\git-extensions-logo.ico"
              Link="git-extensions-logo.ico"
-             CopyToPublishDirectory="PreserveNewest" />
+             CopyToPublishDirectory="PreserveNewest"/>
   </ItemGroup>
 
 </Project>

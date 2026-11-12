@@ -1,6 +1,7 @@
 ﻿using GitExtUtils;
 
 namespace GitExtUtilsTests;
+
 public sealed class ArrayExtensionsTests
 {
     [Fact]
@@ -8,21 +9,21 @@ public sealed class ArrayExtensionsTests
     {
         int[] nums = [.. Enumerable.Range(0, 10)];
 
-        nums.Subsequence(0, 4).Should().Equal(new[] { 0, 1, 2, 3 });
-        nums.Subsequence(1, 4).Should().Equal(new[] { 1, 2, 3, 4 });
+        nums.Subsequence(0, 4).Should().Equal(0, 1, 2, 3);
+        nums.Subsequence(1, 4).Should().Equal(1, 2, 3, 4);
 
         nums.Subsequence(0, 10).Should().Equal(nums);
 
-        nums.Subsequence(0, 0).Should().Equal(Array.Empty<int>());
+        nums.Subsequence(0, 0).Should().Equal();
 
-        nums.Subsequence(9, 0).Should().Equal(Array.Empty<int>());
+        nums.Subsequence(9, 0).Should().Equal();
     }
 
     [Fact]
     public void Append()
     {
-        new[] { 0 }.Append(1).Should().Equal(new[] { 0, 1 });
-        Array.Empty<int>().Append(0).Should().Equal(new[] { 0 });
-        Array.Empty<int>().Append(0).Append(1).Append(2).Should().Equal(new[] { 0, 1, 2 });
+        new[] { 0 }.Append(1).Should().Equal(0, 1);
+        Array.Empty<int>().Append(0).Should().Equal(0);
+        Array.Empty<int>().Append(0).Append(1).Append(2).Should().Equal(0, 1, 2);
     }
 }

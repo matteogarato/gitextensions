@@ -11,12 +11,15 @@ public class PwshShell : ShellDescriptor
         Icon = Images.pwsh;
 
         ExecutableName = "pwsh.exe";
-        if (PathUtil.TryFindShellPath(ExecutableName, out string? exePath))
+        if (PathUtil.TryFindShellPath(ExecutableName, out var exePath))
         {
             ExecutablePath = exePath;
             ExecutableCommandLine = exePath.Quote();
         }
     }
 
-    public override string GetChangeDirCommand(string path) => $"cd {path.QuoteNE()}";
+    public override string GetChangeDirCommand(string path)
+    {
+        return $"cd {path.QuoteNe()}";
+    }
 }

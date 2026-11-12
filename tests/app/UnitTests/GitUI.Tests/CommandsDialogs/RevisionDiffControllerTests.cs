@@ -2,7 +2,6 @@
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
 namespace GitUITests.CommandsDialogs;
@@ -10,15 +9,15 @@ namespace GitUITests.CommandsDialogs;
 [Culture("en-US")]
 public class RevisionDiffControllerTests
 {
-    private IGitModule _module = null!;
-    private IFullPathResolver _fullPathResolver = null!;
-    private RevisionDiffController _controller = null!;
+    private readonly RevisionDiffController _controller = null!;
+    private readonly IFullPathResolver _fullPathResolver = null!;
+    private readonly IGitModule _module = null!;
 
     public RevisionDiffControllerTests()
     {
         _module = Substitute.For<IGitModule>();
         _fullPathResolver = Substitute.For<IFullPathResolver>();
-        _controller = new(() => _module, _fullPathResolver);
+        _controller = new RevisionDiffController(() => _module, _fullPathResolver);
     }
 
     [Fact]
@@ -42,7 +41,7 @@ public class RevisionDiffControllerTests
     {
         List<FileStatusItem> files =
         [
-            new(default, new(ObjectId.Random()), new(""))
+            new(default, new GitRevision(ObjectId.Random()), new GitItemStatus(""))
         ];
 
         ((Action)(() => _controller.SaveFiles(files, userSelection: null!))).Should()
@@ -53,14 +52,14 @@ public class RevisionDiffControllerTests
     [Fact]
     public void SaveFiles_should_not_save_single_file_if_selection_cancelled()
     {
-        FileStatusItem item = new(default, new(ObjectId.Random()), new(""));
+        FileStatusItem item = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus(""));
         List<FileStatusItem> files =
         [
             item
         ];
 
         // User cancelled the dialog
-        Func<string, string?> userSelection = (_) => null;
+        Func<string, string?> userSelection = _ => null;
 
         _controller.SaveFiles(files, userSelection);
 
@@ -71,13 +70,13 @@ public class RevisionDiffControllerTests
     [Fact]
     public void SaveFiles_should_save_single_file()
     {
-        FileStatusItem item = new(default, new(ObjectId.Random()), new(""));
+        FileStatusItem item = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus(""));
         List<FileStatusItem> files =
         [
             item
         ];
 
-        Func<string, string?> userSelection = (_) => "c:\\temp\\file.txt";
+        Func<string, string?> userSelection = _ => "c:\\temp\\file.txt";
 
         _controller.SaveFiles(files, userSelection);
 
@@ -88,8 +87,8 @@ public class RevisionDiffControllerTests
     [Fact]
     public void SaveFiles_should_not_save_multi_files_if_selection_cancelled()
     {
-        FileStatusItem item1 = new(default, new(ObjectId.Random()), new("item1"));
-        FileStatusItem item2 = new(default, new(ObjectId.Random()), new("item2"));
+        FileStatusItem item1 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item1"));
+        FileStatusItem item2 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item2"));
         List<FileStatusItem> files =
         [
             item1,
@@ -97,7 +96,7 @@ public class RevisionDiffControllerTests
         ];
 
         // User cancelled the dialog
-        Func<string, string?> userSelection = (_) => null;
+        Func<string, string?> userSelection = _ => null;
 
         _controller.SaveFiles(files, userSelection);
 
@@ -112,14 +111,14 @@ public class RevisionDiffControllerTests
     [InlineData("c:\\temp\\")]
     public void SaveFiles_should_save_multi_files_same_folder(string targetFolder)
     {
-        FileStatusItem item1 = new(default, new(ObjectId.Random()), new("item1"));
-        FileStatusItem item2 = new(default, new(ObjectId.Random()), new("item2"));
-        FileStatusItem item3 = new(default, new(ObjectId.Random()), new("item3"));
+        FileStatusItem item1 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item1"));
+        FileStatusItem item2 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item2"));
+        FileStatusItem item3 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item3"));
         List<FileStatusItem> files =
         [
             item3,
             item1,
-            item2,
+            item2
         ];
 
         _fullPathResolver.Resolve(".").Returns(x => "c:\\temp\\");
@@ -127,7 +126,7 @@ public class RevisionDiffControllerTests
         _fullPathResolver.Resolve(item2.Item.Name).Returns(x => "c:\\temp\\folder1\\item2.txt");
         _fullPathResolver.Resolve(item3.Item.Name).Returns(x => "c:\\temp\\folder1\\folder2\\item3.txt");
 
-        Func<string, string?> userSelection = (_) => targetFolder;
+        Func<string, string?> userSelection = _ => targetFolder;
 
         _controller.SaveFiles(files, userSelection);
 
@@ -138,7 +137,8 @@ public class RevisionDiffControllerTests
         _module.ReceivedWithAnyArgs(3).SaveBlobAs(default!, default!, Arg.Any<CancellationToken>());
         _module.Received(1).SaveBlobAs("c:\\temp\\item1.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
         _module.Received(1).SaveBlobAs("c:\\temp\\folder1\\item2.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
-        _module.Received(1).SaveBlobAs("c:\\temp\\folder1\\folder2\\item3.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
+        _module.Received(1).SaveBlobAs("c:\\temp\\folder1\\folder2\\item3.txt", Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -146,14 +146,14 @@ public class RevisionDiffControllerTests
     [InlineData("c:\\myproject\\src\\")]
     public void SaveFiles_should_save_multi_files_different_folder(string targetFolder)
     {
-        FileStatusItem item1 = new(default, new(ObjectId.Random()), new("item1"));
-        FileStatusItem item2 = new(default, new(ObjectId.Random()), new("item2"));
-        FileStatusItem item3 = new(default, new(ObjectId.Random()), new("item3"));
+        FileStatusItem item1 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item1"));
+        FileStatusItem item2 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item2"));
+        FileStatusItem item3 = new(default, new GitRevision(ObjectId.Random()), new GitItemStatus("item3"));
         List<FileStatusItem> files =
         [
             item1,
             item2,
-            item3,
+            item3
         ];
 
         _fullPathResolver.Resolve(".").Returns(x => "c:\\temp\\");
@@ -161,7 +161,7 @@ public class RevisionDiffControllerTests
         _fullPathResolver.Resolve(item2.Item.Name).Returns(x => "c:\\temp\\folder1\\item2.txt");
         _fullPathResolver.Resolve(item3.Item.Name).Returns(x => "c:\\temp\\folder1\\folder2\\item3.txt");
 
-        Func<string, string?> userSelection = (_) => targetFolder;
+        Func<string, string?> userSelection = _ => targetFolder;
 
         _controller.SaveFiles(files, userSelection);
 
@@ -170,9 +170,12 @@ public class RevisionDiffControllerTests
         _fullPathResolver.Received(1).Resolve(item2.Item.Name);
         _fullPathResolver.Received(1).Resolve(item3.Item.Name);
         _module.ReceivedWithAnyArgs(3).SaveBlobAs(default!, default!, Arg.Any<CancellationToken>());
-        _module.Received(1).SaveBlobAs("c:\\myproject\\src\\item1.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
-        _module.Received(1).SaveBlobAs("c:\\myproject\\src\\folder1\\item2.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
-        _module.Received(1).SaveBlobAs("c:\\myproject\\src\\folder1\\folder2\\item3.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
+        _module.Received(1)
+            .SaveBlobAs("c:\\myproject\\src\\item1.txt", Arg.Any<string>(), Arg.Any<CancellationToken>());
+        _module.Received(1).SaveBlobAs("c:\\myproject\\src\\folder1\\item2.txt", Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+        _module.Received(1).SaveBlobAs("c:\\myproject\\src\\folder1\\folder2\\item3.txt", Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     private static ContextMenuSelectionInfo CreateContextMenuSelectionInfo(
@@ -215,7 +218,7 @@ public class RevisionDiffControllerTests
     [Fact]
     public void BrowseDiff_DifftoolMenu_Default()
     {
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo();
+        var selectionInfo = CreateContextMenuSelectionInfo();
         _controller.ShouldShowDifftoolMenus(selectionInfo).Should().BeTrue();
     }
 
@@ -225,7 +228,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_DifftoolMenu_Selected(int t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
         _controller.ShouldShowDifftoolMenus(selectionInfo).Should().Be(t > 0);
     }
 
@@ -235,7 +238,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_DifftoolMenu_BareRepo(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isBareRepository: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isBareRepository: t);
         _controller.ShouldShowDifftoolMenus(selectionInfo).Should().BeTrue();
     }
 
@@ -245,7 +248,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_DifftoolMenu_DisplayOnly(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: t);
         _controller.ShouldShowDifftoolMenus(selectionInfo).Should().Be(!t);
     }
 
@@ -256,7 +259,7 @@ public class RevisionDiffControllerTests
     [Fact]
     public void BrowseDiff_ResetMenu_Default()
     {
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo();
+        var selectionInfo = CreateContextMenuSelectionInfo();
         _controller.ShouldShowResetFileMenus(selectionInfo).Should().BeTrue();
     }
 
@@ -266,7 +269,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_ResetMenu_Selected(int t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
         _controller.ShouldShowResetFileMenus(selectionInfo).Should().Be(t > 0);
     }
 
@@ -276,7 +279,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_ResetMenu_Tracked(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isAnyTracked: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isAnyTracked: t);
         _controller.ShouldShowResetFileMenus(selectionInfo).Should().Be(t);
     }
 
@@ -286,7 +289,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_ResetMenu_BareRepo(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isBareRepository: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isBareRepository: t);
         _controller.ShouldShowResetFileMenus(selectionInfo).Should().Be(!t);
     }
 
@@ -296,7 +299,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_ResetMenu_DisplayOnly(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: t);
         _controller.ShouldShowResetFileMenus(selectionInfo).Should().Be(!t);
     }
 
@@ -307,7 +310,8 @@ public class RevisionDiffControllerTests
     [Fact]
     public void BrowseDiff_MainMenus_NoSelection()
     {
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(selectedGitItemCount: 0, allFilesExist: false, isAnyTracked: false, supportPatches: false);
+        var selectionInfo = CreateContextMenuSelectionInfo(selectedGitItemCount: 0,
+            allFilesExist: false, isAnyTracked: false, supportPatches: false);
         _controller.ShouldShowMenuSaveAs(selectionInfo).Should().BeFalse();
         _controller.ShouldShowMenuCherryPick(selectionInfo).Should().BeFalse();
         _controller.ShouldShowMenuStage(selectionInfo).Should().BeFalse();
@@ -327,7 +331,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_MainMenus_Default()
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(selectedRevision: rev);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev);
         _controller.ShouldShowMenuSaveAs(selectionInfo).Should().BeTrue();
         _controller.ShouldShowMenuCherryPick(selectionInfo).Should().BeTrue();
         _controller.ShouldShowMenuStage(selectionInfo).Should().BeFalse();
@@ -349,7 +353,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_MainMenus_SingleSelected(int t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(selectedRevision: rev, selectedGitItemCount: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
         _controller.ShouldShowMenuSaveAs(selectionInfo).Should().Be(t != 0);
         _controller.ShouldShowMenuStage(selectionInfo).Should().BeFalse();
         _controller.ShouldShowMenuUnstage(selectionInfo).Should().BeFalse();
@@ -370,7 +374,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_StageMenus_WorkTree(bool t)
     {
         GitRevision rev = new(ObjectId.WorkTreeId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isAnyItemIndex: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isAnyItemIndex: t);
         _controller.ShouldShowMenuUnstage(selectionInfo).Should().Be(t);
     }
 
@@ -380,7 +384,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_StageMenus_Index(bool t)
     {
         GitRevision rev = new(ObjectId.WorkTreeId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isAnyItemWorkTree: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isAnyItemWorkTree: t);
         _controller.ShouldShowMenuStage(selectionInfo).Should().Be(t);
     }
 
@@ -390,7 +394,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_EditOpen_IsAnySubmodule(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(selectedRevision: rev, isAnySubmodule: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isAnySubmodule: t);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().Be(!t);
     }
 
@@ -401,7 +405,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_OpenRevisionFile_Commit(int t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, selectedGitItemCount: t);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().Be(t == 1);
     }
 
@@ -409,7 +413,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_OpenRevisionFile_WorkTree()
     {
         GitRevision rev = new(ObjectId.WorkTreeId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().BeFalse();
     }
 
@@ -417,7 +421,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_OpenRevisionFile_Index()
     {
         GitRevision rev = new(ObjectId.IndexId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().BeFalse();
     }
 
@@ -425,7 +429,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_OpenRevisionFile_DisplayOnly()
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: true);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: true);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().BeFalse();
     }
 
@@ -435,7 +439,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_SupportLinePatches(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, supportPatches: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, supportPatches: t);
         _controller.ShouldShowMenuSaveAs(selectionInfo).Should().BeTrue();
         _controller.ShouldShowMenuCherryPick(selectionInfo).Should().Be(t);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().BeTrue();
@@ -447,7 +451,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_DisplayOnlyDiff(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isDisplayOnlyDiff: t);
         _controller.ShouldShowMenuSaveAs(selectionInfo).Should().Be(!t);
         _controller.ShouldShowMenuOpenRevision(selectionInfo).Should().Be(!t);
     }
@@ -458,7 +462,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_StatusOnlyDiff(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isStatusOnly: t, isAnyTracked: !t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isStatusOnly: t, isAnyTracked: !t);
         _controller.ShouldShowMenuCopyFileName(selectionInfo).Should().Be(!t);
         _controller.ShouldShowMenuShowInFolder(selectionInfo).Should().Be(!t);
         _controller.ShouldShowMenuShowInFileTree(selectionInfo).Should().Be(!t);
@@ -470,7 +474,7 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_ShowInFileTree(bool t)
     {
         GitRevision rev = new(ObjectId.Random());
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isDeleted: t);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isDeleted: t);
         _controller.ShouldShowMenuCopyFileName(selectionInfo).Should().Be(true);
         _controller.ShouldShowMenuShowInFolder(selectionInfo).Should().Be(true);
         _controller.ShouldShowMenuShowInFileTree(selectionInfo).Should().Be(!t);
@@ -482,7 +486,8 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_DeleteFile_WorkTree(bool t)
     {
         GitRevision rev = new(ObjectId.WorkTreeId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, allFilesOrUntrackedDirectoriesExist: t);
+        var selectionInfo =
+            CreateContextMenuSelectionInfo(rev, allFilesOrUntrackedDirectoriesExist: t);
         _controller.ShouldShowMenuDeleteFile(selectionInfo).Should().Be(t);
     }
 
@@ -492,7 +497,8 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_DeleteFile_Index(bool t)
     {
         GitRevision rev = new(ObjectId.IndexId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, allFilesOrUntrackedDirectoriesExist: t);
+        var selectionInfo =
+            CreateContextMenuSelectionInfo(rev, allFilesOrUntrackedDirectoriesExist: t);
         _controller.ShouldShowMenuDeleteFile(selectionInfo).Should().Be(t);
     }
 
@@ -504,7 +510,8 @@ public class RevisionDiffControllerTests
     public void BrowseDiff_Submodules_WorkTree(bool isAnySubmodule, bool submodulesExist, bool expected)
     {
         GitRevision rev = new(ObjectId.WorkTreeId);
-        ContextMenuSelectionInfo selectionInfo = CreateContextMenuSelectionInfo(rev, isAnySubmodule: isAnySubmodule, allDirectoriesExist: submodulesExist);
+        var selectionInfo = CreateContextMenuSelectionInfo(rev, isAnySubmodule: isAnySubmodule,
+            allDirectoriesExist: submodulesExist);
         _controller.ShouldShowSubmoduleMenus(selectionInfo).Should().Be(expected);
     }
 

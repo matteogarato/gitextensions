@@ -1,61 +1,64 @@
 ﻿using GitExtensions.Extensibility;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitCommands.Git;
 
 public interface IRevisionDiffProvider
 {
     /// <summary>
-    /// options to git-diff from GE arguments, including artificial commits
+    ///     options to git-diff from GE arguments, including artificial commits
     /// </summary>
     /// <param name="firstRevision">The first revision, "A"</param>
     /// <param name="secondRevision">The second "current" revision, "B"</param>
     ArgumentString Get(string? firstRevision, string? secondRevision);
 
     /// <summary>
-    /// options to git-diff from GE arguments, including artificial commits
+    ///     options to git-diff from GE arguments, including artificial commits
     /// </summary>
     /// <param name="firstRevision">The first revision, "A"</param>
     /// <param name="secondRevision">The second "current" revision, "B"</param>
     /// <param name="fileName">The file to compare</param>
     /// <param name="oldFileName">The old name of the file</param>
     /// <param name="isTracked">The file is tracked</param>
-    ArgumentString Get(string? firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked);
+    ArgumentString Get(string? firstRevision, string? secondRevision, string? fileName, string? oldFileName,
+        bool isTracked);
 }
 
 /// <summary>
-/// Translate GitRevision including artificial commits to diff options
-/// Closely related to GitRevision.cs
+///     Translate GitRevision including artificial commits to diff options
+///     Closely related to GitRevision.cs
 /// </summary>
 public sealed class RevisionDiffProvider : IRevisionDiffProvider
 {
     // This is an instance class to not have static dependencies in GitModule
-    private const string StagedOpt = "--cached";
+    private const string _stagedOpt = "--cached";
 
     /// <summary>
-    /// options to git-diff from GE arguments, including artificial commits
+    ///     options to git-diff from GE arguments, including artificial commits
     /// </summary>
     /// <param name="firstRevision">The first revision</param>
     /// <param name="secondRevision">The second "current" revision</param>
-    public ArgumentString Get(string? firstRevision, string? secondRevision)
+    ArgumentString IRevisionDiffProvider.Get(string? firstRevision, string? secondRevision)
     {
         return GetInternal(firstRevision, secondRevision);
     }
 
     /// <summary>
-    /// options to git-diff from GE arguments, including artificial commits
+    ///     options to git-diff from GE arguments, including artificial commits
     /// </summary>
     /// <param name="firstRevision">The first revision, "A"</param>
     /// <param name="secondRevision">The second "current" revision, "B"</param>
     /// <param name="fileName">The file to compare</param>
     /// <param name="oldFileName">The old name of the file</param>
     /// <param name="isTracked">The file is tracked</param>
-    public ArgumentString Get(string? firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    ArgumentString IRevisionDiffProvider.Get(string? firstRevision, string? secondRevision, string? fileName,
+        string? oldFileName, bool isTracked)
     {
         return GetInternal(firstRevision, secondRevision, fileName, oldFileName, isTracked);
     }
 
-    private static ArgumentString GetInternal(string? firstRevision, string? secondRevision, string? fileName = null, string? oldFileName = null, bool isTracked = true)
+    private static ArgumentString GetInternal(string? firstRevision, string? secondRevision, string? fileName = null,
+        string? oldFileName = null, bool isTracked = true)
     {
         // Combined Diff artificial commit should not be included in diffs
         if (firstRevision == GitRevision.CombinedDiffGuid || secondRevision == GitRevision.CombinedDiffGuid)
@@ -72,29 +75,30 @@ public sealed class RevisionDiffProvider : IRevisionDiffProvider
         // Note: As artificial are options, diff unstage..unstage and
         // stage..stage will show output, different from e.g. HEAD..HEAD
         // Diff-to-itself is not always disabled or is transient why this is not handled as error in release builds
-        DebugHelpers.Assert(!(firstRevision == secondRevision && (string.IsNullOrEmpty(firstRevision) || firstRevision == StagedOpt)),
+        DebugHelpers.Assert(
+            !(firstRevision == secondRevision && (string.IsNullOrEmpty(firstRevision) || firstRevision == _stagedOpt)),
             "Unexpectedly two identical artificial revisions to diff: " + firstRevision +
             ". This will be displayed as diff to HEAD, not an identical diff.");
 
         // As empty (unstaged) and --cached (staged) are options (not revisions),
         // order must be preserved with -R
         if (firstRevision != secondRevision && (string.IsNullOrEmpty(firstRevision) ||
-                           (firstRevision == StagedOpt && !string.IsNullOrEmpty(secondRevision))))
+                                                (firstRevision == _stagedOpt && !string.IsNullOrEmpty(secondRevision))))
         {
             extra.Add("-R");
         }
 
         // Special case: Remove options comparing worktree-index
-        if ((string.IsNullOrEmpty(firstRevision) && secondRevision == StagedOpt) ||
-            (firstRevision == StagedOpt && string.IsNullOrEmpty(secondRevision)))
+        if ((string.IsNullOrEmpty(firstRevision) && secondRevision == _stagedOpt) ||
+            (firstRevision == _stagedOpt && string.IsNullOrEmpty(secondRevision)))
         {
             firstRevision = secondRevision = "";
         }
 
         // Reorder options - not strictly required
-        if (secondRevision == StagedOpt)
+        if (secondRevision == _stagedOpt)
         {
-            extra.Add(StagedOpt);
+            extra.Add(_stagedOpt);
             secondRevision = "";
         }
 
@@ -120,17 +124,17 @@ public sealed class RevisionDiffProvider : IRevisionDiffProvider
             }
 
             extra.Add("--");
-            extra.Add(fileName.QuoteNE());
-            extra.Add(oldFileName.QuoteNE());
+            extra.Add(fileName.QuoteNe());
+            extra.Add(oldFileName.QuoteNe());
         }
 
         return extra;
     }
 
     /// <summary>
-    /// Translate the revision string to an option string
-    /// Artificial "commits" are options, handle aliases too
-    /// (order and handling of empty arguments is not handled here)
+    ///     Translate the revision string to an option string
+    ///     Artificial "commits" are options, handle aliases too
+    ///     (order and handling of empty arguments is not handled here)
     /// </summary>
     private static string ArtificialToDiffOptions(string? rev)
     {
@@ -143,7 +147,7 @@ public sealed class RevisionDiffProvider : IRevisionDiffProvider
             case "^":
             case GitRevision.WorkTreeGuid + "^":
             case GitRevision.IndexGuid:
-                return StagedOpt;
+                return _stagedOpt;
             case "^^":
             case GitRevision.WorkTreeGuid + "^^":
             case GitRevision.IndexGuid + "^":
@@ -153,7 +157,7 @@ public sealed class RevisionDiffProvider : IRevisionDiffProvider
             case GitRevision.IndexGuid + "^^":
                 return "HEAD^";
             default:
-                return rev.QuoteNE();
+                return rev.QuoteNe();
         }
     }
 }

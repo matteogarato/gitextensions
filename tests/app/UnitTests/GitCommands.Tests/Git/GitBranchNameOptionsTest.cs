@@ -2,21 +2,22 @@
 using GitCommands.Git;
 
 namespace GitCommandsTests.Git;
+
 public class GitBranchNameOptionsTest : IDisposable
 {
     private readonly CultureInfo _currentCulture = CultureInfo.CurrentCulture;
-    private readonly CultureInfo _currentUICulture = CultureInfo.CurrentUICulture;
+    private readonly CultureInfo _currentUiCulture = CultureInfo.CurrentUICulture;
 
     public GitBranchNameOptionsTest()
     {
-        CultureInfo.CurrentCulture = new("en-US");
-        CultureInfo.CurrentUICulture = new("en-US");
+        CultureInfo.CurrentCulture = new CultureInfo("en-US");
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         CultureInfo.CurrentCulture = _currentCulture;
-        CultureInfo.CurrentUICulture = _currentUICulture;
+        CultureInfo.CurrentUICulture = _currentUiCulture;
     }
 
     [Theory]

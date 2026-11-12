@@ -1,5 +1,5 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUI;
+using GitExtUtils.GitUI;
 using ResourceManager;
 
 namespace GitExtensions.Plugins.GitImpact;
@@ -32,12 +32,11 @@ public sealed partial class FormImpact : GitExtensionsFormBase
 
     private void Impact_Invalidated(object? sender, InvalidateEventArgs e)
     {
-        ThreadHelper.JoinableTaskFactory.Run(
-            async () =>
-            {
-                await this.SwitchToMainThreadAsync();
-                UpdateAuthorInfo(Impact.SelectedAuthor);
-            });
+        ThreadHelper.JoinableTaskFactory.Run(async () =>
+        {
+            await this.SwitchToMainThreadAsync();
+            UpdateAuthorInfo(Impact.SelectedAuthor);
+        });
     }
 
     private void UpdateAuthorInfo(string author)
@@ -46,7 +45,7 @@ public sealed partial class FormImpact : GitExtensionsFormBase
 
         if (lblAuthor.Visible)
         {
-            ImpactLoader.DataPoint data = Impact.GetAuthorInfo(author);
+            var data = Impact.GetAuthorInfo(author);
             lblAuthor.Text = string.Format(_authorCommits.Text, author, data.Commits, data.ChangedLines);
             pnlAuthorColor.BackColor = Impact.GetAuthorColor(author);
 

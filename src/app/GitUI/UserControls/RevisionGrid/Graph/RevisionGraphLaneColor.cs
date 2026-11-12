@@ -6,38 +6,42 @@ namespace GitUI.UserControls.RevisionGrid.Graph;
 
 public static class RevisionGraphLaneColor
 {
-    public static int GetColorForLane(int seed)
+    internal static readonly List<Brush> PresetGraphBrushes = [];
+
+    static RevisionGraphLaneColor()
     {
-        return Math.Abs(seed) % PresetGraphBrushes.Count;
+        Color[] branchColors =
+        [
+            .. Enum.GetNames<AppColor>()
+                .Where(name => name.StartsWith(nameof(AppColor.GraphBranch1)[..^1]))
+                .Select(name => Enum.Parse<AppColor>(name).GetThemeColor())
+                .Where(color => !color.IsEmpty)
+                .Distinct()
+        ];
+
+        const int minBranchColors = 4;
+        if (branchColors.Length < minBranchColors)
+        {
+            Trace.WriteLine(
+                @"At least {minBranchColors} different graph colors must be configured - using crying fallback");
+            branchColors = [Color.Cyan, Color.Magenta, Color.Yellow, Color.Lime];
+        }
+
+        foreach (var color in branchColors)
+        {
+            PresetGraphBrushes.Add(new SolidBrush(color));
+        }
+
+        NonRelativeBrush = new SolidBrush(NonRelativeColor);
     }
 
     public static Color NonRelativeColor { get; } = AppColor.GraphNonRelativeBranch.GetThemeColor();
 
     internal static Brush NonRelativeBrush { get; }
 
-    internal static readonly List<Brush> PresetGraphBrushes = [];
-
-    static RevisionGraphLaneColor()
+    public static int GetColorForLane(int seed)
     {
-        Color[] branchColors = [.. Enum.GetNames<AppColor>()
-            .Where(name => name.StartsWith(nameof(AppColor.GraphBranch1)[..^1]))
-            .Select(name => Enum.Parse<AppColor>(name).GetThemeColor())
-            .Where(color => !color.IsEmpty)
-            .Distinct()];
-
-        const int minBranchColors = 4;
-        if (branchColors.Length < minBranchColors)
-        {
-            Trace.WriteLine(@"At least {minBranchColors} different graph colors must be configured - using crying fallback");
-            branchColors = [Color.Cyan, Color.Magenta, Color.Yellow, Color.Lime];
-        }
-
-        foreach (Color color in branchColors)
-        {
-            PresetGraphBrushes.Add(new SolidBrush(color));
-        }
-
-        NonRelativeBrush = new SolidBrush(NonRelativeColor);
+        return Math.Abs(seed) % PresetGraphBrushes.Count;
     }
 
     public static Brush GetBrushForLane(int laneColor)

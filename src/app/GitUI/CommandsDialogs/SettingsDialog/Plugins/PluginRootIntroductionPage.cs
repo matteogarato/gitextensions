@@ -1,7 +1,7 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
-namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
+namespace GitUI.CommandsDialogs.SettingsDialog.Plugins;
 
 public partial class PluginRootIntroductionPage : SettingsPageBase
 {

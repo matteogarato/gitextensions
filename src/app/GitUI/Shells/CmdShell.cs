@@ -11,12 +11,15 @@ public class CmdShell : ShellDescriptor
         Icon = Images.cmd;
 
         ExecutableName = "cmd.exe";
-        if (PathUtil.TryFindShellPath(ExecutableName, out string? exePath))
+        if (PathUtil.TryFindShellPath(ExecutableName, out var exePath))
         {
             ExecutablePath = exePath;
             ExecutableCommandLine = exePath.Quote();
         }
     }
 
-    public override string GetChangeDirCommand(string path) => $"cd /D {path.QuoteNE()}";
+    public override string GetChangeDirCommand(string path)
+    {
+        return $"cd /D {path.QuoteNe()}";
+    }
 }

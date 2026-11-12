@@ -3,8 +3,8 @@ namespace GitExtensions.Extensibility.Settings;
 public static class PathSetting
 {
     /// <summary>
-    ///  Converts a path value with POSIX directory separators for storing as git config setting.
-    ///  UNC paths need to be stored with backward slashes.
+    ///     Converts a path value with POSIX directory separators for storing as git config setting.
+    ///     UNC paths need to be stored with backward slashes.
     /// </summary>
     public static string? ConvertPathToGitSetting(this string? path)
     {

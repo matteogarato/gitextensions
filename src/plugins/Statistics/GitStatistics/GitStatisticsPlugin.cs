@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
@@ -16,8 +16,11 @@ public class GitStatisticsPlugin : GitPluginBase, IGitPluginForRepository
         "*.vbs;*.vb;*.fs;*.fsx;*.sql;*.aspx;*.asp;*.php;*.nav;*.pas;*.py;*.rb;*.js;*.jsm;*.ts;*.mk;*.java;*.os;*.bsl";
 
     private readonly StringSetting _codeFiles = new("Code files", _defaultCodeFiles);
-    private readonly StringSetting _ignoreDirectories = new("Directories to ignore (EndsWith)", @"\Debug;\Release;\obj;\bin;\lib");
-    private readonly BoolSetting _ignoreSubmodules = new("Ignore submodules", defaultValue: true);
+
+    private readonly StringSetting _ignoreDirectories =
+        new("Directories to ignore (EndsWith)", @"\Debug;\Release;\obj;\bin;\lib");
+
+    private readonly BoolSetting _ignoreSubmodules = new("Ignore submodules", true);
 
     public GitStatisticsPlugin() : base(true)
     {
@@ -34,19 +37,21 @@ public class GitStatisticsPlugin : GitPluginBase, IGitPluginForRepository
         yield return _ignoreSubmodules;
     }
 
-    public override bool Execute(GitUIEventArgs args)
+    public override bool Execute(GitUiEventArgs args)
     {
         if (string.IsNullOrEmpty(args.GitModule.WorkingDir))
         {
             return false;
         }
 
-        bool countSubmodule = !_ignoreSubmodules.ValueOrDefault(Settings);
+        var countSubmodule = !_ignoreSubmodules.ValueOrDefault(Settings);
 
-        FormGitStatistics formStatistics = new(args.GitUICommands.GetRequiredService<IGitExecutorProvider>(), args.GitModule, _codeFiles.ValueOrDefault(Settings), countSubmodule)
-        {
-            DirectoriesToIgnore = _ignoreDirectories.ValueOrDefault(Settings).Replace("/", "\\")
-        };
+        FormGitStatistics formStatistics =
+            new(args.GitUiCommands.GetRequiredService<IGitExecutorProvider>(), args.GitModule,
+                _codeFiles.ValueOrDefault(Settings), countSubmodule)
+            {
+                DirectoriesToIgnore = _ignoreDirectories.ValueOrDefault(Settings).Replace("/", "\\")
+            };
 
         using (formStatistics)
         {

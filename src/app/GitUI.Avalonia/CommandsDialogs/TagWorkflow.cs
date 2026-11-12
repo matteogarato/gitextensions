@@ -7,7 +7,7 @@ using GitExtensions.Extensibility.Git;
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  The supported options for creating a tag.
+///     The supported options for creating a tag.
 /// </summary>
 /// <param name="Name">The tag name.</param>
 /// <param name="ObjectId">The commit to tag.</param>
@@ -16,28 +16,34 @@ namespace GitUI.CommandsDialogs;
 public sealed record TagConfiguration(string Name, ObjectId ObjectId, TagOperation Operation, string Message);
 
 /// <summary>
-///  Validates and builds tag operations with the shared Git command factories.
+///     Validates and builds tag operations with the shared Git command factories.
 /// </summary>
 public static class TagWorkflow
 {
     /// <summary>
-    ///  Only real commits can be tagged.
+    ///     Only real commits can be tagged.
     /// </summary>
-    public static bool CanCreateTag(ObjectId objectId) => !objectId.IsZero && !objectId.IsArtificial;
+    public static bool CanCreateTag(ObjectId objectId)
+    {
+        return !objectId.IsZero && !objectId.IsArtificial;
+    }
 
     /// <summary>
-    ///  Only tags can be deleted from the tag context menu.
+    ///     Only tags can be deleted from the tag context menu.
     /// </summary>
-    public static bool CanDeleteTag(IGitRef? gitRef) => gitRef is { IsTag: true };
+    public static bool CanDeleteTag(IGitRef? gitRef)
+    {
+        return gitRef is { IsTag: true };
+    }
 
     /// <summary>
-    ///  Returns an error when the name is invalid, already exists, or the message is missing for an annotated tag.
+    ///     Returns an error when the name is invalid, already exists, or the message is missing for an annotated tag.
     /// </summary>
     /// <param name="module">The active repository module.</param>
     /// <param name="configuration">The options selected for tag creation.</param>
     public static string? ValidateCreate(IGitModule module, TagConfiguration configuration)
     {
-        string name = configuration.Name.Trim();
+        var name = configuration.Name.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
             return TranslatedStrings.EnterTagNameError;
@@ -67,22 +73,29 @@ public static class TagWorkflow
     }
 
     /// <summary>
-    ///  Builds the create-tag command, passing an optional temporary annotation-message file.
+    ///     Builds the create-tag command, passing an optional temporary annotation-message file.
     /// </summary>
     /// <param name="configuration">The tag options.</param>
     /// <param name="messageFileName">The file containing the annotation message, when applicable.</param>
     /// <param name="getPathForGitExecution">Converts a path to the form Git expects.</param>
     /// <returns>A state-changing local Git command.</returns>
-    public static IGitCommand BuildCreate(TagConfiguration configuration, string? messageFileName, Func<string?, string?> getPathForGitExecution)
-        => Commands.CreateTag(
-            new GitCreateTagArgs(configuration.Name, configuration.ObjectId, configuration.Operation, configuration.Message),
+    public static IGitCommand BuildCreate(TagConfiguration configuration, string? messageFileName,
+        Func<string?, string?> getPathForGitExecution)
+    {
+        return Commands.CreateTag(
+            new GitCreateTagArgs(configuration.Name, configuration.ObjectId, configuration.Operation,
+                configuration.Message),
             messageFileName,
             getPathForGitExecution);
+    }
 
     /// <summary>
-    ///  Builds a local tag deletion command.
+    ///     Builds a local tag deletion command.
     /// </summary>
     /// <param name="tagName">The tag name to delete.</param>
     /// <returns>A state-changing local Git command.</returns>
-    public static IGitCommand BuildDelete(string tagName) => Commands.DeleteTag(tagName);
+    public static IGitCommand BuildDelete(string tagName)
+    {
+        return Commands.DeleteTag(tagName);
+    }
 }

@@ -20,13 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Resources\IconAutoCompileSubmodules.png" />
+    <None Include="Resources\IconAutoCompileSubmodules.png"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Resources -->
-    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
-    <Compile Update="Properties\Resources.Designer.cs" AutoGen="True" DependentUpon="Resources.resx" DesignTime="True" />
+    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs"/>
+    <Compile Update="Properties\Resources.Designer.cs" AutoGen="True" DependentUpon="Resources.resx" DesignTime="True"/>
   </ItemGroup>
 
 </Project>

@@ -1,13 +1,14 @@
 ﻿using GitCommands.Git;
-using GitUIPluginInterfaces;
+using GitExtensions.Extensibility.Git;
 
 namespace GitCommandsTests.Git;
+
 public class RevisionDiffProviderTest
 {
     // See RevisionDiffProvider.ArtificialToDiffOptions() for possible "aliases" for artificial commits
     // All variants are not tested in all situations
 
-    private RevisionDiffProvider _revisionDiffProvider = null!;
+    private readonly RevisionDiffProvider _revisionDiffProvider = null!;
 
     public RevisionDiffProviderTest()
     {
@@ -44,7 +45,8 @@ public class RevisionDiffProviderTest
     [InlineData("", GitRevision.CombinedDiffGuid)]
     public void RevisionDiffProvider_should_throw_if_any_combined_diff(string firstRevision, string? secondRevision)
     {
-        ((Action)(() => _revisionDiffProvider.Get(firstRevision, secondRevision))).Should().Throw<ArgumentOutOfRangeException>();
+        ((Action)(() => _revisionDiffProvider.Get(firstRevision, secondRevision))).Should()
+            .Throw<ArgumentOutOfRangeException>();
     }
 
     [Theory]
@@ -105,48 +107,60 @@ public class RevisionDiffProviderTest
     // Standard usage when filename is included
     [Theory]
     [InlineData("123456789", GitRevision.WorkTreeGuid, "a.txt", null, true)]
-    public void RevisionDiffProvider_fileName_tracked(string firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    public void RevisionDiffProvider_fileName_tracked(string firstRevision, string? secondRevision, string? fileName,
+        string? oldFileName, bool isTracked)
     {
-        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should().Be("\"123456789\" -- \"a.txt\"");
+        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should()
+            .Be("\"123456789\" -- \"a.txt\"");
     }
 
     // If fileName is null, ignore oldFileName and tracked
     [Theory]
     [InlineData("123456789", "HEAD", null, "b.txt", true)]
-    public void RevisionDiffProvider_fileName_null_with_old_name(string firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    public void RevisionDiffProvider_fileName_null_with_old_name(string firstRevision, string? secondRevision,
+        string? fileName, string? oldFileName, bool isTracked)
     {
-        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should().Be("\"123456789\" \"HEAD\"");
+        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should()
+            .Be("\"123456789\" \"HEAD\"");
     }
 
     // Include old filename if is included
     [Theory]
     [InlineData("123456789", "234567890", "a.txt", "b.txt", true)]
-    public void RevisionDiffProvider_fileName_old_filename(string firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    public void RevisionDiffProvider_fileName_old_filename(string firstRevision, string? secondRevision,
+        string? fileName, string? oldFileName, bool isTracked)
     {
-        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should().Be("\"123456789\" \"234567890\" -- \"a.txt\" \"b.txt\"");
+        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should()
+            .Be("\"123456789\" \"234567890\" -- \"a.txt\" \"b.txt\"");
     }
 
     // normal test case when untracked is set
     [Theory]
     [InlineData(GitRevision.IndexGuid, GitRevision.WorkTreeGuid, "a.txt", null, false)]
-    public void RevisionDiffProvider_fileName_untracked(string firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    public void RevisionDiffProvider_fileName_untracked(string firstRevision, string? secondRevision, string? fileName,
+        string? oldFileName, bool isTracked)
     {
-        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should().Be("--no-index -- \"/dev/null\" \"a.txt\"");
+        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should()
+            .Be("--no-index -- \"/dev/null\" \"a.txt\"");
     }
 
     // If fileName is null, ignore oldFileName and tracked
     [Theory]
     [InlineData(GitRevision.IndexGuid, GitRevision.WorkTreeGuid, null, "b.txt", false)]
-    public void RevisionDiffProvider_fileName_null_Untracked(string firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    public void RevisionDiffProvider_fileName_null_Untracked(string firstRevision, string? secondRevision,
+        string? fileName, string? oldFileName, bool isTracked)
     {
-        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should().BeEmpty();
+        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should()
+            .BeEmpty();
     }
 
     // Ignore revisions for untracked
     [Theory]
     [InlineData("123456789", "234567890", "a.txt", "b.txt", false)]
-    public void RevisionDiffProvider_fileName_old_filename_Untracked(string firstRevision, string? secondRevision, string? fileName, string? oldFileName, bool isTracked)
+    public void RevisionDiffProvider_fileName_old_filename_Untracked(string firstRevision, string? secondRevision,
+        string? fileName, string? oldFileName, bool isTracked)
     {
-        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should().Be("--no-index -- \"/dev/null\" \"a.txt\"");
+        _revisionDiffProvider.Get(firstRevision, secondRevision, fileName, oldFileName, isTracked).Arguments.Should()
+            .Be("--no-index -- \"/dev/null\" \"a.txt\"");
     }
 }

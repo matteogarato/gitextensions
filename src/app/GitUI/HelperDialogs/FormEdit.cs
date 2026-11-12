@@ -1,10 +1,11 @@
 ﻿using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 
 namespace GitUI.HelperDialogs;
 
 public partial class FormEdit : GitModuleForm
 {
-    public FormEdit(IGitUICommands commands, string text, string filename = "")
+    public FormEdit(IGitUiCommands commands, string text, string filename = "")
         : base(commands)
     {
         InitializeComponent();

@@ -6,15 +6,16 @@
 
 using System.Runtime.InteropServices;
 using BugReporter.Serialization;
-using GitCommands;
+using GitCommands.Settings;
 
 namespace BugReporter.Info;
 
 public class GeneralInfo
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="GeneralInfo"/> class. This is the default constructor provided for XML
-    /// serialization and de-serialization.
+    ///     Initializes a new instance of the <see cref="GeneralInfo" /> class. This is the default constructor provided for
+    ///     XML
+    ///     serialization and de-serialization.
     /// </summary>
     public GeneralInfo()
     {
@@ -49,7 +50,8 @@ public class GeneralInfo
             {
                 TargetSite = serializableException.TargetSite;
             }
-            else if (serializableException.InnerException is not null && !string.IsNullOrEmpty(serializableException.InnerException.TargetSite))
+            else if (serializableException.InnerException is not null &&
+                     !string.IsNullOrEmpty(serializableException.InnerException.TargetSite))
             {
                 TargetSite = serializableException.InnerException.TargetSite;
             }
@@ -69,7 +71,7 @@ public class GeneralInfo
     public string? HostApplication { get; set; }
 
     /// <summary>
-    /// Gets or sets AssemblyFileVersion of host assembly.
+    ///     Gets or sets AssemblyFileVersion of host assembly.
     /// </summary>
     public string? HostApplicationVersion { get; set; }
 

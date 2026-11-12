@@ -1,28 +1,41 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitUI.HelperDialogs;
-using GitUIPluginInterfaces;
 using ResourceManager;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormArchive : GitModuleForm
 {
-    private readonly TranslationString _saveFileDialogFilterZip =
-        new("Zip file (*.zip)");
-
-    private readonly TranslationString _saveFileDialogFilterTar =
-        new("Tar file (*.tar)");
+    private readonly TranslationString _noRevisionSelected =
+        new("You need to choose a target revision.");
 
     private readonly TranslationString _saveFileDialogCaption =
         new("Save archive as");
 
-    private readonly TranslationString _noRevisionSelected =
-        new("You need to choose a target revision.");
+    private readonly TranslationString _saveFileDialogFilterTar =
+        new("Tar file (*.tar)");
+
+    private readonly TranslationString _saveFileDialogFilterZip =
+        new("Zip file (*.zip)");
+
+    private GitRevision? _diffSelectedRevision;
 
     private GitRevision? _selectedRevision;
+
+    public FormArchive(IGitUiCommands commands)
+        : base(commands)
+    {
+        InitializeComponent();
+        InitializeComplete();
+
+        labelAuthor.Font = new Font(labelAuthor.Font, FontStyle.Bold);
+        labelMessage.Font = new Font(labelMessage.Font, FontStyle.Bold);
+    }
+
     public GitRevision? SelectedRevision
     {
-        get { return _selectedRevision; }
+        get => _selectedRevision;
         set
         {
             _selectedRevision = value;
@@ -30,10 +43,9 @@ public partial class FormArchive : GitModuleForm
         }
     }
 
-    private GitRevision? _diffSelectedRevision;
     private GitRevision? DiffSelectedRevision
     {
-        get { return _diffSelectedRevision; }
+        get => _diffSelectedRevision;
         set
         {
             _diffSelectedRevision = value;
@@ -48,7 +60,8 @@ public partial class FormArchive : GitModuleForm
             }
             else
             {
-                labelDateCaption.Text = $"{ResourceManager.TranslatedStrings.CommitDate}: {_diffSelectedRevision.CommitDate}";
+                labelDateCaption.Text =
+                    $"{ResourceManager.TranslatedStrings.CommitDate}: {_diffSelectedRevision.CommitDate}";
                 labelAuthor.Text = _diffSelectedRevision.Author;
                 gbDiffRevision.Text = _diffSelectedRevision.ObjectId.ToShortString();
                 labelMessage.Text = _diffSelectedRevision.Subject;
@@ -76,22 +89,6 @@ public partial class FormArchive : GitModuleForm
         }
     }
 
-    private enum OutputFormat
-    {
-        Zip,
-        Tar
-    }
-
-    public FormArchive(IGitUICommands commands)
-        : base(commands)
-    {
-        InitializeComponent();
-        InitializeComplete();
-
-        labelAuthor.Font = new Font(labelAuthor.Font, System.Drawing.FontStyle.Bold);
-        labelMessage.Font = new Font(labelMessage.Font, System.Drawing.FontStyle.Bold);
-    }
-
     private void FormArchive_Load(object sender, EventArgs e)
     {
         buttonArchiveRevision.Focus();
@@ -103,19 +100,23 @@ public partial class FormArchive : GitModuleForm
     {
         if (checkboxRevisionFilter.Checked && DiffSelectedRevision is null)
         {
-            MessageBoxes.Show(this, _noRevisionSelected.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            MessageBoxes.Show(this, _noRevisionSelected.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                MessageBoxIcon.Exclamation);
             return;
         }
 
-        string? revision = SelectedRevision?.Guid;
+        var revision = SelectedRevision?.Guid;
 
-        string fileFilterCaption = GetSelectedOutputFormat() == OutputFormat.Zip ? _saveFileDialogFilterZip.Text : _saveFileDialogFilterTar.Text;
-        string fileFilterEnding = GetSelectedOutputFormat() == OutputFormat.Zip ? "zip" : "tar";
+        var fileFilterCaption = GetSelectedOutputFormat() == OutputFormat.Zip
+            ? _saveFileDialogFilterZip.Text
+            : _saveFileDialogFilterTar.Text;
+        var fileFilterEnding = GetSelectedOutputFormat() == OutputFormat.Zip ? "zip" : "tar";
 
         // TODO (feature): if there is a tag on the revision use the tag name as suggestion
         // TODO (feature): let user decide via GUI
-        string filenameSuggestion = string.Format("{0}_{1}", new DirectoryInfo(Module.WorkingDir).Name, revision);
-        if (checkBoxPathFilter.Checked && textBoxPaths.Lines.Length == 1 && !string.IsNullOrWhiteSpace(textBoxPaths.Lines[0]))
+        var filenameSuggestion = string.Format("{0}_{1}", new DirectoryInfo(Module.WorkingDir).Name, revision);
+        if (checkBoxPathFilter.Checked && textBoxPaths.Lines.Length == 1 &&
+            !string.IsNullOrWhiteSpace(textBoxPaths.Lines[0]))
         {
             filenameSuggestion += "_" + textBoxPaths.Lines[0].Trim().Replace(".", "_");
         }
@@ -128,10 +129,11 @@ public partial class FormArchive : GitModuleForm
         };
         if (saveFileDialog.ShowDialog(this) == DialogResult.OK)
         {
-            string format = GetSelectedOutputFormat() == OutputFormat.Zip ? "zip" : "tar";
+            var format = GetSelectedOutputFormat() == OutputFormat.Zip ? "zip" : "tar";
 
-            string arguments = string.Format(@"archive --format=""{0}"" {1} --output ""{2}"" {3}", format, revision, saveFileDialog.FileName, GetPathArgumentFromGui());
-            FormProcess.ShowDialog(this, UICommands, arguments, Module.WorkingDir, input: null, useDialogSettings: true);
+            var arguments = string.Format(@"archive --format=""{0}"" {1} --output ""{2}"" {3}", format, revision,
+                saveFileDialog.FileName, GetPathArgumentFromGui());
+            FormProcess.ShowDialog(this, UiCommands, arguments, Module.WorkingDir, null, true);
             Close();
         }
     }
@@ -143,23 +145,23 @@ public partial class FormArchive : GitModuleForm
             // 1. get all lines (paths) from text box
             // 2. wrap lines that are not empty with ""
             // 3. join together with space as separator
-            return string.Join(" ", textBoxPaths.Lines.Select(a => a.QuoteNE()));
+            return string.Join(" ", textBoxPaths.Lines.Select(a => a.QuoteNe()));
         }
-        else if (checkboxRevisionFilter.Checked)
+
+        if (checkboxRevisionFilter.Checked)
         {
             // 1. get all changed (and not deleted files) from selected to current revision
-            IEnumerable<GitItemStatus> files = UICommands.Module
-                                .GetDiffFilesWithUntracked(DiffSelectedRevision?.Guid, SelectedRevision?.Guid, StagedStatus.None, noCache: false, cancellationToken: default)
-                                .Where(f => !f.IsDeleted);
+            var files = UiCommands.Module
+                .GetDiffFilesWithUntracked(DiffSelectedRevision?.Guid, SelectedRevision?.Guid, StagedStatus.None,
+                    noCache: false, cancellationToken: default)
+                .Where(f => !f.IsDeleted);
 
             // 2. wrap file names with ""
             // 3. join together with space as separator
-            return string.Join(" ", files.Select(f => f.Name.QuoteNE()));
+            return string.Join(" ", files.Select(f => f.Name.QuoteNe()));
         }
-        else
-        {
-            return "";
-        }
+
+        return "";
     }
 
     private OutputFormat GetSelectedOutputFormat()
@@ -169,7 +171,7 @@ public partial class FormArchive : GitModuleForm
 
     private void btnChooseRevision_Click(object sender, EventArgs e)
     {
-        using FormChooseCommit chooseForm = new(UICommands, SelectedRevision?.Guid);
+        using FormChooseCommit chooseForm = new(UiCommands, SelectedRevision?.Guid);
         if (chooseForm.ShowDialog(this) == DialogResult.OK && chooseForm.SelectedRevision is not null)
         {
             SelectedRevision = chooseForm.SelectedRevision;
@@ -187,7 +189,8 @@ public partial class FormArchive : GitModuleForm
 
     private void btnDiffChooseRevision_Click(object sender, EventArgs e)
     {
-        using FormChooseCommit chooseForm = new(UICommands, DiffSelectedRevision is not null ? DiffSelectedRevision.Guid : string.Empty);
+        using FormChooseCommit chooseForm = new(UiCommands,
+            DiffSelectedRevision is not null ? DiffSelectedRevision.Guid : string.Empty);
         if (chooseForm.ShowDialog(this) == DialogResult.OK && chooseForm.SelectedRevision is not null)
         {
             DiffSelectedRevision = chooseForm.SelectedRevision;
@@ -205,5 +208,11 @@ public partial class FormArchive : GitModuleForm
         {
             checkBoxPathFilter.Checked = false;
         }
+    }
+
+    private enum OutputFormat
+    {
+        Zip,
+        Tar
     }
 }

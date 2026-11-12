@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
 using ResourceManager;
@@ -8,13 +8,13 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class ColorsSettingsPage : SettingsPageWithHeader, IColorsSettingsPage
 {
-    private readonly ColorsSettingsPageController _controller;
-
-    private static readonly TranslationString FormatBuiltinThemeName =
+    private static readonly TranslationString _formatBuiltinThemeName =
         new("{0}");
 
-    private static readonly TranslationString FormatUserDefinedThemeName =
+    private static readonly TranslationString _formatUserDefinedThemeName =
         new("{0}, user-defined");
+
+    private readonly ColorsSettingsPageController _controller;
 
     public ColorsSettingsPage(IServiceProvider serviceProvider)
         : base(serviceProvider)
@@ -29,16 +29,13 @@ public partial class ColorsSettingsPage : SettingsPageWithHeader, IColorsSetting
         InitializeComplete();
     }
 
-    public ThemeId SelectedThemeId
+    ThemeId IColorsSettingsPage.SelectedThemeId
     {
-        get
-        {
-            return ((FormattedThemeId)_NO_TRANSLATE_cbSelectTheme.SelectedItem!).ThemeId;
-        }
+        get => ((FormattedThemeId)_NO_TRANSLATE_cbSelectTheme.SelectedItem!).ThemeId;
         set
         {
             FormattedThemeId formattedThemeId = new(value);
-            int index = _NO_TRANSLATE_cbSelectTheme.Items.IndexOf(formattedThemeId);
+            var index = _NO_TRANSLATE_cbSelectTheme.Items.IndexOf(formattedThemeId);
             if (index < 0)
             {
                 // Handle case when selected theme is missing gracefully.
@@ -47,7 +44,7 @@ public partial class ColorsSettingsPage : SettingsPageWithHeader, IColorsSetting
                 // - user saves app settings
                 // - user deletes the file with custom theme
                 // on first install; suppress MessageBox
-                string theme = formattedThemeId.ToString();
+                var theme = formattedThemeId.ToString();
                 if (!string.IsNullOrWhiteSpace(theme))
                 {
                     MessageBoxes.ShowError(FindForm(), $"Theme not found: {theme}");
@@ -60,7 +57,7 @@ public partial class ColorsSettingsPage : SettingsPageWithHeader, IColorsSetting
         }
     }
 
-    public string[] SelectedThemeVariations
+    string[] IColorsSettingsPage.SelectedThemeVariations
     {
         get => chkColorblind.Checked
             ? [ThemeVariations.Colorblind]
@@ -69,32 +66,44 @@ public partial class ColorsSettingsPage : SettingsPageWithHeader, IColorsSetting
         set => chkColorblind.Checked = value.Contains(ThemeVariations.Colorblind);
     }
 
-    public bool UseSystemVisualStyle
+    bool IColorsSettingsPage.UseSystemVisualStyle
     {
         get => chkUseSystemVisualStyle.Checked;
         set => chkUseSystemVisualStyle.Checked = value;
     }
 
-    public bool LabelRestartIsNeededVisible
+    bool IColorsSettingsPage.LabelRestartIsNeededVisible
     {
         get => lblRestartNeeded.Visible;
         set => lblRestartNeeded.Visible = value;
     }
 
-    public bool IsChoosingVisualStyleEnabled
+    bool IColorsSettingsPage.IsChoosingVisualStyleEnabled
     {
         get => chkUseSystemVisualStyle.Enabled;
         set => chkUseSystemVisualStyle.Enabled = value;
     }
 
-    public void ShowThemeLoadingErrorMessage(ThemeId themeId, string[] variations, Exception ex)
+    void IColorsSettingsPage.ShowThemeLoadingErrorMessage(ThemeId themeId, string[] variations, Exception ex)
     {
         Trace.WriteLine($"Failed to load theme {themeId.Name}: {ex}");
-        string variationsStr = string.Concat(variations.Select(_ => "." + _));
-        string identifier = new FormattedThemeId(themeId).ToString();
+        var variationsStr = string.Concat(variations.Select(_ => "." + _));
+        var identifier = new FormattedThemeId(themeId).ToString();
         AppSettings.ThemeId = ThemeId.DefaultLight;
         MessageBoxes.ShowError(this, $"Failed to load theme {identifier}{variationsStr}: {ex.Message}"
-            + $"{Environment.NewLine}{Environment.NewLine}See also https://github.com/gitextensions/gitextensions/wiki/Dark-Mode");
+                                     + $"{Environment.NewLine}{Environment.NewLine}See also https://github.com/gitextensions/gitextensions/wiki/Dark-Mode");
+    }
+
+    void IColorsSettingsPage.PopulateThemeMenu(IEnumerable<ThemeId> themeIds)
+    {
+        _NO_TRANSLATE_cbSelectTheme.Items.Clear();
+        object[] formattedThemeIds =
+        [
+            .. themeIds
+                .Select(id => new FormattedThemeId(id))
+                .Cast<object>()
+        ];
+        _NO_TRANSLATE_cbSelectTheme.Items.AddRange(formattedThemeIds);
     }
 
     protected override void OnRuntimeLoad()
@@ -133,62 +142,68 @@ public partial class ColorsSettingsPage : SettingsPageWithHeader, IColorsSetting
         base.PageToSettings();
     }
 
-    public void PopulateThemeMenu(IEnumerable<ThemeId> themeIds)
+    private void ComboBoxTheme_SelectedIndexChanged(object? sender, EventArgs e)
     {
-        _NO_TRANSLATE_cbSelectTheme.Items.Clear();
-        object[] formattedThemeIds = [.. themeIds
-            .Select(id => new FormattedThemeId(id))
-            .Cast<object>()];
-        _NO_TRANSLATE_cbSelectTheme.Items.AddRange(formattedThemeIds);
+        _controller.HandleSelectedThemeChanged();
     }
 
-    private void ComboBoxTheme_SelectedIndexChanged(object? sender, EventArgs e) =>
-        _controller.HandleSelectedThemeChanged();
-
-    private void ChkUseSystemVisualStyle_CheckedChanged(object? sender, EventArgs e) =>
+    private void ChkUseSystemVisualStyle_CheckedChanged(object? sender, EventArgs e)
+    {
         _controller.HandleUseSystemVisualStyleChanged();
+    }
 
-    private void ChkColorblind_CheckedChanged(object? sender, EventArgs e) =>
+    private void ChkColorblind_CheckedChanged(object? sender, EventArgs e)
+    {
         _controller.HandleUseColorblindVariationChanged();
+    }
 
     private void tsmiApplicationFolder_Click(object sender, EventArgs e)
-        => _controller.ShowAppThemesDirectory();
-
-    private void tsmiUserFolder_Click(object sender, EventArgs e) =>
-        _controller.ShowUserThemesDirectory();
-
-    private readonly struct FormattedThemeId
     {
-        public FormattedThemeId(ThemeId themeId)
+        _controller.ShowAppThemesDirectory();
+    }
+
+    private void tsmiUserFolder_Click(object sender, EventArgs e)
+    {
+        _controller.ShowUserThemesDirectory();
+    }
+
+    private readonly struct FormattedThemeId(ThemeId themeId)
+    {
+        public ThemeId ThemeId { get; } = themeId;
+
+        public override bool Equals(object? obj)
         {
-            ThemeId = themeId;
+            return obj is FormattedThemeId other && Equals(other);
         }
 
-        public ThemeId ThemeId { get; }
+        public override readonly int GetHashCode()
+        {
+            return ThemeId.GetHashCode();
+        }
 
-        public override bool Equals(object? obj) =>
-            obj is FormattedThemeId other && Equals(other);
+        public static bool operator ==(FormattedThemeId left, FormattedThemeId right)
+        {
+            return left.Equals(right);
+        }
 
-        public override readonly int GetHashCode() =>
-            ThemeId.GetHashCode();
-
-        public static bool operator ==(FormattedThemeId left, FormattedThemeId right) =>
-            left.Equals(right);
-
-        public static bool operator !=(FormattedThemeId left, FormattedThemeId right) =>
-            !left.Equals(right);
+        public static bool operator !=(FormattedThemeId left, FormattedThemeId right)
+        {
+            return !left.Equals(right);
+        }
 
         public override readonly string ToString()
         {
             if (ThemeId.IsBuiltin)
             {
-                return string.Format(FormatBuiltinThemeName.Text, ThemeId.Name);
+                return string.Format(_formatBuiltinThemeName.Text, ThemeId.Name);
             }
 
-            return string.Format(FormatUserDefinedThemeName.Text, ThemeId.Name);
+            return string.Format(_formatUserDefinedThemeName.Text, ThemeId.Name);
         }
 
-        private readonly bool Equals(FormattedThemeId other) =>
-            ThemeId.Equals(other.ThemeId);
+        private readonly bool Equals(FormattedThemeId other)
+        {
+            return ThemeId.Equals(other.ThemeId);
+        }
     }
 }

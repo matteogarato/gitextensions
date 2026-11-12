@@ -1,20 +1,14 @@
 ﻿namespace GitCommands.Submodules;
 
-public class SubmoduleStatusEventArgs : EventArgs
+public class SubmoduleStatusEventArgs(SubmoduleInfoResult info, bool structureUpdated, CancellationToken token)
+    : EventArgs
 {
-    public SubmoduleInfoResult Info { get; }
+    public SubmoduleInfoResult Info { get; } = info;
 
     /// <summary>
-    /// First update of the submodule structure. Status of the submodule will be updated asynchronously.
+    ///     First update of the submodule structure. Status of the submodule will be updated asynchronously.
     /// </summary>
-    public bool StructureUpdated { get; }
+    public bool StructureUpdated { get; } = structureUpdated;
 
-    public CancellationToken Token { get; }
-
-    public SubmoduleStatusEventArgs(SubmoduleInfoResult info, bool structureUpdated, CancellationToken token)
-    {
-        Info = info;
-        Token = token;
-        StructureUpdated = structureUpdated;
-    }
+    public CancellationToken Token { get; } = token;
 }

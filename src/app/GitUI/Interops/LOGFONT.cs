@@ -1,13 +1,13 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace System;
+namespace GitUI.Interops;
 
 internal static partial class NativeMethods
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    public struct LOGFONT
+    public struct Logfont
     {
-        public const int LF_FACESIZE = 32;
+        public const int LfFacesize = 32;
         public int lfHeight;
         public int lfWidth;
         public int lfEscapement;
@@ -21,7 +21,8 @@ internal static partial class NativeMethods
         public byte lfClipPrecision;
         public byte lfQuality;
         public byte lfPitchAndFamily;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = LF_FACESIZE)]
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = LfFacesize)]
         public string lfFaceName;
     }
 }

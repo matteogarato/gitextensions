@@ -1,16 +1,19 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Layout;
+using GitUI.Compat;
 using ResourceManager;
+using Point = System.Drawing.Point;
 
 namespace GitUI.UserControls.RevisionGrid;
 
-internal partial class FormQuickItemSelector : GitExtensionsFormBase
+internal class FormQuickItemSelector : GitExtensionsFormBase
 {
-    private readonly ListBox _itemsList = new();
     private readonly Button _actionButton = new();
     private readonly TranslationString _cancelText = new("Cancel");
+    private readonly ListBox _itemsList = new();
     private readonly TranslationString _selectText = new("Select");
 
     public FormQuickItemSelector()
@@ -23,7 +26,7 @@ internal partial class FormQuickItemSelector : GitExtensionsFormBase
 
         _itemsList.ItemTemplate = new FuncDataTemplate<ItemData>(
             (item, _) => new TextBlock { Text = item.Label },
-            supportsRecycling: false);
+            false);
         _itemsList.MinWidth = 300;
         _itemsList.MaxHeight = 320;
         _itemsList.DoubleTapped += (_, _) => AcceptSelection();
@@ -41,7 +44,7 @@ internal partial class FormQuickItemSelector : GitExtensionsFormBase
 
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 8,
             Children =
             {
@@ -51,15 +54,18 @@ internal partial class FormQuickItemSelector : GitExtensionsFormBase
                     Orientation = Orientation.Horizontal,
                     HorizontalAlignment = HorizontalAlignment.Right,
                     Spacing = 8,
-                    Children = { _actionButton, cancelButton },
-                },
-            },
+                    Children = { _actionButton, cancelButton }
+                }
+            }
         };
     }
 
-    public object? SelectedItem => (_itemsList.SelectedItem as ItemData)?.Item;
+    public object? SelectedItem
+    {
+        get => (_itemsList.SelectedItem as ItemData)?.Item;
+    }
 
-    public System.Drawing.Point Location
+    public Point Location
     {
         get => new(Position.X, Position.Y);
         set
@@ -78,19 +84,13 @@ internal partial class FormQuickItemSelector : GitExtensionsFormBase
 
     private void AcceptSelection()
     {
-        DialogResult = SelectedItem is null ? DialogResult.Cancel : DialogResult.OK;
+        DialogResult = SelectedItem is null ? DialogResult.Cancel : DialogResult.Ok;
     }
 
-    internal sealed class ItemData
+    internal sealed class ItemData(string label, object item)
     {
-        public string Label { get; }
+        public string Label { get; } = label;
 
-        public object Item { get; }
-
-        public ItemData(string label, object item)
-        {
-            Label = label;
-            Item = item;
-        }
+        public object Item { get; } = item;
     }
 }

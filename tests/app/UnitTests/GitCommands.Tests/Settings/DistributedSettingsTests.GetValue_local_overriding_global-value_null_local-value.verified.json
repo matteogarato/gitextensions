@@ -1,4 +1,4 @@
 ﻿{
-  "global": "global-value",
-  "local": "local-value"
+    "global": "global-value",
+    "local": "local-value"
 }

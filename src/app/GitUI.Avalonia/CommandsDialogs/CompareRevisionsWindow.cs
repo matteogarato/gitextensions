@@ -1,38 +1,39 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using Avalonia.Media;
 using GitCommands;
-using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUIPluginInterfaces;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Lists the files that differ between two revisions and shows the patch of the selected file.
+///     Lists the files that differ between two revisions and shows the patch of the selected file.
 /// </summary>
 public sealed class CompareRevisionsWindow : Window
 {
-    private readonly IGitModule _module;
-    private readonly ObjectId _firstId;
-    private readonly ObjectId _secondId;
-    private readonly ObjectId _secondParentId;
-    private readonly CancellationTokenSequence _filesSequence = new();
-    private readonly CancellationTokenSequence _diffSequence = new();
-    private readonly ListBox _files = new() { Name = "lstCompareFiles" };
     private readonly TextBox _diff = new()
     {
         Name = "txtCompareDiff",
         AcceptsReturn = true,
         IsReadOnly = true,
-        TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
-        FontFamily = "monospace",
+        TextWrapping = TextWrapping.NoWrap,
+        FontFamily = "monospace"
     };
-    private readonly TextBlock _status = new() { Name = "lblCompareStatus", TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+
+    private readonly CancellationTokenSequence _diffSequence = new();
+    private readonly ListBox _files = new() { Name = "lstCompareFiles" };
+    private readonly CancellationTokenSequence _filesSequence = new();
+    private readonly ObjectId _firstId;
+    private readonly IGitModule _module;
+    private readonly ObjectId _secondId;
+    private readonly ObjectId _secondParentId;
+    private readonly TextBlock _status = new() { Name = "lblCompareStatus", TextWrapping = TextWrapping.Wrap };
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="CompareRevisionsWindow"/> class.
+    ///     Initializes a new instance of the <see cref="CompareRevisionsWindow" /> class.
     /// </summary>
     /// <param name="module">The repository containing both revisions.</param>
     /// <param name="first">The older revision.</param>
@@ -47,7 +48,8 @@ public sealed class CompareRevisionsWindow : Window
         _firstId = first.ObjectId;
         _secondId = second.ObjectId;
         _secondParentId = second.FirstParentId;
-        Title = string.Format(GitUI.TranslatedStrings.CompareRevisionsWindowTitle, _firstId.ToShortString(), _secondId.ToShortString());
+        Title = string.Format(TranslatedStrings.CompareRevisionsWindowTitle, _firstId.ToShortString(),
+            _secondId.ToShortString());
         Width = 1000;
         Height = 700;
         MinWidth = 640;
@@ -58,20 +60,23 @@ public sealed class CompareRevisionsWindow : Window
             (item, _) => new TextBlock
             {
                 Text = item is null ? string.Empty : FormatFile(item),
-                TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-                Margin = new Avalonia.Thickness(4, 2),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(4, 2)
             },
-            supportsRecycling: false);
+            false);
         _files.SelectionChanged += (_, _) => ThreadHelper.FileAndForget(LoadSelectedDiffAsync);
 
-        Button close = new() { Content = GitUI.TranslatedStrings.Close, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right };
+        Button close = new()
+        {
+            Content = TranslatedStrings.Close, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right
+        };
         close.Click += (_, _) => Close();
 
         Grid content = new()
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             RowDefinitions = new RowDefinitions("2*,Auto,3*,Auto"),
-            Children = { _files, _status, _diff, close },
+            Children = { _files, _status, _diff, close }
         };
         Grid.SetRow(_status, 1);
         Grid.SetRow(_diff, 2);
@@ -87,11 +92,11 @@ public sealed class CompareRevisionsWindow : Window
     }
 
     /// <summary>
-    ///  Formats a changed file as a status letter followed by its path.
+    ///     Formats a changed file as a status letter followed by its path.
     /// </summary>
     internal static string FormatFile(GitItemStatus item)
     {
-        char status = item.IsNew ? 'A'
+        var status = item.IsNew ? 'A'
             : item.IsDeleted ? 'D'
             : item.IsRenamed ? 'R'
             : item.IsCopied ? 'C'
@@ -104,15 +109,16 @@ public sealed class CompareRevisionsWindow : Window
 
     private async Task LoadFilesAsync()
     {
-        CancellationToken cancellationToken = _filesSequence.Next();
-        _status.Text = GitUI.TranslatedStrings.LoadingData;
+        var cancellationToken = _filesSequence.Next();
+        _status.Text = TranslatedStrings.LoadingData;
         try
         {
-            IReadOnlyList<GitItemStatus> files = await Task.Run(
-                () => _module.GetDiffFilesWithSubmodulesStatus(_firstId, _secondId, _secondParentId, cancellationToken: cancellationToken),
+            var files = await Task.Run(
+                () => _module.GetDiffFilesWithSubmodulesStatus(_firstId, _secondId, _secondParentId,
+                    cancellationToken: cancellationToken),
                 cancellationToken);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            GitItemStatus? failed = files.FirstOrDefault(file => file.ErrorMessage is not null);
+            var failed = files.FirstOrDefault(file => file.ErrorMessage is not null);
             if (failed is not null)
             {
                 _status.Text = failed.ErrorMessage;
@@ -120,7 +126,9 @@ public sealed class CompareRevisionsWindow : Window
             }
 
             _files.ItemsSource = files;
-            _status.Text = files.Count == 0 ? GitUI.TranslatedStrings.NoResultsFound : string.Format(GitUI.TranslatedStrings.CompareRevisionsFileCount, files.Count);
+            _status.Text = files.Count == 0
+                ? TranslatedStrings.NoResultsFound
+                : string.Format(TranslatedStrings.CompareRevisionsFileCount, files.Count);
             if (files.Count > 0)
             {
                 _files.SelectedIndex = 0;
@@ -139,7 +147,7 @@ public sealed class CompareRevisionsWindow : Window
     private async Task LoadSelectedDiffAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        CancellationToken cancellationToken = _diffSequence.Next();
+        var cancellationToken = _diffSequence.Next();
         if (_files.SelectedItem is not GitItemStatus file)
         {
             _diff.Text = string.Empty;
@@ -149,17 +157,17 @@ public sealed class CompareRevisionsWindow : Window
         _diff.Text = string.Empty;
         try
         {
-            (Patch? patch, string? error) = await Task.Run(
+            (var patch, var error) = await Task.Run(
                 () => _module.GetSingleDiffAsync(
                     _firstId,
                     _secondId,
                     file.Name,
                     file.OldName,
-                    extraDiffArguments: string.Empty,
+                    string.Empty,
                     _module.FilesEncoding,
-                    cacheResult: false,
-                    isTracked: true,
-                    useGitColoring: false,
+                    false,
+                    true,
+                    false,
                     GitCommandConfiguration.Default,
                     cancellationToken),
                 cancellationToken);

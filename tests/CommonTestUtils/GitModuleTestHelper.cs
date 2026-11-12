@@ -6,7 +6,8 @@ using GitCommands.Git;
 using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitUI;
+using GitExtUtils.GitUI;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace CommonTestUtils;
 
@@ -15,34 +16,24 @@ public sealed partial class GitModuleTestHelper : IDisposable
     private readonly string _repositoryName;
 
     /// <summary>
-    /// Gets the module.
-    /// </summary>
-    public GitModule Module { get; }
-
-    /// <summary>
-    /// Gets the temporary path where test repositories will be created for integration tests.
-    /// </summary>
-    public string TemporaryPath { get; }
-
-    /// <summary>
-    /// Creates a throw-away new repository in a temporary location.
+    ///     Creates a throw-away new repository in a temporary location.
     /// </summary>
     public GitModuleTestHelper(string repositoryName = "repo1")
-        : this(repositoryName, FileSystemUtility.GetTemporaryPath(), useExisting: false)
+        : this(repositoryName, FileSystemUtility.GetTemporaryPath(), false)
     {
     }
 
     /// <summary>
-    /// Creates a wrapper for a throw-away repository in a temporary location.
-    /// The caller must supply the path to the directory containing the
-    /// repository in <paramref name="temporaryPath"/> and the name for the
-    /// repository, which will be a subdirectory of <paramref name="temporaryPath"/>,
-    /// in <paramref name="repositoryName"/>. If <paramref name="useExisting"/>
-    /// is false, then the temporary path must not exist, and it will be
-    /// created and the specified repository initialized within it. If
-    /// <paramref name="useExisting"/> is true, then the temporary repository
-    /// must already exist with the specified name in the specified temporary
-    /// path.
+    ///     Creates a wrapper for a throw-away repository in a temporary location.
+    ///     The caller must supply the path to the directory containing the
+    ///     repository in <paramref name="temporaryPath" /> and the name for the
+    ///     repository, which will be a subdirectory of <paramref name="temporaryPath" />,
+    ///     in <paramref name="repositoryName" />. If <paramref name="useExisting" />
+    ///     is false, then the temporary path must not exist, and it will be
+    ///     created and the specified repository initialized within it. If
+    ///     <paramref name="useExisting" /> is true, then the temporary repository
+    ///     must already exist with the specified name in the specified temporary
+    ///     path.
     /// </summary>
     internal GitModuleTestHelper(string repositoryName, string temporaryPath, bool useExisting)
     {
@@ -50,7 +41,7 @@ public sealed partial class GitModuleTestHelper : IDisposable
 
         _repositoryName = repositoryName;
 
-        string path = Path.Combine(TemporaryPath, repositoryName);
+        var path = Path.Combine(TemporaryPath, repositoryName);
 
         GitModule module;
 
@@ -63,7 +54,7 @@ public sealed partial class GitModuleTestHelper : IDisposable
                 throw new ArgumentException($"Repository '{path}' does not exist", nameof(repositoryName));
             }
 
-            module = new(executorProvider, path);
+            module = new GitModule(executorProvider, path);
         }
         else
         {
@@ -74,8 +65,8 @@ public sealed partial class GitModuleTestHelper : IDisposable
 
             Directory.CreateDirectory(path);
 
-            module = new(executorProvider, path);
-            module.Init(bare: false, shared: false);
+            module = new GitModule(executorProvider, path);
+            module.Init(false, false);
 
             // Don't assume global user/email
             SetRepoConfig(module);
@@ -91,98 +82,16 @@ public sealed partial class GitModuleTestHelper : IDisposable
     }
 
     /// <summary>
-    /// Adds 'subModuleHelper' as a submodule of the current subModuleHelper.
+    ///     Gets the module.
     /// </summary>
-    /// <param name="subModuleHelper">GitModuleTestHelper to add as a submodule of this.</param>
-    /// <param name="path">Relative submodule path.</param>
-    public void AddSubmodule(GitModuleTestHelper subModuleHelper, string path)
-    {
-        // Submodules require at least one commit
-        subModuleHelper.Module.GitExecutable.GetOutput(@"commit --allow-empty -m ""Initial empty commit""");
-
-        // Ensure config is set to allow file submodules
-        string fileEnabled = Module.GetEffectiveSetting(SettingKeyString.AllowFileProtocol);
-        fileEnabled.Should().Be("always");
-
-        // Even though above is set, adding a file protocol submodule fails unless -c... is used for protocol.file.allow config.
-        IEnumerable<GitConfigItem> cfgs = Commands.GetAllowFileConfig();
-
-        ExecutionResult result = Module.GitExecutable.Execute(Commands.AddSubmodule(subModuleHelper.Module.WorkingDir.ToPosixPath(), path, null!, true, cfgs));
-        Debug.WriteLine(result.AllOutput);
-
-        Module.GitExecutable.GetOutput(@"commit -am ""Add submodule""");
-    }
-
-    public GitModuleTestSnapshot CaptureSnapshot()
-        => new(_repositoryName, TemporaryPath);
+    public GitModule Module { get; }
 
     /// <summary>
-    /// Creates a new file, writes the specified string to the file, and then closes the file.
-    /// If the target file already exists, it is overwritten.
+    ///     Gets the temporary path where test repositories will be created for integration tests.
     /// </summary>
-    /// <returns>The path to the newly created file.</returns>
-    public string CreateFile(string parentDir, string fileName, string fileContent)
-    {
-        EnsureCreatedInTempFolder(parentDir);
-        if (!Directory.Exists(parentDir))
-        {
-            Directory.CreateDirectory(parentDir);
-        }
+    public string TemporaryPath { get; }
 
-        string filePath = Path.Combine(parentDir, fileName);
-        File.WriteAllText(filePath, fileContent ?? string.Empty);
-
-        return filePath;
-    }
-
-    /// <summary>
-    /// Creates a new file under the working folder to the specified directory,
-    /// writes the specified string to the file and then closes the file.
-    /// If the target file already exists, it is overwritten.
-    /// </summary>
-    /// <returns>The path to the newly created file.</returns>
-    public string CreateRepoFile(string fileRelativePath, string fileName, string fileContent)
-    {
-        if (Path.IsPathRooted(fileRelativePath))
-        {
-            throw new ArgumentException("Relative path expected", nameof(fileRelativePath));
-        }
-
-        string parentDir = Path.Combine(Module.WorkingDir, fileRelativePath);
-        EnsureCreatedInTempFolder(parentDir);
-
-        return CreateFile(parentDir, fileName, fileContent);
-    }
-
-    /// <summary>
-    /// Creates a new file to the root of the working folder,
-    /// writes the specified string to the file and then closes the file.
-    /// If the target file already exists, it is overwritten.
-    /// </summary>
-    /// <returns>The path to the newly created file.</returns>
-    public string CreateRepoFile(string fileName, string fileContent)
-    {
-        return CreateRepoFile("", fileName, fileContent);
-    }
-
-    public string DeleteRepoFile(string fileName)
-    {
-        string parentDir = Module.WorkingDir;
-        string filePath = Path.Combine(parentDir, fileName);
-        if (!Directory.Exists(parentDir))
-        {
-            return filePath;
-        }
-
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
-        return filePath;
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         try
         {
@@ -194,7 +103,8 @@ public sealed partial class GitModuleTestHelper : IDisposable
             {
                 if (!ThreadHelper.HasJoinableTaskContext)
                 {
-                    Trace.WriteLine($"{nameof(ThreadHelper)}{nameof(ThreadHelper.JoinableTaskContext)} should not be null if {nameof(Module.EffectiveSettings)} exist! Disposing too late?");
+                    Trace.WriteLine(
+                        $"{nameof(ThreadHelper)}{nameof(ThreadHelper.JoinableTaskContext)} should not be null if {nameof(Module.EffectiveSettings)} exist! Disposing too late?");
                 }
                 else
                 {
@@ -210,6 +120,102 @@ public sealed partial class GitModuleTestHelper : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Adds 'subModuleHelper' as a submodule of the current subModuleHelper.
+    /// </summary>
+    /// <param name="subModuleHelper">GitModuleTestHelper to add as a submodule of this.</param>
+    /// <param name="path">Relative submodule path.</param>
+    public void AddSubmodule(GitModuleTestHelper subModuleHelper, string path)
+    {
+        // Submodules require at least one commit
+        subModuleHelper.Module.GitExecutable.GetOutput(@"commit --allow-empty -m ""Initial empty commit""");
+
+        // Ensure config is set to allow file submodules
+        var fileEnabled = Module.GetEffectiveSetting(SettingKeyString.AllowFileProtocol);
+        fileEnabled.Should().Be("always");
+
+        // Even though above is set, adding a file protocol submodule fails unless -c... is used for protocol.file.allow config.
+        var cfgs = Commands.GetAllowFileConfig();
+
+        var result =
+            Module.GitExecutable.Execute(Commands.AddSubmodule(subModuleHelper.Module.WorkingDir.ToPosixPath(), path,
+                null!, true, cfgs));
+        Debug.WriteLine(result.AllOutput);
+
+        Module.GitExecutable.GetOutput(@"commit -am ""Add submodule""");
+    }
+
+    public GitModuleTestSnapshot CaptureSnapshot()
+    {
+        return new GitModuleTestSnapshot(_repositoryName, TemporaryPath);
+    }
+
+    /// <summary>
+    ///     Creates a new file, writes the specified string to the file, and then closes the file.
+    ///     If the target file already exists, it is overwritten.
+    /// </summary>
+    /// <returns>The path to the newly created file.</returns>
+    public string CreateFile(string parentDir, string fileName, string fileContent)
+    {
+        EnsureCreatedInTempFolder(parentDir);
+        if (!Directory.Exists(parentDir))
+        {
+            Directory.CreateDirectory(parentDir);
+        }
+
+        var filePath = Path.Combine(parentDir, fileName);
+        File.WriteAllText(filePath, fileContent ?? string.Empty);
+
+        return filePath;
+    }
+
+    /// <summary>
+    ///     Creates a new file under the working folder to the specified directory,
+    ///     writes the specified string to the file and then closes the file.
+    ///     If the target file already exists, it is overwritten.
+    /// </summary>
+    /// <returns>The path to the newly created file.</returns>
+    public string CreateRepoFile(string fileRelativePath, string fileName, string fileContent)
+    {
+        if (Path.IsPathRooted(fileRelativePath))
+        {
+            throw new ArgumentException("Relative path expected", nameof(fileRelativePath));
+        }
+
+        var parentDir = Path.Combine(Module.WorkingDir, fileRelativePath);
+        EnsureCreatedInTempFolder(parentDir);
+
+        return CreateFile(parentDir, fileName, fileContent);
+    }
+
+    /// <summary>
+    ///     Creates a new file to the root of the working folder,
+    ///     writes the specified string to the file and then closes the file.
+    ///     If the target file already exists, it is overwritten.
+    /// </summary>
+    /// <returns>The path to the newly created file.</returns>
+    public string CreateRepoFile(string fileName, string fileContent)
+    {
+        return CreateRepoFile("", fileName, fileContent);
+    }
+
+    public string DeleteRepoFile(string fileName)
+    {
+        var parentDir = Module.WorkingDir;
+        var filePath = Path.Combine(parentDir, fileName);
+        if (!Directory.Exists(parentDir))
+        {
+            return filePath;
+        }
+
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+
+        return filePath;
+    }
+
     private void EnsureCreatedInTempFolder(string path)
     {
         if (!path.StartsWith(TemporaryPath))
@@ -219,16 +225,16 @@ public sealed partial class GitModuleTestHelper : IDisposable
     }
 
     /// <summary>
-    /// Updates and inits submodules recursively, returning all submodule Modules
+    ///     Updates and inits submodules recursively, returning all submodule Modules
     /// </summary>
     /// <returns>All submodule Modules</returns>
     public IEnumerable<IGitModule> GetSubmodulesRecursive()
     {
-        IEnumerable<GitConfigItem> configs = Commands.GetAllowFileConfig();
-        ArgumentString args = Commands.SubmoduleUpdate(name: null, configs: configs);
+        var configs = Commands.GetAllowFileConfig();
+        var args = Commands.SubmoduleUpdate(name: null, configs: configs);
 
         Module.GitExecutable.Execute(args);
-        IReadOnlyList<string> paths = Module.GetSubmodulesLocalPaths(recursive: true);
+        var paths = Module.GetSubmodulesLocalPaths(recursive: true);
         IGitExecutorProvider executorProvider = new GitExecutorProvider(new GitDirectoryResolver());
         return paths.Select(path =>
         {
@@ -239,16 +245,17 @@ public sealed partial class GitModuleTestHelper : IDisposable
     }
 
     /// <summary>
-    /// Set dummy user and email locally for the module along with specific tests configs, no global setting in AppVeyor
-    /// Must also be set on the submodule, local settings are not included when adding it
+    ///     Set dummy user and email locally for the module along with specific tests configs, no global setting in AppVeyor
+    ///     Must also be set on the submodule, local settings are not included when adding it
     /// </summary>
     private static void SetRepoConfig(GitModule module)
     {
         GitConfigSettings localSettings = new(module.GitExecutable, GitSettingLevel.Local);
         localSettings.SetValue(SettingKeyString.UserName, "author");
         localSettings.SetValue(SettingKeyString.UserEmail, "author@mail.com");
-        new GitEncodingSettingsSetter(localSettings).FilesEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-        localSettings.SetValue(SettingKeyString.AllowFileProtocol, "always"); // git version 2.38.1 and later disabled file protocol by default
+        new GitEncodingSettingsSetter(localSettings).FilesEncoding = new UTF8Encoding(false);
+        localSettings.SetValue(SettingKeyString.AllowFileProtocol,
+            "always"); // git version 2.38.1 and later disabled file protocol by default
         localSettings.Save();
     }
 }

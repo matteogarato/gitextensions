@@ -1,22 +1,21 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using GitCommands;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
+using GitUI.Compat;
 using GitUI.Theming;
-using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Graph;
 using GitUI.UserControls.RevisionGrid.Graph.Rendering;
-using GitUIPluginInterfaces;
+using Color = System.Drawing.Color;
 
-using ResourceManager;
-
-namespace GitUI;
+namespace GitUI.UserControls.RevisionGrid;
 
 // Twin of the enum declared in GitUI/UserControls/RevisionGrid/RevisionGridControl.cs.
 public enum RevisionGraphDrawStyle
@@ -32,44 +31,41 @@ public enum RevisionGraphDrawStyle
 // come in later milestones.
 public partial class RevisionGridControl : GitExtensionsControl
 {
-    private const int RowHeight = 24;
-    private const int GraphColumnWidth = 160;
+    private const int _rowHeight = 24;
+    private const int _graphColumnWidth = 160;
+    private readonly FilterInfo _filterInfo = new();
 
     private readonly CancellationTokenSequence _refreshSequence = new();
-    private readonly List<GitRevision> _revisions = [];
     private readonly RevisionGraph _revisionGraph = new();
-    private readonly FilterInfo _filterInfo = new();
+    private readonly List<GitRevision> _revisions = [];
     private RevisionGraphConfig _config = new();
-    private ObjectId? _headId;
     private bool _headHighlighted;
-    private ILookup<ObjectId, IGitRef>? _refsByObjectId;
+    private ObjectId? _headId;
     private IGitModule? _module;
+    private ILookup<ObjectId, IGitRef>? _refsByObjectId;
 
     public RevisionGridControl()
     {
         InitializeComponent();
 
-        txtRevisionFilter.PlaceholderText = GitUI.TranslatedStrings.RevisionFilterWatermark;
+        txtRevisionFilter.PlaceholderText = TranslatedStrings.RevisionFilterWatermark;
         ComboBoxItem messageOption = new()
         {
-            Content = GitUI.TranslatedStrings.RevisionFilterMessage,
-            Tag = RevisionSearchField.Message
+            Content = TranslatedStrings.RevisionFilterMessage, Tag = RevisionSearchField.Message
         };
         cbxRevisionFilterField.Items.Add(messageOption);
         cbxRevisionFilterField.Items.Add(new ComboBoxItem
         {
-            Content = GitUI.TranslatedStrings.RevisionFilterAuthor,
-            Tag = RevisionSearchField.Author
+            Content = TranslatedStrings.RevisionFilterAuthor, Tag = RevisionSearchField.Author
         });
         cbxRevisionFilterField.Items.Add(new ComboBoxItem
         {
-            Content = GitUI.TranslatedStrings.RevisionFilterCommitter,
-            Tag = RevisionSearchField.Committer
+            Content = TranslatedStrings.RevisionFilterCommitter, Tag = RevisionSearchField.Committer
         });
         cbxRevisionFilterField.SelectedItem = messageOption;
-        btnApplyRevisionFilter.Content = GitUI.TranslatedStrings.ApplyFilter;
-        btnClearRevisionFilter.Content = GitUI.TranslatedStrings.ClearFilter;
-        btnMoreRevisionFilters.Content = GitUI.TranslatedStrings.MoreFilters;
+        btnApplyRevisionFilter.Content = TranslatedStrings.ApplyFilter;
+        btnClearRevisionFilter.Content = TranslatedStrings.ClearFilter;
+        btnMoreRevisionFilters.Content = TranslatedStrings.MoreFilters;
         btnMoreRevisionFilters.Click += (_, _) => ThreadHelper.FileAndForget(ShowMoreFiltersAsync);
         btnApplyRevisionFilter.Click += (_, _) => ApplyRevisionFilter();
         btnClearRevisionFilter.Click += (_, _) => ClearRevisionFilter();
@@ -82,40 +78,45 @@ public partial class RevisionGridControl : GitExtensionsControl
             }
         };
 
-        lstRevisions.ItemTemplate = new FuncDataTemplate<GitRevision>((_, _) => new RevisionRowControl(this), supportsRecycling: true);
+        lstRevisions.ItemTemplate =
+            new FuncDataTemplate<GitUIPluginInterfaces.GitRevision>((_, _) => new RevisionRowControl(this), true);
         lstRevisions.SelectionChanged += (_, _) => SelectionChanged?.Invoke(this, EventArgs.Empty);
 
         InitializeComplete();
     }
 
     /// <summary>
-    ///  Gets the revision currently selected in the list, or <see langword="null"/>.
+    ///     Gets the revision currently selected in the list, or <see langword="null" />.
     /// </summary>
-    public GitRevision? SelectedRevision => lstRevisions.SelectedItem as GitRevision;
+    public GitUIPluginInterfaces.GitRevision? SelectedRevision
+    {
+        get => lstRevisions.SelectedItem as GitUIPluginInterfaces.GitRevision;
+    }
 
     /// <summary>
-    ///  Gets the selected revisions in their displayed order.
+    ///     Gets the selected revisions in their displayed order.
     /// </summary>
-    public IReadOnlyList<GitRevision> SelectedRevisions
+    public IReadOnlyList<GitUIPluginInterfaces.GitRevision> SelectedRevisions
     {
         get
         {
-            HashSet<GitRevision> selected = (lstRevisions.SelectedItems?.OfType<GitRevision>() ?? []).ToHashSet();
-            return _revisions.Where(selected.Contains).ToArray();
+            var selected = (lstRevisions.SelectedItems?.OfType<GitUIPluginInterfaces.GitRevision>() ?? [])
+                .ToHashSet<GitUIPluginInterfaces.GitRevision>();
+            return _revisions.Where(selected.Contains).ToArray<GitUIPluginInterfaces.GitRevision>();
         }
     }
 
     /// <summary>
-    ///  Occurs when the selected revision changes.
+    ///     Occurs when the selected revision changes.
     /// </summary>
     public event EventHandler? SelectionChanged;
 
     /// <summary>
-    ///  Selects and scrolls to the given revision if it is loaded.
+    ///     Selects and scrolls to the given revision if it is loaded.
     /// </summary>
     public void SelectRevision(ObjectId objectId)
     {
-        GitRevision? revision = _revisions.Find(r => r.ObjectId == objectId);
+        var revision = _revisions.Find(r => r.ObjectId == objectId);
         if (revision is not null)
         {
             lstRevisions.SelectedItems?.Clear();
@@ -126,8 +127,8 @@ public partial class RevisionGridControl : GitExtensionsControl
 
     public bool GoToRef(string refName)
     {
-        GitRevision? revision = _revisions.FirstOrDefault(candidate => candidate.Refs.Any(
-            gitRef => string.Equals(gitRef.Name, refName, StringComparison.Ordinal)));
+        var revision = _revisions.FirstOrDefault(candidate =>
+            candidate.Refs.Any(gitRef => string.Equals(gitRef.Name, refName, StringComparison.Ordinal)));
         if (revision is null)
         {
             return false;
@@ -138,13 +139,13 @@ public partial class RevisionGridControl : GitExtensionsControl
     }
 
     /// <summary>
-    ///  Starts (re)loading the history of <paramref name="module"/> in the background,
-    ///  streaming batches into the list as they are parsed.
+    ///     Starts (re)loading the history of <paramref name="module" /> in the background,
+    ///     streaming batches into the list as they are parsed.
     /// </summary>
     public void ReloadRevisions(IGitModule module)
     {
         _module = module;
-        CancellationToken cancellationToken = _refreshSequence.Next();
+        var cancellationToken = _refreshSequence.Next();
 
         _revisions.Clear();
         _revisionGraph.Clear();
@@ -166,13 +167,14 @@ public partial class RevisionGridControl : GitExtensionsControl
                 .ToLookup(gitRef => gitRef.ObjectId);
 
             RevisionReader reader = new(module);
-            reader.GetLog(observer, revisionFilter, pathFilter: RevisionFilterOptions.BuildPathSpec(_filterInfo.PathFilter), hasNotes: false, autostashLabel: "autostash", cancellationToken);
+            reader.GetLog(observer, revisionFilter, RevisionFilterOptions.BuildPathSpec(_filterInfo.PathFilter), false,
+                "autostash", cancellationToken);
         });
     }
 
     private void ApplyRevisionFilter()
     {
-        IGitModule? module = _module;
+        var module = _module;
         if (module is null)
         {
             return;
@@ -183,13 +185,13 @@ public partial class RevisionGridControl : GitExtensionsControl
             throw new InvalidOperationException("A revision filter field must be selected.");
         }
 
-        string text = txtRevisionFilter.Text ?? string.Empty;
+        var text = txtRevisionFilter.Text ?? string.Empty;
         _filterInfo.Apply(new RevisionFilter(
             text,
-            byCommit: field == RevisionSearchField.Message,
-            byCommitter: field == RevisionSearchField.Committer,
-            byAuthor: field == RevisionSearchField.Author,
-            byDiffContent: false));
+            field == RevisionSearchField.Message,
+            field == RevisionSearchField.Committer,
+            field == RevisionSearchField.Author,
+            false));
         ReloadRevisions(module);
     }
 
@@ -210,22 +212,23 @@ public partial class RevisionGridControl : GitExtensionsControl
             ShowOnlyFirstParent = _filterInfo.ShowOnlyFirstParent,
             ShowCurrentBranchOnly = _filterInfo.ShowCurrentBranchOnly,
             ShowReflogReferences = _filterInfo.ShowReflogReferences,
-            SimplifyByDecoration = _filterInfo.ShowSimplifyByDecoration,
+            SimplifyByDecoration = _filterInfo.ShowSimplifyByDecoration
         };
-        RevisionFilterOptions? result = await new RevisionFilterWindow(current).ShowDialog<RevisionFilterOptions?>(owner);
+        var result =
+            await new RevisionFilterWindow(current).ShowDialog<RevisionFilterOptions?>(owner);
         if (result is null)
         {
             return;
         }
 
         _filterInfo.ByDateFrom = result.DateFrom is not null;
-        if (result.DateFrom is DateTime from)
+        if (result.DateFrom is { } from)
         {
             _filterInfo.DateFrom = from;
         }
 
         _filterInfo.ByDateTo = result.DateTo is not null;
-        if (result.DateTo is DateTime to)
+        if (result.DateTo is { } to)
         {
             // The whole end day is included.
             _filterInfo.DateTo = to.AddDays(1).AddSeconds(-1);
@@ -250,20 +253,13 @@ public partial class RevisionGridControl : GitExtensionsControl
         ApplyRevisionFilter();
     }
 
-    private enum RevisionSearchField
-    {
-        Message,
-        Author,
-        Committer
-    }
-
     /// <summary>
-    ///  Adds a batch to the shared graph model on the reader thread (like the WinForms grid
-    ///  does), so rows are already shaped when the UI displays them.
+    ///     Adds a batch to the shared graph model on the reader thread (like the WinForms grid
+    ///     does), so rows are already shaped when the UI displays them.
     /// </summary>
-    private void AddToGraph(IReadOnlyList<GitRevision> batch, CancellationToken cancellationToken)
+    private void AddToGraph(IReadOnlyList<GitUIPluginInterfaces.GitRevision> batch, CancellationToken cancellationToken)
     {
-        foreach (GitRevision revision in batch)
+        foreach (var revision in batch)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -280,17 +276,18 @@ public partial class RevisionGridControl : GitExtensionsControl
 
         // Mark the current checkout and its ancestry as relative once its node has arrived;
         // without this every lane renders in the non-relative gray.
-        if (!_headHighlighted && _headId is ObjectId headId && _revisionGraph.TryGetNode(headId, out _))
+        if (!_headHighlighted && _headId is { } headId && _revisionGraph.TryGetNode(headId, out _))
         {
             _revisionGraph.HighlightBranch(headId);
             _headHighlighted = true;
         }
 
-        int lastRowIndex = _revisionGraph.Count - 1;
+        var lastRowIndex = _revisionGraph.Count - 1;
         _revisionGraph.CacheTo(lastRowIndex, lastRowIndex, cancellationToken);
     }
 
-    private void AppendRevisions(IReadOnlyList<GitRevision> batch, CancellationToken cancellationToken)
+    private void AppendRevisions(IReadOnlyList<GitUIPluginInterfaces.GitRevision> batch,
+        CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
         {
@@ -332,58 +329,66 @@ public partial class RevisionGridControl : GitExtensionsControl
         }
     }
 
-    private sealed class RevisionObserver(RevisionGridControl owner, CancellationToken cancellationToken) : IObserver<IReadOnlyList<GitRevision>>
+    private enum RevisionSearchField
     {
-        public void OnNext(IReadOnlyList<GitRevision> value)
-        {
-            owner.AddToGraph(value, cancellationToken);
-            Dispatcher.UIThread.Post(() => owner.AppendRevisions(value, cancellationToken));
-        }
+        Message,
+        Author,
+        Committer
+    }
 
-        public void OnCompleted()
+    private sealed class RevisionObserver(RevisionGridControl owner, CancellationToken cancellationToken)
+        : IObserver<IReadOnlyList<GitRevision>>
+    {
+        void IObserver<IReadOnlyList<GitRevision>>.OnCompleted()
         {
             owner._revisionGraph.LoadingCompleted();
 
             // Finish the row cache (including segment straightening); before this final pass
             // GetSegmentsForRow reports the cache dirty and rows render without a graph.
-            int lastRowIndex = owner._revisionGraph.Count - 1;
+            var lastRowIndex = owner._revisionGraph.Count - 1;
             owner._revisionGraph.CacheTo(lastRowIndex, lastRowIndex, cancellationToken);
 
             Dispatcher.UIThread.Post(() => owner.OnLoadingCompleted(cancellationToken));
         }
 
-        public void OnError(Exception error)
-            => Dispatcher.UIThread.Post(() => owner.OnLoadingError(error, cancellationToken));
+        void IObserver<IReadOnlyList<GitRevision>>.OnError(Exception error)
+        {
+            Dispatcher.UIThread.Post(() => owner.OnLoadingError(error, cancellationToken));
+        }
+
+        public void OnNext(IReadOnlyList<GitUIPluginInterfaces.GitRevision> value)
+        {
+            owner.AddToGraph(value, cancellationToken);
+            Dispatcher.UIThread.Post(() => owner.AppendRevisions(value, cancellationToken));
+        }
     }
 
     /// <summary>
-    ///  One list row: graph cell, subject, author, date. Recycled by the virtualizing panel;
-    ///  content follows the <c>DataContext</c>.
+    ///     One list row: graph cell, subject, author, date. Recycled by the virtualizing panel;
+    ///     content follows the <c>DataContext</c>.
     /// </summary>
     private sealed class RevisionRowControl : Grid
     {
+        private readonly TextBlock _author;
+        private readonly TextBlock _date;
         private readonly GraphCellControl _graph;
         private readonly StackPanel _messagePanel;
         private readonly TextBlock _subject;
-        private readonly TextBlock _author;
-        private readonly TextBlock _date;
 
         public RevisionRowControl(RevisionGridControl owner)
         {
-            Height = RowHeight;
-            ColumnDefinitions = new ColumnDefinitions($"{GraphColumnWidth},*,180,140");
+            Height = _rowHeight;
+            ColumnDefinitions = new ColumnDefinitions($"{_graphColumnWidth},*,180,140");
 
             _graph = new GraphCellControl(owner) { ClipToBounds = true };
-            _subject = CreateTextBlock(leftMargin: 0);
+            _subject = CreateTextBlock(0);
             _messagePanel = new StackPanel
             {
-                Orientation = Avalonia.Layout.Orientation.Horizontal,
-                Margin = new Avalonia.Thickness(8, 0, 2, 0),
-                ClipToBounds = true,
+                Orientation = Orientation.Horizontal, Margin = new Thickness(8, 0, 2, 0), ClipToBounds = true
             };
             _messagePanel.Children.Add(_subject);
-            _author = CreateTextBlock(leftMargin: 8, opacity: 0.85);
-            _date = CreateTextBlock(leftMargin: 8, opacity: 0.7);
+            _author = CreateTextBlock(8, 0.85);
+            _date = CreateTextBlock(8, 0.7);
 
             SetColumn(_graph, 0);
             SetColumn(_messagePanel, 1);
@@ -397,24 +402,26 @@ public partial class RevisionGridControl : GitExtensionsControl
             return;
 
             static TextBlock CreateTextBlock(int leftMargin, double opacity = 1)
-                => new()
+            {
+                return new TextBlock
                 {
                     TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                    Margin = new Avalonia.Thickness(leftMargin, 0, 2, 0),
-                    Opacity = opacity,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(leftMargin, 0, 2, 0),
+                    Opacity = opacity
                 };
+            }
         }
 
         protected override void OnDataContextChanged(EventArgs e)
         {
             base.OnDataContextChanged(e);
 
-            if (DataContext is GitRevision revision)
+            if (DataContext is GitUIPluginInterfaces.GitRevision revision)
             {
                 // The subject TextBlock is the persistent last child; only ref chips are rebuilt.
                 _messagePanel.Children.RemoveRange(0, _messagePanel.Children.Count - 1);
-                foreach (IGitRef gitRef in revision.Refs)
+                foreach (var gitRef in revision.Refs)
                 {
                     _messagePanel.Children.Insert(_messagePanel.Children.Count - 1, RefLabels.CreateChip(gitRef));
                 }
@@ -428,8 +435,8 @@ public partial class RevisionGridControl : GitExtensionsControl
     }
 
     /// <summary>
-    ///  Ref label chips (branch/tag/remote), colored like the WinForms
-    ///  <c>RevisionGridRefRenderer</c> from the <see cref="AppColor"/> palette.
+    ///     Ref label chips (branch/tag/remote), colored like the WinForms
+    ///     <c>RevisionGridRefRenderer</c> from the <see cref="AppColor" /> palette.
     /// </summary>
     private static class RefLabels
     {
@@ -440,47 +447,47 @@ public partial class RevisionGridControl : GitExtensionsControl
 
         public static Border CreateChip(IGitRef gitRef)
         {
-            IBrush brush = gitRef switch
+            var brush = gitRef switch
             {
                 { IsTag: true } => _tagBrush,
                 { IsRemote: true } => _remoteBranchBrush,
                 { IsHead: true } => _branchBrush,
-                _ => _otherBrush,
+                _ => _otherBrush
             };
 
             return new Border
             {
                 BorderBrush = brush,
-                BorderThickness = new Avalonia.Thickness(1),
-                CornerRadius = new Avalonia.CornerRadius(3),
-                Padding = new Avalonia.Thickness(4, 0),
-                Margin = new Avalonia.Thickness(0, 3, 6, 3),
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(4, 0),
+                Margin = new Thickness(0, 3, 6, 3),
+                VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
                     Text = gitRef.Name,
                     Foreground = brush,
                     FontSize = 11,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                },
+                    VerticalAlignment = VerticalAlignment.Center
+                }
             };
         }
 
         private static IBrush CreateBrush(AppColor appColor)
         {
-            System.Drawing.Color color = appColor.GetThemeColor();
+            var color = appColor.GetThemeColor();
             return new SolidColorBrush(Avalonia.Media.Color.FromArgb(color.A, color.R, color.G, color.B)).ToImmutable();
         }
     }
 
     /// <summary>
-    ///  Renders the graph cell of one row with the ported <see cref="GraphRenderer"/>.
+    ///     Renders the graph cell of one row with the ported <see cref="GraphRenderer" />.
     /// </summary>
     private sealed class GraphCellControl(RevisionGridControl owner) : Control
     {
-        private GitRevision? _revision;
+        private GitUIPluginInterfaces.GitRevision? _revision;
 
-        public GitRevision? Revision
+        public GitUIPluginInterfaces.GitRevision? Revision
         {
             get => _revision;
             set
@@ -493,8 +500,8 @@ public partial class RevisionGridControl : GitExtensionsControl
         public override void Render(DrawingContext context)
         {
             if (_revision is null
-                || owner._headId is not ObjectId headId
-                || !owner._revisionGraph.TryGetRowIndex(_revision.ObjectId, out int rowIndex))
+                || owner._headId is not { } headId
+                || !owner._revisionGraph.TryGetRowIndex(_revision.ObjectId, out var rowIndex))
             {
                 return;
             }
@@ -510,7 +517,7 @@ public partial class RevisionGridControl : GitExtensionsControl
 
             try
             {
-                GraphRenderer.DrawItem(owner._config, context, rowIndex, RowHeight,
+                GraphRenderer.DrawItem(owner._config, context, rowIndex, _rowHeight,
                     owner._revisionGraph.GetSegmentsForRow,
                     RevisionGraphDrawStyle.DrawNonRelativesGray,
                     headId);

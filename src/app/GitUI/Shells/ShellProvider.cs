@@ -1,19 +1,27 @@
-﻿using ConEmu.WinForms;
+﻿using ConEmuWinForms;
 
 namespace GitUI.Shells;
 
 public class ShellProvider : IShellProvider
 {
-    private static IShellDescriptor DefaultShell = new BashShell();
-    private static readonly IShellDescriptor[] Shells = [DefaultShell, new CmdShell(), new PwshShell(), new PowerShellShell()];
+    private static readonly IShellDescriptor _defaultShell = new BashShell();
 
-    public IReadOnlyList<IShellDescriptor> GetShells() => Shells;
+    private static readonly IShellDescriptor[] _shells =
+        [_defaultShell, new CmdShell(), new PwshShell(), new PowerShellShell()];
 
-    public IShellDescriptor GetShell(string? name) => Shells.FirstOrDefault(s => s.Name == name) ?? DefaultShell;
-
-    public string GetShellCommandLine(string? shellType)
+    IReadOnlyList<IShellDescriptor> IShellProvider.GetShells()
     {
-        IShellDescriptor shell = GetShell(shellType);
+        return _shells;
+    }
+
+    IShellDescriptor IShellProvider.GetShell(string? name)
+    {
+        return _shells.FirstOrDefault(s => s.Name == name) ?? _defaultShell;
+    }
+
+    string IShellProvider.GetShellCommandLine(string? shellType)
+    {
+        var shell = GetShell(shellType);
 
         if (!shell.HasExecutable || shell.ExecutableCommandLine is null)
         {

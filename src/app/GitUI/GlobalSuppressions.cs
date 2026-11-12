@@ -10,5 +10,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1824:MarkAssembliesWithNeutralResourcesLanguage")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "ppk", Scope = "member", Target = "~M:GitUI.BrowseForPrivateKey.Browse(System.Windows.Forms.IWin32Window)~System.String")]
+[assembly: SuppressMessage("Microsoft.Performance", "CA1824:MarkAssembliesWithNeutralResourcesLanguage")]
+[assembly:
+    SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "ppk",
+        Scope = "member",
+        Target = "~M:GitUI.BrowseForPrivateKey.Browse(System.Windows.Forms.IWin32Window)~System.String")]

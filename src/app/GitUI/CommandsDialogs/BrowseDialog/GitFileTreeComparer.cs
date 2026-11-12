@@ -5,7 +5,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog;
 
 public class GitFileTreeComparer : IComparer<IGitItem>
 {
-    public int Compare(IGitItem? x, IGitItem? y)
+    int IComparer<IGitItem>.Compare(IGitItem? x, IGitItem? y)
     {
         return (x as GitItem, y as GitItem) switch
         {

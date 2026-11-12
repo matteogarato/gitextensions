@@ -6,32 +6,37 @@ using GitExtensions.Extensibility.Git;
 namespace GitCommands.Settings;
 
 /// <summary>
-///  Provides read-only access to the effective git config settings (by running "git config list").
-///  <br/>Only the last value of multi-value settings is provided - in contrast to <see cref="GitConfigSettings"/>, which also offers all values via <see cref="GitConfigSettings.GetValues"/>.
-///  <br/>"Implements" <see cref="IConfigValueStore"/> so it can be used with <see cref="SettingsSource{T}"/>.
+///     Provides read-only access to the effective git config settings (by running "git config list").
+///     <br />Only the last value of multi-value settings is provided - in contrast to <see cref="GitConfigSettings" />,
+///     which also offers all values via <see cref="GitConfigSettings.GetValues" />.
+///     <br />"Implements" <see cref="IConfigValueStore" /> so it can be used with <see cref="SettingsSource{T}" />.
 /// </summary>
-/// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable"/> for the repo of interest.</param>
+/// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable" /> for the repo of interest.</param>
 [DebuggerDisplay("{" + nameof(DebuggerDisplay) + ",nq}")]
-public sealed class EffectiveGitConfigSettings(IExecutable gitExecutable) : GitConfigSettingsBase(gitExecutable, GitSettingLevel.Effective), IConfigValueStore
+public sealed class EffectiveGitConfigSettings(IExecutable gitExecutable)
+    : GitConfigSettingsBase(gitExecutable, GitSettingLevel.Effective), IConfigValueStore
 {
+    public override string? GetValue(string name)
+    {
+        name = NormalizeSettingName(name);
+        Update();
+        return UniqueValueSettings.TryGetValue(name, out var value) ? value : null;
+    }
+
+    void IConfigValueStore.SetValue(string setting, string? value)
+    {
+        throw new InvalidOperationException("Effective Git settings are read-only.");
+    }
+
     private void Clear()
     {
         UniqueValueSettings.Clear();
     }
 
-    public override string? GetValue(string name)
+    protected override void Update()
     {
-        name = NormalizeSettingName(name);
-        Update();
-        return UniqueValueSettings.TryGetValue(name, out string? value) ? value : null;
+        Update(Clear, StoreSetting);
     }
-
-    public void SetValue(string setting, string? value)
-    {
-        throw new InvalidOperationException("Effective Git settings are read-only.");
-    }
-
-    protected override void Update() => Update(Clear, StoreSetting);
 
     private void StoreSetting(string name, string value)
     {

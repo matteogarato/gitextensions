@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitExtUtils.GitUI;
 
@@ -23,23 +23,22 @@ public partial class FormChooseTranslation : GitExtensionsForm
 
         ImageList imageList = new()
         {
-            ColorDepth = ColorDepth.Depth32Bit,
-            ImageSize = DpiUtil.Scale(new Size(150, 75)),
+            ColorDepth = ColorDepth.Depth32Bit, ImageSize = DpiUtil.Scale(new Size(150, 75))
         };
 
-        foreach (string translation in translations)
+        foreach (var translation in translations)
         {
-            string imagePath = Path.Join(Translator.GetTranslationDir(), translation + ".gif");
+            var imagePath = Path.Join(Translator.GetTranslationDir(), translation + ".gif");
             if (File.Exists(imagePath))
             {
-                Image image = Image.FromFile(imagePath);
+                var image = Image.FromFile(imagePath);
                 imageList.Images.Add(translation, image);
             }
         }
 
         lvTranslations.LargeImageList = imageList;
 
-        foreach (string translation in translations)
+        foreach (var translation in translations)
         {
             if (imageList.Images.ContainsKey(translation))
             {
@@ -63,7 +62,7 @@ public partial class FormChooseTranslation : GitExtensionsForm
     private void lvTranslations_ItemActivate(object sender, EventArgs e)
     {
         // take the selection if any, else see the fallback in FormChooseTranslation_FormClosing
-        ListView.SelectedListViewItemCollection selectedItems = ((ListView)sender).SelectedItems;
+        var selectedItems = ((ListView)sender).SelectedItems;
         if (selectedItems.Count > 0)
         {
             AppSettings.Translation = selectedItems[0].Tag!.ToString()!;

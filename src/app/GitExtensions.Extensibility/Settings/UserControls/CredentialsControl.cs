@@ -24,12 +24,12 @@ public partial class CredentialsControl : UserControl
     }
 
     /// <summary>
-    /// Change UI Mode
+    ///     Change UI Mode
     /// </summary>
     /// <param name="showUserName">Is show the `User name` text box</param>
     /// <param name="passwordLabelText">The `Password` lable's text</param>
     /// <param name="userNameLabelText">The `User name` lable's text</param>
-    public void ChangeUIMode(bool showUserName, string? passwordLabelText = null, string? userNameLabelText = null)
+    public void ChangeUiMode(bool showUserName, string? passwordLabelText = null, string? userNameLabelText = null)
     {
         ChangeLabelText(userNameLabelText, passwordLabelText);
 

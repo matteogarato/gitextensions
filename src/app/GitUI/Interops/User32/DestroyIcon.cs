@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
-using static System.Interop;
+using static GitUI.Interops.Interop;
 
-namespace System;
+namespace GitUI.Interops.User32;
 
 internal static partial class NativeMethods
 {
     [DllImport(Libraries.User32, ExactSpelling = true, SetLastError = true)]
-    public static extern BOOL DestroyIcon(IntPtr handle);
+    public static extern Bool DestroyIcon(IntPtr handle);
 }

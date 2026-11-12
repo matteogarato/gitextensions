@@ -6,25 +6,25 @@ using GitExtensions.Extensibility.Git;
 namespace GitExtUtils;
 
 /// <summary>
-/// Builds a git command line string from config items, a command name and that command's arguments.
+///     Builds a git command line string from config items, a command name and that command's arguments.
 /// </summary>
 /// <remarks>
-/// <para>Derives from <see cref="ArgumentBuilder"/>, so read that class's documentation to learn more about
-/// its usage.</para>
-///
-/// <para>
-/// A git command line is built from:
-/// <list type="number">
-///   <item>Zero or more config items, each of form <c>-c key=value</c></item>
-///   <item>A command name, such as <c>log</c></item>
-///   <item>Zero or more arguments specific to that command</item>
-/// </list>
-/// </para>
-///
-/// <para>Git Extensions defines a set of config items per command in the <see cref="GitCommandConfiguration"/> class.</para>
+///     <para>
+///         Derives from <see cref="ArgumentBuilder" />, so read that class's documentation to learn more about
+///         its usage.
+///     </para>
+///     <para>
+///         A git command line is built from:
+///         <list type="number">
+///             <item>Zero or more config items, each of form <c>-c key=value</c></item>
+///             <item>A command name, such as <c>log</c></item>
+///             <item>Zero or more arguments specific to that command</item>
+///         </list>
+///     </para>
+///     <para>Git Extensions defines a set of config items per command in the <see cref="GitCommandConfiguration" /> class.</para>
 /// </remarks>
 /// <example>
-/// <code>
+///     <code>
 /// GitArgumentBuilder args = new("commit")
 /// {
 ///     "-S",                       // added unconditionally
@@ -35,22 +35,23 @@ namespace GitExtUtils;
 /// </example>
 public sealed partial class GitArgumentBuilder : ArgumentBuilder
 {
+    private readonly string _command;
     private readonly List<GitConfigItem> _configItems;
     private readonly ArgumentString _gitArgs;
-    private readonly string _command;
-
-    [GeneratedRegex(@"^[a-z0-9_.-]+$", RegexOptions.ExplicitCapture)]
-    private static partial Regex CommandRegex { get; }
 
     /// <summary>
-    /// Initialises a new <see cref="GitArgumentBuilder"/> for the given <paramref name="command"/>.
+    ///     Initialises a new <see cref="GitArgumentBuilder" /> for the given <paramref name="command" />.
     /// </summary>
     /// <param name="command">The git command this builder is compiling arguments for.</param>
-    /// <param name="commandConfiguration">Optional source for default command configuration items. Pass <c>null</c> to use the Git Extensions defaults.</param>
+    /// <param name="commandConfiguration">
+    ///     Optional source for default command configuration items. Pass <c>null</c> to use the
+    ///     Git Extensions defaults.
+    /// </param>
     /// <param name="gitOptions">Optional arguments that are for the git command.  EX: git --no-optional-locks status.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="command"/> is an invalid string.</exception>
-    public GitArgumentBuilder(string command, IGitCommandConfiguration? commandConfiguration = null, ArgumentString gitOptions = default)
+    /// <exception cref="ArgumentNullException"><paramref name="command" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="command" /> is an invalid string.</exception>
+    public GitArgumentBuilder(string command, IGitCommandConfiguration? commandConfiguration = null,
+        ArgumentString gitOptions = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -63,25 +64,29 @@ public sealed partial class GitArgumentBuilder : ArgumentBuilder
         _gitArgs = gitOptions;
         commandConfiguration ??= GitCommandConfiguration.Default;
 
-        IReadOnlyList<GitConfigItem> defaultConfig = commandConfiguration.Get(command);
-        _configItems = new List<GitConfigItem>(capacity: defaultConfig.Count + 2);
+        var defaultConfig = commandConfiguration.Get(command);
+        _configItems = new List<GitConfigItem>(defaultConfig.Count + 2);
         if (defaultConfig.Count != 0)
         {
             _configItems.AddRange(defaultConfig);
         }
     }
 
+    [GeneratedRegex(@"^[a-z0-9_.-]+$", RegexOptions.ExplicitCapture)]
+    private static partial Regex CommandRegex { get; }
+
     /// <summary>
-    /// Add <paramref name="configItem"/> to this builder.
+    ///     Add <paramref name="configItem" /> to this builder.
     /// </summary>
     /// <remarks>
-    /// Any prior config item with the same key will be replaced.
+    ///     Any prior config item with the same key will be replaced.
     /// </remarks>
     /// <param name="configItem">The config item to add to the builder.</param>
     public void Add(GitConfigItem configItem)
     {
         // Append or replace config item based upon its key
-        int index = _configItems.IndexOf(item => string.Equals(item.Key, configItem.Key, StringComparison.OrdinalIgnoreCase));
+        var index = _configItems.IndexOf(item =>
+            string.Equals(item.Key, configItem.Key, StringComparison.OrdinalIgnoreCase));
 
         if (index == -1)
         {
@@ -96,15 +101,16 @@ public sealed partial class GitArgumentBuilder : ArgumentBuilder
     /// <inheritdoc />
     public override string ToString()
     {
-        string arguments = base.ToString();
-        int gitArgsLength = _gitArgs.Length;
+        var arguments = base.ToString();
+        var gitArgsLength = _gitArgs.Length;
         if (gitArgsLength == 0)
         {
             gitArgsLength = -1; // prevent extra capacity when length is 0
         }
 
         // 7 = "-c " + "=" + " " + 2 (for possible quotes of value)
-        int capacity = _configItems.Sum(i => i.Key.Length + i.Value.Length + 7) + _command.Length + 1 + arguments.Length;
+        var capacity = _configItems.Sum(i => i.Key.Length + i.Value.Length + 7) + _command.Length + 1 +
+                       arguments.Length;
         capacity += gitArgsLength + 1;
 
         StringBuilder str = new(capacity);
@@ -115,7 +121,7 @@ public sealed partial class GitArgumentBuilder : ArgumentBuilder
             str.Append(' ');
         }
 
-        foreach ((string key, string value) in _configItems)
+        foreach ((var key, var value) in _configItems)
         {
             str.Append("-c ").Append(key).Append('=').AppendQuoted(value).Append(' ');
         }
@@ -127,7 +133,8 @@ public sealed partial class GitArgumentBuilder : ArgumentBuilder
             str.Append(' ').Append(arguments);
         }
 
-        DebugHelpers.Assert(str.Capacity == capacity, $"Did not allocate enough capacity for string buffer. Allocated {capacity} but final capacity was {str.Capacity}.");
+        DebugHelpers.Assert(str.Capacity == capacity,
+            $"Did not allocate enough capacity for string buffer. Allocated {capacity} but final capacity was {str.Capacity}.");
 
         return str.ToString();
     }

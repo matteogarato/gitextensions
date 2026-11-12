@@ -4,12 +4,12 @@ namespace GitUI.UserControls;
 
 public class CaseSensitiveComboBox : ComboBox
 {
-    private const AutoCompleteMode Mode = AutoCompleteMode.SuggestAppend;
+    private const AutoCompleteMode _mode = AutoCompleteMode.SuggestAppend;
     private string? _lastTextChangedValue;
 
     private bool SystemAutoCompleteEnabled
     {
-        get => Mode != AutoCompleteMode.None && DropDownStyle != ComboBoxStyle.DropDownList;
+        get => _mode != AutoCompleteMode.None && DropDownStyle != ComboBoxStyle.DropDownList;
     }
 
     protected override void OnValidating(CancelEventArgs e)
@@ -24,7 +24,7 @@ public class CaseSensitiveComboBox : ComboBox
     {
         if (SystemAutoCompleteEnabled)
         {
-            string text = Text;
+            var text = Text;
             if (text == _lastTextChangedValue)
             {
                 return;
@@ -38,7 +38,7 @@ public class CaseSensitiveComboBox : ComboBox
 
     private int FindStringExactCase(string s)
     {
-        for (int i = 0; i < Items.Count; i++)
+        for (var i = 0; i < Items.Count; i++)
         {
             if (GetItemText(Items[i])!.Equals(s, StringComparison.Ordinal))
             {
@@ -51,9 +51,9 @@ public class CaseSensitiveComboBox : ComboBox
 
     private void NotifyAutoComplete()
     {
-        string text = Text;
-        bool textChanged = text != _lastTextChangedValue;
-        bool selectedIndexSet = false;
+        var text = Text;
+        var textChanged = text != _lastTextChangedValue;
+        var selectedIndexSet = false;
         int index;
         if (textChanged && text.Equals(_lastTextChangedValue, StringComparison.OrdinalIgnoreCase))
         {

@@ -7,7 +7,7 @@ internal interface IFilePromptCreator
 
 internal sealed class FilePromptCreator : IFilePromptCreator
 {
-    public IUserInputPrompt Create()
+    IUserInputPrompt IFilePromptCreator.Create()
     {
         return new FormFilePrompt();
     }

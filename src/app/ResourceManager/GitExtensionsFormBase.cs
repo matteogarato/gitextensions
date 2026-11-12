@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Translations;
 using GitExtensions.Extensibility.Translations.Xliff;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
-using GitUI;
 using ResourceManager.Hotkey;
 using ResourceManager.Properties;
 
@@ -16,18 +16,17 @@ namespace ResourceManager;
 // NOTE do not make this class abstract as it breaks the WinForms designer in VS
 
 /// <summary>
-/// Base class for all Git Extensions forms.
+///     Base class for all Git Extensions forms.
 /// </summary>
 /// <remarks>
-/// Deriving from this class requires a call to <see cref="InitializeComplete"/> at
-/// the end of the constructor. Omitting this call with result in a runtime exception.
+///     Deriving from this class requires a call to <see cref="InitializeComplete" /> at
+///     the end of the constructor. Omitting this call with result in a runtime exception.
 /// </remarks>
 public class GitExtensionsFormBase : Form, ITranslate
 {
     private readonly GitExtensionsControlInitialiser _initialiser;
-    private IReadOnlyList<HotkeyCommand>? _hotkeys;
 
-    /// <summary>Creates a new <see cref="GitExtensionsFormBase"/> indicating position restore.</summary>
+    /// <summary>Creates a new <see cref="GitExtensionsFormBase" /> indicating position restore.</summary>
     public GitExtensionsFormBase()
     {
         _initialiser = new GitExtensionsControlInitialiser(this);
@@ -41,9 +40,14 @@ public class GitExtensionsFormBase : Form, ITranslate
         Icon = Resources.GitExtensionsLogoIcon;
     }
 
+    protected bool IsDesignMode
+    {
+        get => _initialiser.IsDesignMode;
+    }
+
     /// <summary>
-    /// Checks if the form wants to handle the key and executes that hotkey
-    /// (without propagating an unhandled key to the base class function as in <cref>ProcessCmdKey</cref>).
+    ///     Checks if the form wants to handle the key and executes that hotkey
+    ///     (without propagating an unhandled key to the base class function as in <cref>ProcessCmdKey</cref>).
     /// </summary>
     public virtual bool ProcessHotkey(Keys keyData)
     {
@@ -52,7 +56,7 @@ public class GitExtensionsFormBase : Form, ITranslate
             return false;
         }
 
-        HotkeyCommand? hotkey = _hotkeys?.FirstOrDefault(hotkey => hotkey?.KeyData == keyData);
+        var hotkey = Hotkeys?.FirstOrDefault(hotkey => hotkey?.KeyData == keyData);
         return hotkey is not null && ExecuteCommand(hotkey.CommandCode);
     }
 
@@ -62,83 +66,18 @@ public class GitExtensionsFormBase : Form, ITranslate
         this.FixVisualStyle();
     }
 
-    protected bool IsDesignMode => _initialiser.IsDesignMode;
-
-    #region Hotkeys
-
     /// <summary>
-    ///  Gets or sets a value that specifies if the hotkeys are used.
-    /// </summary>
-    protected bool HotkeysEnabled { get; set; }
-
-    /// <summary>
-    ///  Gets the currently loaded hotkeys.
-    /// </summary>
-    protected IReadOnlyList<HotkeyCommand>? Hotkeys => _hotkeys;
-
-    /// <summary>
-    ///  Loads hotkeys for the specified configuration setting.
-    /// </summary>
-    /// <param name="hotkeySettingsName">The setting name.</param>
-    protected void LoadHotkeys(string hotkeySettingsName)
-    {
-        _hotkeys = GetHotkeys(hotkeySettingsName);
-    }
-
-    /// <summary>
-    ///  Loads hotkeys for the specified configuration setting.
-    /// </summary>
-    /// <param name="hotkeySettingsName">The setting name.</param>
-    protected IReadOnlyList<HotkeyCommand> GetHotkeys(string hotkeySettingsName)
-    {
-        if (!HotkeysEnabled)
-        {
-            return [];
-        }
-
-        if (!TryGetUICommands(out IGitUICommands? commands))
-        {
-            DebugHelpers.Fail($"{GetType().FullName}: service provider is unavailable.");
-            return [];
-        }
-
-        return commands.GetRequiredService<IHotkeySettingsLoader>().LoadHotkeys(hotkeySettingsName);
-    }
-
-    /// <summary>Overridden: Checks if a hotkey wants to handle the key before letting the message propagate</summary>
-    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-    {
-        return ProcessHotkey(keyData) || base.ProcessCmdKey(ref msg, keyData);
-    }
-
-    protected Keys GetShortcutKeys<T>(T commandCode) where T : struct, Enum
-        => _hotkeys.GetShortcutKey(commandCode);
-
-    protected string GetShortcutKeyDisplayString<T>(T commandCode) where T : struct, Enum
-        => _hotkeys.GetShortcutDisplay(commandCode);
-
-    protected string GetShortcutKeyTooltipString<T>(T commandCode) where T : struct, Enum
-        => _hotkeys.GetShortcutToolTip(commandCode);
-
-    /// <summary>Override this method to handle form-specific Hotkey commands.</summary>
-    protected virtual bool ExecuteCommand(int command)
-    {
-        return false;
-    }
-
-    #endregion
-
-    /// <summary>
-    ///  Attempts to find an instance of <see cref="IGitUICommands"/>.
+    ///     Attempts to find an instance of <see cref="IGitUiCommands" />.
     /// </summary>
     /// <param name="commands">
-    ///  The instance of <see cref="IGitUICommands"/> directly assigned form
-    ///  (if the form implements <see cref="IGitModuleForm"/>); <see langword="null"/>, otherwise.
+    ///     The instance of <see cref="IGitUiCommands" /> directly assigned form
+    ///     (if the form implements <see cref="IGitModuleForm" />); <see langword="null" />, otherwise.
     /// </param>
     /// <returns>
-    ///  <see langword="true"/>, if an instance of <see cref="IGitUICommands"/> is found; <see langword="false"/>, otherwise.
+    ///     <see langword="true" />, if an instance of <see cref="IGitUiCommands" /> is found; <see langword="false" />,
+    ///     otherwise.
     /// </returns>
-    public virtual bool TryGetUICommands([NotNullWhen(returnValue: true)] out IGitUICommands? commands)
+    public virtual bool TryGetUiCommands([NotNullWhen(true)] out IGitUiCommands? commands)
     {
         commands = null;
         return false;
@@ -148,10 +87,11 @@ public class GitExtensionsFormBase : Form, ITranslate
     {
         if (!IsDesignMode)
         {
-            if (m.Msg == NativeMethods.WM_ACTIVATEAPP && m.WParam != IntPtr.Zero)
+            if (m.Msg == NativeMethods.WmActivateapp && m.WParam != IntPtr.Zero)
             {
                 OnApplicationActivated();
-                if (WindowState == FormWindowState.Minimized && Owner is null && AppSettings.WorkaroundActivateFromMinimize)
+                if (WindowState == FormWindowState.Minimized && Owner is null &&
+                    AppSettings.WorkaroundActivateFromMinimize)
                 {
                     // Application occasionally requires explicit "restore" in Taskbar.
                     // See https://github.com/gitextensions/gitextensions/pull/10119.
@@ -166,10 +106,13 @@ public class GitExtensionsFormBase : Form, ITranslate
 
     /// <summary>Performs post-initialisation tasks such as translation and DPI scaling.</summary>
     /// <remarks>
-    /// <para>Subclasses must ensure this method is called in their constructor, ideally as the final statement.</para>
-    /// <para>Requiring this extra life-cycle event allows preparing the UI after any call to <c>InitializeComponent</c>,
-    /// but before it is show. Both the <see cref="Form.Load"/> and <see cref="Form.Shown"/> events occur too late for
-    /// operations that effect layout.</para>
+    ///     <para>Subclasses must ensure this method is called in their constructor, ideally as the final statement.</para>
+    ///     <para>
+    ///         Requiring this extra life-cycle event allows preparing the UI after any call to <c>InitializeComponent</c>,
+    ///         but before it is show. Both the <see cref="Form.Load" /> and <see cref="Form.Shown" /> events occur too late
+    ///         for
+    ///         operations that effect layout.
+    ///     </para>
     /// </remarks>
     protected void InitializeComplete()
     {
@@ -188,6 +131,83 @@ public class GitExtensionsFormBase : Form, ITranslate
         this.EnableRemoveWordHotkey();
     }
 
+    /// <summary>
+    ///     Notifies whenever the application becomes active.
+    /// </summary>
+    protected virtual void OnApplicationActivated()
+    {
+    }
+
+    #region Hotkeys
+
+    /// <summary>
+    ///     Gets or sets a value that specifies if the hotkeys are used.
+    /// </summary>
+    protected bool HotkeysEnabled { get; set; }
+
+    /// <summary>
+    ///     Gets the currently loaded hotkeys.
+    /// </summary>
+    protected IReadOnlyList<HotkeyCommand>? Hotkeys { get; private set; }
+
+    /// <summary>
+    ///     Loads hotkeys for the specified configuration setting.
+    /// </summary>
+    /// <param name="hotkeySettingsName">The setting name.</param>
+    protected void LoadHotkeys(string hotkeySettingsName)
+    {
+        Hotkeys = GetHotkeys(hotkeySettingsName);
+    }
+
+    /// <summary>
+    ///     Loads hotkeys for the specified configuration setting.
+    /// </summary>
+    /// <param name="hotkeySettingsName">The setting name.</param>
+    protected IReadOnlyList<HotkeyCommand> GetHotkeys(string hotkeySettingsName)
+    {
+        if (!HotkeysEnabled)
+        {
+            return [];
+        }
+
+        if (!TryGetUiCommands(out var commands))
+        {
+            DebugHelpers.Fail($"{GetType().FullName}: service provider is unavailable.");
+            return [];
+        }
+
+        return commands.GetRequiredService<IHotkeySettingsLoader>().LoadHotkeys(hotkeySettingsName);
+    }
+
+    /// <summary>Overridden: Checks if a hotkey wants to handle the key before letting the message propagate</summary>
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        return ProcessHotkey(keyData) || base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    protected Keys GetShortcutKeys<T>(T commandCode) where T : struct, Enum
+    {
+        return Hotkeys.GetShortcutKey(commandCode);
+    }
+
+    protected string GetShortcutKeyDisplayString<T>(T commandCode) where T : struct, Enum
+    {
+        return Hotkeys.GetShortcutDisplay(commandCode);
+    }
+
+    protected string GetShortcutKeyTooltipString<T>(T commandCode) where T : struct, Enum
+    {
+        return Hotkeys.GetShortcutToolTip(commandCode);
+    }
+
+    /// <summary>Override this method to handle form-specific Hotkey commands.</summary>
+    protected virtual bool ExecuteCommand(int command)
+    {
+        return false;
+    }
+
+    #endregion
+
     #region Translation
 
     public virtual void AddTranslationItems(ITranslation translation)
@@ -202,7 +222,7 @@ public class GitExtensionsFormBase : Form, ITranslate
 
     protected void TranslateItem(string itemName, object item)
     {
-        IDictionary<string, TranslationFile> translation = Translator.GetTranslation(AppSettings.CurrentTranslation);
+        var translation = Translator.GetTranslation(AppSettings.CurrentTranslation);
 
         if (translation.Count == 0)
         {
@@ -211,18 +231,11 @@ public class GitExtensionsFormBase : Form, ITranslate
 
         (string itemName, object item)[] itemsToTranslate = [(itemName, item)];
 
-        foreach (KeyValuePair<string, TranslationFile> pair in translation)
+        foreach (var pair in translation)
         {
             TranslationUtils.TranslateItemsFromList(Name, pair.Value, itemsToTranslate);
         }
     }
 
     #endregion
-
-    /// <summary>
-    /// Notifies whenever the application becomes active.
-    /// </summary>
-    protected virtual void OnApplicationActivated()
-    {
-    }
 }

@@ -1,13 +1,11 @@
 ﻿namespace GitUI.Avatars;
 
 /// <summary>
-/// An avatar provider that combines multiple avatar providers.
+///     An avatar provider that combines multiple avatar providers.
 /// </summary>
 public sealed class ChainedAvatarProvider : IAvatarProvider
 {
     private readonly IAvatarProvider[] _avatarProviders;
-
-    public bool PerformsIo => _avatarProviders.Length != 0 && _avatarProviders.Any(p => p.PerformsIo);
 
     public ChainedAvatarProvider(params IAvatarProvider[] avatarProviders)
     {
@@ -26,13 +24,18 @@ public sealed class ChainedAvatarProvider : IAvatarProvider
         _avatarProviders = [.. avatarProviders];
     }
 
-    /// <summary>
-    /// Gets an avatar images from multiple avatar providers and returns the first hit.
-    /// The providers are queried in the same order that was given during construction.
-    /// </summary>
-    public async Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    bool IAvatarProvider.PerformsIo
     {
-        foreach (IAvatarProvider provider in _avatarProviders)
+        get => _avatarProviders.Length != 0 && _avatarProviders.Any(p => p.PerformsIo);
+    }
+
+    /// <summary>
+    ///     Gets an avatar images from multiple avatar providers and returns the first hit.
+    ///     The providers are queried in the same order that was given during construction.
+    /// </summary>
+    async Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
+    {
+        foreach (var provider in _avatarProviders)
         {
             Image? avatar = null;
 

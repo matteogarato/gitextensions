@@ -1,5 +1,4 @@
-﻿using GitCommands;
-using GitCommands.Settings;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using GitUI.SettingControlBindings;
 
@@ -8,15 +7,20 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 public partial class DetailedSettingsPage : DistributedSettingsPage
 {
     private readonly List<ISettingControlBinding> _controlBindings;
+
     public DetailedSettingsPage(IServiceProvider serviceProvider)
-       : base(serviceProvider)
+        : base(serviceProvider)
     {
         InitializeComponent();
         InitializeComplete();
 
-        _controlBindings = [SettingControlBindingsProvider.CreateControlBinding(DetailedSettings.GetRemoteBranchesDirectlyFromRemote, chkRemotesFromServer),
-                            SettingControlBindingsProvider.CreateControlBinding(DetailedSettings.AddMergeLogMessages, addLogMessages),
-                            SettingControlBindingsProvider.CreateControlBinding(DetailedSettings.MergeLogMessagesCount, nbMessages)];
+        _controlBindings =
+        [
+            SettingControlBindingsProvider.CreateControlBinding(DetailedSettings.GetRemoteBranchesDirectlyFromRemote,
+                chkRemotesFromServer),
+            SettingControlBindingsProvider.CreateControlBinding(DetailedSettings.AddMergeLogMessages, addLogMessages),
+            SettingControlBindingsProvider.CreateControlBinding(DetailedSettings.MergeLogMessagesCount, nbMessages)
+        ];
     }
 
     public static SettingsPageReference GetPageReference()
@@ -32,7 +36,7 @@ public partial class DetailedSettingsPage : DistributedSettingsPage
         chkRenderGraphWithDiagonals.Checked = AppSettings.RenderGraphWithDiagonals.Value;
         chkStraightenGraphDiagonals.Checked = AppSettings.StraightenGraphDiagonals.Value;
 
-        foreach (ISettingControlBinding controlBinding in _controlBindings)
+        foreach (var controlBinding in _controlBindings)
         {
             controlBinding.LoadSetting(GetCurrentSettings());
         }
@@ -46,7 +50,7 @@ public partial class DetailedSettingsPage : DistributedSettingsPage
         AppSettings.RenderGraphWithDiagonals.Value = chkRenderGraphWithDiagonals.Checked;
         AppSettings.StraightenGraphDiagonals.Value = chkStraightenGraphDiagonals.Checked;
 
-        foreach (ISettingControlBinding controlBinding in _controlBindings)
+        foreach (var controlBinding in _controlBindings)
         {
             controlBinding.SaveSetting(GetCurrentSettings());
         }

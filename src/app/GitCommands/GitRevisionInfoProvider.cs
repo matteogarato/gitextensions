@@ -6,28 +6,21 @@ namespace GitCommands;
 public interface IGitRevisionInfoProvider
 {
     /// <summary>
-    /// Loads children item for the given <paramref name="item"/>.
+    ///     Loads children item for the given <paramref name="item" />.
     /// </summary>
     /// <returns>The item's children.</returns>
     IEnumerable<INamedGitItem> LoadChildren(IGitItem item);
 }
 
-public sealed class GitRevisionInfoProvider : IGitRevisionInfoProvider
+public sealed class GitRevisionInfoProvider(Func<IGitModule> getModule) : IGitRevisionInfoProvider
 {
-    private readonly Func<IGitModule> _getModule;
-
-    public GitRevisionInfoProvider(Func<IGitModule> getModule)
-    {
-        _getModule = getModule;
-    }
-
     /// <summary>
-    /// Loads children item for the given <paramref name="item"/>.
+    ///     Loads children item for the given <paramref name="item" />.
     /// </summary>
     /// <returns>The item's children.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><see cref="IGitItem.Guid"/> is not supplied.</exception>
-    public IEnumerable<INamedGitItem> LoadChildren(IGitItem item)
+    /// <exception cref="ArgumentNullException"><paramref name="item" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException"><see cref="IGitItem.Guid" /> is not supplied.</exception>
+    IEnumerable<INamedGitItem> IGitRevisionInfoProvider.LoadChildren(IGitItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
 
@@ -36,14 +29,15 @@ public sealed class GitRevisionInfoProvider : IGitRevisionInfoProvider
             throw new ArgumentException("Item must have a valid identifier", nameof(item));
         }
 
-        IGitModule module = _getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
+        var module =
+            getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
         return YieldSubItems();
 
         IEnumerable<INamedGitItem> YieldSubItems()
         {
-            string basePath = (item as GitItem)?.FileName ?? string.Empty;
+            var basePath = (item as GitItem)?.FileName ?? string.Empty;
 
-            foreach (INamedGitItem subItem in module.GetTree(item.ObjectId, full: false))
+            foreach (INamedGitItem subItem in module.GetTree(item.ObjectId, false))
             {
                 if (subItem is GitItem gitItem)
                 {

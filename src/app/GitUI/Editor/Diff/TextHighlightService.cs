@@ -5,14 +5,14 @@ namespace GitUI.Editor.Diff;
 
 public class TextHighlightService : ITextHighlightService
 {
-    /// <summary>
-    /// Base class for highlighting, not adding any highlighting.
-    /// </summary>
-    public static TextHighlightService Instance { get; } = new();
-
     protected TextHighlightService()
     {
     }
+
+    /// <summary>
+    ///     Base class for highlighting, not adding any highlighting.
+    /// </summary>
+    public static TextHighlightService Instance { get; } = new();
 
     public virtual void AddTextHighlighting(IDocument document)
     {

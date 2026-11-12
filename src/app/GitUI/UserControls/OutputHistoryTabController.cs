@@ -3,14 +3,14 @@ using GitUI.Properties;
 
 namespace GitUI.UserControls;
 
-internal partial class OutputHistoryTabController : OutputHistoryControllerBase
+internal class OutputHistoryTabController : OutputHistoryControllerBase
 {
-    private TabPage? _tabPage;
+    private readonly TabPage? _tabPage;
 
     internal OutputHistoryTabController(IOutputHistoryProvider outputHistoryProvider,
-                                        OutputHistoryControl outputHistoryControl,
-                                        TabControl parent,
-                                        string tabCaption)
+        OutputHistoryControl outputHistoryControl,
+        TabControl parent,
+        string tabCaption)
         : base(outputHistoryProvider, outputHistoryControl)
     {
         if (!outputHistoryProvider.Enabled)
@@ -18,11 +18,7 @@ internal partial class OutputHistoryTabController : OutputHistoryControllerBase
             return;
         }
 
-        _tabPage = new()
-        {
-            Text = tabCaption,
-            Name = "OutputHistoryTab",
-        };
+        _tabPage = new TabPage { Text = tabCaption, Name = "OutputHistoryTab" };
         _tabPage.Controls.Add(outputHistoryControl);
         outputHistoryControl.Dock = DockStyle.Fill;
         parent.TabPages.Add(_tabPage);

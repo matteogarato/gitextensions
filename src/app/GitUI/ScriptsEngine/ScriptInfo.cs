@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace GitUI.ScriptsEngine;
@@ -6,11 +7,11 @@ namespace GitUI.ScriptsEngine;
 // WARNING: This class is serialized to XML!
 public partial class ScriptInfo
 {
+    private Bitmap? _icon;
+
     // Match a single '&' (lookahead to not be followed by a second '&')
     [GeneratedRegex("&(?!&)", RegexOptions.ExplicitCapture)]
     private static partial Regex MnemonicAmpersandRegex { get; }
-
-    private Bitmap? _icon;
 
     public bool Enabled { get; set; } = true;
 
@@ -33,7 +34,7 @@ public partial class ScriptInfo
     public int HotkeyCommandIdentifier { get; set; }
 
     /// <summary>
-    /// Gets or sets the icon name.
+    ///     Gets or sets the icon name.
     /// </summary>
     public string? Icon
     {
@@ -46,7 +47,7 @@ public partial class ScriptInfo
     }
 
     /// <summary>
-    /// Gets or sets the path to the file containing the icon.
+    ///     Gets or sets the path to the file containing the icon.
     /// </summary>
     public string? IconFilePath
     {
@@ -59,12 +60,15 @@ public partial class ScriptInfo
     }
 
     /// <summary>
-    ///  Returns the name with mnemonic ampersands removed.
+    ///     Returns the name with mnemonic ampersands removed.
     /// </summary>
-    public string GetDisplayName() => MnemonicAmpersandRegex.Replace(Name!, "");
+    public string GetDisplayName()
+    {
+        return MnemonicAmpersandRegex.Replace(Name!, "");
+    }
 
     /// <summary>
-    /// Gets the associated bitmap.
+    ///     Gets the associated bitmap.
     /// </summary>
     /// <returns>Bitmap image.</returns>
     public Bitmap? GetIcon()
@@ -83,7 +87,7 @@ public partial class ScriptInfo
 
                 try
                 {
-                    using Icon? associatedIcon = System.Drawing.Icon.ExtractAssociatedIcon(IconFilePath);
+                    using var associatedIcon = System.Drawing.Icon.ExtractAssociatedIcon(IconFilePath);
                     if (associatedIcon is not null)
                     {
                         return associatedIcon.ToBitmap();
@@ -102,9 +106,9 @@ public partial class ScriptInfo
             // Get all resources
             System.Resources.ResourceManager rm
                 = new("GitUI.Properties.Images",
-                    System.Reflection.Assembly.GetExecutingAssembly());
+                    Assembly.GetExecutingAssembly());
 
-            Bitmap? bitmap = (Bitmap?)rm.GetObject(Icon);
+            var bitmap = (Bitmap?)rm.GetObject(Icon);
             if (bitmap is null)
             {
                 // Discard the invalid name in order to not search for it again, which takes long

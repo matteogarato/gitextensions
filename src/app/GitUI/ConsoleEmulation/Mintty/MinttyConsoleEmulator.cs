@@ -6,62 +6,79 @@ namespace GitUI.ConsoleEmulation.Mintty;
 
 internal sealed class MinttyConsoleEmulator : IConsoleEmulator
 {
-    private const string PreferredDefaultTheme = "monokai-dimmed";
+    private const string _preferredDefaultTheme = "monokai-dimmed";
 
     private IReadOnlyCollection<string>? _availableThemes;
 
-    public string Name => "mintty";
-
-    public string DisplayName => "Mintty";
-
-    public bool IsSupportedInCurrentEnvironment => OperatingSystem.IsWindows() && TryResolvePaths(out _, out _);
-
-    public IReadOnlyCollection<string> AvailableThemes => _availableThemes ??= LoadAvailableThemes();
-
-    public string? DefaultTheme =>
-        AvailableThemes.Contains(PreferredDefaultTheme, StringComparer.OrdinalIgnoreCase)
-            ? PreferredDefaultTheme
-            : null;
-
-    public IConsoleCommandRunner CreateCommandRunner(ConsoleEmulatorSettings settings)
+    string IConsoleEmulator.Name
     {
-        (string minttyPath, string bashPath) = ResolvePaths();
+        get => "mintty";
+    }
+
+    string IConsoleEmulator.DisplayName
+    {
+        get => "Mintty";
+    }
+
+    bool IConsoleEmulator.IsSupportedInCurrentEnvironment
+    {
+        get => OperatingSystem.IsWindows() && TryResolvePaths(out _, out _);
+    }
+
+    IReadOnlyCollection<string> IConsoleEmulator.AvailableThemes
+    {
+        get => _availableThemes ??= LoadAvailableThemes();
+    }
+
+    string? IConsoleEmulator.DefaultTheme
+    {
+        get => AvailableThemes.Contains(_preferredDefaultTheme, StringComparer.OrdinalIgnoreCase)
+            ? _preferredDefaultTheme
+            : null;
+    }
+
+    IConsoleCommandRunner IConsoleEmulator.CreateCommandRunner(ConsoleEmulatorSettings settings)
+    {
+        var (minttyPath, bashPath) = ResolvePaths();
         return new MinttyCommandRunner(minttyPath, bashPath, settings);
     }
 
-    public IConsoleShellRunner CreateShellRunner(ConsoleEmulatorSettings settings)
+    IConsoleShellRunner IConsoleEmulator.CreateShellRunner(ConsoleEmulatorSettings settings)
     {
-        (string minttyPath, string bashPath) = ResolvePaths();
+        var (minttyPath, bashPath) = ResolvePaths();
         return new MinttyShellRunner(minttyPath, bashPath, settings);
     }
 
     private static (string MinttyPath, string BashPath) ResolvePaths()
     {
-        if (!TryResolvePaths(out string? minttyPath, out string? bashPath))
+        if (!TryResolvePaths(out var minttyPath, out var bashPath))
         {
-            throw new InvalidOperationException($"mintty or bash not found. Check {nameof(IsSupportedInCurrentEnvironment)} before calling.");
+            throw new InvalidOperationException(
+                $"mintty or bash not found. Check {nameof(IsSupportedInCurrentEnvironment)} before calling.");
         }
 
         return (minttyPath, bashPath);
     }
 
-    private static bool TryResolvePaths([NotNullWhen(true)] out string? minttyPath, [NotNullWhen(true)] out string? bashPath)
+    private static bool TryResolvePaths([NotNullWhen(true)] out string? minttyPath,
+        [NotNullWhen(true)] out string? bashPath)
     {
-        bool foundMintty = PathUtil.TryFindShellPath(@"usr\bin\mintty.exe", out minttyPath);
-        bool foundBash = PathUtil.TryFindShellPath("bash.exe", out bashPath);
+        var foundMintty = PathUtil.TryFindShellPath(@"usr\bin\mintty.exe", out minttyPath);
+        var foundBash = PathUtil.TryFindShellPath("bash.exe", out bashPath);
         return foundMintty && foundBash;
     }
 
     private static IReadOnlyCollection<string> LoadAvailableThemes()
     {
-        if (!TryResolvePaths(out string? minttyPath, out _))
+        if (!TryResolvePaths(out var minttyPath, out _))
         {
             return [];
         }
 
         try
         {
-            string themesDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(minttyPath)!, "..", "share", "mintty", "themes"));
+            var themesDir =
+                Path.GetFullPath(Path.Combine(Path.GetDirectoryName(minttyPath)!, "..", "share", "mintty", "themes"));
             if (!Directory.Exists(themesDir))
             {
                 return [];

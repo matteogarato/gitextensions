@@ -4,28 +4,23 @@ using System.IO.Abstractions;
 namespace GitCommands;
 
 /// <summary>
-/// Provides the ability to extract icons associated with file types.
+///     Provides the ability to extract icons associated with file types.
 /// </summary>
 public interface IFileAssociatedIconProvider
 {
     /// <summary>
-    /// Retrieves the icon associated with the given file type.
+    ///     Retrieves the icon associated with the given file type.
     /// </summary>
     /// <param name="workingDirectory">The git repository working directory.</param>
     /// <param name="relativeFilePath">The relative path to the file.</param>
-    /// <returns>The icon associated with the given file type or <see langword="null"/>.</returns>
+    /// <returns>The icon associated with the given file type or <see langword="null" />.</returns>
     Icon? Get(string workingDirectory, string relativeFilePath);
 }
 
-public sealed class FileAssociatedIconProvider : IFileAssociatedIconProvider
+public sealed class FileAssociatedIconProvider(IFileSystem fileSystem) : IFileAssociatedIconProvider
 {
-    private readonly IFileSystem _fileSystem;
-    private static readonly ConcurrentDictionary<string, Icon?> LoadedFileIcons = new(StringComparer.OrdinalIgnoreCase);
-
-    public FileAssociatedIconProvider(IFileSystem fileSystem)
-    {
-        _fileSystem = fileSystem;
-    }
+    private static readonly ConcurrentDictionary<string, Icon?>
+        _loadedFileIcons = new(StringComparer.OrdinalIgnoreCase);
 
     public FileAssociatedIconProvider()
         : this(new FileSystem())
@@ -33,28 +28,31 @@ public sealed class FileAssociatedIconProvider : IFileAssociatedIconProvider
     }
 
     // unit tests only
-    internal int CacheCount => LoadedFileIcons.Count;
+    internal int CacheCount
+    {
+        get => _loadedFileIcons.Count;
+    }
 
     /// <summary>
-    /// Retrieves the icon associated with the given file type.
-    /// The retrieved icons are cached by extensions.
+    ///     Retrieves the icon associated with the given file type.
+    ///     The retrieved icons are cached by extensions.
     /// </summary>
     /// <param name="workingDirectory">The git repository working directory.</param>
     /// <param name="relativeFilePath">The relative path to the file.</param>
-    /// <returns>The icon associated with the given file type or <see langword="null"/>.</returns>
+    /// <returns>The icon associated with the given file type or <see langword="null" />.</returns>
     /// <remarks>
-    /// The method takes two parameters to performance reasons - the full path is established
-    /// only if the file type has not been processed already and the extensions is not cached.
+    ///     The method takes two parameters to performance reasons - the full path is established
+    ///     only if the file type has not been processed already and the extensions is not cached.
     /// </remarks>
-    public Icon? Get(string workingDirectory, string relativeFilePath)
+    Icon? IFileAssociatedIconProvider.Get(string workingDirectory, string relativeFilePath)
     {
-        string extension = Path.GetExtension(relativeFilePath);
+        var extension = Path.GetExtension(relativeFilePath);
         if (string.IsNullOrWhiteSpace(extension))
         {
             return null;
         }
 
-        Icon? icon = LoadedFileIcons.GetOrAdd(extension, ext =>
+        var icon = _loadedFileIcons.GetOrAdd(extension, ext =>
         {
             string? tempFile = null;
             try
@@ -65,8 +63,8 @@ public sealed class FileAssociatedIconProvider : IFileAssociatedIconProvider
                 // extensions from the registry and using p/invokes and WinAPI, which have
                 // significantly higher maintenance overhead.
 
-                string fullPath = Path.Combine(workingDirectory, relativeFilePath);
-                if (!_fileSystem.File.Exists(fullPath))
+                var fullPath = Path.Combine(workingDirectory, relativeFilePath);
+                if (!fileSystem.File.Exists(fullPath))
                 {
                     tempFile = CreateTempFile(Path.GetFileName(fullPath));
                     fullPath = tempFile;
@@ -91,8 +89,8 @@ public sealed class FileAssociatedIconProvider : IFileAssociatedIconProvider
 
     private string CreateTempFile(string fileName)
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), fileName);
-        _fileSystem.File.WriteAllText(tempFile, string.Empty);
+        var tempFile = Path.Combine(Path.GetTempPath(), fileName);
+        fileSystem.File.WriteAllText(tempFile, string.Empty);
         return tempFile;
     }
 
@@ -100,7 +98,7 @@ public sealed class FileAssociatedIconProvider : IFileAssociatedIconProvider
     {
         try
         {
-            _fileSystem.File.Delete(path);
+            fileSystem.File.Delete(path);
         }
         catch
         {
@@ -111,6 +109,6 @@ public sealed class FileAssociatedIconProvider : IFileAssociatedIconProvider
     // unit tests only
     internal void ResetCache()
     {
-        LoadedFileIcons.Clear();
+        _loadedFileIcons.Clear();
     }
 }

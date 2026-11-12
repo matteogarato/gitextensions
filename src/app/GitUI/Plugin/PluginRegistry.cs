@@ -3,20 +3,19 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitUIPluginInterfaces;
-using Microsoft;
 
-namespace GitUI;
+namespace GitUI.Plugin;
 
 public static class PluginRegistry
 {
     private const int _initialPluginCapacity = 20;
+
+    private static bool _isLoaded;
     public static List<IGitPlugin> Plugins { get; } = new(_initialPluginCapacity);
 
     public static List<IRepositoryHostPlugin> GitHosters { get; } = [];
 
     public static bool PluginsRegistered { get; private set; }
-
-    private static bool _isLoaded = false;
 
     public static void InitializeGitHostersOnly()
     {
@@ -24,7 +23,7 @@ public static class PluginRegistry
     }
 
     /// <summary>
-    /// Initialises all available plugins on the background thread.
+    ///     Initialises all available plugins on the background thread.
     /// </summary>
     public static void InitializeAll()
     {
@@ -52,8 +51,10 @@ public static class PluginRegistry
     {
         try
         {
-            IGitPlugin[] plugins = [.. ManagedExtensibility.GetExports<T>()
-                .Select(lazy =>
+            IGitPlugin[] plugins =
+            [
+                .. ManagedExtensibility.GetExports<T>()
+                    .Select(lazy =>
                     {
                         try
                         {
@@ -65,18 +66,20 @@ public static class PluginRegistry
                             DebugHelpers.Fail($"{wrapper.Name}. Error: {ex.Demystify()}");
                             return wrapper;
                         }
-                    })];
+                    })
+            ];
 
             lock (Plugins)
             {
-                foreach (IGitPlugin plugin in plugins)
+                foreach (var plugin in plugins)
                 {
                     Validates.NotNull(plugin.Description);
 
                     // Description for old plugin setting processing as key
                     plugin.SettingsContainer = new GitPluginSettingsContainer(plugin.Id, plugin.Description);
 
-                    if (plugin is IRepositoryHostPlugin repositoryHostPlugin && !GitHosters.Contains(repositoryHostPlugin))
+                    if (plugin is IRepositoryHostPlugin repositoryHostPlugin &&
+                        !GitHosters.Contains(repositoryHostPlugin))
                     {
                         GitHosters.Add(repositoryHostPlugin);
                     }
@@ -104,7 +107,7 @@ public static class PluginRegistry
         return GitHosters.FirstOrDefault(gitHoster => gitHoster.GitModuleIsRelevantToMe());
     }
 
-    public static void Register(IGitUICommands gitUiCommands)
+    public static void Register(IGitUiCommands gitUiCommands)
     {
         if (PluginsRegistered)
         {
@@ -119,7 +122,7 @@ public static class PluginRegistry
         }
     }
 
-    public static void Unregister(IGitUICommands gitUiCommands)
+    public static void Unregister(IGitUiCommands gitUiCommands)
     {
         if (!PluginsRegistered)
         {

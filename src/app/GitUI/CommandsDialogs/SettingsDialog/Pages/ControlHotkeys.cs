@@ -1,55 +1,18 @@
 ﻿using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Hotkey;
-using Microsoft;
 using ResourceManager;
 using ResourceManager.Hotkey;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 /// <summary>
-/// ControlHotkeys enables editing of HotkeySettings.
+///     ControlHotkeys enables editing of HotkeySettings.
 /// </summary>
 internal partial class ControlHotkeys : GitExtensionsControl
 {
     private IReadOnlyList<HotkeySettings>? _settings;
-
-    private IReadOnlyList<HotkeySettings>? Settings
-    {
-        get { return _settings; }
-        set
-        {
-            _settings = value;
-            UpdateCombobox(value);
-        }
-    }
-
-    #region SelectedHotkeySettings
-    private HotkeySettings? _selectedHotkeySettings;
-    private HotkeySettings? SelectedHotkeySettings
-    {
-        get { return _selectedHotkeySettings; }
-        set
-        {
-            _selectedHotkeySettings = value;
-            UpdateListViewItems(value);
-        }
-    }
-
-    #endregion
-
-    #region SelectedHotkeyCommand
-    private HotkeyCommand? _selectedHotkeyCommand;
-    private HotkeyCommand? SelectedHotkeyCommand
-    {
-        get { return _selectedHotkeyCommand; }
-        set
-        {
-            _selectedHotkeyCommand = value;
-            UpdateTextBox(value);
-        }
-    }
-    #endregion
 
     public ControlHotkeys()
     {
@@ -60,13 +23,24 @@ internal partial class ControlHotkeys : GitExtensionsControl
         cmbSettings.DisplayMember = nameof(HotkeySettings.Name);
     }
 
+    private IReadOnlyList<HotkeySettings>? Settings
+    {
+        get => _settings;
+        set
+        {
+            _settings = value;
+            UpdateCombobox(value);
+        }
+    }
+
     private IHotkeySettingsManager HotkeySettingsManager
     {
         get
         {
-            if (this.FindAncestors().OfType<SettingsPageBase>().FirstOrDefault() is not SettingsPageBase settingsPage)
+            if (this.FindAncestors().OfType<SettingsPageBase>().FirstOrDefault() is not { } settingsPage)
             {
-                throw new InvalidOperationException($"{GetType().Name} must be sited on a {typeof(SettingsPageBase)} control");
+                throw new InvalidOperationException(
+                    $"{GetType().Name} must be sited on a {typeof(SettingsPageBase)} control");
             }
 
             return settingsPage.ServiceProvider.GetRequiredService<IHotkeySettingsManager>();
@@ -92,7 +66,7 @@ internal partial class ControlHotkeys : GitExtensionsControl
         cmbSettings.Items.Clear();
         if (settings is not null)
         {
-            foreach (HotkeySettings setting in settings)
+            foreach (var setting in settings)
             {
                 cmbSettings.Items.Add(setting);
             }
@@ -106,15 +80,12 @@ internal partial class ControlHotkeys : GitExtensionsControl
         listMappings.Items.Clear();
         if (setting?.Commands is not null)
         {
-            foreach (HotkeyCommand cmd in setting.Commands)
+            foreach (var cmd in setting.Commands)
             {
                 if (cmd is not null)
                 {
                     listMappings.Items.Add(
-                        new ListViewItem([cmd.Name!, cmd.KeyData.ToText()])
-                        {
-                            Tag = cmd
-                        });
+                        new ListViewItem([cmd.Name!, cmd.KeyData.ToText()]) { Tag = cmd });
                 }
             }
         }
@@ -142,17 +113,17 @@ internal partial class ControlHotkeys : GitExtensionsControl
 
     private void listMappings_SelectedIndexChanged(object sender, EventArgs e)
     {
-        ListViewItem? lvi = listMappings.SelectedItems.Count > 0 ? listMappings.SelectedItems[0] : null;
+        var lvi = listMappings.SelectedItems.Count > 0 ? listMappings.SelectedItems[0] : null;
         if (lvi is not null)
         {
-            HotkeyCommand? hotkey = lvi.Tag as HotkeyCommand;
+            var hotkey = lvi.Tag as HotkeyCommand;
             SelectedHotkeyCommand = hotkey;
         }
     }
 
     private void bApply_Click(object sender, EventArgs e)
     {
-        HotkeyCommand? hotkey = SelectedHotkeyCommand;
+        var hotkey = SelectedHotkeyCommand;
         if (hotkey is not null)
         {
             // Update the KeyData with the chosen one
@@ -165,7 +136,7 @@ internal partial class ControlHotkeys : GitExtensionsControl
 
     private void bClear_Click(object sender, EventArgs e)
     {
-        HotkeyCommand? hotkey = SelectedHotkeyCommand;
+        var hotkey = SelectedHotkeyCommand;
         if (hotkey is not null)
         {
             // Update the KeyData with the chosen one
@@ -186,4 +157,36 @@ internal partial class ControlHotkeys : GitExtensionsControl
     {
         Settings = HotkeySettingsManager.CreateDefaultSettings();
     }
+
+    #region SelectedHotkeySettings
+
+    private HotkeySettings? _selectedHotkeySettings;
+
+    private HotkeySettings? SelectedHotkeySettings
+    {
+        get => _selectedHotkeySettings;
+        set
+        {
+            _selectedHotkeySettings = value;
+            UpdateListViewItems(value);
+        }
+    }
+
+    #endregion
+
+    #region SelectedHotkeyCommand
+
+    private HotkeyCommand? _selectedHotkeyCommand;
+
+    private HotkeyCommand? SelectedHotkeyCommand
+    {
+        get => _selectedHotkeyCommand;
+        set
+        {
+            _selectedHotkeyCommand = value;
+            UpdateTextBox(value);
+        }
+    }
+
+    #endregion
 }

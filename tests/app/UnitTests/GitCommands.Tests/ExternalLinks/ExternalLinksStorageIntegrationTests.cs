@@ -5,9 +5,10 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.ExternalLinks;
+
 public class ExternalLinksStorageIntegrationTests
 {
-    private ExternalLinksStorage _externalLinksStorage = null!;
+    private readonly ExternalLinksStorage _externalLinksStorage = null!;
 
     public ExternalLinksStorageIntegrationTests()
     {
@@ -20,14 +21,15 @@ public class ExternalLinksStorageIntegrationTests
     [InlineData("level3_roaming_GitExtensions", 1)]
     public void Can_load_settings(string fileName, int expected)
     {
-        string content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.{fileName}.settings.xml");
+        var content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.{fileName}.settings.xml");
 
         using GitModuleTestHelper testHelper = new();
-        string settingsFile = testHelper.CreateRepoFile(".git", "GitExtensions.settings", content);
+        var settingsFile = testHelper.CreateRepoFile(".git", "GitExtensions.settings", content);
         using GitExtSettingsCache settingsCache = new(settingsFile);
-        DistributedSettings settings = new(lowerPriority: null, settingsCache, SettingLevel.Unknown);
+        DistributedSettings settings = new(null, settingsCache, SettingLevel.Unknown);
 
-        IReadOnlyList<ExternalLinkDefinition>? definitions = _externalLinksStorage.Load(settings);
+        var definitions = _externalLinksStorage.Load(settings);
         definitions.Should().HaveCount(expected);
     }
 
@@ -35,9 +37,9 @@ public class ExternalLinksStorageIntegrationTests
     public async Task Can_save_settings()
     {
         using GitModuleTestHelper testHelper = new();
-        string settingsFile = testHelper.CreateRepoFile(".git", "GitExtensions.settings", "﻿<dictionary />");
+        var settingsFile = testHelper.CreateRepoFile(".git", "GitExtensions.settings", "﻿<dictionary />");
         using GitExtSettingsCache settingsCache = new(settingsFile);
-        DistributedSettings settings = new(lowerPriority: null, settingsCache, SettingLevel.Unknown);
+        DistributedSettings settings = new(null, settingsCache, SettingLevel.Unknown);
 
         ExternalLinkDefinition definition = new()
         {
@@ -46,13 +48,13 @@ public class ExternalLinksStorageIntegrationTests
             UseRemotesPattern = "upstream|origin",
             UseOnlyFirstRemote = true,
             SearchInParts = { ExternalLinkDefinition.RevisionPart.Message },
-            RemoteSearchInParts = { ExternalLinkDefinition.RemotePart.URL }
+            RemoteSearchInParts = { ExternalLinkDefinition.RemotePart.Url }
         };
 
         _externalLinksStorage.Save(settings, new[] { definition });
 
         settings.Save();
 
-        await Verifier.VerifyXml(File.ReadAllText(settingsFile));
+        await VerifyXml(File.ReadAllText(settingsFile));
     }
 }

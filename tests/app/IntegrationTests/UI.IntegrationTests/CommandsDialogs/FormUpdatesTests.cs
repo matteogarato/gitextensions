@@ -2,21 +2,27 @@
 using CommonTestUtils;
 using GitUI;
 using GitUI.CommandsDialogs.BrowseDialog;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormUpdatesTests : System.IDisposable
+public class FormUpdatesTests : IDisposable
 {
     // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
+    private readonly ReferenceRepository _referenceRepository = null!;
 
     // Created once for each test
-    private GitUICommands _commands = null!;
+    private GitUiCommands _commands = null!;
+
     public FormUpdatesTests()
     {
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -27,31 +33,30 @@ public class FormUpdatesTests : System.IDisposable
     [WinFormsFact]
     public void Should_hide_NET_runtime_link_if_no_required_version()
     {
-        RunFormTest(
-            form =>
-            {
-                FormUpdates.TestAccessor accessor = form.GetTestAccessor();
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
 
-                accessor.DisplayNetRuntimeLink("Required: .NET {0} Desktop Runtime {1} or later {2}.x", requiredNetRuntimeVersion: null!);
-                accessor.linkRequiredNetRuntime.Visible.Should().BeFalse();
-            });
+            accessor.DisplayNetRuntimeLink("Required: .NET {0} Desktop Runtime {1} or later {2}.x", null!);
+            accessor.LinkRequiredNetRuntime.Visible.Should().BeFalse();
+        });
     }
 
     [WinFormsTheory]
     [MemberData(nameof(NetRuntimeLinkTextTestCases))]
-    public void Should_NET_runtime_link_text_be_correct(Version runtimeVersion, string format, string expectedText, LinkArea expectedLinkArea)
+    public void Should_NET_runtime_link_text_be_correct(Version runtimeVersion, string format, string expectedText,
+        LinkArea expectedLinkArea)
     {
-        RunFormTest(
-            form =>
-            {
-                FormUpdates.TestAccessor accessor = form.GetTestAccessor();
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
 
-                accessor.DisplayNetRuntimeLink(format, runtimeVersion);
+            accessor.DisplayNetRuntimeLink(format, runtimeVersion);
 
-                accessor.linkRequiredNetRuntime.Visible.Should().BeTrue();
-                accessor.linkRequiredNetRuntime.Text.Should().Be(expectedText);
-                accessor.linkRequiredNetRuntime.LinkArea.Should().Be(expectedLinkArea);
-            });
+            accessor.LinkRequiredNetRuntime.Visible.Should().BeTrue();
+            accessor.LinkRequiredNetRuntime.Text.Should().Be(expectedText);
+            accessor.LinkRequiredNetRuntime.LinkArea.Should().Be(expectedLinkArea);
+        });
     }
 
     public static IEnumerable<object[]> NetRuntimeLinkTextTestCases()
@@ -85,21 +90,20 @@ public class FormUpdatesTests : System.IDisposable
     [MemberData(nameof(NetRuntimeLinkTestCases))]
     public void Should_NET_runtime_link_url_be_correct(Version runtimeVersion, string expectedUrl)
     {
-        RunFormTest(
-            form =>
-            {
-                FormUpdates.TestAccessor accessor = form.GetTestAccessor();
-                accessor.DisplayNetRuntimeLink("Required: .NET {0} Desktop Runtime {1} or later {2}.x", runtimeVersion);
+        RunFormTest(form =>
+        {
+            var accessor = form.GetTestAccessor();
+            accessor.DisplayNetRuntimeLink("Required: .NET {0} Desktop Runtime {1} or later {2}.x", runtimeVersion);
 
-                accessor.NetRuntimeDownloadUrl.Should().Be(expectedUrl);
-            });
+            accessor.NetRuntimeDownloadUrl.Should().Be(expectedUrl);
+        });
     }
 
     public static IEnumerable<object[]> NetRuntimeLinkTestCases()
     {
         // FormUpdates builds the URL from RuntimeInformation.OSArchitecture (lowercased), so the expected URL must use the
         // same architecture; hard-coding "x64" made these cases fail on the arm64 CI runner where the URL is correctly "arm64".
-        string arch = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
+        var arch = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
 
         yield return
         [
@@ -122,27 +126,21 @@ public class FormUpdatesTests : System.IDisposable
 
     private void RunFormTest(Action<FormUpdates> testDriver)
     {
-        RunFormTest(
-            form =>
-            {
-                testDriver(form);
-                return Task.CompletedTask;
-            });
+        RunFormTest(form =>
+        {
+            testDriver(form);
+            return Task.CompletedTask;
+        });
     }
 
     private void RunFormTest(Func<FormUpdates, Task> testDriverAsync)
     {
-        UITest.RunForm(
+        UiTest.RunForm(
             () =>
             {
                 using FormUpdates form = new(new Version(4, 2, 0));
-                form.ShowDialog(owner: null);
+                form.ShowDialog(null);
             },
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

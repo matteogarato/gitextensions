@@ -5,7 +5,7 @@ namespace ResourceManager.Hotkey;
 public static class KeysExtensions
 {
     /// <summary>
-    /// Strips the modifier from KeyData.
+    ///     Strips the modifier from KeyData.
     /// </summary>
     public static Keys GetKeyCode(this Keys keyData)
     {
@@ -22,7 +22,7 @@ public static class KeysExtensions
     public static Keys[] GetModifiers(this Keys key)
     {
         // Retrieve the modifiers, mask away the rest
-        Keys modifier = key & Keys.Modifiers;
+        var modifier = key & Keys.Modifiers;
 
         List<Keys> modifierList = [];
 
@@ -64,7 +64,7 @@ public static class KeysExtensions
         }
 
         // Get the string representation
-        string? str = key.ToCultureSpecificString();
+        var str = key.ToCultureSpecificString();
 
         // Strip the leading 'D' if it's a Decimal Key (D1, D2, ...)
         if (str?.Length is 2 && str[0] == 'D')
@@ -76,10 +76,14 @@ public static class KeysExtensions
     }
 
     public static string ToShortcutKeyDisplayString(this Keys key)
-        => key.ToText();
+    {
+        return key.ToText();
+    }
 
     public static string ToShortcutKeyToolTipString(this Keys key)
-        => key == Keys.None ? "" : $"({key.ToShortcutKeyDisplayString()})";
+    {
+        return key == Keys.None ? "" : $"({key.ToShortcutKeyDisplayString()})";
+    }
 
     private static string? ToCultureSpecificString(this Keys key)
     {
@@ -89,7 +93,8 @@ public static class KeysExtensions
         }
 
         // var str = key.ToString(); // OLD: this is culture unspecific
-        CultureInfo culture = CultureInfo.CurrentUICulture; // TODO: replace this with the GitExtensions language setting
+        var
+            culture = CultureInfo.CurrentUICulture; // TODO: replace this with the GitExtensions language setting
 
         // for modifier keys this yields for example "Ctrl+None" thus we have to strip the rest after the +
         return new KeysConverter().ConvertToString(null, culture, key)?.SubstringUntil('+');

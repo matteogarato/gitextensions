@@ -5,8 +5,8 @@ namespace GitUI;
 
 public class FormStatusOutputLog
 {
-    private readonly Lock _outputStringLock = new();
     private readonly StringBuilder _outputString = new();
+    private readonly Lock _outputStringLock = new();
 
     public void Append(string text)
     {

@@ -6,25 +6,26 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests.Git;
+
 public class IndexLockManagerTests
 {
-    private const string IndexLock = "index.lock";
+    private const string _indexLock = "index.lock";
+    private readonly DirectoryBase _directory = null!;
+    private readonly FileBase _file = null!;
+    private readonly IFileSystem _fileSystem = null!;
+    private readonly IGitDirectoryResolver _gitDirectoryResolver = null!;
+    private readonly string _gitFile = null!;
+    private readonly string _gitWorkingDir = null!;
+    private readonly string _indexLockFile = null!;
+    private readonly IGitModule _module = null!;
     private readonly string _workingDir = @"c:\dev\repo";
-    private string _gitWorkingDir = null!;
-    private string _indexLockFile = null!;
-    private string _gitFile = null!;
-    private FileBase _file = null!;
-    private DirectoryBase _directory = null!;
-    private IFileSystem _fileSystem = null!;
-    private IGitDirectoryResolver _gitDirectoryResolver = null!;
-    private IGitModule _module = null!;
     private IIndexLockManager _manager = null!;
 
     public IndexLockManagerTests()
     {
         _gitFile = Path.Combine(_workingDir, ".git");
         _gitWorkingDir = _gitFile.EnsureTrailingPathSeparator();
-        _indexLockFile = Path.Combine(_gitWorkingDir, IndexLock);
+        _indexLockFile = Path.Combine(_gitWorkingDir, _indexLock);
 
         _file = Substitute.For<FileBase>();
         _directory = Substitute.For<DirectoryBase>();
@@ -88,8 +89,8 @@ public class IndexLockManagerTests
         _file.Exists(_indexLockFile).Returns(true);
         _file.When(x => x.Delete(_indexLockFile)).Throw(new DivideByZeroException("boom"));
 
-        Action act = () => _manager.UnlockIndex(false);
-        FileDeleteException ex = act.Should().Throw<FileDeleteException>().Which;
+        var act = () => _manager.UnlockIndex(false);
+        var ex = act.Should().Throw<FileDeleteException>().Which;
 
         ex!.FileName.Should().Be(_indexLockFile);
         _module.DidNotReceive().GetSubmodulesLocalPaths();
@@ -97,17 +98,17 @@ public class IndexLockManagerTests
         _file.Received(1).Delete(_indexLockFile);
     }
 
-    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Fact(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     public void UnlockIndex_should_delete_submodule_locks_if_requested()
     {
         _file.Exists(_indexLockFile).Returns(true);
 
-        string submoduleGitHubWorkingDir = $@"{_workingDir}\Externals\Git.hub\";
-        string submoduleNbugWorkingDir = $@"{_workingDir}\Externals\NBug\";
-        string submoduleGitHubWorkingDirGitDir = $@"{_gitWorkingDir}\modules\Externals\Git.hub\";
-        string submoduleNBugWorkingDirGitDir = $@"{_gitWorkingDir}\modules\Externals\NBug\";
-        string submoduleGitHubIndexLock = $@"{_gitWorkingDir}\modules\Externals\Git.hub\{IndexLock}";
-        string submoduleNBugIndexLock = $@"{_gitWorkingDir}\modules\Externals\NBug\{IndexLock}";
+        var submoduleGitHubWorkingDir = $@"{_workingDir}\Externals\Git.hub\";
+        var submoduleNbugWorkingDir = $@"{_workingDir}\Externals\NBug\";
+        var submoduleGitHubWorkingDirGitDir = $@"{_gitWorkingDir}\modules\Externals\Git.hub\";
+        var submoduleNBugWorkingDirGitDir = $@"{_gitWorkingDir}\modules\Externals\NBug\";
+        var submoduleGitHubIndexLock = $@"{_gitWorkingDir}\modules\Externals\Git.hub\{_indexLock}";
+        var submoduleNBugIndexLock = $@"{_gitWorkingDir}\modules\Externals\NBug\{_indexLock}";
 
         _module.GetSubmodulesLocalPaths().Returns(new[] { "Externals/Git.hub", "Externals/NBug" });
         _module.GetSubmoduleFullPath(Arg.Any<string>())
@@ -117,7 +118,7 @@ public class IndexLockManagerTests
         _file.Exists(submoduleGitHubIndexLock).Returns(true);
         _file.Exists(submoduleNBugIndexLock).Returns(false);
 
-        _manager.UnlockIndex(true);
+        _manager.UnlockIndex();
 
         _file.Received().Delete(submoduleGitHubIndexLock);
         _file.DidNotReceive().Delete(submoduleNBugIndexLock);
@@ -134,25 +135,27 @@ public class IndexLockManagerTests
     path = Externals/Git.hub
     url = https://github.com/gitextensions/Git.hub.gitk");
 
-        string submoduleGitHub = Path.Combine(helper.Module.WorkingDir, "Externals", "Git.hub");
-        string submoduleNBug = Path.Combine(helper.Module.WorkingDir, "Externals", "NBug");
-        string submoduleGitHubWorkingDirGitDir = Path.Combine(helper.Module.WorkingDirGitDir, "modules", "Externals", "Git.hub");
-        string submoduleNbugWorkingDirGitDir = Path.Combine(helper.Module.WorkingDirGitDir, "modules", "Externals", "NBug");
+        var submoduleGitHub = Path.Combine(helper.Module.WorkingDir, "Externals", "Git.hub");
+        var submoduleNBug = Path.Combine(helper.Module.WorkingDir, "Externals", "NBug");
+        var submoduleGitHubWorkingDirGitDir =
+            Path.Combine(helper.Module.WorkingDirGitDir, "modules", "Externals", "Git.hub");
+        var submoduleNbugWorkingDirGitDir =
+            Path.Combine(helper.Module.WorkingDirGitDir, "modules", "Externals", "NBug");
         helper.CreateFile(submoduleGitHub, ".git", "gitdir: ../../.git/modules/Externals/Git.hub");
         helper.CreateFile(submoduleNBug, ".git", "gitdir: ../../.git/modules/Externals/NBug");
-        helper.CreateFile(helper.Module.WorkingDirGitDir, IndexLock, "");
-        helper.CreateFile(submoduleGitHubWorkingDirGitDir, IndexLock, "");
+        helper.CreateFile(helper.Module.WorkingDirGitDir, _indexLock, "");
+        helper.CreateFile(submoduleGitHubWorkingDirGitDir, _indexLock, "");
 
         _manager = new IndexLockManager(helper.Module);
 
-        string indexLock = Path.Combine(helper.Module.WorkingDirGitDir, IndexLock);
+        var indexLock = Path.Combine(helper.Module.WorkingDirGitDir, _indexLock);
         File.Exists(indexLock).Should().BeTrue();
-        string gitHubIndexLock = Path.Combine(submoduleGitHubWorkingDirGitDir, IndexLock);
+        var gitHubIndexLock = Path.Combine(submoduleGitHubWorkingDirGitDir, _indexLock);
         File.Exists(gitHubIndexLock).Should().BeTrue();
-        string nbugIndexLock = Path.Combine(submoduleNbugWorkingDirGitDir, IndexLock);
+        var nbugIndexLock = Path.Combine(submoduleNbugWorkingDirGitDir, _indexLock);
         File.Exists(nbugIndexLock).Should().BeFalse();
 
-        _manager.UnlockIndex(true);
+        _manager.UnlockIndex();
 
         File.Exists(indexLock).Should().BeFalse();
         File.Exists(gitHubIndexLock).Should().BeFalse();

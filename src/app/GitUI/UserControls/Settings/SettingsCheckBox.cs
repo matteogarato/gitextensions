@@ -1,13 +1,14 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Git;
+using GitUI.Properties;
 
 namespace GitUI.UserControls.Settings;
 
 public partial class SettingsCheckBox : UserControl
 {
-    private string? _toolTipText;
     private ToolTipIcon _toolTipIcon;
+    private string? _toolTipText;
     private ToolTip? _tooltip;
 
     public SettingsCheckBox()
@@ -26,7 +27,7 @@ public partial class SettingsCheckBox : UserControl
                 ManualSectionSubfolder = "settings";
             }
 
-            string url = UserManual.UserManual.UrlFor(ManualSectionSubfolder, ManualSectionAnchorName);
+            var url = UserManual.UserManual.UrlFor(ManualSectionSubfolder, ManualSectionAnchorName);
             OsShellUtil.OpenUrlInDefaultBrowser(url);
         };
     }
@@ -38,21 +39,21 @@ public partial class SettingsCheckBox : UserControl
     }
 
     /// <summary>
-    /// Gets or sets the anchor pointing to a section in the manual pertaining to this control.
+    ///     Gets or sets the anchor pointing to a section in the manual pertaining to this control.
     /// </summary>
     /// <remarks>
-    /// The URL structure:
-    /// https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
+    ///     The URL structure:
+    ///     https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
     /// </remarks>
     public string? ManualSectionAnchorName { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of a document pertaining to this control.
-    /// Default is "settings
+    ///     Gets or sets the name of a document pertaining to this control.
+    ///     Default is "settings
     /// </summary>
     /// <remarks>
-    /// The URL structure:
-    /// https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
+    ///     The URL structure:
+    ///     https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
     /// </remarks>
     [DefaultValue(null)]
     public string? ManualSectionSubfolder { get; set; }
@@ -89,22 +90,22 @@ public partial class SettingsCheckBox : UserControl
             _toolTipIcon = value;
             pictureBox.Image = _toolTipIcon switch
             {
-                ToolTipIcon.Warning => Properties.Resources.Warning,
-                ToolTipIcon.Information => Properties.Resources.information,
-                _ => throw new NotImplementedException(),
+                ToolTipIcon.Warning => Resources.Warning,
+                ToolTipIcon.Information => Resources.information,
+                _ => throw new NotImplementedException()
             };
         }
     }
 
     public event EventHandler InfoClicked
     {
-        add { pictureBox.Click += value; }
-        remove { pictureBox.Click -= value; }
+        add => pictureBox.Click += value;
+        remove => pictureBox.Click -= value;
     }
 
     public event EventHandler CheckedChanged
     {
-        add { checkBox.CheckedChanged += value; }
-        remove { checkBox.CheckedChanged -= value; }
+        add => checkBox.CheckedChanged += value;
+        remove => checkBox.CheckedChanged -= value;
     }
 }

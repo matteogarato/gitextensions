@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
+
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\app\BugReporter\BugReporter.csproj" />
-    <ProjectReference Include="..\..\..\CommonTestUtils\CommonTestUtils.csproj" />
+    <ProjectReference Include="..\..\..\..\src\app\BugReporter\BugReporter.csproj"/>
+    <ProjectReference Include="..\..\..\CommonTestUtils\CommonTestUtils.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="**\*.approved.*" />
+    <None Include="**\*.approved.*"/>
     <None Update="**\*.approved.*">
       <DependentUpon>
         $(

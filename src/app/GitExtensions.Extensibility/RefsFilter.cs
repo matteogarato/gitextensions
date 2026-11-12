@@ -1,8 +1,8 @@
 ﻿namespace GitExtensions.Extensibility;
 
 /// <summary>
-/// Enums requestable in GetRefs() (multiple names can be appended)
-/// Compare to <see ref="GitRefType"/> for actual values of parsed GitRefs
+///     Enums requestable in GetRefs() (multiple names can be appended)
+///     Compare to <see ref="GitRefType" /> for actual values of parsed GitRefs
 /// </summary>
 [Flags]
 public enum RefsFilter

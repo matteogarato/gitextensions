@@ -15,13 +15,16 @@ public class BuildInfo
     public string? Tooltip { get; set; }
     public string? PullRequestUrl { get; set; }
 
-    public string StatusSymbol => Status switch
+    public string StatusSymbol
     {
-        BuildStatus.Success => "✔",
-        BuildStatus.Failure => "❌",
-        BuildStatus.InProgress => "▶️",
-        BuildStatus.Stopped => "⏹️",
-        BuildStatus.Unstable => "❗",
-        _ => "❓",
-    };
+        get => Status switch
+        {
+            BuildStatus.Success => "✔",
+            BuildStatus.Failure => "❌",
+            BuildStatus.InProgress => "▶️",
+            BuildStatus.Stopped => "⏹️",
+            BuildStatus.Unstable => "❗",
+            _ => "❓"
+        };
+    }
 }

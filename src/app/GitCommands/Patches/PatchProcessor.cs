@@ -10,16 +10,11 @@ namespace GitCommands.Patches;
 
 public static partial class PatchProcessor
 {
-    private enum PatchProcessorState
-    {
-        InHeader,
-        InBody,
-        OutsidePatch
-    }
-
     // With Git coloring, Git adds escape sequences at the start and end of the line.
     private const string _escapeSequenceRegex = @"\u001b\[[^m]*m";
-    [GeneratedRegex(@$"^({_escapeSequenceRegex})?(?<line>.*?)({_escapeSequenceRegex})?\s*$", RegexOptions.ExplicitCapture)]
+
+    [GeneratedRegex(@$"^({_escapeSequenceRegex})?(?<line>.*?)({_escapeSequenceRegex})?\s*$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex StripWrappingEscapesSequenceRegex { get; }
 
 #if DEBUG
@@ -31,38 +26,42 @@ public static partial class PatchProcessor
     // diff --git a/GitCommands/CommitInformationTest.cs b/GitCommands/CommitInformationTest.cs
     // diff --git b/Benchmarks/App.config a/Benchmarks/App.config
     // diff --cc config-enumerator
-    [GeneratedRegex(@$"^diff --(?<type>git|cc|combined)\s[""]?([^/\s]+/)?(?<filenamea>.*?)[""]?( [""]?[^/\s]+/(?<filenameb>.*?)[""]?)?\s*$", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(
+        @"^diff --(?<type>git|cc|combined)\s[""]?([^/\s]+/)?(?<filenamea>.*?)[""]?( [""]?[^/\s]+/(?<filenameb>.*?)[""]?)?\s*$",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex PatchHeaderFileNameRegex { get; }
 
     [GeneratedRegex(@$"^({_escapeSequenceRegex})?diff --(?<type>git|cc|combined)\s", RegexOptions.ExplicitCapture)]
     private static partial Regex PatchHeaderRegex { get; }
 
-    [GeneratedRegex(@$"(---|\+\+\+) [""]?[^/\s]+/(?<filename>.*)[""]?", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"(---|\+\+\+) [""]?[^/\s]+/(?<filename>.*)[""]?", RegexOptions.ExplicitCapture)]
     private static partial Regex FileNameRegex { get; }
 
     [GeneratedRegex(@$"^({_escapeSequenceRegex})?[\-+@ ]", RegexOptions.ExplicitCapture)]
     private static partial Regex StartOfContentsRegex { get; }
 
     /// <summary>
-    /// Parses a patch file into individual <see cref="Patch"/> objects.
+    ///     Parses a patch file into individual <see cref="Patch" /> objects.
     /// </summary>
     /// <remarks>
-    /// The diff part of a patch is printed verbatim.
-    /// <para />
-    /// Everything else (header, warnings, ...) is printed in git encoding (<see cref="GitExecutor.SystemEncoding"/>).
-    /// <para />
-    /// Since a patch may contain the diff of more than one file, it would be nice to obtain the encoding for each file
-    /// from <c>.gitattributes</c>. For now, one encoding is used for every file in the repo (<see cref="GitEncodingSettingsGetter.FilesEncoding"/>).
-    /// <para />
-    /// File paths can be quoted (see <c>core.quotepath</c>). They are unquoted by <see cref="GitModule.ReEncodeFileNameFromLossless"/>.
+    ///     The diff part of a patch is printed verbatim.
+    ///     <para />
+    ///     Everything else (header, warnings, ...) is printed in git encoding (<see cref="GitExecutor.SystemEncoding" />).
+    ///     <para />
+    ///     Since a patch may contain the diff of more than one file, it would be nice to obtain the encoding for each file
+    ///     from <c>.gitattributes</c>. For now, one encoding is used for every file in the repo (
+    ///     <see cref="GitEncodingSettingsGetter.FilesEncoding" />).
+    ///     <para />
+    ///     File paths can be quoted (see <c>core.quotepath</c>). They are unquoted by
+    ///     <see cref="Git.GitModule.ReEncodeFileNameFromLossless" />.
     /// </remarks>
     [Pure]
     public static IEnumerable<Patch> CreatePatchesFromString(string patchText, Lazy<Encoding> filesContentEncoding)
     {
         // TODO encoding for each file in patch should be obtained separately from .gitattributes
 
-        string[] lines = patchText.Split(Delimiters.LineFeed);
-        int i = 0;
+        var lines = patchText.Split(Delimiters.LineFeed);
+        var i = 0;
 
         // skip email header
         for (; i < lines.Length; i++)
@@ -75,7 +74,7 @@ public static partial class PatchProcessor
 
         for (; i < lines.Length; i++)
         {
-            Patch? patch = CreatePatchFromString(lines, filesContentEncoding, ref i);
+            var patch = CreatePatchFromString(lines, filesContentEncoding, ref i);
             if (patch is not null)
             {
                 yield return patch;
@@ -90,27 +89,28 @@ public static partial class PatchProcessor
             return null;
         }
 
-        string rawHeader = lines[lineIndex];
-        Match contentMatch = StripWrappingEscapesSequenceRegex.Match(rawHeader);
-        string header = contentMatch.Groups["line"].Value;
+        var rawHeader = lines[lineIndex];
+        var contentMatch = StripWrappingEscapesSequenceRegex.Match(rawHeader);
+        var header = contentMatch.Groups["line"].Value;
 #if DEBUG
-        DebugHelpers.Assert(!CheckAnyEscapeSequenceRegex.IsMatch(header), "Git unexpectedly emits escape sequences in first header other than at start/end. line {i}:{rawHeader}");
+        DebugHelpers.Assert(!CheckAnyEscapeSequenceRegex.IsMatch(header),
+            "Git unexpectedly emits escape sequences in first header other than at start/end. line {i}:{rawHeader}");
 #endif
-        Match headerMatch = PatchHeaderFileNameRegex.Match(header);
+        var headerMatch = PatchHeaderFileNameRegex.Match(header);
         if (!headerMatch.Success)
         {
             return null;
         }
 
         header = GitModule.ReEncodeFileNameFromLossless(header);
-        bool isCombinedDiff = headerMatch.Groups["type"].ValueSpan is not "git";
+        var isCombinedDiff = headerMatch.Groups["type"].ValueSpan is not "git";
         if (!headerMatch.Success || (!isCombinedDiff && !headerMatch.Groups["filenameb"].Success))
         {
             throw new FormatException($"Invalid patch header: {header}");
         }
 
-        string fileNameA = headerMatch.Groups["filenamea"].Value.Trim();
-        string? fileNameB = isCombinedDiff ? null : headerMatch.Groups["filenameb"].Value.Trim();
+        var fileNameA = headerMatch.Groups["filenamea"].Value.Trim();
+        var fileNameB = isCombinedDiff ? null : headerMatch.Groups["filenameb"].Value.Trim();
 
         StringBuilder patchText = new();
 
@@ -120,20 +120,20 @@ public static partial class PatchProcessor
             patchText.Append('\n');
         }
 
-        PatchProcessorState state = PatchProcessorState.InHeader;
-        PatchChangeType changeType = PatchChangeType.ChangeFile;
-        PatchFileType fileType = PatchFileType.Text;
+        var state = PatchProcessorState.InHeader;
+        var changeType = PatchChangeType.ChangeFile;
+        var fileType = PatchFileType.Text;
         string? index = null;
 
-        bool done = false;
-        int i = lineIndex + 1;
+        var done = false;
+        var i = lineIndex + 1;
 
         // Process patch header
         for (; i < lines.Length; i++)
         {
-            string rawLine = lines[i];
-            Match lineMatch = StripWrappingEscapesSequenceRegex.Match(rawLine);
-            string line = lineMatch.Groups["line"].Value;
+            var rawLine = lines[i];
+            var lineMatch = StripWrappingEscapesSequenceRegex.Match(rawLine);
+            var line = lineMatch.Groups["line"].Value;
 #if DEBUG
             DebugHelpers.Assert(line.StartsWith("@@") || !CheckAnyEscapeSequenceRegex.IsMatch(line),
                 $"Git unexpectedly emits escape sequences in header other than at start/end. line {i}:{rawLine}");
@@ -215,7 +215,7 @@ public static partial class PatchProcessor
             {
                 // old file name
                 line = GitModule.UnescapeOctalCodePoints(line);
-                Match regexMatch = FileNameRegex.Match(line);
+                var regexMatch = FileNameRegex.Match(line);
 
                 if (regexMatch.Success)
                 {
@@ -238,7 +238,7 @@ public static partial class PatchProcessor
             {
                 // new file name
                 line = GitModule.UnescapeOctalCodePoints(line);
-                Match regexMatch = FileNameRegex.Match(line);
+                var regexMatch = FileNameRegex.Match(line);
 
                 if (regexMatch.Success)
                 {
@@ -260,13 +260,13 @@ public static partial class PatchProcessor
         // process patch body
         for (; !done && i < lines.Length; i++)
         {
-            string line = lines[i];
+            var line = lines[i];
             if (PatchHeaderRegex.IsMatch(line))
             {
                 break;
             }
 
-            Encoding encoding = (state == PatchProcessorState.InBody && StartOfContentsRegex.IsMatch(line))
+            var encoding = state == PatchProcessorState.InBody && StartOfContentsRegex.IsMatch(line)
                 ? filesContentEncoding.Value // diff content
                 : GitModule.SystemEncoding; // warnings, messages ...
 
@@ -284,6 +284,15 @@ public static partial class PatchProcessor
 
         // Add the escape sequences back to the header
         static string ReaddEscapes(ReadOnlySpan<char> rawLine, string line, Match lineMatch)
-            => $"{rawLine[..lineMatch.Index]}{line}{rawLine[(lineMatch.Index + lineMatch.Length)..]}";
+        {
+            return $"{rawLine[..lineMatch.Index]}{line}{rawLine[(lineMatch.Index + lineMatch.Length)..]}";
+        }
+    }
+
+    private enum PatchProcessorState
+    {
+        InHeader,
+        InBody,
+        OutsidePatch
     }
 }

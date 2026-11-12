@@ -40,73 +40,232 @@ WindowText: fff0f0f0
 
 /* Application colors */
 /* PanelBackground sets Windows Dark mode */
-.PanelBackground { color: #323232; }
-.EditorBackground { color: #323232; }
-.LineNumberBackground { color: #323232; }
-.AuthoredHighlight { color: #393920; }
-.Selection { color: #00009b; }
-.HighlightAllOccurences { color: #1d4897; }
-.InactiveSelectionHighlight { color: #436689; }
+.PanelBackground {
+    color: #323232;
+}
 
-.GraphBranch1 { color: #db5b93; }
-.GraphBranch2 { color: #6fa7d4; }
-.GraphBranch3 { color: #1da31b; }
-.GraphBranch4 { color: #8a67cf; }
-.GraphBranch5 { color: #c02a22; }
-.GraphBranch6 { color: #17aa8f; }
-.GraphBranch7 { color: #ca9b0d; }
-.GraphBranch8 { } /* color not specified, color slot will not be used */
-.GraphNonRelativeBranch { color: #707070; }
+.EditorBackground {
+    color: #323232;
+}
 
-.Branch { color: #7FE28A; }
-.RemoteBranch { color: #fd9797; } /* hsl(0, 100%, 70%) */
-.RemoteBranch.colorblind { color: #0080ff; } /* hsl(210, 100%, 50%) */
-.Tag { color: #40BAF7; }
-.OtherTag { color: #cfb3b3; }
-.DiffSection { color: #5f5e5e; }
+.LineNumberBackground {
+    color: #323232;
+}
+
+.AuthoredHighlight {
+    color: #393920;
+}
+
+.Selection {
+    color: #00009b;
+}
+
+.HighlightAllOccurences {
+    color: #1d4897;
+}
+
+.InactiveSelectionHighlight {
+    color: #436689;
+}
+
+.GraphBranch1 {
+    color: #db5b93;
+}
+
+.GraphBranch2 {
+    color: #6fa7d4;
+}
+
+.GraphBranch3 {
+    color: #1da31b;
+}
+
+.GraphBranch4 {
+    color: #8a67cf;
+}
+
+.GraphBranch5 {
+    color: #c02a22;
+}
+
+.GraphBranch6 {
+    color: #17aa8f;
+}
+
+.GraphBranch7 {
+    color: #ca9b0d;
+}
+
+.GraphBranch8 {
+}
+
+/* color not specified, color slot will not be used */
+.GraphNonRelativeBranch {
+    color: #707070;
+}
+
+.Branch {
+    color: #7FE28A;
+}
+
+.RemoteBranch {
+    color: #fd9797;
+}
+
+/* hsl(0, 100%, 70%) */
+.RemoteBranch.colorblind {
+    color: #0080ff;
+}
+
+/* hsl(210, 100%, 50%) */
+.Tag {
+    color: #40BAF7;
+}
+
+.OtherTag {
+    color: #cfb3b3;
+}
+
+.DiffSection {
+    color: #5f5e5e;
+}
 
 /* translation of terminal (cli) ansi color output sequences */
 /* Colors match VS Code Dark terminal ANSI palette */
 /* https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/terminal/common/terminalColorRegistry.ts */
 
-.AnsiTerminalBlackForeNormal { color: #000000; }
-.AnsiTerminalBlackBackNormal { color: #4d4d4d; }
-.AnsiTerminalBlackForeBold { color: #666666; }
-.AnsiTerminalBlackBackBold { color: #666666; }
+.AnsiTerminalBlackForeNormal {
+    color: #000000;
+}
 
-.AnsiTerminalRedForeNormal { color: #cd3131; }
-.AnsiTerminalRedBackNormal { color: #6e1919; }
-.AnsiTerminalRedBackNormal.colorblind { color: #0d0a5e; }
-.AnsiTerminalRedForeBold { color: #f14c4c; }
-.AnsiTerminalRedBackBold { color: #8a2c2c; }
-.AnsiTerminalRedBackBold.colorblind { color: #110e8a; }
+.AnsiTerminalBlackBackNormal {
+    color: #4d4d4d;
+}
 
-.AnsiTerminalGreenForeNormal { color: #0dbc79; }
-.AnsiTerminalGreenForeBold { color: #23d18b; }
-.AnsiTerminalGreenBackNormal { color: #076641; }
-.AnsiTerminalGreenBackBold { color: #0d7a4e; }
+.AnsiTerminalBlackForeBold {
+    color: #666666;
+}
 
-.AnsiTerminalYellowForeNormal { color: #e5e510; }
-.AnsiTerminalYellowBackNormal { color: #79790a; }
-.AnsiTerminalYellowForeBold { color: #f5f543; }
-.AnsiTerminalYellowBackBold { color: #9e9e0d; }
+.AnsiTerminalBlackBackBold {
+    color: #666666;
+}
 
-.AnsiTerminalBlueForeNormal { color: #2472c8; }
-.AnsiTerminalBlueBackNormal { color: #12396b; }
-.AnsiTerminalBlueForeBold { color: #3b8eea; }
-.AnsiTerminalBlueBackBold { color: #1d4e80; }
+.AnsiTerminalRedForeNormal {
+    color: #cd3131;
+}
 
-.AnsiTerminalMagentaForeNormal { color: #bc3fbc; }
-.AnsiTerminalMagentaBackNormal { color: #622163; }
-.AnsiTerminalMagentaForeBold { color: #d670d6; }
-.AnsiTerminalMagentaBackBold { color: #7d3a7d; }
+.AnsiTerminalRedBackNormal {
+    color: #6e1919;
+}
 
-.AnsiTerminalCyanForeNormal { color: #11a8cd; }
-.AnsiTerminalCyanBackNormal { color: #0a5a6e; }
-.AnsiTerminalCyanForeBold { color: #29b8db; }
-.AnsiTerminalCyanBackBold { color: #146375; }
+.AnsiTerminalRedBackNormal.colorblind {
+    color: #0d0a5e;
+}
 
-.AnsiTerminalWhiteForeNormal { color: #e5e5e5; }
-.AnsiTerminalWhiteBackNormal { color: #c0c0c0; }
-.AnsiTerminalWhiteForeBold { color: #e5e5e5; }
-.AnsiTerminalWhiteBackBold { color: #e5e5e5; }
+.AnsiTerminalRedForeBold {
+    color: #f14c4c;
+}
+
+.AnsiTerminalRedBackBold {
+    color: #8a2c2c;
+}
+
+.AnsiTerminalRedBackBold.colorblind {
+    color: #110e8a;
+}
+
+.AnsiTerminalGreenForeNormal {
+    color: #0dbc79;
+}
+
+.AnsiTerminalGreenForeBold {
+    color: #23d18b;
+}
+
+.AnsiTerminalGreenBackNormal {
+    color: #076641;
+}
+
+.AnsiTerminalGreenBackBold {
+    color: #0d7a4e;
+}
+
+.AnsiTerminalYellowForeNormal {
+    color: #e5e510;
+}
+
+.AnsiTerminalYellowBackNormal {
+    color: #79790a;
+}
+
+.AnsiTerminalYellowForeBold {
+    color: #f5f543;
+}
+
+.AnsiTerminalYellowBackBold {
+    color: #9e9e0d;
+}
+
+.AnsiTerminalBlueForeNormal {
+    color: #2472c8;
+}
+
+.AnsiTerminalBlueBackNormal {
+    color: #12396b;
+}
+
+.AnsiTerminalBlueForeBold {
+    color: #3b8eea;
+}
+
+.AnsiTerminalBlueBackBold {
+    color: #1d4e80;
+}
+
+.AnsiTerminalMagentaForeNormal {
+    color: #bc3fbc;
+}
+
+.AnsiTerminalMagentaBackNormal {
+    color: #622163;
+}
+
+.AnsiTerminalMagentaForeBold {
+    color: #d670d6;
+}
+
+.AnsiTerminalMagentaBackBold {
+    color: #7d3a7d;
+}
+
+.AnsiTerminalCyanForeNormal {
+    color: #11a8cd;
+}
+
+.AnsiTerminalCyanBackNormal {
+    color: #0a5a6e;
+}
+
+.AnsiTerminalCyanForeBold {
+    color: #29b8db;
+}
+
+.AnsiTerminalCyanBackBold {
+    color: #146375;
+}
+
+.AnsiTerminalWhiteForeNormal {
+    color: #e5e5e5;
+}
+
+.AnsiTerminalWhiteBackNormal {
+    color: #c0c0c0;
+}
+
+.AnsiTerminalWhiteForeBold {
+    color: #e5e5e5;
+}
+
+.AnsiTerminalWhiteBackBold {
+    color: #e5e5e5;
+}

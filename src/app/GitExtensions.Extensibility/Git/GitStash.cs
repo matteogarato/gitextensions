@@ -1,21 +1,39 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
-namespace GitUIPluginInterfaces;
+namespace GitExtensions.Extensibility.Git;
 
 /// <summary>Stored local modifications.</summary>
-public sealed partial class GitStash
+public sealed partial class GitStash(int index, string message)
 {
     [GeneratedRegex(@"^stash@\{(?<index>\d+)\}: (?<message>.+)$", RegexOptions.ExplicitCapture)]
     private static partial Regex StashRegex { get; }
 
-    public static bool TryParse(string s, [NotNullWhen(returnValue: true)] out GitStash? stash)
+    /// <summary>Short description of the commit the stash was based on.</summary>
+    public string Message { get; } = message;
+
+    /// <summary>Gets the index of the stash in the list.</summary>
+    public int Index { get; } = index;
+
+    /// <summary>Name of the stash.</summary>
+    /// <remarks>"stash@{n}"</remarks>
+    public string Name
+    {
+        get => $"stash@{{{Index}}}";
+    }
+
+    public string Summary
+    {
+        get => Index == -1 ? Message : $"@{{{Index}}}: {Message}";
+    }
+
+    public static bool TryParse(string s, [NotNullWhen(true)] out GitStash? stash)
     {
         // "stash@{i}: WIP on {branch}: {PreviousCommitMiniSHA} {PreviousCommitMessage}"
         // "stash@{i}: On {branch}: {Message}"
         // "stash@{i}: autostash"
 
-        Match match = StashRegex.Match(s);
+        var match = StashRegex.Match(s);
 
         if (!match.Success)
         {
@@ -30,23 +48,8 @@ public sealed partial class GitStash
         return true;
     }
 
-    /// <summary>Short description of the commit the stash was based on.</summary>
-    public string Message { get; }
-
-    /// <summary>Gets the index of the stash in the list.</summary>
-    public int Index { get; }
-
-    public GitStash(int index, string message)
+    public override string ToString()
     {
-        Index = index;
-        Message = message;
+        return Message;
     }
-
-    /// <summary>Name of the stash.</summary>
-    /// <remarks>"stash@{n}"</remarks>
-    public string Name => $"stash@{{{Index}}}";
-
-    public string Summary => Index == -1 ? Message : $"@{{{Index}}}: {Message}";
-
-    public override string ToString() => Message;
 }

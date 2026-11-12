@@ -1,5 +1,7 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.UserRepositoryHistory;
+using GitExtUtils.GitUI;
 
 namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl;
 
@@ -8,64 +10,62 @@ public interface IUserRepositoriesListController
     Task AssignCategoryAsync(Repository repository, string? category);
     string GetCurrentBranchName(string path);
     bool IsValidGitWorkingDir(string path);
-    (IReadOnlyList<RecentRepoInfo> recentRepositories, IReadOnlyList<RecentRepoInfo> favouriteRepositories) PreRenderRepositories(string filter);
+
+    (IReadOnlyList<RecentRepoInfo> recentRepositories, IReadOnlyList<RecentRepoInfo> favouriteRepositories)
+        PreRenderRepositories(string filter);
+
     bool RemoveInvalidRepository(string path);
     void ClearCache();
 }
 
-public sealed class UserRepositoriesListController : IUserRepositoriesListController
+public sealed class UserRepositoriesListController(
+    ILocalRepositoryManager localRepositoryManager,
+    IInvalidRepositoryRemover invalidRepositoryRemover,
+    IRepositoryCurrentBranchNameCache branchNameCache)
+    : IUserRepositoriesListController
 {
-    private readonly ILocalRepositoryManager _localRepositoryManager;
-    private readonly IInvalidRepositoryRemover _invalidRepositoryRemover;
-    private readonly IRepositoryCurrentBranchNameCache _branchNameCache;
+    private IList<Repository>? _allFavoriteRepositories;
 
     // Holds the raw, unfiltered list of repositories.
     // This is done to allow fast filtering of all known repos.
     private IList<Repository>? _allRecentRepositories;
-    private IList<Repository>? _allFavoriteRepositories;
 
-    public UserRepositoriesListController(ILocalRepositoryManager localRepositoryManager, IInvalidRepositoryRemover invalidRepositoryRemover, IRepositoryCurrentBranchNameCache branchNameCache)
-    {
-        _localRepositoryManager = localRepositoryManager;
-        _invalidRepositoryRemover = invalidRepositoryRemover;
-        _branchNameCache = branchNameCache;
-    }
-
-    public async Task AssignCategoryAsync(Repository repository, string? category)
+    async Task IUserRepositoriesListController.AssignCategoryAsync(Repository repository, string? category)
     {
         ArgumentNullException.ThrowIfNull(repository);
 
-        await _localRepositoryManager.AssignCategoryAsync(repository, category);
+        await localRepositoryManager.AssignCategoryAsync(repository, category);
     }
 
     /// <summary>
-    /// Clears the repository cache. After this call the repository list will be loaded from disk.
-    /// Note: The info in _branchNameCache is updated by Dashboard (but not read), the data is shared
-    /// with the repo menus in both Dashboard and Browse.
+    ///     Clears the repository cache. After this call the repository list will be loaded from disk.
+    ///     Note: The info in _branchNameCache is updated by Dashboard (but not read), the data is shared
+    ///     with the repo menus in both Dashboard and Browse.
     /// </summary>
-    public void ClearCache()
+    void IUserRepositoriesListController.ClearCache()
     {
         _allRecentRepositories = null;
         _allFavoriteRepositories = null;
-        _branchNameCache.InvalidateAll();
+        branchNameCache.InvalidateAll();
     }
 
-    public string GetCurrentBranchName(string path)
+    string IUserRepositoriesListController.GetCurrentBranchName(string path)
     {
         if (!AppSettings.ShowRepoCurrentBranch || GitModule.IsBareRepository(path))
         {
             return string.Empty;
         }
 
-        return _branchNameCache.GetCurrentBranchName(path);
+        return branchNameCache.GetCurrentBranchName(path);
     }
 
-    public bool IsValidGitWorkingDir(string path)
+    bool IUserRepositoriesListController.IsValidGitWorkingDir(string path)
     {
         return GitModule.IsValidGitWorkingDir(path);
     }
 
-    public (IReadOnlyList<RecentRepoInfo> recentRepositories, IReadOnlyList<RecentRepoInfo> favouriteRepositories) PreRenderRepositories(string pattern)
+    (IReadOnlyList<RecentRepoInfo> recentRepositories, IReadOnlyList<RecentRepoInfo> favouriteRepositories)
+        IUserRepositoriesListController.PreRenderRepositories(string pattern)
     {
         List<RecentRepoInfo> topRepos = [];
         List<RecentRepoInfo> recentRepos = [];
@@ -73,7 +73,6 @@ public sealed class UserRepositoriesListController : IUserRepositoriesListContro
         RecentRepoSplitter splitter = new()
         {
             MeasureFont = AppSettings.Font,
-
             MaxTopRepositories = AppSettings.MaxTopRepositories,
             RecentReposComboMinWidth = AppSettings.RecentReposComboMinWidth,
             ShorteningStrategy = AppSettings.ShorteningRecentRepoPathStrategy,
@@ -81,12 +80,14 @@ public sealed class UserRepositoriesListController : IUserRepositoriesListContro
             SortTopRepos = AppSettings.SortTopRepos
         };
 
-        _allRecentRepositories ??= ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync);
-        IList<Repository> repositories = Filter(_allRecentRepositories, pattern);
+        _allRecentRepositories ??=
+            ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadRecentHistoryAsync);
+        var repositories = Filter(_allRecentRepositories, pattern);
         splitter.SplitRecentRepos(repositories, topRepos, recentRepos);
         List<RecentRepoInfo> recentRepositories = [.. topRepos.Union(recentRepos)];
 
-        _allFavoriteRepositories ??= ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadFavouriteHistoryAsync);
+        _allFavoriteRepositories ??=
+            ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Locals.LoadFavouriteHistoryAsync);
         repositories = Filter(_allFavoriteRepositories, pattern);
         topRepos.Clear();
         recentRepos.Clear();
@@ -96,8 +97,10 @@ public sealed class UserRepositoriesListController : IUserRepositoriesListContro
         return (recentRepositories, favouriteRepositories);
     }
 
-    public bool RemoveInvalidRepository(string path)
-       => _invalidRepositoryRemover.ShowDeleteInvalidRepositoryDialog(path);
+    bool IUserRepositoriesListController.RemoveInvalidRepository(string path)
+    {
+        return invalidRepositoryRemover.ShowDeleteInvalidRepositoryDialog(path);
+    }
 
     private static IList<Repository> Filter(IList<Repository> repositories, string pattern)
     {

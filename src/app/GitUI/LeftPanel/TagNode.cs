@@ -14,6 +14,26 @@ internal sealed class TagNode : BaseRevisionNode, IGitRefActions, ICanDelete
         ObjectId = objectId;
     }
 
+    bool ICanDelete.Delete()
+    {
+        return UiCommands.StartDeleteTagDialog(TreeViewNode.TreeView, FullPath);
+    }
+
+    bool IGitRefActions.CreateBranch()
+    {
+        return UiCommands.StartCreateBranchDialog(TreeViewNode.TreeView, ObjectId);
+    }
+
+    bool IGitRefActions.Merge()
+    {
+        return UiCommands.StartMergeBranchDialog(TreeViewNode.TreeView, FullPath);
+    }
+
+    bool IGitRefActions.Checkout()
+    {
+        return UiCommands.StartCheckoutRevisionDialog(TreeViewNode.TreeView, FullPath);
+    }
+
     internal override void OnSelected()
     {
         if (Tree.IgnoreSelectionChangedEvent)
@@ -35,21 +55,6 @@ internal sealed class TagNode : BaseRevisionNode, IGitRefActions, ICanDelete
         Delete();
     }
 
-    public bool CreateBranch()
-    {
-        return UICommands.StartCreateBranchDialog(TreeViewNode.TreeView, ObjectId);
-    }
-
-    public bool Delete()
-    {
-        return UICommands.StartDeleteTagDialog(TreeViewNode.TreeView, FullPath);
-    }
-
-    public bool Merge()
-    {
-        return UICommands.StartMergeBranchDialog(TreeViewNode.TreeView, FullPath);
-    }
-
     public override void ApplyStyle()
     {
         base.ApplyStyle();
@@ -58,10 +63,5 @@ internal sealed class TagNode : BaseRevisionNode, IGitRefActions, ICanDelete
             Visible
                 ? nameof(Images.TagHorizontal)
                 : nameof(Images.EyeClosed);
-    }
-
-    public bool Checkout()
-    {
-        return UICommands.StartCheckoutRevisionDialog(TreeViewNode.TreeView, FullPath);
     }
 }

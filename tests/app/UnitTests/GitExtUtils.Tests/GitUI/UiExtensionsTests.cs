@@ -1,6 +1,7 @@
 ﻿using GitExtensions.Extensibility.Extensions;
 
 namespace GitExtUtilsTests.GitUI;
+
 public sealed class UiExtensionsTests
 {
     [Theory]
@@ -15,5 +16,8 @@ public sealed class UiExtensionsTests
     [InlineData("b", null, "b")]
     [InlineData("", "n", "\r\nNotes:\r\n    n")]
     public void FormatBodyAndNotes(string? body, string? notes, string? expected)
-        => UIExtensions.FormatBodyAndNotes(body!, notes)?.ReplaceLineEndings("\r\n").Should().Be(expected); // under linux we`d get only \n newline sequences, leading to failing tests
+    {
+        UiExtensions.FormatBodyAndNotes(body!, notes)?.ReplaceLineEndings("\r\n").Should().Be(expected);
+        // under linux we`d get only \n newline sequences, leading to failing tests
+    }
 }

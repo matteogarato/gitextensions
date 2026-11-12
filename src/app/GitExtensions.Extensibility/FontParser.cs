@@ -4,13 +4,14 @@ namespace GitExtensions.Extensibility;
 
 public static class FontParser
 {
-    private const string InvariantCultureId = "_IC_";
+    private const string _invariantCultureId = "_IC_";
 
     public static string AsString(this Font value)
     {
         ArgumentNullException.ThrowIfNull(value);
         return string.Format(CultureInfo.InvariantCulture,
-            "{0};{1};{2};{3};{4}", value.FontFamily.Name, value.Size, InvariantCultureId, value.Bold ? 1 : 0, value.Italic ? 1 : 0);
+            "{0};{1};{2};{3};{4}", value.FontFamily.Name, value.Size, _invariantCultureId, value.Bold ? 1 : 0,
+            value.Italic ? 1 : 0);
     }
 
     public static Font Parse(this string? value, Font defaultValue)
@@ -20,7 +21,7 @@ public static class FontParser
             return defaultValue;
         }
 
-        string[] parts = value.Split(';');
+        var parts = value.Split(';');
         if (parts.Length < 2)
         {
             return defaultValue;
@@ -29,7 +30,7 @@ public static class FontParser
         try
         {
             string fontSize;
-            if (parts.Length == 3 && parts[2] == InvariantCultureId)
+            if (parts.Length == 3 && parts[2] == _invariantCultureId)
             {
                 fontSize = parts[1];
             }
@@ -39,7 +40,7 @@ public static class FontParser
                 fontSize = fontSize.Replace(".", CultureInfo.InvariantCulture.NumberFormat.NumberDecimalSeparator);
             }
 
-            FontStyle fontStyle = parts.Length > 3 && parts[3] == "1" ? FontStyle.Bold : FontStyle.Regular;
+            var fontStyle = parts.Length > 3 && parts[3] == "1" ? FontStyle.Bold : FontStyle.Regular;
             fontStyle |= parts.Length > 4 && parts[4] == "1" ? FontStyle.Italic : FontStyle.Regular;
 
             return new Font(parts[0], float.Parse(fontSize, CultureInfo.InvariantCulture), fontStyle);

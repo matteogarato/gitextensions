@@ -1,5 +1,5 @@
 ﻿using System.Drawing.Imaging;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 
@@ -7,11 +7,7 @@ namespace GitUI.SpellChecker;
 
 public sealed class SpellCheckEditControl : NativeWindow, IDisposable
 {
-    public bool IsImeStartingComposition { get; private set; }
-
     private readonly RichTextBox _richTextBox;
-    public List<TextPos> IllFormedLines { get; } = [];
-    public List<TextPos> Lines { get; } = [];
     private Bitmap? _bitmap;
     private Graphics? _bufferGraphics;
     private int _lineHeight;
@@ -25,10 +21,23 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
         AssignHandle(richTextBox.Handle);
     }
 
+    public bool IsImeStartingComposition { get; private set; }
+    public List<TextPos> IllFormedLines { get; } = [];
+    public List<TextPos> Lines { get; } = [];
+
+    void IDisposable.Dispose()
+    {
+        ReleaseHandle();
+
+        _bitmap?.Dispose();
+        _bufferGraphics?.Dispose();
+        _textBoxGraphics?.Dispose();
+    }
+
     protected override void WndProc(ref Message m)
     {
-        const int WM_IME_STARTCOMPOSITION = 0x010D;
-        const int WM_IME_ENDCOMPOSITION = 0x010E;
+        const int wmImeStartcomposition = 0x010D;
+        const int wmImeEndcomposition = 0x010E;
 
         switch (m.Msg)
         {
@@ -43,11 +52,11 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
                 CustomPaint();
 
                 break;
-            case WM_IME_STARTCOMPOSITION:
+            case wmImeStartcomposition:
                 IsImeStartingComposition = true;
                 base.WndProc(ref m);
                 break;
-            case WM_IME_ENDCOMPOSITION:
+            case wmImeEndcomposition:
                 base.WndProc(ref m);
                 IsImeStartingComposition = false;
                 break;
@@ -64,7 +73,7 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
             return;
         }
 
-        if (_bitmap is null || (_bitmap.Width != _richTextBox.Width || _bitmap.Height != _richTextBox.Height))
+        if (_bitmap is null || _bitmap.Width != _richTextBox.Width || _bitmap.Height != _richTextBox.Height)
         {
             _bitmap = new Bitmap(_richTextBox.Width, _richTextBox.Height, PixelFormat.Format32bppPArgb);
             _bufferGraphics = Graphics.FromImage(_bitmap);
@@ -81,8 +90,8 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
         DrawLines(IllFormedLines, DrawType.Mark);
 
         // Mark first line if it is blank
-        int lh = LineHeight();
-        int ypos = _richTextBox.GetPositionFromCharIndex(0).Y;
+        var lh = LineHeight();
+        var ypos = _richTextBox.GetPositionFromCharIndex(0).Y;
         if (_richTextBox.Text.Length > 1 &&
 
             // check for textBox.Text.Length>1 instead of textBox.Text.Length!=0 because there might be only a \n
@@ -102,10 +111,10 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
 
     private void DrawLines(IEnumerable<TextPos> list, DrawType type)
     {
-        foreach (TextPos textPos in list)
+        foreach (var textPos in list)
         {
-            Point start = _richTextBox.GetPositionFromCharIndex(textPos.Start);
-            Point end = _richTextBox.GetPositionFromCharIndex(textPos.End);
+            var start = _richTextBox.GetPositionFromCharIndex(textPos.Start);
+            var end = _richTextBox.GetPositionFromCharIndex(textPos.End);
 
             // The position above now points to the top left corner of the character.
             // We need to account for the character height so the underlines go
@@ -152,12 +161,12 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
     private void DrawWave(Point start, Point end)
     {
         using Pen pen = new(Color.Red.AdaptForeColor(_richTextBox.BackColor), DpiUtil.ScaleX);
-        int waveWidth = DpiUtil.Scale(4);
-        int waveHalfWidth = waveWidth >> 1;
-        if ((end.X - start.X) > waveWidth)
+        var waveWidth = DpiUtil.Scale(4);
+        var waveHalfWidth = waveWidth >> 1;
+        if (end.X - start.X > waveWidth)
         {
             List<Point> pl = [];
-            for (int i = start.X; i <= (end.X - waveHalfWidth); i += waveWidth)
+            for (var i = start.X; i <= end.X - waveHalfWidth; i += waveWidth)
             {
                 pl.Add(new Point(i, start.Y));
                 pl.Add(new Point(i + waveHalfWidth, start.Y + waveHalfWidth));
@@ -174,8 +183,8 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
 
     private void DrawMark(Point start, Point end)
     {
-        Color col = Color.FromArgb(120, 255, 255, 0).AdaptBackColor();
-        int lineHeight = LineHeight();
+        var col = Color.FromArgb(120, 255, 255, 0).AdaptBackColor();
+        var lineHeight = LineHeight();
         using Pen pen = new(col, lineHeight);
         start.Offset(0, -lineHeight / 2);
         end.Offset(0, -lineHeight / 2);
@@ -198,15 +207,6 @@ public sealed class SpellCheckEditControl : NativeWindow, IDisposable
         }
 
         return _lineHeight == 0 ? 12 : _lineHeight;
-    }
-
-    public void Dispose()
-    {
-        ReleaseHandle();
-
-        _bitmap?.Dispose();
-        _bufferGraphics?.Dispose();
-        _textBoxGraphics?.Dispose();
     }
 
     private enum DrawType

@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Settings;
 using GitExtensions.Plugins.GitlabIntegration.ApiClient;
 using GitExtensions.Plugins.GitlabIntegration.ApiClient.Models;
-using GitUI;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using ResourceManager;
 
@@ -16,8 +16,8 @@ public partial class GitlabSettingsUserControl : GitExtensionsControl, IBuildSer
 {
     private readonly GitlabRemoteParser _remoteParser = new();
     private IEnumerable<string?> _remotes = null!;
-    private string? _repositoryNamespace;
     private string? _repositoryName;
+    private string? _repositoryNamespace;
 
     public GitlabSettingsUserControl()
     {
@@ -25,21 +25,22 @@ public partial class GitlabSettingsUserControl : GitExtensionsControl, IBuildSer
         InitializeComplete();
     }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
         _remotes = remotes;
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
     {
-        string? host = buildServerConfig.GetValue("InstanceUrl");
-        int? projectId = buildServerConfig.GetInt("ProjectId");
-        string? apiToken = buildServerConfig.GetValue("ApiToken");
+        var host = buildServerConfig.GetValue("InstanceUrl");
+        var projectId = buildServerConfig.GetInt("ProjectId");
+        var apiToken = buildServerConfig.GetValue("ApiToken");
 
-        foreach (string? remote in _remotes)
+        foreach (var remote in _remotes)
         {
             if (remote is not null
-                && _remoteParser.TryExtractGitlabDataFromRemoteUrl(remote, out string? remoteHost, out string? owner, out string? repository))
+                && _remoteParser.TryExtractGitlabDataFromRemoteUrl(remote, out var remoteHost, out var owner,
+                    out var repository))
             {
                 remoteHost = $"https://{remoteHost}";
                 if (string.IsNullOrWhiteSpace(host))
@@ -76,6 +77,18 @@ public partial class GitlabSettingsUserControl : GitExtensionsControl, IBuildSer
         }
     }
 
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
+    {
+        buildServerConfig.SetString("InstanceUrl", InstanceUrlTextBox.Text.NullIfEmpty());
+        if (int.TryParse(ProjectIdTextBox.Text, out var projectId))
+        {
+            buildServerConfig.SetInt("ProjectId", projectId);
+        }
+
+        buildServerConfig.SetString("ApiToken", ApiTokenTextBox.Text.NullIfEmpty());
+        buildServerConfig.SetInt("PagesLimit", 0);
+    }
+
     private async Task<int?> UpdateProjectIdAsync(string? host, string? apiToken)
     {
         if (string.IsNullOrWhiteSpace(host)
@@ -88,7 +101,7 @@ public partial class GitlabSettingsUserControl : GitExtensionsControl, IBuildSer
         try
         {
             GitlabApiClient apiClient = new(host, apiToken ?? string.Empty);
-            GitlabProject? project = await apiClient.GetProjectAsync(_repositoryNamespace, _repositoryName);
+            var project = await apiClient.GetProjectAsync(_repositoryNamespace, _repositoryName);
 
             if (project is not null)
             {
@@ -103,18 +116,6 @@ public partial class GitlabSettingsUserControl : GitExtensionsControl, IBuildSer
         return 0;
     }
 
-    public void SaveSettings(SettingsSource buildServerConfig)
-    {
-        buildServerConfig.SetString("InstanceUrl", InstanceUrlTextBox.Text.NullIfEmpty());
-        if (int.TryParse(ProjectIdTextBox.Text, out int projectId))
-        {
-            buildServerConfig.SetInt("ProjectId", projectId);
-        }
-
-        buildServerConfig.SetString("ApiToken", ApiTokenTextBox.Text.NullIfEmpty());
-        buildServerConfig.SetInt("PagesLimit", 0);
-    }
-
     private void GetProjectIdLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
         if (!Uri.IsWellFormedUriString(InstanceUrlTextBox.Text, UriKind.Absolute))
@@ -126,7 +127,7 @@ public partial class GitlabSettingsUserControl : GitExtensionsControl, IBuildSer
 
         ThreadHelper.FileAndForget(async () =>
         {
-            int? projectId = await UpdateProjectIdAsync(InstanceUrlTextBox.Text, ApiTokenTextBox.Text);
+            var projectId = await UpdateProjectIdAsync(InstanceUrlTextBox.Text, ApiTokenTextBox.Text);
             if (projectId is > 0)
             {
                 ProjectIdTextBox.Text = projectId.ToString();

@@ -1,4 +1,6 @@
-﻿namespace GitUI.Editor;
+﻿using ICSharpCode.TextEditor.Gui;
+
+namespace GitUI.Editor;
 
 partial class FileViewerInternal
 {
@@ -28,7 +30,7 @@ partial class FileViewerInternal
     /// </summary>
     private void InitializeComponent()
     {
-        TextEditor = new ICSharpCode.TextEditor.TextEditorControl();
+        TextEditor = new TextEditorControl();
         SuspendLayout();
         // 
         // TextEditor
@@ -53,5 +55,5 @@ partial class FileViewerInternal
 
     #endregion
 
-    private ICSharpCode.TextEditor.TextEditorControl TextEditor;
+    private TextEditorControl TextEditor;
 }

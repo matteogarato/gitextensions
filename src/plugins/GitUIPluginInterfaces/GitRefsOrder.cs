@@ -6,40 +6,29 @@ namespace GitUIPluginInterfaces;
 // Special handling for Default and Version.
 public enum GitRefsSortBy
 {
-    [Description("Git default")]
-    Default = 0,
+    [Description("Git default")] Default = 0,
 
-    [Description("Author date")]
-    authordate,
+    [Description("Author date")] Authordate,
 
-    [Description("Committer date")]
-    committerdate,
+    [Description("Committer date")] Committerdate,
 
-    [Description("Creator date")]
-    creatordate,
+    [Description("Creator date")] Creatordate,
 
-    [Description("Tagger date")]
-    taggerdate,
+    [Description("Tagger date")] Taggerdate,
 
-    [Description("Alpha-numeric")]
-    refname,
+    [Description("Alpha-numeric")] Refname,
 
     // NB: sort key is version:refname
-    [Description("Version")]
-    versionRefname,
+    [Description("Version")] VersionRefname,
 
-    [Description("Object size")]
-    objectsize,
+    [Description("Object size")] Objectsize,
 
-    [Description("Originating remote")]
-    upstream,
+    [Description("Originating remote")] Upstream
 }
 
 public enum GitRefsSortOrder
 {
-    [Description("A ↓ Z")]
-    Ascending = 0,
+    [Description("A ↓ Z")] Ascending = 0,
 
-    [Description("Z ↑ A")]
-    Descending = 1,
+    [Description("Z ↑ A")] Descending = 1
 }

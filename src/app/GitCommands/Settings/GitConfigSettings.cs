@@ -7,7 +7,7 @@ using GitExtensions.Extensibility.Git;
 namespace GitCommands.Settings;
 
 /// <summary>
-///  Provides read/write access to git config settings of a specific scope (by running "git config").
+///     Provides read/write access to git config settings of a specific scope (by running "git config").
 /// </summary>
 [DebuggerDisplay("{" + nameof(DebuggerDisplay) + ",nq}")]
 public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSettingsGetter, IPersistentConfigValueStore
@@ -16,28 +16,32 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
     private readonly Dictionary<string, List<string>> _multiValueSettings = [];
 
     /// <summary>
-    ///  The constructor.
+    ///     The constructor.
     /// </summary>
-    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable"/> for the repo of interest.</param>
-    /// <param name="gitSettingLevel">The scope (excluding <see cref="GitSettingLevel.Effective"/>) of the git config settings.</param>
+    /// <param name="gitExecutable">The <see cref="IGitExecutor.GitExecutable" /> for the repo of interest.</param>
+    /// <param name="gitSettingLevel">
+    ///     The scope (excluding <see cref="GitSettingLevel.Effective" />) of the git config
+    ///     settings.
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public GitConfigSettings(IExecutable gitExecutable, GitSettingLevel gitSettingLevel)
         : base(gitExecutable, gitSettingLevel)
     {
-        ArgumentOutOfRangeException.ThrowIfEqual(gitSettingLevel == GitSettingLevel.Effective, true, $"Use read-only {nameof(EffectiveGitConfigSettings)} instance instead.");
+        ArgumentOutOfRangeException.ThrowIfEqual(gitSettingLevel == GitSettingLevel.Effective, true,
+            $"Use read-only {nameof(EffectiveGitConfigSettings)} instance instead.");
     }
 
-    private void Clear()
+    private new string DebuggerDisplay
     {
-        _multiValueSettings.Clear();
-        UniqueValueSettings.Clear();
+        get =>
+            $"{{ {GitSettingLevel}, {(IsValid ? "" : "in")}valid, {UniqueValueSettings.Count} + {_modifiedSettings.Count}! + {_multiValueSettings.Count}* }}";
     }
 
-    public IEnumerable<(string Setting, string Value)> GetAllValues()
+    IEnumerable<(string Setting, string Value)> IGitConfigSettingsGetter.GetAllValues()
     {
         Update();
 
-        foreach (KeyValuePair<string, string?> modified in _modifiedSettings)
+        foreach (var modified in _modifiedSettings)
         {
             if (modified.Value is not null)
             {
@@ -45,7 +49,7 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
             }
         }
 
-        foreach (KeyValuePair<string, string> unique in UniqueValueSettings)
+        foreach (var unique in UniqueValueSettings)
         {
             if (!_modifiedSettings.ContainsKey(unique.Key))
             {
@@ -53,9 +57,9 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
             }
         }
 
-        foreach (KeyValuePair<string, List<string>> multi in _multiValueSettings)
+        foreach (var multi in _multiValueSettings)
         {
-            foreach (string value in multi.Value)
+            foreach (var value in multi.Value)
             {
                 yield return (multi.Key, value);
             }
@@ -65,7 +69,7 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
     public override string? GetValue(string name)
     {
         name = NormalizeSettingName(name);
-        if (_modifiedSettings.TryGetValue(name, out string? value))
+        if (_modifiedSettings.TryGetValue(name, out var value))
         {
             return value;
         }
@@ -79,25 +83,25 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
         // A setting may occur more than once in a single scope, either because it is a genuine multi-value setting
         // or because a conditional include ("includeIf") overrides the value of the including config file.
         // "git config get" yields the last value in both cases, so do the same here.
-        return _multiValueSettings.TryGetValue(name, out List<string>? values) ? values[^1] : null;
+        return _multiValueSettings.TryGetValue(name, out var values) ? values[^1] : null;
     }
 
-    public IReadOnlyList<string> GetValues(string name)
+    IReadOnlyList<string> IGitConfigSettingsGetter.GetValues(string name)
     {
         name = NormalizeSettingName(name);
         Update();
-        return _multiValueSettings.TryGetValue(name, out List<string>? values)
+        return _multiValueSettings.TryGetValue(name, out var values)
             ? values
-            : GetValue(name) is string value
+            : GetValue(name) is { } value
                 ? [value]
                 : [];
     }
 
-    public void Save()
+    void IPersistentConfigValueStore.Save()
     {
-        foreach ((string name, string? value) in _modifiedSettings)
+        foreach ((var name, var value) in _modifiedSettings)
         {
-            GitExecutable.SetGitSetting(GitSettingLevel, name, value, append: false);
+            GitExecutable.SetGitSetting(GitSettingLevel, name, value, false);
 
             if (value is null)
             {
@@ -112,7 +116,7 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
         _modifiedSettings.Clear();
     }
 
-    public void SetValue(string name, string? value)
+    void IConfigValueStore.SetValue(string name, string? value)
     {
         name = NormalizeSettingName(name);
 
@@ -129,14 +133,14 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
         if (_multiValueSettings.ContainsKey(name))
         {
             throw new UserExternalOperationException(new InvalidOperationException($"""
-                Changing multi-value git settings is not supported. Tried to set "{name}" = "{value}".
-                But "{name}" has multiple values in the {GitSettingLevel.ToString().ToLowerInvariant()} git config. This is unusual for this configuration entry.
-                Either it is set several times, or a conditional include ("includeIf") overrides the value of the including config file.
-                Please edit the config file(s) manually.
-                """));
+                 Changing multi-value git settings is not supported. Tried to set "{name}" = "{value}".
+                 But "{name}" has multiple values in the {GitSettingLevel.ToString().ToLowerInvariant()} git config. This is unusual for this configuration entry.
+                 Either it is set several times, or a conditional include ("includeIf") overrides the value of the including config file.
+                 Please edit the config file(s) manually.
+                 """));
         }
 
-        if (UniqueValueSettings.TryGetValue(name, out string? storedValue) && value == storedValue)
+        if (UniqueValueSettings.TryGetValue(name, out var storedValue) && value == storedValue)
         {
             _modifiedSettings.Remove(name);
         }
@@ -146,9 +150,15 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
         }
     }
 
+    private void Clear()
+    {
+        _multiValueSettings.Clear();
+        UniqueValueSettings.Clear();
+    }
+
     private void StoreSetting(string name, string value)
     {
-        if (_multiValueSettings.TryGetValue(name, out List<string>? values))
+        if (_multiValueSettings.TryGetValue(name, out var values))
         {
             values.Add(value);
             return;
@@ -156,12 +166,13 @@ public sealed class GitConfigSettings : GitConfigSettingsBase, IGitConfigSetting
 
         if (!UniqueValueSettings.TryAdd(name, value))
         {
-            UniqueValueSettings.Remove(name, out string? firstValue);
+            UniqueValueSettings.Remove(name, out var firstValue);
             _multiValueSettings.Add(name, [firstValue!, value]);
         }
     }
 
-    protected override void Update() => Update(Clear, StoreSetting);
-
-    private new string DebuggerDisplay => $"{{ {GitSettingLevel}, {(IsValid ? "" : "in")}valid, {UniqueValueSettings.Count} + {_modifiedSettings.Count}! + {_multiValueSettings.Count}* }}";
+    protected override void Update()
+    {
+        Update(Clear, StoreSetting);
+    }
 }

@@ -5,15 +5,12 @@ using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Extensibility.Settings;
 using GitUI.Properties;
 
-namespace GitUI;
+namespace GitUI.Plugin;
 
 internal partial class FailedPluginWrapper : IGitPlugin
 {
-    [GeneratedRegex(@"""GitExtensions.([^""]+)""", RegexOptions.ExplicitCapture)]
-    private static partial Regex PluginNameRegex { get; }
-
     private readonly string _exception;
-    private string _pluginName = null!;
+    private readonly string _pluginName = null!;
 
     public FailedPluginWrapper(Exception loadingException)
     {
@@ -23,7 +20,7 @@ internal partial class FailedPluginWrapper : IGitPlugin
         try
         {
             // Try to extract plugin name from exception
-            Match match = PluginNameRegex.Match(_exception);
+            var match = PluginNameRegex.Match(_exception);
             if (match.Success)
             {
                 _pluginName = match.Value;
@@ -36,16 +33,27 @@ internal partial class FailedPluginWrapper : IGitPlugin
         }
     }
 
-    public Guid Id { get; } = Guid.NewGuid();
-    public string? Name { get; init; } = TranslatedStrings.FailedToLoadPlugin;
-    public string? Description { get; } = TranslatedStrings.FailedToLoadPlugin;
-    public Image? Icon { get; } = Resources.bug;
-    public IGitPluginSettingsContainer? SettingsContainer { get; set; }
-    public bool HasSettings { get; } = false;
+    [GeneratedRegex(@"""GitExtensions.([^""]+)""", RegexOptions.ExplicitCapture)]
+    private static partial Regex PluginNameRegex { get; }
 
-    public bool Execute(GitUIEventArgs args)
+    private string? Name { get; } = TranslatedStrings.FailedToLoadPlugin;
+
+    Guid IGitPlugin.Id { get; } = Guid.NewGuid();
+
+    string? IGitPlugin.Name
     {
-        DialogResult result = MessageBoxes.Show(string.Format(TranslatedStrings.FailedToLoadPluginPopupText, _exception),
+        get => Name;
+    }
+
+    string? IGitPlugin.Description { get; } = TranslatedStrings.FailedToLoadPlugin;
+    Image? IGitPlugin.Icon { get; } = Resources.bug;
+    IGitPluginSettingsContainer? IGitPlugin.SettingsContainer { get; set; }
+    bool IGitPlugin.HasSettings { get; } = false;
+
+    bool IGitPlugin.Execute(GitUiEventArgs args)
+    {
+        var result = MessageBoxes.Show(
+            string.Format(TranslatedStrings.FailedToLoadPluginPopupText, _exception),
             TranslatedStrings.FailedToLoadPlugin, MessageBoxButtons.OKCancel, MessageBoxIcon.Error);
         if (result == DialogResult.OK)
         {
@@ -55,13 +63,16 @@ internal partial class FailedPluginWrapper : IGitPlugin
         return false;
     }
 
-    public IEnumerable<ISetting> GetSettings() => [];
+    IEnumerable<ISetting> IGitPlugin.GetSettings()
+    {
+        return [];
+    }
 
-    public void Register(IGitUICommands gitUiCommands)
+    void IGitPlugin.Register(IGitUiCommands gitUiCommands)
     {
     }
 
-    public void Unregister(IGitUICommands gitUiCommands)
+    void IGitPlugin.Unregister(IGitUiCommands gitUiCommands)
     {
     }
 }

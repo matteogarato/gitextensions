@@ -6,9 +6,17 @@ namespace GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 
 public sealed class AzureDevopsExternalLinkDefinitionExtractor : ExternalLinkDefinitionExtractor
 {
-    public override string ServiceName => "Azure DevOps";
-    public override Image Icon => Images.VisualStudioTeamServices;
     private readonly AzureDevOpsRemoteParser _azureDevOpsRemoteParser = new();
+
+    public override string ServiceName
+    {
+        get => "Azure DevOps";
+    }
+
+    public override Image Icon
+    {
+        get => Images.VisualStudioTeamServices;
+    }
 
     public override bool IsValidRemoteUrl(string remoteUrl)
     {
@@ -23,13 +31,14 @@ public sealed class AzureDevopsExternalLinkDefinitionExtractor : ExternalLinkDef
 
         if (!string.IsNullOrWhiteSpace(remoteUrl))
         {
-            _azureDevOpsRemoteParser.TryExtractAzureDevopsDataFromRemoteUrl(remoteUrl, out accountName, out _, out repoName);
+            _azureDevOpsRemoteParser.TryExtractAzureDevopsDataFromRemoteUrl(remoteUrl, out accountName, out _,
+                out repoName);
         }
 
         accountName ??= "ACCOUNT_NAME";
         repoName ??= "REPO_NAME";
 
-        string azureDevopsUrl = $"https://dev.azure.com/{accountName}";
+        var azureDevopsUrl = $"https://dev.azure.com/{accountName}";
         ExternalLinkDefinition definition = new()
         {
             Name = string.Format(CodeLink.Text, ServiceName),
@@ -38,8 +47,16 @@ public sealed class AzureDevopsExternalLinkDefinitionExtractor : ExternalLinkDef
             SearchPattern = @".*",
             LinkFormats =
             {
-                new ExternalLinkFormat { Caption = string.Format(ViewCommitLink.Text, ServiceName), Format = $"{azureDevopsUrl}/_git/{repoName}/commit/%COMMIT_HASH%" },
-                new ExternalLinkFormat { Caption = string.Format(ViewProjectLink.Text, ServiceName), Format = $"{azureDevopsUrl}/{repoName}" }
+                new ExternalLinkFormat
+                {
+                    Caption = string.Format(ViewCommitLink.Text, ServiceName),
+                    Format = $"{azureDevopsUrl}/_git/{repoName}/commit/%COMMIT_HASH%"
+                },
+                new ExternalLinkFormat
+                {
+                    Caption = string.Format(ViewProjectLink.Text, ServiceName),
+                    Format = $"{azureDevopsUrl}/{repoName}"
+                }
             }
         };
         externalLinkDefinitions.Add(definition);
@@ -50,7 +67,13 @@ public sealed class AzureDevopsExternalLinkDefinitionExtractor : ExternalLinkDef
             Enabled = true,
             SearchInParts = { ExternalLinkDefinition.RevisionPart.Message },
             SearchPattern = @"#(\d+)",
-            LinkFormats = { new ExternalLinkFormat { Caption = "#{0}", Format = $"{azureDevopsUrl}/{repoName}/_workitems/edit/{{0}}" } }
+            LinkFormats =
+            {
+                new ExternalLinkFormat
+                {
+                    Caption = "#{0}", Format = $"{azureDevopsUrl}/{repoName}/_workitems/edit/{{0}}"
+                }
+            }
         });
 
         return externalLinkDefinitions;

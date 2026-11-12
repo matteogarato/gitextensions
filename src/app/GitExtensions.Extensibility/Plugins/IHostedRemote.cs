@@ -2,10 +2,8 @@
 
 public interface IHostedRemote
 {
-    IHostedRepository GetHostedRepository();
-
     /// <summary>
-    /// Gets the name of the remote in the local git repository. May be null.
+    ///     Gets the name of the remote in the local git repository. May be null.
     /// </summary>
     string? Name { get; }
 
@@ -21,6 +19,7 @@ public interface IHostedRemote
 
     string RemoteUrl { get; }
     GitProtocol CloneProtocol { get; }
+    IHostedRepository GetHostedRepository();
 
     string GetBlameUrl(string commitHash, string fileName, int lineIndex);
 }

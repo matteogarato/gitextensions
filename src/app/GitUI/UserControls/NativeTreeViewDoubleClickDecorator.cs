@@ -5,16 +5,11 @@ namespace GitUI.UserControls;
 // Add double-click related behaviour to NativeTreeView
 public class NativeTreeViewDoubleClickDecorator
 {
+    private readonly Func<DateTime> _getCurrentTime;
     private readonly NativeTreeView _treeView;
-
-    private int _mouseClicks = 0;
     private DateTime _lastMouseDown = DateTime.MinValue;
 
-    private readonly Func<DateTime> _getCurrentTime;
-
-    // Invoked just before an inner tree node is expanded/collapsed. Set CancelEventHandler.Cancel to true
-    // to cancel the expand/collapse of the current node.
-    public event CancelEventHandler? BeforeDoubleClickExpandCollapse;
+    private int _mouseClicks;
 
     public NativeTreeViewDoubleClickDecorator(NativeTreeView treeView, Func<DateTime> getCurrentTime)
     {
@@ -30,12 +25,16 @@ public class NativeTreeViewDoubleClickDecorator
     {
     }
 
+    // Invoked just before an inner tree node is expanded/collapsed. Set CancelEventHandler.Cancel to true
+    // to cancel the expand/collapse of the current node.
+    public event CancelEventHandler? BeforeDoubleClickExpandCollapse;
+
     private void HandleBeforeDoubleClickExpandCollapse(object? sender, TreeViewCancelEventArgs e)
     {
         // Once detected, reset double-clicked state so that if BeforeDoubleClickExpandCollapse does
         // anything that collapses/expands nodes on the tree, this function won't erroneously resend
         // this event.
-        bool doubleClicked = IsDoubleClickStateSet();
+        var doubleClicked = IsDoubleClickStateSet();
         ResetDoubleClickState();
 
         if (doubleClicked)
@@ -49,7 +48,7 @@ public class NativeTreeViewDoubleClickDecorator
     private void OnMouseDown(object? sender, MouseEventArgs e)
     {
         // We only care about double-clicks on the node itself, not the plus/minus part
-        TreeViewHitTestInfo hitTest = _treeView.HitTest(e.Location);
+        var hitTest = _treeView.HitTest(e.Location);
         if (hitTest.Location == TreeViewHitTestLocations.PlusMinus)
         {
             return;
@@ -58,7 +57,7 @@ public class NativeTreeViewDoubleClickDecorator
         // Use _mouseClicks and _lastMouseDown to detect double-clicks, and set _lastDoubleClick when detected
         ++_mouseClicks;
 
-        DateTime now = _getCurrentTime();
+        var now = _getCurrentTime();
 
         if (_mouseClicks == 2)
         {
@@ -71,8 +70,8 @@ public class NativeTreeViewDoubleClickDecorator
     // Returns true if a double-click occurred very recently
     private bool IsDoubleClickStateSet()
     {
-        int delta = (int)DateTime.Now.Subtract(_lastMouseDown).TotalMilliseconds;
-        return delta is (>= 0 and < 200);
+        var delta = (int)DateTime.Now.Subtract(_lastMouseDown).TotalMilliseconds;
+        return delta is >= 0 and < 200;
     }
 
     private void ResetDoubleClickState()

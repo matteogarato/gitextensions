@@ -14,7 +14,7 @@ using GitUI.Shells;
 using NSubstitute;
 using ResourceManager;
 
-namespace GitExtensions.UITests;
+namespace UITests;
 
 public static class GlobalServiceContainer
 {
@@ -27,9 +27,9 @@ public static class GlobalServiceContainer
         serviceContainer.AddService(Substitute.For<IAppTitleGenerator>());
         serviceContainer.AddService(Substitute.For<IWindowsJumpListManager>());
         serviceContainer.AddService(Substitute.For<ILinkFactory>());
-        serviceContainer.AddService(Substitute.For<IRepositoryHistoryUIService>());
+        serviceContainer.AddService(Substitute.For<IRepositoryHistoryUiService>());
 
-        IScriptsManager scriptsManager = Substitute.For<IScriptsManager>();
+        var scriptsManager = Substitute.For<IScriptsManager>();
         scriptsManager.GetScripts().Returns([]);
         serviceContainer.AddService(scriptsManager);
 
@@ -40,7 +40,7 @@ public static class GlobalServiceContainer
 
         serviceContainer.AddService(Substitute.For<ISubmoduleStatusProvider>());
 
-        IGitBranchNameNormaliser branchNameNormaliser = Substitute.For<IGitBranchNameNormaliser>();
+        var branchNameNormaliser = Substitute.For<IGitBranchNameNormaliser>();
         branchNameNormaliser.Normalise(Arg.Any<string?>(), Arg.Any<GitBranchNameOptions>())
             .Returns(callInfo => callInfo.Arg<string?>());
         serviceContainer.AddService(branchNameNormaliser);

@@ -1,8 +1,10 @@
 ﻿namespace GitUI.CommandsDialogs.SettingsDialog.RevisionLinks;
 
-public sealed class CloudProviderExternalLinkDefinitionExtractorFactory : ICloudProviderExternalLinkDefinitionExtractorFactory
+public sealed class
+    CloudProviderExternalLinkDefinitionExtractorFactory : ICloudProviderExternalLinkDefinitionExtractorFactory
 {
-    public ICloudProviderExternalLinkDefinitionExtractor? Get(CloudProviderKind cloudProviderKind)
+    ICloudProviderExternalLinkDefinitionExtractor? ICloudProviderExternalLinkDefinitionExtractorFactory.Get(
+        CloudProviderKind cloudProviderKind)
     {
         return cloudProviderKind switch
         {

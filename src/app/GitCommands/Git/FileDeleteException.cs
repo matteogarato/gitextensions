@@ -1,15 +1,9 @@
 namespace GitCommands.Git;
 
-public class FileDeleteException : Exception
+public class FileDeleteException(string fileName, Exception inner) : Exception(inner.Message, inner)
 {
-    public FileDeleteException(string fileName, Exception inner)
-        : base(inner.Message, inner)
-    {
-        FileName = fileName;
-    }
-
     /// <summary>
-    /// Gets the name of the file which could not be deleted.
+    ///     Gets the name of the file which could not be deleted.
     /// </summary>
-    public string FileName { get; }
+    public string FileName { get; } = fileName;
 }

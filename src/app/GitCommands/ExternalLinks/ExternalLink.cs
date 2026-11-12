@@ -1,16 +1,17 @@
 ﻿namespace GitCommands.ExternalLinks;
 
-public sealed class ExternalLink
+public sealed class ExternalLink(string? caption, string uri)
 {
-    public string? Caption { get; }
-    public string Uri { get; }
+    public string? Caption { get; } = caption;
+    public string Uri { get; } = uri;
 
-    public ExternalLink(string? caption, string uri)
+    public override bool Equals(object? obj)
     {
-        Caption = caption;
-        Uri = uri;
+        return obj is ExternalLink link && string.Equals(Uri, link.Uri);
     }
 
-    public override bool Equals(object? obj) => obj is ExternalLink link && string.Equals(Uri, link.Uri);
-    public override int GetHashCode() => Uri.GetHashCode();
+    public override int GetHashCode()
+    {
+        return Uri.GetHashCode();
+    }
 }

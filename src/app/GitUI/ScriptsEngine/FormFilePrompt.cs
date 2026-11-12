@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitExtUtils.GitUI;
 
@@ -6,13 +6,18 @@ namespace GitUI.ScriptsEngine;
 
 internal partial class FormFilePrompt : GitExtensionsForm, IUserInputPrompt
 {
-    public string UserInput { get; private set; } = string.Empty;
-
     public FormFilePrompt()
     {
         InitializeComponent();
         Translate();
         InitializeComplete();
+    }
+
+    private string UserInput { get; set; } = string.Empty;
+
+    string IUserInputPrompt.UserInput
+    {
+        get => UserInput;
     }
 
     protected override void OnRuntimeLoad(EventArgs e)

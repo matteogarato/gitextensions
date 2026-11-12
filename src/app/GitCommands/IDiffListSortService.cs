@@ -5,19 +5,19 @@ namespace GitCommands;
 public enum DiffListSortType
 {
     /// <summary>
-    /// Sorts by file path alphanumerically
+    ///     Sorts by file path alphanumerically
     /// </summary>
     FilePath,
     FilePathFlat,
 
     /// <summary>
-    /// Sorts by file extension then by path
+    ///     Sorts by file extension then by path
     /// </summary>
     FileExtension,
     FileExtensionFlat,
 
     /// <summary>
-    /// Sorts by git change type. Addition, Deletions, edits, etc. then by path
+    ///     Sorts by git change type. Addition, Deletions, edits, etc. then by path
     /// </summary>
     FileStatus,
     FileStatusFlat
@@ -33,7 +33,8 @@ public interface IDiffListSortService
 public static class DiffListSortServiceExtensions
 {
     /// <summary>
-    /// Provides the <see cref="IDiffListSortService.DiffListSorting"/> immediately and then an element for each <see cref="IDiffListSortService.DiffListSortingChanged"/>.
+    ///     Provides the <see cref="IDiffListSortService.DiffListSorting" /> immediately and then an element for each
+    ///     <see cref="IDiffListSortService.DiffListSortingChanged" />.
     /// </summary>
     /// <param name="diffListSortService">The diff list service</param>
     /// <returns>A hot stream with one immediate cold element.</returns>
@@ -41,8 +42,8 @@ public static class DiffListSortServiceExtensions
     {
         return Observable.Return(diffListSortService.DiffListSorting)
             .Concat(Observable.FromEventPattern(
-                h => diffListSortService.DiffListSortingChanged += h,
-                h => diffListSortService.DiffListSortingChanged -= h)
+                    h => diffListSortService.DiffListSortingChanged += h,
+                    h => diffListSortService.DiffListSortingChanged -= h)
                 .Select(_ => diffListSortService.DiffListSorting))
             .DistinctUntilChanged();
     }

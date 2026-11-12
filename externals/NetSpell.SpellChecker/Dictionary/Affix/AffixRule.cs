@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace NetSpell.SpellChecker.Dictionary.Affix;
+namespace SpellChecker.Dictionary.Affix;
 
 using AffixEntryCollection = List<AffixEntry>;
 

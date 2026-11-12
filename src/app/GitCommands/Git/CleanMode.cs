@@ -1,4 +1,4 @@
-﻿namespace GitCommands;
+﻿namespace GitCommands.Git;
 
 /// <summary>Mode for 'git clean'</summary>
 public enum CleanMode

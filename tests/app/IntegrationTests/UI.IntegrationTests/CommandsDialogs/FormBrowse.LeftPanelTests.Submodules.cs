@@ -1,48 +1,53 @@
 ﻿using System.ComponentModel.Design;
 using CommonTestUtils;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitCommands.Submodules;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
+using GitUI.UserControls;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormBrowse_LeftPanel_SubmodulesTests : System.IDisposable, IClassFixture<FormBrowse_LeftPanel_SubmodulesTestsFixture>
+public class FormBrowseLeftPanelSubmodulesTests : IDisposable, IClassFixture<FormBrowseLeftPanelSubmodulesTestsFixture>
 {
     // Created once for each test
-    private GitUICommands _commands = null!;
+    private GitUiCommands _commands = null!;
+
+    private ISubmoduleStatusProvider _provider = null!;
 
     private GitModuleTestHelper _repo1 = null!;
-    private GitModuleTestHelper _repo2 = null!;
-    private GitModuleTestHelper _repo3 = null!;
 
     // Note that _repo2Module and _repo3Module point to the submodules under _repo1Module,
     // not _repo2.Module and _repo3.Module respectively. In general, the tests should here
     // should interact with these modules, not with _repo2 and _repo3.
     private IGitModule _repo1Module = null!;
+    private GitModuleTestHelper _repo2 = null!;
     private IGitModule _repo2Module = null!;
+    private GitModuleTestHelper _repo3 = null!;
     private IGitModule _repo3Module = null!;
 
-    private ISubmoduleStatusProvider _provider = null!;
-
-    public FormBrowse_LeftPanel_SubmodulesTests(FormBrowse_LeftPanel_SubmodulesTestsFixture fixture)
+    public FormBrowseLeftPanelSubmodulesTests(FormBrowseLeftPanelSubmodulesTestsFixture fixture)
     {
         InitializeTest();
     }
 
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
+    }
+
     private void InitializeTest()
     {
-        _repo1 = new GitModuleTestHelper("repo1");
+        _repo1 = new GitModuleTestHelper();
         _repo2 = new GitModuleTestHelper("repo2");
         _repo3 = new GitModuleTestHelper("repo3");
 
         _repo2.AddSubmodule(_repo3, "repo3");
         _repo1.AddSubmodule(_repo2, "repo2");
-        IEnumerable<IGitModule> submodules = _repo1.GetSubmodulesRecursive();
+        var submodules = _repo1.GetSubmodulesRecursive();
 
         _repo1Module = _repo1.Module;
         _repo2Module = submodules.ElementAt(0);
@@ -54,7 +59,7 @@ public class FormBrowse_LeftPanel_SubmodulesTests : System.IDisposable, IClassFi
         serviceContainer.RemoveService<ISubmoduleStatusProvider>();
         serviceContainer.AddService(_provider);
 
-        _commands = new GitUICommands(serviceContainer, _repo1Module);
+        _commands = new GitUiCommands(serviceContainer, _repo1Module);
     }
 
     private void DisposeTest()
@@ -68,61 +73,56 @@ public class FormBrowse_LeftPanel_SubmodulesTests : System.IDisposable, IClassFi
     [WinFormsFact]
     public void RepoObjectTree_should_show_all_submodules()
     {
-        RunFormTest(
-            form =>
-            {
-                TreeNode submodulesNode = GetSubmoduleNode(form);
+        RunFormTest(form =>
+        {
+            var submodulesNode = GetSubmoduleNode(form);
 
-                // act: wait until loaded by left panel
-                UITest.ProcessUntil("Loading submodules", () => submodulesNode.Nodes.Count == 1);
+            // act: wait until loaded by left panel
+            UiTest.ProcessUntil("Loading submodules", () => submodulesNode.Nodes.Count == 1);
 
-                // assert
-                submodulesNode.Nodes.Count.Should().Be(1);
+            // assert
+            submodulesNode.Nodes.Count.Should().Be(1);
 
-                TreeNode repo1Node = submodulesNode.Nodes[0];
-                repo1Node.Name.Should().StartWith("repo1");
-                repo1Node.Nodes.Count.Should().Be(1);
+            var repo1Node = submodulesNode.Nodes[0];
+            repo1Node.Name.Should().StartWith("repo1");
+            repo1Node.Nodes.Count.Should().Be(1);
 
-                TreeNode repo2Node = repo1Node.Nodes[0];
-                repo2Node.Name.Should().StartWith("repo2");
-                repo2Node.Nodes.Count.Should().Be(1);
+            var repo2Node = repo1Node.Nodes[0];
+            repo2Node.Name.Should().StartWith("repo2");
+            repo2Node.Nodes.Count.Should().Be(1);
 
-                TreeNode repo3Node = repo2Node.Nodes[0];
-                repo3Node.Name.Should().StartWith("repo3");
-                repo3Node.Nodes.Count.Should().Be(0);
+            var repo3Node = repo2Node.Nodes[0];
+            repo3Node.Name.Should().StartWith("repo3");
+            repo3Node.Nodes.Count.Should().Be(0);
 
-                return Task.CompletedTask;
-            });
+            return Task.CompletedTask;
+        });
     }
 
     private static TreeNode GetSubmoduleNode(FormBrowse form)
     {
-        GitUI.UserControls.NativeTreeView treeView = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor().TreeView;
-        TreeNode? remotesNode = treeView.Nodes.OfType<TreeNode>().FirstOrDefault(n => n.Text == TranslatedStrings.Submodules);
+        var treeView = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor().TreeView;
+        var remotesNode = treeView.Nodes.OfType<TreeNode>()
+            .FirstOrDefault(n => n.Text == TranslatedStrings.Submodules);
         remotesNode.Should().NotBeNull();
         return remotesNode;
     }
 
     private void RunFormTest(Func<FormBrowse, Task> testDriverAsync)
     {
-        UITest.RunForm(
-            showForm: () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
+        UiTest.RunForm(
+            () => _commands.StartBrowseDialog(owner: null).Should().BeTrue(),
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }
 
-public sealed class FormBrowse_LeftPanel_SubmodulesTestsFixture : System.IDisposable
+public sealed class FormBrowseLeftPanelSubmodulesTestsFixture : IDisposable
 {
     // Track the original setting value
-    private bool _originalShowAuthorAvatarColumn;
-    private bool _showAvailableDiffTools;
+    private readonly bool _originalShowAuthorAvatarColumn;
+    private readonly bool _showAvailableDiffTools;
 
-    public FormBrowse_LeftPanel_SubmodulesTestsFixture()
+    public FormBrowseLeftPanelSubmodulesTestsFixture()
     {
         // Remember the current settings...
         _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
@@ -135,7 +135,7 @@ public sealed class FormBrowse_LeftPanel_SubmodulesTestsFixture : System.IDispos
         AppSettings.ShowAuthorAvatarColumn = false;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
         AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;

@@ -1,17 +1,18 @@
 ﻿using GitExtensions.Extensibility;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitExtUtils;
 
 /// <summary>
-///  Reads a stream asynchronously and provides the output split at a linefeed or at a carriage return not followed by linefeed.
-///  If no line end is received within a timeout, the already received output is provided.
+///     Reads a stream asynchronously and provides the output split at a linefeed or at a carriage return not followed by
+///     linefeed.
+///     If no line end is received within a timeout, the already received output is provided.
 /// </summary>
 /// <remarks>
-///  Multiple lines can be provided as one block.
-///  <br/>
-///  The timeout expires for instance if an input prompt is shown in the stream.
+///     Multiple lines can be provided as one block.
+///     <br />
+///     The timeout expires for instance if an input prompt is shown in the stream.
 /// </remarks>
 public sealed class AsyncStreamReader : IDisposable
 {
@@ -23,26 +24,27 @@ public sealed class AsyncStreamReader : IDisposable
     private bool _disposedValue;
 
     /// <summary>
-    ///  Starts reading the stream and forwards its output to the <paramref name="notify"/> functor.
+    ///     Starts reading the stream and forwards its output to the <paramref name="notify" /> functor.
     /// </summary>
     public AsyncStreamReader(IStreamReader streamReader, Action<string> notify)
     {
-        CancellationToken cancellationToken = _cancellationTokenSource.Token;
+        var cancellationToken = _cancellationTokenSource.Token;
         _taskManager.FileAndForget(async () =>
         {
             // Read single chars because ReadAsync blocks until a line end is received
             // Wait for start of new output without timeout, but read consecutive chars with timeout in order to display prompts having no line end
-            char[] buffer = new char[1];
+            var buffer = new char[1];
             Memory<char> bufferMemory = new(buffer);
 
-            string received = "";
+            var received = "";
             while (true)
             {
                 try
                 {
                     CancellationTokenSource? readTimeoutCancellationTokenSource = null;
-                    CancellationToken readCancellation = GetReadCancellation(addTimeout: received.Length > 0, ref readTimeoutCancellationTokenSource);
-                    int length = await streamReader.ReadAsync(bufferMemory, readCancellation);
+                    var readCancellation =
+                        GetReadCancellation(received.Length > 0, ref readTimeoutCancellationTokenSource);
+                    var length = await streamReader.ReadAsync(bufferMemory, readCancellation);
                     readTimeoutCancellationTokenSource?.Dispose();
 
                     if (length == 0)
@@ -62,7 +64,7 @@ public sealed class AsyncStreamReader : IDisposable
 
                     received += buffer[0];
 
-                    int lastLineEnd = received.LastIndexOf(Delimiters.LineFeed) + 1;
+                    var lastLineEnd = received.LastIndexOf(Delimiters.LineFeed) + 1;
                     if (lastLineEnd == 0)
                     {
                         lastLineEnd = received.LastIndexOf(Delimiters.CarriageReturn) + 1;
@@ -88,7 +90,8 @@ public sealed class AsyncStreamReader : IDisposable
 
         return;
 
-        CancellationToken GetReadCancellation(bool addTimeout, ref CancellationTokenSource? readTimeoutCancellationTokenSource)
+        CancellationToken GetReadCancellation(bool addTimeout,
+            ref CancellationTokenSource? readTimeoutCancellationTokenSource)
         {
             if (!addTimeout)
             {
@@ -101,17 +104,17 @@ public sealed class AsyncStreamReader : IDisposable
     }
 
     /// <summary>
-    ///  Starts reading the stream and forwards its output to the <paramref name="notify"/> functor.
+    ///     Starts reading the stream and forwards its output to the <paramref name="notify" /> functor.
     /// </summary>
     public AsyncStreamReader(StreamReader streamReader, Action<string> notify)
         : this(new StreamReaderFacade(streamReader), notify)
     {
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -130,7 +133,7 @@ public sealed class AsyncStreamReader : IDisposable
     }
 
     /// <summary>
-    ///  Cancels the asynchronous read.
+    ///     Cancels the asynchronous read.
     /// </summary>
     public void CancelOperation()
     {
@@ -138,7 +141,7 @@ public sealed class AsyncStreamReader : IDisposable
     }
 
     /// <summary>
-    ///  Waits until all stream output has been read and forwarded to the notify functor.
+    ///     Waits until all stream output has been read and forwarded to the notify functor.
     /// </summary>
     public Task WaitUntilEofAsync(CancellationToken cancellationToken)
     {

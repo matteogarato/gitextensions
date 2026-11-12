@@ -1,36 +1,28 @@
-﻿using GitCommands;
-using GitExtUtils.Tasks;
-using LibGit2Sharp;
+﻿using LibGit2Sharp;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace CommonTestUtils;
 
 public class ReferenceRepository : IDisposable
 {
-    static ReferenceRepository()
-    {
-        Epilogue.RegisterAfterSuiteAction(order: 1, ReleaseNextRepositories);
-    }
-
-    private static readonly Lock _nextLock = new();
-    private static GitModuleTestSnapshot? _repoSnapshot = null;
-    private static GitModuleTestSnapshot? _repoWithCommitSnapshot = null;
-    private static string? _repoCommitHash = null;
-    private static Task<(GitModuleTestHelper Helper, string? CommitHash)>? _nextGitModuleTestHelper = null;
-    private static Task<(GitModuleTestHelper Helper, string? CommitHash)>? _nextGitModuleTestHelperWithCommit = null;
-
     private const string _fileName = "A.txt";
 
     public const string AuthorName = "GitUITests";
     public const string AuthorEmail = "unittests@gitextensions.com";
     public const string AuthorFullIdentity = $"{AuthorName} <{AuthorEmail}>";
+
+    private static readonly Lock _nextLock = new();
+    private static GitModuleTestSnapshot? _repoSnapshot;
+    private static GitModuleTestSnapshot? _repoWithCommitSnapshot;
+    private static string? _repoCommitHash;
+    private static Task<(GitModuleTestHelper Helper, string? CommitHash)>? _nextGitModuleTestHelper;
+    private static Task<(GitModuleTestHelper Helper, string? CommitHash)>? _nextGitModuleTestHelperWithCommit;
     private readonly GitModuleTestHelper _moduleTestHelper;
 
-    // We don't expect any failures so that we won't be switching to the main thread or showing messages
-    public static Control DummyOwner { get; } = new();
-
-    public GitModule Module => _moduleTestHelper.Module;
-
-    public string? CommitHash { get; private set; }
+    static ReferenceRepository()
+    {
+        Epilogue.RegisterAfterSuiteAction(1, ReleaseNextRepositories);
+    }
 
     public ReferenceRepository(bool createCommit = true)
     {
@@ -38,16 +30,34 @@ public class ReferenceRepository : IDisposable
         {
             if (createCommit)
             {
-                _moduleTestHelper = ClaimNextModuleTestHelper(ref _nextGitModuleTestHelperWithCommit, ref _repoWithCommitSnapshot, createCommit: true);
+                _moduleTestHelper = ClaimNextModuleTestHelper(ref _nextGitModuleTestHelperWithCommit,
+                    ref _repoWithCommitSnapshot, true);
             }
             else
             {
-                _moduleTestHelper = ClaimNextModuleTestHelper(ref _nextGitModuleTestHelper, ref _repoSnapshot, createCommit: false);
+                _moduleTestHelper = ClaimNextModuleTestHelper(ref _nextGitModuleTestHelper, ref _repoSnapshot, false);
             }
         }
     }
 
-    private static Task<(GitModuleTestHelper Helper, string? CommitHash)> BeginFastCloneGitModuleTestHelper(GitModuleTestSnapshot snapshot)
+    // We don't expect any failures so that we won't be switching to the main thread or showing messages
+    public static Control DummyOwner { get; } = new();
+
+    public GitModule Module
+    {
+        get => _moduleTestHelper.Module;
+    }
+
+    public string? CommitHash { get; private set; }
+
+    void IDisposable.Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private static Task<(GitModuleTestHelper Helper, string? CommitHash)> BeginFastCloneGitModuleTestHelper(
+        GitModuleTestSnapshot snapshot)
     {
         return Task.Run(() => (snapshot.Clone(), _repoCommitHash));
     }
@@ -64,7 +74,9 @@ public class ReferenceRepository : IDisposable
         Commands.Checkout(repository, CommitHash!, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
     }
 
-    private GitModuleTestHelper ClaimNextModuleTestHelper(ref Task<(GitModuleTestHelper Helper, string? CommitHash)>? initializer, ref GitModuleTestSnapshot? snapshot, bool createCommit)
+    private GitModuleTestHelper ClaimNextModuleTestHelper(
+        ref Task<(GitModuleTestHelper Helper, string? CommitHash)>? initializer, ref GitModuleTestSnapshot? snapshot,
+        bool createCommit)
     {
         GitModuleTestHelper moduleTestHelper;
 
@@ -92,9 +104,9 @@ public class ReferenceRepository : IDisposable
 
     private static string Commit(Repository repository, string commitMessage)
     {
-        Signature author = GetAuthorSignature();
+        var author = GetAuthorSignature();
         CommitOptions options = new() { PrettifyMessage = false };
-        Commit commit = repository.Commit(commitMessage, author, author, options);
+        var commit = repository.Commit(commitMessage, author, author, options);
         repository.Index.Write();
         return commit.Id.Sha;
     }
@@ -119,7 +131,8 @@ public class ReferenceRepository : IDisposable
         return CommitHash;
     }
 
-    public string CreateCommit(string commitMessage, string content1, string fileName1, string? content2 = null, string? fileName2 = null)
+    public string CreateCommit(string commitMessage, string content1, string fileName1, string? content2 = null,
+        string? fileName2 = null)
     {
         using Repository repository = new(Module.WorkingDir);
         _moduleTestHelper.CreateRepoFile(fileName1, content1);
@@ -135,18 +148,20 @@ public class ReferenceRepository : IDisposable
         return CommitHash;
     }
 
-    private static string CreateCommit(GitModuleTestHelper moduleTestHelper, string commitMessage, string? content = null)
+    private static string CreateCommit(GitModuleTestHelper moduleTestHelper, string commitMessage,
+        string? content = null)
     {
         using Repository repository = new(moduleTestHelper.Module.WorkingDir);
         moduleTestHelper.CreateRepoFile(_fileName, content ?? commitMessage);
         IndexAdd(repository, _fileName);
 
-        string commitHash = Commit(repository, commitMessage);
+        var commitHash = Commit(repository, commitMessage);
         Console.WriteLine($"Created commit: {commitHash}, message: {commitMessage}");
         return commitHash;
     }
 
-    public string CreateCommitRelative(string fileRelativePath, string fileName, string commitMessage, string? content = null)
+    public string CreateCommitRelative(string fileRelativePath, string fileName, string commitMessage,
+        string? content = null)
     {
         using Repository repository = new(Module.WorkingDir);
         _moduleTestHelper.CreateRepoFile(fileRelativePath, fileName, content ?? commitMessage);
@@ -162,9 +177,9 @@ public class ReferenceRepository : IDisposable
     {
         using Repository repository = new(Module.WorkingDir);
         repository.Network.Remotes.Add("origin", "http://useless.url");
-        Remote remote = repository.Network.Remotes["origin"];
+        var remote = repository.Network.Remotes["origin"];
 
-        Branch branch = repository.Branches[branchName];
+        var branch = repository.Branches[branchName];
 
         repository.Branches.Update(branch,
             b => b.Remote = remote.Name,
@@ -175,7 +190,10 @@ public class ReferenceRepository : IDisposable
         Module.GetSettings("reload local settings, too");
     }
 
-    public string CreateRepoFile(string fileName, string fileContent) => _moduleTestHelper.CreateRepoFile(fileName, fileContent);
+    public string CreateRepoFile(string fileName, string fileContent)
+    {
+        return _moduleTestHelper.CreateRepoFile(fileName, fileContent);
+    }
 
     public void CreateTag(string tagName, string commitHash, bool allowOverwrite = false)
     {
@@ -183,12 +201,9 @@ public class ReferenceRepository : IDisposable
         repository.Tags.Add(tagName, commitHash, allowOverwrite);
     }
 
-    public string DeleteRepoFile(string fileName) => _moduleTestHelper.DeleteRepoFile(fileName);
-
-    public void Dispose()
+    public string DeleteRepoFile(string fileName)
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+        return _moduleTestHelper.DeleteRepoFile(fileName);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -202,7 +217,10 @@ public class ReferenceRepository : IDisposable
         Commands.Fetch(repository, remoteName, [], new FetchOptions(), null);
     }
 
-    private static Signature GetAuthorSignature() => new(AuthorName, AuthorEmail, DateTimeOffset.Now);
+    private static Signature GetAuthorSignature()
+    {
+        return new Signature(AuthorName, AuthorEmail, DateTimeOffset.Now);
+    }
 
     private static (GitModuleTestHelper Helper, string? CommitHash) InitializeGitModuleTestHelper(bool createCommit)
     {
@@ -247,7 +265,8 @@ public class ReferenceRepository : IDisposable
         Epilogue.ExecuteAfterTestActions();
     }
 
-    public string RenameRepoFile(string fileRelativePath, string oldFileName, string newFileName, string? newContent = null, string? commitMessage = null)
+    public string RenameRepoFile(string fileRelativePath, string oldFileName, string newFileName,
+        string? newContent = null, string? commitMessage = null)
     {
         using Repository repository = new(Module.WorkingDir);
         newContent ??= File.ReadAllText(Path.Combine(Module.WorkingDir, fileRelativePath, oldFileName));
@@ -269,7 +288,7 @@ public class ReferenceRepository : IDisposable
         _moduleTestHelper.CreateRepoFile(_fileName, content ?? stashMessage);
         IndexAdd(repository, _fileName);
 
-        Stash stash = repository.Stashes.Add(GetAuthorSignature(), stashMessage);
+        var stash = repository.Stashes.Add(GetAuthorSignature(), stashMessage);
         Console.WriteLine($"Created stash: {stash.Index.Sha}, message: {stashMessage}");
     }
 }

@@ -2,13 +2,15 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using GitExtensions.Plugins.GitHubActionsIntegration.ApiClient.Models;
-using Microsoft;
 
 namespace GitExtensions.Plugins.GitHubActionsIntegration.ApiClient;
 
 public sealed class GitHubActionsApiClient : IGitHubActionsApiClient
 {
-    private const int DefaultPerPage = 100;
+    private const int _defaultPerPage = 100;
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private readonly HttpClient _httpClient;
     private readonly string _repository;
 
@@ -16,16 +18,16 @@ public sealed class GitHubActionsApiClient : IGitHubActionsApiClient
     {
         _repository = repository;
 
-        string baseUrl = apiUrl.TrimEnd('/');
+        var baseUrl = apiUrl.TrimEnd('/');
 
         BaseUrl = $"{baseUrl}/repos/{owner}/{_repository}";
 
         _httpClient = CreateHttpClient(apiToken);
     }
 
-    public string BaseUrl { get; }
+    string IGitHubActionsApiClient.BaseUrl { get; }
 
-    public async Task<GitHubActionsWorkflowRunsResponse> GetWorkflowRunsAsync(
+    async Task<GitHubActionsWorkflowRunsResponse> IGitHubActionsApiClient.GetWorkflowRunsAsync(
         bool running,
         DateTime? sinceDate,
         int page,
@@ -35,7 +37,7 @@ public sealed class GitHubActionsApiClient : IGitHubActionsApiClient
         List<string> queryParams =
         [
             $"page={page}",
-            $"per_page={Math.Min(perPage, DefaultPerPage)}"
+            $"per_page={Math.Min(perPage, _defaultPerPage)}"
         ];
 
         if (running)
@@ -49,39 +51,40 @@ public sealed class GitHubActionsApiClient : IGitHubActionsApiClient
 
         if (sinceDate.HasValue)
         {
-            string createdFilter = $">={sinceDate.Value:yyyy-MM-ddTHH:mm:ssZ}";
+            var createdFilter = $">={sinceDate.Value:yyyy-MM-ddTHH:mm:ssZ}";
             queryParams.Add($"created={Uri.EscapeDataString(createdFilter)}");
         }
 
-        string query = string.Join("&", queryParams);
-        string url = $"{BaseUrl}/actions/runs?{query}";
+        var query = string.Join("&", queryParams);
+        var url = $"{BaseUrl}/actions/runs?{query}";
 
         return await GetAsync<GitHubActionsWorkflowRunsResponse>(url, cancellationToken);
     }
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    void IDisposable.Dispose()
     {
-        PropertyNameCaseInsensitive = true,
-    };
+        _httpClient.Dispose();
+    }
 
     private async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken)
         where T : class
     {
-        using HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
 
         switch (response.StatusCode)
         {
             case HttpStatusCode.Unauthorized:
             case HttpStatusCode.Forbidden:
-                throw new UnauthorizedAccessException($"GitHub API returned {response.StatusCode}. Check your API token.");
+                throw new UnauthorizedAccessException(
+                    $"GitHub API returned {response.StatusCode}. Check your API token.");
             case HttpStatusCode.NotFound:
                 throw new InvalidOperationException($"Repository not found at {url}. Check owner/repository settings.");
         }
 
         response.EnsureSuccessStatusCode();
 
-        string json = await response.Content.ReadAsStringAsync(cancellationToken);
-        T? result = JsonSerializer.Deserialize<T>(json, _jsonOptions);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        var result = JsonSerializer.Deserialize<T>(json, _jsonOptions);
         Validates.NotNull(result);
 
         return result;
@@ -89,10 +92,7 @@ public sealed class GitHubActionsApiClient : IGitHubActionsApiClient
 
     private static HttpClient CreateHttpClient(string? apiToken)
     {
-        HttpClient client = new()
-        {
-            Timeout = TimeSpan.FromMinutes(2),
-        };
+        HttpClient client = new() { Timeout = TimeSpan.FromMinutes(2) };
 
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         client.DefaultRequestHeaders.Add("User-Agent", "GitExtensions");
@@ -104,10 +104,5 @@ public sealed class GitHubActionsApiClient : IGitHubActionsApiClient
         }
 
         return client;
-    }
-
-    public void Dispose()
-    {
-        _httpClient.Dispose();
     }
 }

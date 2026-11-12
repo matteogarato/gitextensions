@@ -7,54 +7,55 @@ namespace GitUITests.SettingControlBindings;
 
 public sealed class NumberSettingControlBindingTests
 {
-    private const string SettingName = "TestSetting";
-    private const int DefaultValue = 42;
+    private const string _settingName = "TestSetting";
+    private const int _defaultValue = 42;
 
     [Fact]
     public void CreateControlBinding_TextBox_SaveSetting_should_set_null_when_TextBox_is_empty()
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
 
         textBox.Text = string.Empty;
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, null);
+        settingsSource.Received(1).SetValue(_settingName, null);
     }
 
     [Fact]
-    public void CreateControlBinding_TextBox_LoadSetting_should_show_default_value_when_nothing_stored_at_effective_level()
+    public void
+        CreateControlBinding_TextBox_LoadSetting_should_show_default_value_when_nothing_stored_at_effective_level()
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(SettingLevel.Effective);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
         binding.LoadSetting(settingsSource);
 
-        textBox.Text.Should().Be(DefaultValue.ToString());
+        textBox.Text.Should().Be(_defaultValue.ToString());
     }
 
     [Theory]
     [InlineData(SettingLevel.Global)]
     [InlineData(SettingLevel.Local)]
     [InlineData(SettingLevel.Distributed)]
-
-    public void CreateControlBinding_TextBox_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(SettingLevel settingLevel)
+    public void CreateControlBinding_TextBox_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(
+        SettingLevel settingLevel)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(settingLevel);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
         binding.LoadSetting(settingsSource);
 
@@ -62,17 +63,18 @@ public sealed class NumberSettingControlBindingTests
     }
 
     [Fact]
-    public void CreateControlBinding_TextBox_SaveSetting_should_not_write_when_TextBox_shows_default_value_at_effective_level()
+    public void
+        CreateControlBinding_TextBox_SaveSetting_should_not_write_when_TextBox_shows_default_value_at_effective_level()
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(SettingLevel.Effective);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
-        textBox.Text = DefaultValue.ToString();
+        textBox.Text = _defaultValue.ToString();
         binding.SaveSetting(settingsSource);
 
         settingsSource.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string?>());
@@ -83,16 +85,15 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(1)]
     [InlineData(99)]
     [InlineData(int.MaxValue)]
-
     public void CreateControlBinding_TextBox_LoadSetting_should_show_stored_value_at_effective_level(int storedValue)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(SettingLevel.Effective);
-        settingsSource.GetValue(SettingName).Returns(storedValue.ToString());
+        settingsSource.GetValue(_settingName).Returns(storedValue.ToString());
 
         binding.LoadSetting(settingsSource);
 
@@ -104,29 +105,27 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(1)]
     [InlineData(99)]
     [InlineData(int.MaxValue)]
-
     public void CreateControlBinding_TextBox_SaveSetting_should_write_valid_number(int value)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
 
         textBox.Text = value.ToString();
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, value.ToString());
+        settingsSource.Received(1).SetValue(_settingName, value.ToString());
     }
 
     [Theory]
     [InlineData("abc")]
     [InlineData("1.5")]
     [InlineData("1e3")]
-
     public void CreateControlBinding_TextBox_should_set_red_background_when_text_changes_to_invalid(string invalidText)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
         SettingControlBindingsProvider.CreateControlBinding(setting);
@@ -134,26 +133,25 @@ public sealed class NumberSettingControlBindingTests
         textBox.Text = invalidText;
 
         textBox.BackColor.Should().Be(OtherColors.BrightRed);
-        textBox.ForeColor.Should().Be(ColorHelper.GetTextColor(OtherColors.BrightRed));
+        textBox.ForeColor.Should().Be(OtherColors.BrightRed.GetTextColor());
     }
 
     [Theory]
     [InlineData("abc")]
     [InlineData("1.5")]
     [InlineData("1e3")]
-
     public void CreateControlBinding_TextBox_SaveSetting_should_store_null_on_invalid_input(string invalidText)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
 
         textBox.Text = invalidText;
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, null);
+        settingsSource.Received(1).SetValue(_settingName, null);
     }
 
     [Theory]
@@ -161,10 +159,9 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(1)]
     [InlineData(99)]
     [InlineData(int.MaxValue)]
-
     public void CreateControlBinding_TextBox_should_restore_background_when_text_changes_to_valid(int value)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new() { BackColor = Color.Red, ForeColor = Color.WhiteSmoke };
         setting.CustomControl = textBox;
         SettingControlBindingsProvider.CreateControlBinding(setting);
@@ -180,16 +177,15 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(SettingLevel.Local)]
     [InlineData(SettingLevel.Distributed)]
     [InlineData(SettingLevel.Effective)]
-
     public void CreateControlBinding_TextBox_LoadSetting_should_restore_background(SettingLevel settingLevel)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new() { BackColor = Color.Red, ForeColor = Color.WhiteSmoke };
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(settingLevel);
-        settingsSource.GetValue(SettingName).Returns(DefaultValue.ToString());
+        settingsSource.GetValue(_settingName).Returns(_defaultValue.ToString());
 
         binding.LoadSetting(settingsSource);
 
@@ -201,52 +197,54 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(SettingLevel.Global)]
     [InlineData(SettingLevel.Local)]
     [InlineData(SettingLevel.Distributed)]
-
-    public void CreateControlBinding_TextBox_SaveSetting_should_write_default_value_at_non_effective_level(SettingLevel settingLevel)
+    public void CreateControlBinding_TextBox_SaveSetting_should_write_default_value_at_non_effective_level(
+        SettingLevel settingLevel)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using TextBox textBox = new();
         setting.CustomControl = textBox;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(settingLevel);
 
-        textBox.Text = DefaultValue.ToString();
+        textBox.Text = _defaultValue.ToString();
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, DefaultValue.ToString());
+        settingsSource.Received(1).SetValue(_settingName, _defaultValue.ToString());
     }
 
     [Fact]
-    public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_default_value_when_nothing_stored_at_effective_level()
+    public void
+        CreateControlBinding_NumericUpDown_LoadSetting_should_show_default_value_when_nothing_stored_at_effective_level()
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(SettingLevel.Effective);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
         binding.LoadSetting(settingsSource);
 
-        numericUpDown.Value.Should().Be(DefaultValue);
+        numericUpDown.Value.Should().Be(_defaultValue);
     }
 
     [Theory]
     [InlineData(SettingLevel.Global)]
     [InlineData(SettingLevel.Local)]
     [InlineData(SettingLevel.Distributed)]
-
-    public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(SettingLevel settingLevel)
+    public void
+        CreateControlBinding_NumericUpDown_LoadSetting_should_show_empty_when_nothing_stored_at_non_effective_level(
+            SettingLevel settingLevel)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(settingLevel);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
         binding.LoadSetting(settingsSource);
 
@@ -258,50 +256,50 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(SettingLevel.Local)]
     [InlineData(SettingLevel.Distributed)]
     [InlineData(SettingLevel.Effective)]
-
     public void CreateControlBinding_NumericUpDown_LoadSetting_should_show_stored_value(SettingLevel settingLevel)
     {
-        const int StoredValue = 99;
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        const int storedValue = 99;
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(settingLevel);
-        settingsSource.GetValue(SettingName).Returns(StoredValue.ToString());
+        settingsSource.GetValue(_settingName).Returns(storedValue.ToString());
 
         binding.LoadSetting(settingsSource);
 
-        numericUpDown.Value.Should().Be(StoredValue);
+        numericUpDown.Value.Should().Be(storedValue);
     }
 
     [Fact]
     public void CreateControlBinding_NumericUpDown_SaveSetting_should_set_null_when_control_is_empty()
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
 
         numericUpDown.ResetText();
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, null);
+        settingsSource.Received(1).SetValue(_settingName, null);
     }
 
     [Fact]
-    public void CreateControlBinding_NumericUpDown_SaveSetting_should_not_write_when_control_shows_default_value_at_effective_level()
+    public void
+        CreateControlBinding_NumericUpDown_SaveSetting_should_not_write_when_control_shows_default_value_at_effective_level()
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(SettingLevel.Effective);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
-        numericUpDown.Value = DefaultValue;
+        numericUpDown.Value = _defaultValue;
         binding.SaveSetting(settingsSource);
 
         settingsSource.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string?>());
@@ -312,43 +310,42 @@ public sealed class NumberSettingControlBindingTests
     [InlineData(1)]
     [InlineData(99)]
     [InlineData(int.MaxValue)]
-
     public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_value_at_effective_level(int value)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(SettingLevel.Effective);
         // Store a different value so the effective-level comparison does not skip the write.
-        int storedValue = value == DefaultValue ? DefaultValue + 1 : DefaultValue;
-        settingsSource.GetValue(SettingName).Returns(storedValue.ToString());
+        var storedValue = value == _defaultValue ? _defaultValue + 1 : _defaultValue;
+        settingsSource.GetValue(_settingName).Returns(storedValue.ToString());
 
         numericUpDown.Value = value;
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, value.ToString());
+        settingsSource.Received(1).SetValue(_settingName, value.ToString());
     }
 
     [Theory]
     [InlineData(SettingLevel.Global)]
     [InlineData(SettingLevel.Local)]
     [InlineData(SettingLevel.Distributed)]
-
-    public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_default_value_at_non_effective_level(SettingLevel settingLevel)
+    public void CreateControlBinding_NumericUpDown_SaveSetting_should_write_default_value_at_non_effective_level(
+        SettingLevel settingLevel)
     {
-        NumberSetting<int> setting = new(SettingName, defaultValue: DefaultValue);
+        NumberSetting<int> setting = new(_settingName, _defaultValue);
         using NumericUpDown numericUpDown = new() { Minimum = 0, Maximum = int.MaxValue };
         setting.CustomControl = numericUpDown;
-        ISettingControlBinding binding = SettingControlBindingsProvider.CreateControlBinding(setting);
-        SettingsSource settingsSource = Substitute.For<SettingsSource>();
+        var binding = SettingControlBindingsProvider.CreateControlBinding(setting);
+        var settingsSource = Substitute.For<SettingsSource>();
         settingsSource.SettingLevel.Returns(settingLevel);
-        settingsSource.GetValue(SettingName).Returns((string?)null);
+        settingsSource.GetValue(_settingName).Returns((string?)null);
 
-        numericUpDown.Value = DefaultValue;
+        numericUpDown.Value = _defaultValue;
         binding.SaveSetting(settingsSource);
 
-        settingsSource.Received(1).SetValue(SettingName, DefaultValue.ToString());
+        settingsSource.Received(1).SetValue(_settingName, _defaultValue.ToString());
     }
 }

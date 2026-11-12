@@ -1,12 +1,12 @@
 ﻿using GitCommands.Settings;
 
-namespace GitCommands;
+namespace GitCommands.Utils;
 
 public static class AutoCrlfExtensions
 {
-    public static string AdjustLineEndings(this string text, AutoCRLFType? autocrlf)
+    public static string AdjustLineEndings(this string text, AutoCrlfType? autocrlf)
     {
-        if (string.IsNullOrWhiteSpace(text) || autocrlf != AutoCRLFType.@true)
+        if (string.IsNullOrWhiteSpace(text) || autocrlf != AutoCrlfType.True)
         {
             return text;
         }

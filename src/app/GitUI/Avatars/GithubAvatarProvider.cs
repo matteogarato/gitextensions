@@ -1,11 +1,13 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using Git.hub;
 using JetBrains.Annotations;
 
 namespace GitUI.Avatars;
 
-public sealed partial class GithubAvatarProvider : IAvatarProvider
+public sealed partial class GithubAvatarProvider([NotNull] IAvatarDownloader downloader, bool onlySupplyNoReply = false)
+    : IAvatarProvider
 {
     /* A brief skim through the Git Extensions repo history shows GitHub emails with the following user names:
      *
@@ -17,30 +19,27 @@ public sealed partial class GithubAvatarProvider : IAvatarProvider
      * RaMMicHaeL
      * SamuelLongchamps
      */
-    private readonly IAvatarDownloader _downloader;
-    private readonly bool _onlySupplyNoReply;
+    private readonly IAvatarDownloader _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
 
-    [GeneratedRegex(@"^(\d+\+)?(?<username>[^@]+)@users\.noreply\.github\.com$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"^(\d+\+)?(?<username>[^@]+)@users\.noreply\.github\.com$",
+        RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture)]
     private static partial Regex GitHubEmailRegex { get; }
 
-    public GithubAvatarProvider([NotNull] IAvatarDownloader downloader, bool onlySupplyNoReply = false)
+    bool IAvatarProvider.PerformsIo
     {
-        _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
-        _onlySupplyNoReply = onlySupplyNoReply;
+        get => true;
     }
 
-    public bool PerformsIo => true;
-
-    public async Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    async Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
     {
-        Uri? uri = await BuildAvatarUriAsync(email, imageSize);
+        var uri = await BuildAvatarUriAsync(email, imageSize);
 
         if (uri is null)
         {
             return null;
         }
 
-        Image? image = await _downloader.DownloadImageAsync(uri);
+        var image = await _downloader.DownloadImageAsync(uri);
 
         // Sadly GitHub doesn't provide an option to return a 404 error for non-custom avatars
         // and always provides a fallback image (identicon). Using GitHubs fallback image would
@@ -50,7 +49,7 @@ public sealed partial class GithubAvatarProvider : IAvatarProvider
         // GitHub are never scaled and always 420 x 420 - even if a different size was requested.
 
         // We exploit that fact to filter out identicons.
-        bool isIdenticon = imageSize != 420 && image?.Size.Width is 420;
+        var isIdenticon = imageSize != 420 && image?.Size.Width is 420;
 
         if (isIdenticon)
         {
@@ -62,13 +61,13 @@ public sealed partial class GithubAvatarProvider : IAvatarProvider
 
     private async Task<Uri?> BuildAvatarUriAsync(string email, int imageSize)
     {
-        Match match = GitHubEmailRegex.Match(email);
+        var match = GitHubEmailRegex.Match(email);
 
         if (match.Success)
         {
             // email is an @users.noreply.github.com address
 
-            string username = match.Groups["username"].Value;
+            var username = match.Groups["username"].Value;
 
             // For real users we can directly access the avatar by using
             // https://avatars.githubusercontent.com/{encodedUsername}?s={imageSize}
@@ -81,12 +80,12 @@ public sealed partial class GithubAvatarProvider : IAvatarProvider
             // query the GitHub profile first.
 
             // GitHub user names can't contain square brackets but bots use them.
-            bool isBot = username.Contains('[');
+            var isBot = username.Contains('[');
 
             if (isBot)
             {
-                Git.hub.Client client = new();
-                Git.hub.User userProfile = await client.GetUserAsync(username);
+                Client client = new();
+                var userProfile = await client.GetUserAsync(username);
 
                 if (string.IsNullOrEmpty(userProfile?.AvatarUrl))
                 {
@@ -100,23 +99,18 @@ public sealed partial class GithubAvatarProvider : IAvatarProvider
                 builder.Query = query.ToString();
                 return builder.Uri;
             }
-            else
-            {
-                string encodedUsername = HttpUtility.UrlEncode(match.Groups["username"].Value);
-                return new Uri($"https://avatars.githubusercontent.com/{encodedUsername}?s={imageSize}");
-            }
+
+            var encodedUsername = HttpUtility.UrlEncode(match.Groups["username"].Value);
+            return new Uri($"https://avatars.githubusercontent.com/{encodedUsername}?s={imageSize}");
         }
-        else
+        // regular email address
+
+        if (onlySupplyNoReply)
         {
-            // regular email address
-
-            if (_onlySupplyNoReply)
-            {
-                return null;
-            }
-
-            string encodedEmail = HttpUtility.UrlEncode(email);
-            return new Uri($"https://avatars.githubusercontent.com/u/e?email={encodedEmail}&s={imageSize}");
+            return null;
         }
+
+        var encodedEmail = HttpUtility.UrlEncode(email);
+        return new Uri($"https://avatars.githubusercontent.com/u/e?email={encodedEmail}&s={imageSize}");
     }
 }

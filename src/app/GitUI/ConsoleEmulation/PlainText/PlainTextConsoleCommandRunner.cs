@@ -1,37 +1,39 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Git.Extensions;
 using GitCommands.Logging;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtUtils;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
-using Microsoft;
 using Timer = System.Windows.Forms.Timer;
 
 namespace GitUI.ConsoleEmulation.PlainText;
 
 /// <summary>
-///  Displays redirected process output in an edit box when no embedded terminal is being used.
+///     Displays redirected process output in an edit box when no embedded terminal is being used.
 /// </summary>
 public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainTextConsoleCommandRunner
 {
     private readonly RichTextBox _editbox;
 
-    private Process? _process;
+    private StreamWriter? _input;
 
     private Action? _logProcessKilled;
 
     private ProcessOutputThrottle? _outputThrottle;
 
-    private StreamWriter? _input;
+    private Process? _process;
 
     public PlainTextConsoleCommandRunner()
     {
         _editbox = new RichTextBox
         {
-            BackColor = Application.IsDarkModeEnabled ? AppColor.EditorBackground.GetThemeColor() : SystemColors.Info,
+            BackColor =
+                Application.IsDarkModeEnabled ? AppColor.EditorBackground.GetThemeColor() : SystemColors.Info,
             BorderStyle = BorderStyle.FixedSingle,
             Dock = DockStyle.Fill,
             Font = AppSettings.MonospaceFont,
@@ -59,29 +61,35 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
         }
     }
 
-    public Control Control => this;
+    Control IConsoleCommandRunner.Control
+    {
+        get => this;
+    }
 
-    public event EventHandler<ConsoleOutputEventArgs>? CommandOutputReceived;
+    event EventHandler<ConsoleOutputEventArgs>? IConsoleCommandRunner.CommandOutputReceived
+    {
+        add => CommandOutputReceived += value;
+        remove => CommandOutputReceived -= value;
+    }
 
-    public event EventHandler<ConsoleProcessExitEventArgs>? CommandProcessExited;
+    event EventHandler<ConsoleProcessExitEventArgs>? IConsoleCommandRunner.CommandProcessExited
+    {
+        add => CommandProcessExited += value;
+        remove => CommandProcessExited -= value;
+    }
 
-    // Editbox-based output never terminates independently; event is required by the interface.
-#pragma warning disable CS0067
-    public event EventHandler? ConsoleHostTerminated;
-#pragma warning restore CS0067
-
-    public void WriteOutputText(string text)
+    void IPlainTextConsoleCommandRunner.WriteOutputText(string text)
     {
         _outputThrottle?.Append(text);
     }
 
-    public void WriteCommandProcessInput(string text)
+    void IConsoleCommandRunner.WriteCommandProcessInput(string text)
     {
         Validates.NotNull(_input);
         _input.Write(text);
     }
 
-    public void KillCommandProcess()
+    void IConsoleCommandRunner.KillCommandProcess()
     {
         if (InvokeRequired)
         {
@@ -111,7 +119,7 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
         CommandProcessExited?.Invoke(this, new ConsoleProcessExitEventArgs(-1));
     }
 
-    public void ResetConsole()
+    void IConsoleCommandRunner.ResetConsole()
     {
         KillCommandProcess();
         _outputThrottle?.Clear();
@@ -119,9 +127,10 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
         _editbox.Visible = false;
     }
 
-    public void StartCommand(string command, string arguments, string workDir, Dictionary<string, string> envVariables)
+    void IConsoleCommandRunner.StartCommand(string command, string arguments, string workDir,
+        Dictionary<string, string> envVariables)
     {
-        ProcessOperation operation = CommandLog.LogProcessStart(command, arguments, workDir);
+        var operation = CommandLog.LogProcessStart(command, arguments, workDir);
 
         WriteOutputText($"{command.Quote()} {arguments}{Environment.NewLine}");
 
@@ -134,7 +143,7 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
             _logProcessKilled = () => operation.LogProcessEnd(new Exception("Process killed"));
 
             // process used to execute external commands
-            Encoding outputEncoding = GitModule.SystemEncoding;
+            var outputEncoding = GitModule.SystemEncoding;
             ProcessStartInfo startInfo = new()
             {
                 UseShellExecute = false,
@@ -150,12 +159,12 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
                 WorkingDirectory = workDir
             };
 
-            foreach ((string name, string value) in envVariables)
+            foreach ((var name, var value) in envVariables)
             {
                 startInfo.EnvironmentVariables.Add(name, value);
             }
 
-            _process = new() { StartInfo = startInfo, EnableRaisingEvents = true };
+            _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
             AsyncStreamReader? outputReader = null;
             AsyncStreamReader? errorReader = null;
@@ -163,66 +172,66 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
             _process.Exited += delegate
             {
                 ThreadHelper.FileAndForget(async () =>
+                {
+                    if (_process is null)
                     {
+                        await this.SwitchToMainThreadAsync();
+                        operation.LogProcessEnd(new Exception("Process instance is null in Exited event"));
+                        return;
+                    }
+
+                    // The process is exited already, but this command waits also until all output is received.
+                    // Only WaitForExit when someone is connected to the exited event. For some reason a
+                    // null reference is thrown sometimes when staging/unstaging in the commit dialog when
+                    // we wait for exit, probably a timing issue...
+                    try
+                    {
+                        // WaitForExit[Async] blocks here for unknown reason if the process has already exited
+                        if (!_process.HasExited)
+                        {
+                            await _process.WaitForExitAsync();
+                        }
+
+                        _logProcessKilled = null;
+
                         if (_process is null)
                         {
-                            await this.SwitchToMainThreadAsync();
-                            operation.LogProcessEnd(new Exception("Process instance is null in Exited event"));
+                            // The process has been killed meanwhile.
                             return;
                         }
-
-                        // The process is exited already, but this command waits also until all output is received.
-                        // Only WaitForExit when someone is connected to the exited event. For some reason a
-                        // null reference is thrown sometimes when staging/unstaging in the commit dialog when
-                        // we wait for exit, probably a timing issue...
-                        try
-                        {
-                            // WaitForExit[Async] blocks here for unknown reason if the process has already exited
-                            if (!_process.HasExited)
-                            {
-                                await _process.WaitForExitAsync();
-                            }
-
-                            _logProcessKilled = null;
-
-                            if (_process is null)
-                            {
-                                // The process has been killed meanwhile.
-                                return;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            await this.SwitchToMainThreadAsync();
-                            operation.LogProcessEnd(ex);
-                        }
-
-                        int exitCode = _process.ExitCode;
-
-                        using CancellationTokenSource eofTimeoutTokenSource = new(millisecondsDelay: 5000);
-
-                        if (outputReader is not null)
-                        {
-                            await outputReader.WaitUntilEofAsync(eofTimeoutTokenSource.Token);
-                            outputReader.Dispose();
-                        }
-
-                        if (errorReader is not null)
-                        {
-                            await errorReader.WaitUntilEofAsync(eofTimeoutTokenSource.Token);
-                            errorReader.Dispose();
-                        }
-
+                    }
+                    catch (Exception ex)
+                    {
                         await this.SwitchToMainThreadAsync();
-                        operation.LogProcessEnd(exitCode);
-                        WriteOutputText("Done");
-                        _process.Dispose();
-                        _process = null;
-                        await _input!.DisposeAsync();
-                        _input = null;
-                        _outputThrottle?.Stop(flush: true);
-                        CommandProcessExited?.Invoke(this, new ConsoleProcessExitEventArgs(exitCode));
-                    });
+                        operation.LogProcessEnd(ex);
+                    }
+
+                    var exitCode = _process.ExitCode;
+
+                    using CancellationTokenSource eofTimeoutTokenSource = new(5000);
+
+                    if (outputReader is not null)
+                    {
+                        await outputReader.WaitUntilEofAsync(eofTimeoutTokenSource.Token);
+                        outputReader.Dispose();
+                    }
+
+                    if (errorReader is not null)
+                    {
+                        await errorReader.WaitUntilEofAsync(eofTimeoutTokenSource.Token);
+                        errorReader.Dispose();
+                    }
+
+                    await this.SwitchToMainThreadAsync();
+                    operation.LogProcessEnd(exitCode);
+                    WriteOutputText("Done");
+                    _process.Dispose();
+                    _process = null;
+                    await _input!.DisposeAsync();
+                    _input = null;
+                    _outputThrottle?.Stop(true);
+                    CommandProcessExited?.Invoke(this, new ConsoleProcessExitEventArgs(exitCode));
+                });
             };
 
             _process.Start();
@@ -245,21 +254,25 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
         {
             output = output.Replace("\r\n", "\n");
 
-            for (int startIndex = 0; startIndex < output.Length;)
+            for (var startIndex = 0; startIndex < output.Length;)
             {
-                int nextLineStart = output.IndexOfAny(Delimiters.LineFeedAndCarriageReturnSearchValues, startIndex) + 1;
+                var nextLineStart = output.IndexOfAny(Delimiters.LineFeedAndCarriageReturnSearchValues, startIndex) + 1;
                 if (nextLineStart == 0)
                 {
                     nextLineStart = output.Length;
                 }
 
-                string outputLine = output[startIndex..nextLineStart];
+                var outputLine = output[startIndex..nextLineStart];
                 CommandOutputReceived?.Invoke(this, new ConsoleOutputEventArgs(outputLine));
 
                 startIndex = nextLineStart;
             }
         }
     }
+
+    private event EventHandler<ConsoleOutputEventArgs>? CommandOutputReceived;
+
+    private event EventHandler<ConsoleProcessExitEventArgs>? CommandProcessExited;
 
     protected override void Dispose(bool disposing)
     {
@@ -293,10 +306,10 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
 
     private sealed class ProcessOutputThrottle : IDisposable
     {
-        private readonly Lock _textToAddLock = new();
-        private readonly StringBuilder _textToAdd = new();
-        private readonly Timer _timer;
         private readonly Action<string> _doOutput;
+        private readonly StringBuilder _textToAdd = new();
+        private readonly Lock _textToAddLock = new();
+        private readonly Timer _timer;
 
         /// <param name="doOutput">Will be called on the UI thread.</param>
         public ProcessOutputThrottle(Action<string> doOutput)
@@ -306,6 +319,15 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
             _timer = new Timer { Interval = 1 };
             _timer.Tick += delegate { FlushOutput(); };
             _timer.Start();
+        }
+
+        void IDisposable.Dispose()
+        {
+            Stop(false);
+
+            // clear will lock, to prevent outputting to disposed object
+            Clear();
+            _timer.Dispose();
         }
 
         public void Stop(bool flush)
@@ -333,7 +355,7 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
             _timer.Interval = 100;
             _timer.Start();
 
-            string textToAdd = "";
+            var textToAdd = "";
             lock (_textToAddLock)
             {
                 if (_textToAdd.Length > 0)
@@ -356,16 +378,17 @@ public sealed class PlainTextConsoleCommandRunner : ContainerControl, IPlainText
                 _textToAdd.Clear();
             }
         }
-
-        public void Dispose()
-        {
-            Stop(flush: false);
-
-            // clear will lock, to prevent outputting to disposed object
-            Clear();
-            _timer.Dispose();
-        }
     }
 
     #endregion
+
+    // Editbox-based output never terminates independently; event is required by the interface.
+#pragma warning disable CS0067
+    private event EventHandler? ConsoleHostTerminated;
+    event EventHandler? IConsoleCommandRunner.ConsoleHostTerminated
+    {
+        add => ConsoleHostTerminated += value;
+        remove => ConsoleHostTerminated -= value;
+    }
+#pragma warning restore CS0067
 }

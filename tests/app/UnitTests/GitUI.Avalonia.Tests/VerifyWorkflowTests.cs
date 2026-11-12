@@ -1,44 +1,42 @@
 using System.ComponentModel.Design;
-using GitCommands;
+using System.IO.Abstractions;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
 using GitUI.CommandsDialogs;
-using GitUIPluginInterfaces;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class VerifyWorkflowTests : IDisposable
 {
-    private readonly ServiceContainer _serviceContainer = new();
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"ge-verify-{Guid.NewGuid():N}");
     private readonly IGitExecutorProvider _executorProvider;
+    private readonly string _root = Path.Combine(Path.GetTempPath(), $"ge-verify-{Guid.NewGuid():N}");
+    private readonly ServiceContainer _serviceContainer = new();
 
     public VerifyWorkflowTests()
     {
         ThreadHelper.JoinableTaskContext = new JoinableTaskContext();
-        System.IO.Abstractions.IFileSystem fileSystem = new System.IO.Abstractions.FileSystem();
+        IFileSystem fileSystem = new FileSystem();
         GitDirectoryResolver gitDirectoryResolver = new(fileSystem);
-        _serviceContainer.AddService(typeof(System.IO.Abstractions.IFileSystem), fileSystem);
+        _serviceContainer.AddService(typeof(IFileSystem), fileSystem);
         _serviceContainer.AddService(typeof(IGitDirectoryResolver), gitDirectoryResolver);
         GitCommands.ServiceContainerRegistry.RegisterServices(_serviceContainer);
         _executorProvider = _serviceContainer.GetRequiredService<IGitExecutorProvider>();
         Directory.CreateDirectory(_root);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _serviceContainer.Dispose();
-        Directory.Delete(_root, recursive: true);
+        Directory.Delete(_root, true);
     }
 
     [Fact]
     public void BuildFsck_should_add_requested_options()
     {
-        ArgumentString arguments = VerifyWorkflow.BuildFsck(unreachable: true, full: true, noReflogs: true);
+        var arguments = VerifyWorkflow.BuildFsck(true, true, true);
 
         arguments.ToString().Should().Be("fsck-objects --unreachable --full --no-reflogs");
     }
@@ -47,9 +45,9 @@ public sealed class VerifyWorkflowTests : IDisposable
     public void ParseFsckOutput_should_extract_supported_object_diagnostics()
     {
         const string objectId = "0123456789012345678901234567890123456789";
-        string output = $"dangling blob {objectId}\nwarning in tree {objectId}\nunrecognized diagnostic {objectId}\n";
+        var output = $"dangling blob {objectId}\nwarning in tree {objectId}\nunrecognized diagnostic {objectId}\n";
 
-        IReadOnlyList<VerifyObject> objects = VerifyWorkflow.ParseFsckOutput(output);
+        var objects = VerifyWorkflow.ParseFsckOutput(output);
 
         objects.Should().HaveCount(2);
         objects[0].Diagnostic.Should().Be("dangling blob");
@@ -62,31 +60,28 @@ public sealed class VerifyWorkflowTests : IDisposable
     [Fact]
     public void BuildFsck_should_find_a_real_unreferenced_git_object()
     {
-        GitModule module = CreateRepository();
-        string filePath = Path.Combine(_root, "loose-object.txt");
+        var module = CreateRepository();
+        var filePath = Path.Combine(_root, "loose-object.txt");
         File.WriteAllText(filePath, "unreferenced object");
-        string objectId = module.GitExecutable.GetOutput(new GitArgumentBuilder("hash-object")
-        {
-            "-w",
-            filePath.Quote(),
-        }).Trim();
+        var objectId = module.GitExecutable.GetOutput(new GitArgumentBuilder("hash-object") { "-w", filePath.Quote() })
+            .Trim();
 
-        ExecutionResult result = module.GitExecutable.Execute(
-            VerifyWorkflow.BuildFsck(unreachable: false, full: false, noReflogs: false),
+        var result = module.GitExecutable.Execute(
+            VerifyWorkflow.BuildFsck(false, false, false),
             throwOnErrorExit: false,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.ExitedSuccessfully.Should().BeTrue(result.AllOutput);
+        ((bool)result.ExitedSuccessfully).Should().BeTrue(result.AllOutput);
         VerifyWorkflow.ParseFsckOutput(result.AllOutput)
             .Should()
             .Contain(item => item.Type == "blob" && item.ObjectId.ToString() == objectId);
     }
 
-    private GitModule CreateRepository()
+    private GitCommands.GitModule CreateRepository()
     {
-        string path = Path.Combine(_root, "repository");
+        var path = Path.Combine(_root, "repository");
         Directory.CreateDirectory(path);
-        GitModule module = new(_executorProvider, path);
+        GitCommands.GitModule module = new(_executorProvider, path);
         module.Init(bare: false, shared: false);
         module.SetSetting("user.name", "Avalonia Test");
         module.SetSetting("user.email", "avalonia@example.com");

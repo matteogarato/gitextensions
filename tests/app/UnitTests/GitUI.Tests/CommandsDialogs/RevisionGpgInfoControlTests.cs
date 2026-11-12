@@ -11,7 +11,7 @@ public class RevisionGpgInfoControlTests : IDisposable
         GitModuleForm.IsUnitTestActive = true;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         GitModuleForm.IsUnitTestActive = false;
     }
@@ -28,11 +28,11 @@ public class RevisionGpgInfoControlTests : IDisposable
     public void DisplayVerificationPending_must_drop_the_result_of_the_previous_revision()
     {
         using RevisionGpgInfoControl control = new();
-        control.DisplayGpgInfo(new GpgInfo(CommitStatus.GoodSignature, "Good signature", TagStatus.NoTag, TagVerificationMessage: null));
+        control.DisplayGpgInfo(new GpgInfo(CommitStatus.GoodSignature, "Good signature", TagStatus.NoTag, null));
 
         control.DisplayVerificationPending();
 
-        RevisionGpgInfoControl.TestAccessor accessor = control.GetTestAccessor();
+        var accessor = control.GetTestAccessor();
         accessor.CommitGpgInfoText.Should().Be(TranslatedStrings.LoadingData);
         accessor.CommitSignPictureVisible.Should().BeFalse();
     }

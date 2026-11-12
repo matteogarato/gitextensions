@@ -1,4 +1,4 @@
-﻿using ResourceManager;
+﻿using GitUI.Compat;
 
 namespace GitUI;
 

@@ -1,12 +1,11 @@
 using System.Text.RegularExpressions;
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  The options chosen by the user for a commit.
+///     The options chosen by the user for a commit.
 /// </summary>
 public sealed record CommitRequest(
     string Message,
@@ -23,24 +22,25 @@ public sealed record CommitRequest(
     bool UseExplicitCommitMessage = true);
 
 /// <summary>
-///  A previously used commit message and its one-line display text.
+///     A previously used commit message and its one-line display text.
 /// </summary>
 public sealed record CommitMessageHistoryItem(string Message, string Preview);
 
 /// <summary>
-///  Validates a <see cref="CommitRequest"/> and maps it onto the shared <see cref="Commands.Commit"/> builder,
-///  so the Avalonia UI uses the same git semantics as the WinForms commit dialog.
+///     Validates a <see cref="CommitRequest" /> and maps it onto the shared <see cref="Commands.Commit" /> builder,
+///     so the Avalonia UI uses the same git semantics as the WinForms commit dialog.
 /// </summary>
 public static class CommitWorkflow
 {
-    private const string AmendCommitPrefix = "amend!";
-    private const string FixupCommitPrefix = "fixup!";
-    private const string SquashCommitPrefix = "squash!";
+    private const string _amendCommitPrefix = "amend!";
+    private const string _fixupCommitPrefix = "fixup!";
+    private const string _squashCommitPrefix = "squash!";
 
     /// <summary>
-    ///  Returns a user-facing error if the commit cannot be created, otherwise <see langword="null"/>.
+    ///     Returns a user-facing error if the commit cannot be created, otherwise <see langword="null" />.
     /// </summary>
-    public static string? Validate(CommitRequest request, int stagedCount, bool isMergeInProgress, bool hasUnresolvedConflicts)
+    public static string? Validate(CommitRequest request, int stagedCount, bool isMergeInProgress,
+        bool hasUnresolvedConflicts)
     {
         if (hasUnresolvedConflicts)
         {
@@ -79,19 +79,19 @@ public static class CommitWorkflow
             request.NoVerify,
             request.GpgSign,
             request.GpgKeyId,
-            allowEmpty: stagedCount == 0,
-            resetAuthor: request.ResetAuthor);
+            stagedCount == 0,
+            request.ResetAuthor);
     }
 
     /// <summary>
-    ///  Returns warnings for configured commit-message validation rules.
+    ///     Returns warnings for configured commit-message validation rules.
     /// </summary>
     /// <param name="message">The commit message to validate.</param>
     /// <returns>The validation warnings that require confirmation.</returns>
     public static IReadOnlyList<string> GetMessageValidationWarnings(string message)
     {
         List<string> warnings = [];
-        string[] lines = message.Split(Delimiters.NewLines, StringSplitOptions.RemoveEmptyEntries);
+        var lines = message.Split(Delimiters.NewLines, StringSplitOptions.RemoveEmptyEntries);
 
         if (AppSettings.CommitValidationMaxCntCharsFirstLine > 0
             && lines.Length > 0
@@ -102,7 +102,7 @@ public static class CommitWorkflow
 
         if (AppSettings.CommitValidationMaxCntCharsPerLine > 0)
         {
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 if (line.Length > AppSettings.CommitValidationMaxCntCharsPerLine)
                 {
@@ -113,7 +113,7 @@ public static class CommitWorkflow
 
         if (AppSettings.CommitValidationSecondLineMustBeEmpty)
         {
-            string[] allLines = message.Split(Delimiters.NewLines, StringSplitOptions.None);
+            var allLines = message.Split(Delimiters.NewLines, StringSplitOptions.None);
             if (allLines.Length > 2 && allLines[1].Length > 0)
             {
                 warnings.Add(TranslatedStrings.CommitMsgSecondLineNotEmpty);
@@ -121,8 +121,8 @@ public static class CommitWorkflow
         }
 
         if (!string.IsNullOrEmpty(AppSettings.CommitValidationRegEx)
-            && !message.StartsWith(FixupCommitPrefix, StringComparison.Ordinal)
-            && !message.StartsWith(SquashCommitPrefix, StringComparison.Ordinal)
+            && !message.StartsWith(_fixupCommitPrefix, StringComparison.Ordinal)
+            && !message.StartsWith(_squashCommitPrefix, StringComparison.Ordinal)
             && !Regex.IsMatch(GetTextToValidate(message), AppSettings.CommitValidationRegEx))
         {
             warnings.Add(TranslatedStrings.CommitMsgRegExNotMatched);
@@ -132,13 +132,13 @@ public static class CommitWorkflow
 
         static string GetTextToValidate(string text)
         {
-            if (!text.StartsWith(AmendCommitPrefix, StringComparison.Ordinal)
+            if (!text.StartsWith(_amendCommitPrefix, StringComparison.Ordinal)
                 || !text.ContainsAny(Delimiters.LineFeedAndCarriageReturnSearchValues))
             {
                 return text;
             }
 
-            string[] lines = text.Split(Delimiters.NewLines, StringSplitOptions.None);
+            var lines = text.Split(Delimiters.NewLines, StringSplitOptions.None);
             if (lines.Length > 2 && lines[1].Length == 0)
             {
                 return string.Join(Environment.NewLine, lines.AsSpan(2));
@@ -149,7 +149,7 @@ public static class CommitWorkflow
     }
 
     /// <summary>
-    ///  Builds a distinct, bounded history list with the last saved message first.
+    ///     Builds a distinct, bounded history list with the last saved message first.
     /// </summary>
     /// <param name="previousMessages">Messages read from repository history.</param>
     /// <param name="lastMessage">The last message saved by the application.</param>
@@ -165,15 +165,18 @@ public static class CommitWorkflow
             return [];
         }
 
-        List<string> messages = [.. previousMessages
-            .Where(message => !string.IsNullOrWhiteSpace(message))
-            .Select(message => message?.TrimEnd('\r', '\n') ?? string.Empty)
-            .Distinct(StringComparer.Ordinal)
-            .Take(maxCount)];
+        List<string> messages =
+        [
+            .. previousMessages
+                .Where(message => !string.IsNullOrWhiteSpace(message))
+                .Select(message => message?.TrimEnd('\r', '\n') ?? string.Empty)
+                .Distinct(StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
 
         if (!string.IsNullOrWhiteSpace(lastMessage))
         {
-            string normalizedLastMessage = lastMessage.TrimEnd('\r', '\n');
+            var normalizedLastMessage = lastMessage.TrimEnd('\r', '\n');
             messages.RemoveAll(message => message == normalizedLastMessage);
             messages.Insert(0, normalizedLastMessage);
             if (messages.Count > maxCount)
@@ -183,7 +186,8 @@ public static class CommitWorkflow
         }
 
         return messages.Select(message => new CommitMessageHistoryItem(
-            message,
-            message.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty)).ToArray();
+                message,
+                message.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty))
+            .ToArray();
     }
 }

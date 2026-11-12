@@ -1,40 +1,44 @@
 ﻿using CommonTestUtils;
-using GitCommands;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.Theming;
+
 public class AppColorDefaultsTests : IDisposable
 {
-    private string _originalPath = null!;
+    private readonly string _originalPath = null!;
 
     public AppColorDefaultsTests()
     {
-        AppSettings.TestAccessor testAccessor = AppSettings.GetTestAccessor();
+        var testAccessor = AppSettings.GetTestAccessor();
         _originalPath = testAccessor.ApplicationExecutablePath;
         testAccessor.ApplicationExecutablePath = Path.Combine(AppContext.BaseDirectory, "gitextensions.exe");
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
-        AppSettings.TestAccessor testAccessor = AppSettings.GetTestAccessor();
+        var testAccessor = AppSettings.GetTestAccessor();
         testAccessor.ApplicationExecutablePath = _originalPath;
     }
 
     [Fact]
     public void Default_values_are_defined_in_AppColorDefaults()
     {
-        foreach (AppColor name in Enum.GetValues<AppColor>())
+        foreach (var name in Enum.GetValues<AppColor>())
         {
-            Color value = AppColorDefaults.GetBy(name);
+            var value = AppColorDefaults.GetBy(name);
             value.Should().NotBe(AppColorDefaults.FallbackColor);
         }
     }
 
-    public static IEnumerable<object[]> AppColorCases => Enum.GetValues<AppColor>().Select(value => new object[] { value });
+    public static IEnumerable<object[]> AppColorCases
+    {
+        get => Enum.GetValues<AppColor>().Select(value => new object[] { value });
+    }
+
     [Theory]
     [MemberData(nameof(AppColorCases))]
-
     public void Default_values_are_used_when_not_overridden_in_settings(AppColor name)
     {
         // This only applies when migrating colors from AppSettings to a theme.
@@ -42,8 +46,8 @@ public class AppColorDefaultsTests : IDisposable
 
         MemorySettings emptySettings = new();
 
-        Color defaultColor = AppColorDefaults.GetBy(name);
-        Color settingsColor = emptySettings.GetColor(name.ToString(), defaultColor);
+        var defaultColor = AppColorDefaults.GetBy(name);
+        var settingsColor = emptySettings.GetColor(name.ToString(), defaultColor);
 
         settingsColor.Should().Be(defaultColor);
     }

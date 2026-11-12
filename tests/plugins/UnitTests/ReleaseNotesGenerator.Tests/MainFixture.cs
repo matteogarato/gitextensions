@@ -1,9 +1,17 @@
 ﻿using GitExtensions.Plugins.ReleaseNotesGenerator;
-using Xunit;
 
 namespace ReleaseNotesGeneratorTests;
+
 public class MainFixture
 {
+    /// <summary>
+    ///     Indicates whether the current operating system can run Windows clipboard tests.
+    /// </summary>
+    public static bool IsWindows
+    {
+        get => OperatingSystem.IsWindows();
+    }
+
     [Fact]
     public void FormatStringTest()
     {
@@ -13,7 +21,7 @@ public class MainFixture
     [Fact(Skip = "Clipboard data object is available only on Windows.", SkipUnless = nameof(IsWindows))]
     public void CreateHtmlFormatClipboardDataObjectTest()
     {
-        DataObject dataObject = HtmlFragment.CreateHtmlFormatClipboardDataObject("<p>Hallo</p>");
+        var dataObject = HtmlFragment.CreateHtmlFormatClipboardDataObject("<p>Hallo</p>");
         dataObject.GetFormats().Length.Should().Be(2);
         dataObject.GetText().Should().Be("<p>Hallo</p>");
         dataObject.TryGetData("HTML Format", out string? s);
@@ -36,9 +44,4 @@ public class MainFixture
         // Verify manually that the content can be pasted as text and into MS Word or
         // LibreOffice Writer. There it should create a formatted table.
     }
-
-    /// <summary>
-    ///  Indicates whether the current operating system can run Windows clipboard tests.
-    /// </summary>
-    public static bool IsWindows => OperatingSystem.IsWindows();
 }

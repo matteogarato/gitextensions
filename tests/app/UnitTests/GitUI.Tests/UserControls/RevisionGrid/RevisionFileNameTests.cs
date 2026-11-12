@@ -1,17 +1,23 @@
 ﻿using System.ComponentModel.Design;
 using CommonTestUtils;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI;
+using GitUI.Hotkey;
+using GitUI.UserControls.RevisionGrid;
 using NSubstitute;
+using ResourceManager;
+using AppSettings = GitCommands.Settings.AppSettings;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitUITests.UserControls.RevisionGrid;
+
 public class RevisionFileNameTests : IDisposable
 {
-    private RevisionGridControl _revisionGridControl = null!;
-    private MockExecutable _executable = null!;
-    private IGitCommandRunner _commandRunner = null!;
+    private readonly IGitCommandRunner _commandRunner = null!;
+    private readonly MockExecutable _executable = null!;
+    private readonly RevisionGridControl _revisionGridControl = null!;
 
     public RevisionFileNameTests()
     {
@@ -20,23 +26,23 @@ public class RevisionFileNameTests : IDisposable
         _commandRunner = new GitCommandRunner(_executable, () => GitModule.SystemEncoding);
 
         ServiceContainer serviceContainer = new();
-        serviceContainer.AddService(Substitute.For<GitUI.Hotkey.IHotkeySettingsManager>());
-        serviceContainer.AddService(Substitute.For<ResourceManager.IHotkeySettingsLoader>());
+        serviceContainer.AddService(Substitute.For<IHotkeySettingsManager>());
+        serviceContainer.AddService(Substitute.For<IHotkeySettingsLoader>());
 
-        IGitModule gitModule = Substitute.For<IGitModule>();
+        var gitModule = Substitute.For<IGitModule>();
         gitModule.GitExecutable.Returns(_ => _executable);
         gitModule.GitCommandRunner.Returns(_ => _commandRunner);
 
-        GitUICommands uiCommands = new(serviceContainer, gitModule);
+        GitUiCommands uiCommands = new(serviceContainer, gitModule);
 
-        IGitUICommandsSource uiCommandsSource = Substitute.For<IGitUICommandsSource>();
-        uiCommandsSource.UICommands.Returns(_ => uiCommands);
+        var uiCommandsSource = Substitute.For<IGitUiCommandsSource>();
+        uiCommandsSource.UiCommands.Returns(_ => uiCommands);
 
-        _revisionGridControl.UICommandsSource = uiCommandsSource;
+        _revisionGridControl.UiCommandsSource = uiCommandsSource;
         _revisionGridControl.FilePathByObjectId = [];
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _revisionGridControl.Dispose();
     }
@@ -48,9 +54,10 @@ public class RevisionFileNameTests : IDisposable
     {
         const string path = "a.txt";
         string actualFileName;
-        string line = $"-c log.showsignature=false log --format=\"????%H\" --name-only --follow --diff-merges=separate  --find-renames --find-copies {objectId} --max-count=1 -- \"a.txt\"";
+        var line =
+            $"-c log.showsignature=false log --format=\"????%H\" --name-only --follow --diff-merges=separate  --find-renames --find-copies {objectId} --max-count=1 -- \"a.txt\"";
 
-        bool originalFollowRenamesInFileHistoryExactOnly = AppSettings.FollowRenamesInFileHistoryExactOnly;
+        var originalFollowRenamesInFileHistoryExactOnly = AppSettings.FollowRenamesInFileHistoryExactOnly;
         AppSettings.FollowRenamesInFileHistoryExactOnly = false;
 
         try

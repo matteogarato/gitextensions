@@ -1,18 +1,13 @@
 ﻿using System.Text.Json.Nodes;
 using GitExtensions.Extensibility.Git;
-using GitUI;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
+using FileStatusList = GitUI.UserControls.FileStatusList;
 
 namespace GitUITests.UserControls;
 
 public class FileStatusListSorterTests : IDisposable
 {
-    public FileStatusListSorterTests()
-    {
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
     }
 
@@ -28,7 +23,6 @@ public class FileStatusListSorterTests : IDisposable
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-
     public async Task Sort_should_first_add_folders_then_files(bool flat, bool mergeSingleItemsWithFolder)
     {
         const string oldFolder = "oldfolder/of/renamed/file/";
@@ -52,14 +46,18 @@ public class FileStatusListSorterTests : IDisposable
             new("5/6/file56a"),
             new("5/7/file57b"),
             new("5/7/file57a"),
-            new($"{oldFolder}5/7/8/file578"),
+            new($"{oldFolder}5/7/8/file578")
         ];
-        GitItemStatus renamedFile = statuses[^1];
+        var renamedFile = statuses[^1];
         renamedFile.OldName = renamedFile.Name;
         renamedFile.Name = renamedFile.Name[oldFolder.Length..];
 
         FileStatusList.StatusSorter statusSorter = new();
-        TreeNode rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat, mergeSingleItemsWithFolder, createNode: status => new TreeNode(status.ToString()) { Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status) });
+        var rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat, mergeSingleItemsWithFolder,
+            createNode: status => new TreeNode(status.ToString())
+            {
+                Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status)
+            });
         await Verify(Serialize(rootNode).ToString());
     }
 
@@ -71,45 +69,56 @@ public class FileStatusListSorterTests : IDisposable
             new("core/c.1"),
             new("core/c.2"),
             new("core.dot/cd.3"),
-            new("core/api/c_a.0"),
+            new("core/api/c_a.0")
         ];
 
         FileStatusList.StatusSorter statusSorter = new();
-        TreeNode rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat: false, mergeSingleItemsWithFolder: false, createNode: status => new TreeNode(status.ToString()) { Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status) });
+        var rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat: false,
+            mergeSingleItemsWithFolder: false,
+            createNode: status => new TreeNode(status.ToString())
+            {
+                Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status)
+            });
         await Verify(Serialize(rootNode).ToString());
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task Sort_should_not_merge_single_file_with_root_node(bool flat)
     {
         GitItemStatus[] statuses =
         [
-            new("root_file"),
+            new("root_file")
         ];
 
         FileStatusList.StatusSorter statusSorter = new();
-        TreeNode rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat, mergeSingleItemsWithFolder: true, createNode: status => new TreeNode(status.ToString()) { Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status) });
+        var rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat, mergeSingleItemsWithFolder: true,
+            createNode: status => new TreeNode(status.ToString())
+            {
+                Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status)
+            });
         await Verify(Serialize(rootNode).ToString());
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task Sort_should_optionally_create_subfolder_nodes_for_single_files(bool mergeSingleItemsWithFolder)
     {
         GitItemStatus[] statuses =
         [
             new("1/2/file12"),
             new("1/3/file13"),
-            new("1/4/file14"),
+            new("1/4/file14")
         ];
 
         FileStatusList.StatusSorter statusSorter = new();
-        TreeNode rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat: false, mergeSingleItemsWithFolder, createNode: status => new TreeNode(status.ToString()) { Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status) });
+        var rootNode = statusSorter.CreateTreeSortedByPath(statuses, flat: false, mergeSingleItemsWithFolder,
+            createNode: status => new TreeNode(status.ToString())
+            {
+                Tag = new FileStatusItem(firstRev: null, secondRev: new GitRevision(ObjectId.WorkTreeId), status)
+            });
         await Verify(Serialize(rootNode).ToString());
     }
 

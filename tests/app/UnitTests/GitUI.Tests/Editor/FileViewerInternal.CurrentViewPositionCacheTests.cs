@@ -1,13 +1,13 @@
 ﻿using GitUI.Editor;
 using GitUI.Editor.Diff;
-using ICSharpCode.TextEditor;
+using ICSharpCode.TextEditor.Document;
 
 namespace GitUITests.Editor;
 
 public class CurrentViewPositionCacheTests : IDisposable
 {
-    private FileViewerInternal _fileViewerInternal = null!;
-    private FileViewerInternal.CurrentViewPositionCache _viewPositionCache = null!;
+    private readonly FileViewerInternal _fileViewerInternal = null!;
+    private readonly FileViewerInternal.CurrentViewPositionCache _viewPositionCache = null!;
 
     public CurrentViewPositionCacheTests()
     {
@@ -16,7 +16,7 @@ public class CurrentViewPositionCacheTests : IDisposable
         _viewPositionCache = new FileViewerInternal.CurrentViewPositionCache(_fileViewerInternal);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _fileViewerInternal.Dispose();
     }
@@ -26,13 +26,11 @@ public class CurrentViewPositionCacheTests : IDisposable
     [InlineData("a")]
     public void Capture_should_not_change_capture_if_less_then_two_lines(string? text)
     {
-        FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
+        var test = _viewPositionCache.GetTestAccessor();
 
         FileViewerInternal.ViewPosition existingViewPosition = new()
         {
-            FirstLine = "first line",
-            FirstVisibleLine = 24,
-            TotalNumberOfLines = 35
+            FirstLine = "first line", FirstVisibleLine = 24, TotalNumberOfLines = 35
         };
         test.ViewPosition = existingViewPosition;
 
@@ -47,7 +45,7 @@ public class CurrentViewPositionCacheTests : IDisposable
     [StaFact]
     public void Capture_should_capture_current_position_if_ShowLineNumbers_true_start()
     {
-        FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
+        var test = _viewPositionCache.GetTestAccessor();
         test.TextEditor.ShowLineNumbers = true;
         test.TextEditor.Text = "a\r\nb\r\nc\r\n";
 
@@ -65,9 +63,10 @@ public class CurrentViewPositionCacheTests : IDisposable
     [StaFact]
     public void Capture_should_capture_current_position_if_ShowLineNumbers_true_scrolled()
     {
-        FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
+        var test = _viewPositionCache.GetTestAccessor();
         test.TextEditor.ShowLineNumbers = true;
-        test.TextEditor.Text = "a\r\nb\r\nc\r\nd\r\ne\r\nf\r\ng\r\nh\r\ni\r\nj\r\nk\r\nl\r\nm\r\nn\r\no\r\np\r\nr\r\ns\r\nt\r\nu\r\nv\r\nw\r\nx\r\ny\r\nz\r\n0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n0";
+        test.TextEditor.Text =
+            "a\r\nb\r\nc\r\nd\r\ne\r\nf\r\ng\r\nh\r\ni\r\nj\r\nk\r\nl\r\nm\r\nn\r\no\r\np\r\nr\r\ns\r\nt\r\nu\r\nv\r\nw\r\nx\r\ny\r\nz\r\n0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n0";
         test.TextEditor.ActiveTextAreaControl.TextArea.Caret.Line = 23;
         test.TextEditor.ActiveTextAreaControl.TextArea.ScrollToCaret();
         test.TextEditor.ActiveTextAreaControl.TextArea.TextView.SetFirstVisibleLine(22);
@@ -86,9 +85,10 @@ public class CurrentViewPositionCacheTests : IDisposable
     [StaFact]
     public void Capture_should_capture_current_position_if_ShowLineNumbers_false_without_margin()
     {
-        FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
+        var test = _viewPositionCache.GetTestAccessor();
         test.TextEditor.ShowLineNumbers = false;
-        test.TextEditor.Text = "a\r\nb\r\nc\r\nd\r\ne\r\nf\r\ng\r\nh\r\ni\r\nj\r\nk\r\nl\r\nm\r\nn\r\no\r\np\r\nr\r\ns\r\nt\r\nu\r\nv\r\nw\r\nx\r\ny\r\nz\r\n0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n0";
+        test.TextEditor.Text =
+            "a\r\nb\r\nc\r\nd\r\ne\r\nf\r\ng\r\nh\r\ni\r\nj\r\nk\r\nl\r\nm\r\nn\r\no\r\np\r\nr\r\ns\r\nt\r\nu\r\nv\r\nw\r\nx\r\ny\r\nz\r\n0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n0";
         test.TextEditor.ActiveTextAreaControl.TextArea.TextView.DrawingPosition = new Rectangle(0, 0, 100, 100);
         test.TextEditor.ActiveTextAreaControl.TextArea.Caret.Line = 23;
         test.TextEditor.ActiveTextAreaControl.TextArea.ScrollToCaret();
@@ -106,9 +106,10 @@ public class CurrentViewPositionCacheTests : IDisposable
     }
 
     [StaFact]
-    public void Capture_should_capture_current_position_and_calculate_active_line_if_ShowLineNumbers_false_with_line_margin()
+    public void
+        Capture_should_capture_current_position_and_calculate_active_line_if_ShowLineNumbers_false_with_line_margin()
     {
-        FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
+        var test = _viewPositionCache.GetTestAccessor();
         test.TextEditor.ShowLineNumbers = false;
         test.TextEditor.Text = Given.GitDiff;
         test.TextEditor.ActiveTextAreaControl.TextArea.TextView.DrawingPosition = new Rectangle(0, 0, 100, 100);
@@ -116,8 +117,8 @@ public class CurrentViewPositionCacheTests : IDisposable
         test.TextEditor.ActiveTextAreaControl.TextArea.ScrollToCaret();
         test.TextEditor.ActiveTextAreaControl.TextArea.TextView.SetFirstVisibleLine(18);
         test.LineNumberControl = new DiffViewerLineNumberControl(test.TextEditor.ActiveTextAreaControl.TextArea);
-        DiffLinesInfo result = DiffLineNumAnalyzer.Analyze(test.TextEditor.Text, allTextMarkers: [], isCombinedDiff: false);
-        test.LineNumberControl.DisplayLineNum(result, showLeftColumn: true);
+        var result = DiffLineNumAnalyzer.Analyze(test.TextEditor.Text, [], false);
+        test.LineNumberControl.DisplayLineNum(result, true);
 
         _viewPositionCache.GetTestAccessor().SetCurrentIdentification("dummy");
         _viewPositionCache.Capture();
@@ -129,7 +130,9 @@ public class CurrentViewPositionCacheTests : IDisposable
         test.ViewPosition.ActiveLineNum.RightLineNumber.Should().Be(-1);
         test.ViewPosition.CaretPosition.Should().Be(new TextLocation(0, 19));
         test.ViewPosition.CaretVisible.Should().BeTrue();
-        test.ViewPosition.FirstLine.Should().Be("diff --git a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs");
+        test.ViewPosition.FirstLine.Should()
+            .Be(
+                "diff --git a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs");
         test.ViewPosition.FirstVisibleLine.Should().Be(18);
         test.ViewPosition.TotalNumberOfLines.Should().Be(23);
     }
@@ -137,24 +140,23 @@ public class CurrentViewPositionCacheTests : IDisposable
     [StaFact]
     public void Restore_should_restore_current_position()
     {
-        FileViewerInternal.CurrentViewPositionCache.TestAccessor test = _viewPositionCache.GetTestAccessor();
-        string text = Given.GitDiff;
+        var test = _viewPositionCache.GetTestAccessor();
+        var text = Given.GitDiff;
         test.TextEditor.Text = text;
         test.TextEditor.ActiveTextAreaControl.TextArea.TextView.DrawingPosition = new Rectangle(0, 0, 100, 100);
         test.TextEditor.ShowLineNumbers = false;
 
         FileViewerInternal.ViewPosition existingViewPosition = new()
         {
-            ActiveLineNum = new DiffLineInfo
-            {
-                LeftLineNumber = 57,
-                LineNumInDiff = 20,
-                LineType = DiffLineType.Minus,
-                RightLineNumber = -1
-            },
+            ActiveLineNum =
+                new DiffLineInfo
+                {
+                    LeftLineNumber = 57, LineNumInDiff = 20, LineType = DiffLineType.Minus, RightLineNumber = -1
+                },
             CaretPosition = new TextLocation(0, 19),
             CaretVisible = true,
-            FirstLine = "diff --git a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs",
+            FirstLine =
+                "diff --git a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs",
             FirstVisibleLine = 18,
             TotalNumberOfLines = 23
         };
@@ -223,7 +225,7 @@ public class CurrentViewPositionCacheTests : IDisposable
         test.TextEditor.ActiveTextAreaControl.TextArea.Caret.Position.Should().Be(existingViewPosition.CaretPosition,
             "the captured position should not be reset by null identification");
 
-        string text2 = "dummy text\ndummy";
+        var text2 = "dummy text\ndummy";
         _viewPositionCache.Capture();
         test.LineNumberControl.Clear();
         highlightService = new PatchHighlightService(ref text2, true, test.LineNumberControl);
@@ -245,7 +247,8 @@ public class CurrentViewPositionCacheTests : IDisposable
 
     private static class Given
     {
-        public const string GitDiff = @"diff --git a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs
+        public const string GitDiff =
+            @"diff --git a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs
 index 7ac22add9..77aa0364a 100644
 --- a/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs
 +++ b/GitUI/CommandsDialogs/SettingsDialog/Pages/ShellExtensionSettingsPage.Designer.cs

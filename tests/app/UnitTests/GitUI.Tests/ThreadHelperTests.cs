@@ -1,10 +1,11 @@
 ﻿using System.Runtime.InteropServices;
 using CommonTestUtils;
-using GitUI;
+using GitExtUtils.GitUI;
 using JetBrains.Annotations;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitUITests;
+
 public sealed class ThreadHelperTests
 {
     private static async Task YieldOntoControlMainThreadAsync(Control control)
@@ -92,7 +93,7 @@ public sealed class ThreadHelperTests
         TaskCompletionSource<int> tcs = new();
         tcs.SetCanceled();
         Action act = () => tcs.Task.CompletedResult();
-        AggregateException actual = act.Should().Throw<AggregateException>().Which;
+        var actual = act.Should().Throw<AggregateException>().Which;
         actual.InnerException.Should().BeOfType<TaskCanceledException>();
     }
 
@@ -103,7 +104,7 @@ public sealed class ThreadHelperTests
         Exception ex = new();
         tcs.SetException(ex);
         Action act = () => tcs.Task.CompletedResult();
-        AggregateException actual = act.Should().Throw<AggregateException>().Which;
+        var actual = act.Should().Throw<AggregateException>().Which;
         actual.InnerException.Should().BeSameAs(ex);
         actual.InnerExceptions.Count.Should().Be(1);
     }
@@ -129,7 +130,7 @@ public sealed class ThreadHelperTests
         TaskCompletionSource<int> tcs = new();
         tcs.SetCanceled();
         Action act = () => tcs.Task.CompletedOrDefault();
-        AggregateException actual = act.Should().Throw<AggregateException>().Which;
+        var actual = act.Should().Throw<AggregateException>().Which;
         actual.InnerException.Should().BeOfType<TaskCanceledException>();
     }
 
@@ -140,13 +141,13 @@ public sealed class ThreadHelperTests
         Exception ex = new();
         tcs.SetException(ex);
         Action act = () => tcs.Task.CompletedOrDefault();
-        AggregateException actual = act.Should().Throw<AggregateException>().Which;
+        var actual = act.Should().Throw<AggregateException>().Which;
         actual.InnerException.Should().BeSameAs(ex);
         actual.InnerExceptions.Count.Should().Be(1);
     }
 
     [Fact]
-    public void JoinableTaskFactoryConfiguredForMTA()
+    public void JoinableTaskFactoryConfiguredForMta()
     {
         Thread.CurrentThread.GetApartmentState().Should().Be(ApartmentState.MTA);
         SynchronizationContext.Current.Should().BeNull();
@@ -156,8 +157,10 @@ public sealed class ThreadHelperTests
     }
 
     [Fact]
-    public async Task AllowAwaitForAsynchronousMTATest()
-        => await Task.Yield();
+    public async Task AllowAwaitForAsynchronousMtaTest()
+    {
+        await Task.Yield();
+    }
 
     private sealed class ThreadExceptionHelper : IDisposable
     {
@@ -169,9 +172,12 @@ public sealed class ThreadHelperTests
         public Exception Exception { get; private set; } = null!;
 
         [CanBeNull]
-        public string Message => Exception?.Message!;
+        public string Message
+        {
+            get => Exception?.Message!;
+        }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             Application.ThreadException -= HandleThreadException;
         }

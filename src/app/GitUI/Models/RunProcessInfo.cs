@@ -1,4 +1,4 @@
-namespace GitUI.Models;
+namespace GitUI;
 
 public record struct RunProcessInfo(
     string Executable,

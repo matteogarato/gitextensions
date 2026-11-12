@@ -6,18 +6,19 @@ using NSubstitute;
 
 namespace GitUITests;
 
-public sealed class RepositoryHistoryUIServiceTests
+public sealed class RepositoryHistoryUiServiceTests
 {
-    private RepositoryHistoryUIService _service = null!;
-    private IRepositoryCurrentBranchNameCache _branchNameCache = null!;
-    private IInvalidRepositoryRemover _invalidRepositoryRemover = null!;
+    private readonly IRepositoryCurrentBranchNameCache _branchNameCache = null!;
+    private readonly IInvalidRepositoryRemover _invalidRepositoryRemover = null!;
+    private readonly RepositoryHistoryUiService _service = null!;
 
-    public RepositoryHistoryUIServiceTests()
+    public RepositoryHistoryUiServiceTests()
     {
         _branchNameCache = Substitute.For<IRepositoryCurrentBranchNameCache>();
         _invalidRepositoryRemover = Substitute.For<IInvalidRepositoryRemover>();
 
-        _service = new RepositoryHistoryUIService(Substitute.For<IGitExecutorProvider>(), _branchNameCache, _invalidRepositoryRemover);
+        _service = new RepositoryHistoryUiService(Substitute.For<IGitExecutorProvider>(), _branchNameCache,
+            _invalidRepositoryRemover);
     }
 
     [StaFact]
@@ -29,7 +30,7 @@ public sealed class RepositoryHistoryUIServiceTests
         const string caption = "CAPTION";
         Repository repository = new(path);
 
-        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, number: 1);
+        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, 1);
 
         containerMenu.DropDownItems.Count.Should().Be(1);
     }
@@ -43,9 +44,9 @@ public sealed class RepositoryHistoryUIServiceTests
         const string caption = "CAPTION";
         Repository repository = new(path);
 
-        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, number: 1);
+        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, 1);
 
-        ToolStripMenuItem item = (ToolStripMenuItem)containerMenu.DropDownItems[0];
+        var item = (ToolStripMenuItem)containerMenu.DropDownItems[0];
         item.Text.Should().Be($"&1: {caption}");
         item.DisplayStyle.Should().Be(ToolStripItemDisplayStyle.ImageAndText);
         item.ToolTipText.Should().BeEmpty();
@@ -58,7 +59,8 @@ public sealed class RepositoryHistoryUIServiceTests
     [InlineData("(no branch)")]
     public void AddRecentRepositories_should_show_branch_correctly(string? branch)
     {
-        _branchNameCache.GetCachedBranchName(Arg.Any<string>()).Returns(string.IsNullOrWhiteSpace(branch) ? null : branch);
+        _branchNameCache.GetCachedBranchName(Arg.Any<string>())
+            .Returns(string.IsNullOrWhiteSpace(branch) ? null : branch);
 
         using ToolStripMenuItem containerMenu = new();
 
@@ -66,9 +68,9 @@ public sealed class RepositoryHistoryUIServiceTests
         const string caption = "CAPTION";
         Repository repository = new(path);
 
-        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, number: 1);
+        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, 1);
 
-        ToolStripMenuItem item = (ToolStripMenuItem)containerMenu.DropDownItems[0];
+        var item = (ToolStripMenuItem)containerMenu.DropDownItems[0];
         if (string.IsNullOrWhiteSpace(branch))
         {
             item.ShortcutKeyDisplayString.Should().BeNullOrEmpty();
@@ -88,9 +90,9 @@ public sealed class RepositoryHistoryUIServiceTests
         const string caption = "CAPTION";
         Repository repository = new(path);
 
-        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, number: 1);
+        _service.GetTestAccessor().AddRecentRepositories(containerMenu, repository, caption, 1);
 
-        ToolStripMenuItem item = (ToolStripMenuItem)containerMenu.DropDownItems[0];
+        var item = (ToolStripMenuItem)containerMenu.DropDownItems[0];
         item.PerformClick();
 
         _invalidRepositoryRemover.Received(1).ShowDeleteInvalidRepositoryDialog(path);
@@ -102,10 +104,10 @@ public sealed class RepositoryHistoryUIServiceTests
         using ToolStripMenuItem tsmiFavouriteRepositories = new();
         List<Repository> repositoryHistory =
         [
-            new Repository(@"c:\") { Category = "D" },
-            new Repository(@"c:\") { Category = "A" },
-            new Repository(@"c:\") { Category = "C" },
-            new Repository(@"c:\") { Category = "B" }
+            new(@"c:\") { Category = "D" },
+            new(@"c:\") { Category = "A" },
+            new(@"c:\") { Category = "C" },
+            new(@"c:\") { Category = "B" }
         ];
 
         using Form form = new();
@@ -114,7 +116,8 @@ public sealed class RepositoryHistoryUIServiceTests
         _service.GetTestAccessor().PopulateFavouriteRepositoriesMenu(tsmiFavouriteRepositories, repositoryHistory);
 
         // assert
-        List<string> categories = [.. tsmiFavouriteRepositories.DropDownItems.Cast<ToolStripMenuItem>().Select(x => x.Text!)];
+        List<string> categories =
+            [.. tsmiFavouriteRepositories.DropDownItems.Cast<ToolStripMenuItem>().Select(x => x.Text!)];
         categories.Should().BeInAscendingOrder();
     }
 }

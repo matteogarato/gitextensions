@@ -1,26 +1,22 @@
 ﻿using System.Text;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Logging;
 using GitExtensions.Extensibility;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitCommandsTests;
 
 public sealed class ExecutableTests : IDisposable
 {
-    public ExecutableTests()
-    {
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
     }
 
     [Fact]
     public async Task Process_shall_be_killed_on_cancellation()
     {
-        TimeSpan cancelDelay = TimeSpan.FromSeconds(1);
+        var cancelDelay = TimeSpan.FromSeconds(1);
 
         await TaskScheduler.Default;
 
@@ -28,8 +24,9 @@ public sealed class ExecutableTests : IDisposable
 
         // start a process running for seconds
         IExecutable executable = new Executable("ping.exe");
-        IProcess process = executable.Start($"-n {cancelDelay.TotalSeconds + 60} 127.0.0.1", cancellationToken: cts.Token);
-        DateTime startedAt = DateTime.Now;
+        var process =
+            executable.Start($"-n {cancelDelay.TotalSeconds + 60} 127.0.0.1", cancellationToken: cts.Token);
+        var startedAt = DateTime.Now;
 
         // cancel after delay
         await Task.Delay(cancelDelay, TestContext.Current.CancellationToken);
@@ -41,7 +38,7 @@ public sealed class ExecutableTests : IDisposable
             try
             {
                 ctsWaitExit.CancelAfter(cancelDelay);
-                int exitCode = await process.WaitForExitAsync(ctsWaitExit.Token);
+                var exitCode = await process.WaitForExitAsync(ctsWaitExit.Token);
                 Assert.Fail($"should not have exited, received: {exitCode}");
             }
             catch (OperationCanceledException)
@@ -51,27 +48,28 @@ public sealed class ExecutableTests : IDisposable
 
         process.Dispose();
 
-        TimeSpan durationWaitTimeout = DateTime.Now - startedAt;
+        var durationWaitTimeout = DateTime.Now - startedAt;
         durationWaitTimeout.Should().BeGreaterThan(1.5 * cancelDelay).And.BeLessThan(4 * cancelDelay);
 
-        CommandLogEntry? cmd = CommandLog.Commands.LastOrDefault();
+        var cmd = CommandLog.Commands.LastOrDefault();
         (cmd?.Exception?.Message).Should().Be("Process killed");
     }
 
     [Fact]
     public async Task WaitForProcessExitAsync_shall_return_latest_after_timeout()
     {
-        TimeSpan halfRuntime = TimeSpan.FromSeconds(3);
+        var halfRuntime = TimeSpan.FromSeconds(3);
 
         await TaskScheduler.Default;
 
         // start a process running for seconds
         IExecutable executable = new Executable("ping.exe");
-        using IProcess process = executable.Start($"-n {(halfRuntime.TotalSeconds * 2) + 1} 127.0.0.1", cancellationToken: TestContext.Current.CancellationToken);
+        using var process = executable.Start($"-n {(halfRuntime.TotalSeconds * 2) + 1} 127.0.0.1",
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // wait for process exit, but cancel the wait while the process is still running
         using CancellationTokenSource cts = new();
-        DateTime startedAt = DateTime.Now;
+        var startedAt = DateTime.Now;
         cts.CancelAfter(halfRuntime);
         try
         {
@@ -82,13 +80,13 @@ public sealed class ExecutableTests : IDisposable
             // ignore
         }
 
-        TimeSpan durationWaitTimeout = DateTime.Now - startedAt;
+        var durationWaitTimeout = DateTime.Now - startedAt;
         durationWaitTimeout.Should().BeGreaterThan(0.5 * halfRuntime).And.BeLessThan(1.5 * halfRuntime);
 
         // wait for process exit without cancellation
         await process.WaitForExitAsync(CancellationToken.None);
 
-        TimeSpan durationExit = DateTime.Now - startedAt;
+        var durationExit = DateTime.Now - startedAt;
         durationExit.Should().BeGreaterThan(1.5 * halfRuntime).And.BeLessThan(2.5 * halfRuntime);
     }
 
@@ -102,22 +100,24 @@ public sealed class ExecutableTests : IDisposable
         const int minRuntime = cancelDelay + exitDelay;
         // cmd.exe with no arguments exits immediately when stdin is not a terminal (e.g., on CI runners).
         // Run a subcommand that blocks for the required duration instead.
-        string arguments = exeFile.Contains("ping") ? $"-n {(minRuntime / 1000) + 2} 127.0.0.1"
-                         : exeFile.Contains("cmd") ? $"/c ping -n {(minRuntime / 1000) + 2} 127.0.0.1"
-                         : "";
+        var arguments = exeFile.Contains("ping") ? $"-n {(minRuntime / 1000) + 2} 127.0.0.1"
+            : exeFile.Contains("cmd") ? $"/c ping -n {(minRuntime / 1000) + 2} 127.0.0.1"
+            : "";
 
         using CancellationTokenSource cancellationTokenSource = new();
-        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        var cancellationToken = cancellationTokenSource.Token;
         IExecutable executable = new Executable(exeFile);
 
         Exception? exception = null;
         ExecutionResult? executionResult = null;
+
         async Task ExecuteAsync()
         {
             try
             {
-                await TaskScheduler.Default.SwitchTo(alwaysYield: true);
-                executionResult = await executable.ExecuteAsync(arguments, outputEncoding: Encoding.Default, cancellationToken: cancellationToken);
+                await TaskScheduler.Default.SwitchTo(true);
+                executionResult = await executable.ExecuteAsync(arguments, outputEncoding: Encoding.Default,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {

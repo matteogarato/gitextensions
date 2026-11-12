@@ -1,6 +1,6 @@
 using System.Text;
 using BugReporter.Serialization;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace BugReporter;
@@ -8,7 +8,7 @@ namespace BugReporter;
 internal static class Program
 {
     /// <summary>
-    ///  The main entry point for the application.
+    ///     The main entry point for the application.
     /// </summary>
     [STAThread]
     private static void Main()
@@ -30,8 +30,8 @@ internal static class Program
 
         SerializableException? exception = null;
 
-        string[] args = Environment.GetCommandLineArgs();
-        foreach (string arg in args)
+        var args = Environment.GetCommandLineArgs();
+        foreach (var arg in args)
         {
             string xml;
             try
@@ -40,7 +40,8 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                exception = new(new Exception($"Failed to decode the error payload\r\n{arg}", ex));
+                exception = new SerializableException(new Exception($"Failed to decode the error payload\r\n{arg}",
+                    ex));
                 continue;
             }
 
@@ -50,20 +51,22 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                exception = new(new Exception($"Failed to decode/parse error payload\r\n{xml}", ex));
+                exception = new SerializableException(new Exception($"Failed to decode/parse error payload\r\n{xml}",
+                    ex));
             }
         }
 
         // No specific info extracted from these exceptions
-        string exceptionInfo = "";
-        exception ??= new(new Exception("Missing error payload"));
+        var exceptionInfo = "";
+        exception ??= new SerializableException(new Exception("Missing error payload"));
 
-        new BugReportForm().ShowDialog(owner: null, exception, exceptionInfo, UserEnvironmentInformation.GetInformation(), canIgnore: true, showIgnore: false, focusDetails: false);
+        new BugReportForm().ShowDialog(null, exception, exceptionInfo, UserEnvironmentInformation.GetInformation(),
+            true, false, false);
     }
 
     private static string Base64Decode(string base64EncodedData)
     {
-        byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+        var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
         return Encoding.UTF8.GetString(base64EncodedBytes);
     }
 }

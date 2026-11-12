@@ -2,33 +2,25 @@ using GitCommands;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
+using GitExtUtils.GitUI;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.RepoHosting;
 
 public partial class CreatePullRequestForm : GitModuleForm
 {
-    #region Translation
-    private readonly TranslationString _strLoading = new("Loading...");
-    private readonly TranslationString _strYouMustSpecifyATitle = new("You must specify a title.");
-    private readonly TranslationString _strPullRequest = new("Pull request");
-    private readonly TranslationString _strFailedToCreatePullRequest = new("Failed to create pull request.");
-    private readonly TranslationString _strPleaseCloneGitHubRep = new("Please clone GitHub repository before pull request.");
-    private readonly TranslationString _strDone = new("Done");
-    private readonly TranslationString _strRemoteFailToLoadBranches = new("Fail to load target branches");
-    private readonly TranslationString _strFailedToLoadTemplate = new("Failed to load PR template from file.");
-    #endregion
+    private readonly string? _chooseRemote;
+    private readonly AsyncLoader _remoteLoader = new();
 
     private readonly IRepositoryHostPlugin _repoHost;
-    private IHostedRemote? _currentHostedRemote;
-    private readonly string? _chooseRemote;
-    private IReadOnlyList<IHostedRemote>? _hostedRemotes;
     private string? _currentBranch;
-    private string? _prevTitle;
-    private readonly AsyncLoader _remoteLoader = new();
+    private IHostedRemote? _currentHostedRemote;
+    private IReadOnlyList<IHostedRemote>? _hostedRemotes;
     private bool _ignoreFirstRemoteLoading = true;
+    private string? _prevTitle;
 
-    public CreatePullRequestForm(IGitUICommands commands, IRepositoryHostPlugin repoHost, string? chooseRemote, string? chooseBranch)
+    public CreatePullRequestForm(IGitUiCommands commands, IRepositoryHostPlugin repoHost, string? chooseRemote,
+        string? chooseBranch)
         : base(commands)
     {
         _repoHost = repoHost;
@@ -38,6 +30,11 @@ public partial class CreatePullRequestForm : GitModuleForm
         InitializeComplete();
         _prevTitle = _titleTB.Text;
         _pullReqTargetsCB.DisplayMember = nameof(IHostedRemote.DisplayData);
+    }
+
+    private IHostedRemote? MyRemote
+    {
+        get => _hostedRemotes!.FirstOrDefault(r => r.IsOwnedByMe);
     }
 
     private void CreatePullRequestForm_Load(object sender, EventArgs e)
@@ -53,7 +50,8 @@ public partial class CreatePullRequestForm : GitModuleForm
                 if (foreignHostedRemotes.Length == 0)
                 {
                     MessageBoxes.Show(this, _strFailedToCreatePullRequest.Text + Environment.NewLine +
-                                          _strPleaseCloneGitHubRep.Text, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                            _strPleaseCloneGitHubRep.Text, "", MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
                     Close();
                     return;
                 }
@@ -63,7 +61,7 @@ public partial class CreatePullRequestForm : GitModuleForm
                 _currentBranch = Module.IsValidGitWorkingDir() ? Module.GetSelectedBranch() : "";
                 LoadRemotes(foreignHostedRemotes);
                 LoadMyBranches();
-                LoadPRTemplate();
+                LoadPrTemplate();
             });
     }
 
@@ -74,7 +72,7 @@ public partial class CreatePullRequestForm : GitModuleForm
 
         if (_chooseRemote is not null)
         {
-            for (int i = 0; i < _pullReqTargetsCB.Items.Count; i++)
+            for (var i = 0; i < _pullReqTargetsCB.Items.Count; i++)
             {
                 if (_pullReqTargetsCB.Items[i] is IHostedRemote ihr && ihr.Name == _chooseRemote)
                 {
@@ -93,9 +91,9 @@ public partial class CreatePullRequestForm : GitModuleForm
         _pullReqTargetsCB_SelectedIndexChanged(this, EventArgs.Empty);
     }
 
-    private void LoadPRTemplate()
+    private void LoadPrTemplate()
     {
-        string templatePath = Path.Join(Module.WorkingDir, ".github", "PULL_REQUEST_TEMPLATE.md");
+        var templatePath = Path.Join(Module.WorkingDir, ".github", "PULL_REQUEST_TEMPLATE.md");
 
         if (!File.Exists(templatePath))
         {
@@ -106,7 +104,7 @@ public partial class CreatePullRequestForm : GitModuleForm
         {
             try
             {
-                string template = await File.ReadAllTextAsync(templatePath);
+                var template = await File.ReadAllTextAsync(templatePath);
 
                 await this.SwitchToMainThreadAsync();
                 _bodyTB.Text = template;
@@ -114,7 +112,8 @@ public partial class CreatePullRequestForm : GitModuleForm
             catch (Exception ex)
             {
                 throw new UserExternalOperationException(_strFailedToLoadTemplate.Text,
-                    new ExternalOperationException(arguments: templatePath, workingDirectory: Module.WorkingDir, innerException: ex));
+                    new ExternalOperationException(arguments: templatePath, workingDirectory: Module.WorkingDir,
+                        innerException: ex));
             }
         });
     }
@@ -134,13 +133,11 @@ public partial class CreatePullRequestForm : GitModuleForm
         PopulateBranchesComboAndEnableCreateButton(_currentHostedRemote!, _remoteBranchesCB);
     }
 
-    private IHostedRemote? MyRemote => _hostedRemotes!.FirstOrDefault(r => r.IsOwnedByMe);
-
     private void LoadMyBranches()
     {
         _yourBranchesCB.Items.Clear();
 
-        IHostedRemote? myRemote = MyRemote;
+        var myRemote = MyRemote;
 
         if (myRemote is null)
         {
@@ -153,54 +150,56 @@ public partial class CreatePullRequestForm : GitModuleForm
     private void PopulateBranchesComboAndEnableCreateButton(IHostedRemote remote, ComboBox comboBox)
     {
         ThreadHelper.FileAndForget(async () =>
+        {
+            try
+            {
+                var hostedRepository = remote.GetHostedRepository();
+                var branches = hostedRepository.GetBranches();
+
+                await this.SwitchToMainThreadAsync();
+
+                comboBox.Items.Clear();
+
+                var selectItem = 0;
+                var defaultBranch = hostedRepository.GetDefaultBranch();
+                for (var i = 0; i < branches.Count; i++)
                 {
-                    try
+                    if (branches[i].Name == defaultBranch)
                     {
-                        IHostedRepository hostedRepository = remote.GetHostedRepository();
-                        IReadOnlyList<IHostedBranch> branches = hostedRepository.GetBranches();
-
-                        await this.SwitchToMainThreadAsync();
-
-                        comboBox.Items.Clear();
-
-                        int selectItem = 0;
-                        string defaultBranch = hostedRepository.GetDefaultBranch();
-                        for (int i = 0; i < branches.Count; i++)
-                        {
-                            if (branches[i].Name == defaultBranch)
-                            {
-                                selectItem = i;
-                            }
-
-                            comboBox.Items.Add(branches[i].Name);
-                        }
-
-                        if (branches.Count > 0)
-                        {
-                            comboBox.SelectedIndex = selectItem;
-                        }
-
-                        _createBtn.Enabled = true;
+                        selectItem = i;
                     }
-                    catch (Exception ex)
-                    {
-                        await TaskDialog.ShowDialogAsync(new TaskDialogPage
-                            {
-                                Icon = TaskDialogIcon.Error,
-                                Caption = _strRemoteFailToLoadBranches.Text,
-                                Text = string.Format(TranslatedStrings.RemoteInError, ex.Message, remote.DisplayData),
-                                Buttons = { TaskDialogButton.OK },
-                                SizeToContent = true
-                            });
-                    }
+
+                    comboBox.Items.Add(branches[i].Name);
+                }
+
+                if (branches.Count > 0)
+                {
+                    comboBox.SelectedIndex = selectItem;
+                }
+
+                _createBtn.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                await TaskDialog.ShowDialogAsync(new TaskDialogPage
+                {
+                    Icon = TaskDialogIcon.Error,
+                    Caption = _strRemoteFailToLoadBranches.Text,
+                    Text = string.Format(TranslatedStrings.RemoteInError, ex.Message, remote.DisplayData),
+                    Buttons = { TaskDialogButton.OK },
+                    SizeToContent = true
                 });
+            }
+        });
     }
 
     private void _yourBranchCB_SelectedIndexChanged(object sender, EventArgs e)
     {
         if (_prevTitle == _titleTB.Text && !string.IsNullOrWhiteSpace(_yourBranchesCB.Text) && MyRemote is not null)
         {
-            string? lastMsg = Module.GetPreviousCommitMessages(count: 1, revision: MyRemote.Name.Combine("/", _yourBranchesCB.Text)!, authorPattern: string.Empty).FirstOrDefault();
+            var lastMsg = Module
+                .GetPreviousCommitMessages(1, MyRemote.Name.Combine("/", _yourBranchesCB.Text)!, string.Empty)
+                .FirstOrDefault();
             _titleTB.Text = lastMsg?.SubstringUntil('\n');
             _prevTitle = _titleTB.Text;
         }
@@ -213,31 +212,33 @@ public partial class CreatePullRequestForm : GitModuleForm
             return;
         }
 
-        string title = _titleTB.Text.Trim();
-        string body = _bodyTB.Text.Trim();
+        var title = _titleTB.Text.Trim();
+        var body = _bodyTB.Text.Trim();
         if (title.Length == 0)
         {
-            MessageBoxes.Show(this, _strYouMustSpecifyATitle.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _strYouMustSpecifyATitle.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 
         try
         {
-            IHostedRepository hostedRepo = _currentHostedRemote.GetHostedRepository();
+            var hostedRepo = _currentHostedRemote.GetHostedRepository();
 
             hostedRepo.CreatePullRequest(_yourBranchesCB.Text, _remoteBranchesCB.Text, title, body);
-            MessageBoxes.Show(this, _strDone.Text, _strPullRequest.Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBoxes.Show(this, _strDone.Text, _strPullRequest.Text, MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             Close();
         }
         catch (Exception ex)
         {
             MessageBoxes.Show(this, _strFailedToCreatePullRequest.Text + Environment.NewLine +
-                ex.Message, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    ex.Message, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -250,4 +251,20 @@ public partial class CreatePullRequestForm : GitModuleForm
 
         base.Dispose(disposing);
     }
+
+    #region Translation
+
+    private readonly TranslationString _strLoading = new("Loading...");
+    private readonly TranslationString _strYouMustSpecifyATitle = new("You must specify a title.");
+    private readonly TranslationString _strPullRequest = new("Pull request");
+    private readonly TranslationString _strFailedToCreatePullRequest = new("Failed to create pull request.");
+
+    private readonly TranslationString _strPleaseCloneGitHubRep =
+        new("Please clone GitHub repository before pull request.");
+
+    private readonly TranslationString _strDone = new("Done");
+    private readonly TranslationString _strRemoteFailToLoadBranches = new("Fail to load target branches");
+    private readonly TranslationString _strFailedToLoadTemplate = new("Failed to load PR template from file.");
+
+    #endregion
 }

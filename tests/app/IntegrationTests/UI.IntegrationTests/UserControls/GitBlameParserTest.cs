@@ -1,11 +1,9 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using Xunit;
 
-namespace GitUITests.UserControls;
+namespace UITests.UserControls;
 
 public sealed class GitBlameParserTest : IClassFixture<GitBlameParserTestFixture>
 {
@@ -16,12 +14,13 @@ public sealed class GitBlameParserTest : IClassFixture<GitBlameParserTestFixture
         // when blaming file FormBrowse.cs on commit 7edc265403b54dd8ea2b8402f8790219d8d42077
         // line content is: internal bool ExecuteCommand(Command cmd)
 
-        string gitExtensionsRepoPath = Path.GetFullPath(@"..\..\..\..\..\..\..");
+        var gitExtensionsRepoPath = Path.GetFullPath(@"..\..\..\..\..\..\..");
 
         GitModule gitModule = new(new GitExecutorProvider(new GitDirectoryResolver()), gitExtensionsRepoPath);
 
         // Revision corresponding to line 2281
-        GitRevision selectedBlamedRevision = gitModule.GetRevision(ObjectId.Parse("52476f30670ba5338756b606841fb0a346fd6460"));
+        var selectedBlamedRevision =
+            gitModule.GetRevision(ObjectId.Parse("52476f30670ba5338756b606841fb0a346fd6460"));
 
         // line content is still: internal bool ExecuteCommand(Command cmd)
         GetOriginalLineInPreviousCommit(2281).Should().Be(2192);
@@ -36,18 +35,23 @@ public sealed class GitBlameParserTest : IClassFixture<GitBlameParserTestFixture
         GetOriginalLineInPreviousCommit(824).Should().Be(824);
 
         int GetOriginalLineInPreviousCommit(int blamedLineNumber)
-            => new GitBlameParser(() => gitModule)
-                    .GetOriginalLineInPreviousCommit(selectedBlamedRevision, "GitUI/CommandsDialogs/FormBrowse.cs", blamedLineNumber);
+        {
+            return new GitBlameParser(() => gitModule)
+                .GetOriginalLineInPreviousCommit(selectedBlamedRevision, "GitUI/CommandsDialogs/FormBrowse.cs",
+                    blamedLineNumber);
+        }
     }
 }
 
-public sealed class GitBlameParserTestFixture : System.IDisposable
+public sealed class GitBlameParserTestFixture : IDisposable
 {
+    private readonly bool _detectCopyInAllOnBlame;
+    private readonly bool _detectCopyInFileOnBlame;
+
+    private readonly bool _ignoreWhitespaceOnBlame;
+
     // Track the original setting value
-    private bool _useHistogramDiffAlgorithm;
-    private bool _detectCopyInFileOnBlame;
-    private bool _detectCopyInAllOnBlame;
-    private bool _ignoreWhitespaceOnBlame;
+    private readonly bool _useHistogramDiffAlgorithm;
 
     public GitBlameParserTestFixture()
     {
@@ -61,7 +65,7 @@ public sealed class GitBlameParserTestFixture : System.IDisposable
         AppSettings.IgnoreWhitespaceOnBlame = true;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.UseHistogramDiffAlgorithm = _useHistogramDiffAlgorithm;
         AppSettings.DetectCopyInFileOnBlame = _detectCopyInFileOnBlame;

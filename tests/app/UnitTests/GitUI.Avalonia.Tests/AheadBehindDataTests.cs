@@ -1,6 +1,6 @@
 using GitCommands.Git;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class AheadBehindDataTests
 {
@@ -19,7 +19,8 @@ public sealed class AheadBehindDataTests
     [InlineData("5", "3", false, false, "↑↓")]
     [InlineData("5", "3", true, true, "5↓ 3↑")]
     [Theory]
-    public void ToDisplay_should_format_counts_and_directions(string ahead, string behind, bool withCounts, bool reverse, string expected)
+    public void ToDisplay_should_format_counts_and_directions(string ahead, string behind, bool withCounts,
+        bool reverse, string expected)
     {
         AheadBehindData data = new("", "", ahead, behind);
 

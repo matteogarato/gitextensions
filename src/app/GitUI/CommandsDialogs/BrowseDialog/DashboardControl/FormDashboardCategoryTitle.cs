@@ -4,10 +4,10 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl;
 
 public partial class FormDashboardCategoryTitle : GitExtensionsForm
 {
-    private readonly TranslationString _categoryNameRequiredText = new("Category name is required");
     private readonly TranslationString _categoryNameExistsText = new("Category name already exists");
-    private readonly TranslationString _renameCategoryText = new("Rename category");
+    private readonly TranslationString _categoryNameRequiredText = new("Category name is required");
     private readonly List<string> _existingCategories = [];
+    private readonly TranslationString _renameCategoryText = new("Rename category");
 
     public FormDashboardCategoryTitle()
     {
@@ -33,7 +33,7 @@ public partial class FormDashboardCategoryTitle : GitExtensionsForm
     }
 
     /// <summary>
-    /// Gets the new category.
+    ///     Gets the new category.
     /// </summary>
     public string? Category { get; private set; }
 
@@ -41,13 +41,15 @@ public partial class FormDashboardCategoryTitle : GitExtensionsForm
     {
         if (string.IsNullOrEmpty(txtCategoryName.Text))
         {
-            MessageBoxes.Show(this, _categoryNameRequiredText.Text, lblCategoryName.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _categoryNameRequiredText.Text, lblCategoryName.Text, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 
         if (_existingCategories.Contains(txtCategoryName.Text, StringComparer.Ordinal))
         {
-            MessageBoxes.Show(this, _categoryNameExistsText.Text, lblCategoryName.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, _categoryNameExistsText.Text, lblCategoryName.Text, MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             return;
         }
 

@@ -18,7 +18,7 @@ public static class BuildServerSettingsHelper
         }
     }
 
-    public static bool IsUrlValid([NotNullWhen(returnValue: true)] string? url)
+    public static bool IsUrlValid([NotNullWhen(true)] string? url)
     {
         if (url is null)
         {

@@ -13,7 +13,7 @@ namespace BugReporter.Info;
 public class Report
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="Report"/> class to be filled with information later on.
+    ///     Initializes a new instance of the <see cref="Report" /> class to be filled with information later on.
     /// </summary>
     public Report()
     {
@@ -25,7 +25,7 @@ public class Report
     }
 
     /// <summary>
-    /// Gets or sets the general information about the exception and the system to be presented in the bug report.
+    ///     Gets or sets the general information about the exception and the system to be presented in the bug report.
     /// </summary>
     public GeneralInfo? GeneralInfo { get; set; }
 
@@ -36,7 +36,7 @@ public class Report
         stream.SetLength(0);
         serializer.Serialize(stream, this);
         stream.Position = 0;
-        XDocument doc = XDocument.Load(stream);
+        var doc = XDocument.Load(stream);
         return doc.Root!.ToString();
     }
 }

@@ -1,7 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid.Columns;
 
@@ -23,7 +24,7 @@ internal sealed class NotesColumnProvider : ColumnProvider
             ReadOnly = false,
             SortMode = DataGridViewColumnSortMode.NotSortable,
             Width = DpiUtil.Scale(50),
-            MinimumWidth = DpiUtil.Scale(25),
+            MinimumWidth = DpiUtil.Scale(25)
         };
         Column = column;
     }
@@ -33,9 +34,10 @@ internal sealed class NotesColumnProvider : ColumnProvider
         Column.Visible = AppSettings.ShowGitNotesColumn.Value;
     }
 
-    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
+    public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight,
+        in CellStyle style)
     {
-        if (FirstLine(revision.Notes) is string firstLine)
+        if (FirstLine(revision.Notes) is { } firstLine)
         {
             _grid.DrawColumnText(e, firstLine, style.NormalFont, style.ForeColor, e.CellBounds);
         }
@@ -47,12 +49,15 @@ internal sealed class NotesColumnProvider : ColumnProvider
         return;
 
         static string? FirstLine(string? text)
-            => text?.IndexOf('\n') is int eolIndex and >= 0
+        {
+            return text?.IndexOf('\n') is { } eolIndex and >= 0
                 ? text[..eolIndex]
                 : text;
+        }
     }
 
-    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
+    public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision,
+        [NotNullWhen(true)] out string? toolTip)
     {
         toolTip = revision.Notes;
         return toolTip is not null;

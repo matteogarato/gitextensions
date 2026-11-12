@@ -16,7 +16,10 @@ public class GitWorkingDirectoryStatusEventArgs : EventArgs
     }
 
     /// <summary>
-    /// the status of all modified files/submodules or null if the previous information is invalidated.
+    ///     the status of all modified files/submodules or null if the previous information is invalidated.
     /// </summary>
-    public IReadOnlyList<GitItemStatus>? ItemStatuses => _itemStatuses ?? [];
+    public IReadOnlyList<GitItemStatus>? ItemStatuses
+    {
+        get => _itemStatuses ?? [];
+    }
 }

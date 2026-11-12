@@ -32,7 +32,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyInformationalVersion("3.1.0")]
 
 // Disable CLS compliance. See https://github.com/gitextensions/gitextensions/issues/4710
-[assembly: CLSCompliant(isCompliant: false)]
+[assembly: CLSCompliant(false)]
 
 // Setting ComVisible to false makes the types in this assembly not visible
 // to COM components.  If you need to access a type in this assembly from

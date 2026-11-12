@@ -2,17 +2,18 @@
 using System.Text.RegularExpressions;
 using GitCommands.Logging;
 using GitExtensions.Extensibility;
+using GitExtUtils.GitUI;
 
 namespace GitUI.ConsoleEmulation.Mintty;
 
 internal sealed partial class MinttyCommandRunner : IConsoleCommandRunner
 {
-    private readonly string _minttyPath;
     private readonly string _bashPath;
+    private readonly string _minttyPath;
+    private readonly Panel _panel;
     private readonly ConsoleEmulatorSettings _settings;
 
     private MinttyControl? _terminal;
-    private readonly Panel _panel;
 
     internal MinttyCommandRunner(string minttyPath, string bashPath, ConsoleEmulatorSettings settings)
     {
@@ -23,26 +24,43 @@ internal sealed partial class MinttyCommandRunner : IConsoleCommandRunner
         _panel = new Panel { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None };
     }
 
-    public Control Control => _panel;
+    Control IConsoleCommandRunner.Control
+    {
+        get => _panel;
+    }
 
-    public event EventHandler<ConsoleOutputEventArgs>? CommandOutputReceived;
-    public event EventHandler<ConsoleProcessExitEventArgs>? CommandProcessExited;
-    public event EventHandler? ConsoleHostTerminated;
+    event EventHandler<ConsoleOutputEventArgs>? IConsoleCommandRunner.CommandOutputReceived
+    {
+        add => CommandOutputReceived += value;
+        remove => CommandOutputReceived -= value;
+    }
 
-    public void WriteCommandProcessInput(string text)
+    event EventHandler<ConsoleProcessExitEventArgs>? IConsoleCommandRunner.CommandProcessExited
+    {
+        add => CommandProcessExited += value;
+        remove => CommandProcessExited -= value;
+    }
+
+    event EventHandler? IConsoleCommandRunner.ConsoleHostTerminated
+    {
+        add => ConsoleHostTerminated += value;
+        remove => ConsoleHostTerminated -= value;
+    }
+
+    void IConsoleCommandRunner.WriteCommandProcessInput(string text)
     {
         _terminal?.SendConsoleInput(text);
     }
 
-    public void KillCommandProcess()
+    void IConsoleCommandRunner.KillCommandProcess()
     {
         _terminal?.RunningSession?.Kill();
     }
 
     [MemberNotNull(nameof(_terminal))]
-    public void ResetConsole()
+    void IConsoleCommandRunner.ResetConsole()
     {
-        MinttyControl? oldTerminal = _terminal;
+        var oldTerminal = _terminal;
 
         _terminal = new MinttyControl { Dock = DockStyle.Fill };
 
@@ -55,18 +73,19 @@ internal sealed partial class MinttyCommandRunner : IConsoleCommandRunner
         _panel.Controls.Add(_terminal);
     }
 
-    public void StartCommand(string command, string arguments, string workDir, Dictionary<string, string> envVariables)
+    void IConsoleCommandRunner.StartCommand(string command, string arguments, string workDir,
+        Dictionary<string, string> envVariables)
     {
         if (_terminal is null)
         {
             ResetConsole();
         }
 
-        ProcessOperation operation = CommandLog.LogProcessStart(command, arguments, workDir);
+        var operation = CommandLog.LogProcessStart(command, arguments, workDir);
 
         try
         {
-            string commandLine = new ArgumentBuilder { command.Quote(), arguments }.ToString();
+            var commandLine = new ArgumentBuilder { command.Quote(), arguments }.ToString();
 
             MinttyStartInfo startInfo = new()
             {
@@ -76,7 +95,8 @@ internal sealed partial class MinttyCommandRunner : IConsoleCommandRunner
                 ProcessExitedCallback = exitCode =>
                 {
                     operation.LogProcessEnd(exitCode);
-                    Control.InvokeAndForget(() => CommandProcessExited?.Invoke(this, new ConsoleProcessExitEventArgs(exitCode)));
+                    Control.InvokeAndForget(() =>
+                        CommandProcessExited?.Invoke(this, new ConsoleProcessExitEventArgs(exitCode)));
                 },
                 ConsoleClosedCallback = () =>
                 {
@@ -85,11 +105,12 @@ internal sealed partial class MinttyCommandRunner : IConsoleCommandRunner
                 AnsiOutputLineCallback = line =>
                 {
                     line = StripAnsiCodesRegex().Replace(line, string.Empty);
-                    Control.InvokeAndForget(() => CommandOutputReceived?.Invoke(this, new ConsoleOutputEventArgs(line)));
+                    Control.InvokeAndForget(() =>
+                        CommandOutputReceived?.Invoke(this, new ConsoleOutputEventArgs(line)));
                 }
             };
 
-            foreach ((string name, string value) in envVariables)
+            foreach ((var name, var value) in envVariables)
             {
                 startInfo.EnvironmentVariables[name] = value;
             }
@@ -102,6 +123,12 @@ internal sealed partial class MinttyCommandRunner : IConsoleCommandRunner
             throw;
         }
     }
+
+    private event EventHandler<ConsoleOutputEventArgs>? CommandOutputReceived;
+
+    private event EventHandler<ConsoleProcessExitEventArgs>? CommandProcessExited;
+
+    private event EventHandler? ConsoleHostTerminated;
 
     [GeneratedRegex(@"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")]
     private static partial Regex StripAnsiCodesRegex();

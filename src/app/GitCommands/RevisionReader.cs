@@ -3,12 +3,14 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
-using GitUIPluginInterfaces;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitCommands;
 
@@ -17,7 +19,6 @@ public sealed class RevisionReader
     private const string _fullFormat =
 
         // These header entries can all be decoded from the bytes (ASCII compatible) directly.
-
         /* Object ID       */ "%H" +
         /* Tree ID         */ "%T" +
         /* Parent IDs      */ "%P%n" +
@@ -35,29 +36,31 @@ public sealed class RevisionReader
 
     private const string _reflogSelectorFormat = "%gD%n";
     private const string _notesPrefix = "\u039d\u043et\u0435\u0282:"; // Unicode l00k-alikes, Νоtеʂ:
-    internal const string NotesMarkerWithoutTrailingLF = $"\n{_notesPrefix}";
+    internal const string NotesMarkerWithoutTrailingLf = $"\n{_notesPrefix}";
     internal const string NotesFormat = $"%n{_notesPrefix}%n%N";
-
-    // Trace info for parse errors
-    private int _noOfParseError = 0;
+    private const int _offsetDaysForOldestBody = 6 * 30; // about 6 months
+    private readonly Encoding _logOutputEncoding;
 
     private readonly IGitModule _module;
-    private readonly Encoding _logOutputEncoding;
     private readonly long _oldestBody;
-    private const int _offsetDaysForOldestBody = 6 * 30; // about 6 months
-
-    // reflog selector to identify stashes
-    private bool _hasReflogSelector;
-
-    // Include Git Notes for the commit
-    private bool _hasNotes;
-
-    // Reusable buffer for decoding byte spans to chars (names, emails, subject, body)
-    private char[] _decodeBuffer = new char[4096];
 
     // Per-instance string pool for deduplicating author/committer names and emails
     private readonly HashSet<string>.AlternateLookup<ReadOnlySpan<char>> _stringPool
         = new HashSet<string>(StringComparer.Ordinal).GetAlternateLookup<ReadOnlySpan<char>>();
+
+    private (ReadOnlyMemory<byte> buffer, ObjectId objectId)? _cache;
+
+    // Reusable buffer for decoding byte spans to chars (names, emails, subject, body)
+    private char[] _decodeBuffer = new char[4096];
+
+    // Include Git Notes for the commit
+    private bool _hasNotes;
+
+    // reflog selector to identify stashes
+    private bool _hasReflogSelector;
+
+    // Trace info for parse errors
+    private int _noOfParseError;
 
     public RevisionReader(IGitModule module, bool allBodies = false)
         : this(module, module.LogOutputEncoding, allBodies ? 0 : GetUnixTimeForOffset(_offsetDaysForOldestBody))
@@ -72,8 +75,8 @@ public sealed class RevisionReader
     }
 
     /// <summary>
-    /// Return the git-log format and set the reflogSelector flag
-    /// (used when parsing the buffer).
+    ///     Return the git-log format and set the reflogSelector flag
+    ///     (used when parsing the buffer).
     /// </summary>
     private string GetLogFormat(bool hasReflogSelector = false, bool hasNotes = false)
     {
@@ -84,32 +87,30 @@ public sealed class RevisionReader
     }
 
     private static long GetUnixTimeForOffset(int days)
-        => new DateTimeOffset(DateTime.Now.ToUniversalTime() - TimeSpan.FromDays(days)).ToUnixTimeSeconds();
+    {
+        return new DateTimeOffset(DateTime.Now.ToUniversalTime() - TimeSpan.FromDays(days)).ToUnixTimeSeconds();
+    }
 
     /// <summary>
-    /// Get the git-stash GitRevisions.
+    ///     Get the git-stash GitRevisions.
     /// </summary>
     /// <param name="cancellationToken">Cancellation cancellationToken.</param>
     /// <returns>List with GitRevisions.</returns>
     public IReadOnlyCollection<GitRevision> GetStashes(CancellationToken cancellationToken)
     {
-        GitArgumentBuilder arguments = new("stash")
-        {
-            "list",
-            "-z",
-            $"--pretty=format:\"{GetLogFormat(hasReflogSelector: true)}\""
-        };
+        GitArgumentBuilder arguments = new("stash") { "list", "-z", $"--pretty=format:\"{GetLogFormat(true)}\"" };
 
         return GetRevisionsFromArguments(arguments, cancellationToken);
     }
 
     /// <summary>
-    /// Get the GitRevisions for the listed files, excluding commits without changes.
+    ///     Get the GitRevisions for the listed files, excluding commits without changes.
     /// </summary>
     /// <param name="untracked">commit list.</param>
     /// <param name="cancellationToken">Cancellation cancellationToken.</param>
     /// <returns>List with GitRevisions.</returns>
-    public IReadOnlyCollection<GitRevision> GetRevisionsFromList(IList<ObjectId> untracked, CancellationToken cancellationToken)
+    public IReadOnlyCollection<GitRevision> GetRevisionsFromList(IList<ObjectId> untracked,
+        CancellationToken cancellationToken)
     {
         if (untracked.Count == 0)
         {
@@ -122,20 +123,21 @@ public sealed class RevisionReader
             $"--pretty=format:\"{GetLogFormat()}\"",
             "--dirstat=files",
             string.Join(" ", untracked),
-            ".",
+            "."
         };
 
         return GetRevisionsFromArguments(arguments, cancellationToken);
     }
 
     /// <summary>
-    /// Retrieves the git history in the requested range (boundaries included).
+    ///     Retrieves the git history in the requested range (boundaries included).
     /// </summary>
     /// <param name="olderCommitHash">The first (older) commit hash.</param>
     /// <param name="newerCommitHash">The last (newer) commit hash.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The retrieved git history.</returns>
-    public IReadOnlyCollection<GitRevision> GetRevisionsFromRange(string olderCommitHash, string newerCommitHash, CancellationToken cancellationToken)
+    public IReadOnlyCollection<GitRevision> GetRevisionsFromRange(string olderCommitHash, string newerCommitHash,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(olderCommitHash) || string.IsNullOrWhiteSpace(newerCommitHash))
         {
@@ -144,47 +146,55 @@ public sealed class RevisionReader
 
         GitArgumentBuilder arguments = new("log")
         {
-            "-z",
-            $"--pretty=format:\"{GetLogFormat()}\"",
-            $"{olderCommitHash}~..{newerCommitHash}".Quote()
+            "-z", $"--pretty=format:\"{GetLogFormat()}\"", $"{olderCommitHash}~..{newerCommitHash}".Quote()
         };
 
         return GetRevisionsFromArguments(arguments, cancellationToken);
     }
 
     /// <summary>
-    ///  Retrieves the <see cref="GitRevision"/> for a real commit.
+    ///     Retrieves the <see cref="GitRevision" /> for a real commit.
     /// </summary>
     /// <param name="commitHash">The Git commit hash.</param>
     /// <param name="hasNotes">Specifies whether Git Notes should be retrieved.</param>
-    /// <param name="throwOnError">Specifies whether an <see cref="ExternalOperationException"/> shall be thrown if the revision does not exist.</param>
+    /// <param name="throwOnError">
+    ///     Specifies whether an <see cref="ExternalOperationException" /> shall be thrown if the
+    ///     revision does not exist.
+    /// </param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The retrieved git revision or <see langword="null"/> if it does not exist.</returns>
-    public GitRevision? GetRevision(string commitHash, bool hasNotes, bool throwOnError, CancellationToken cancellationToken)
-        => ThreadHelper.JoinableTaskFactory.Run(async () =>
-            {
-                await TaskScheduler.Default;
-                return await GetRevisionAsync(commitHash, hasNotes, throwOnError, cancellationToken);
-            });
+    /// <returns>The retrieved git revision or <see langword="null" /> if it does not exist.</returns>
+    public GitRevision? GetRevision(string commitHash, bool hasNotes, bool throwOnError,
+        CancellationToken cancellationToken)
+    {
+        return ThreadHelper.JoinableTaskFactory.Run(async () =>
+        {
+            await TaskScheduler.Default;
+            return await GetRevisionAsync(commitHash, hasNotes, throwOnError, cancellationToken);
+        });
+    }
 
     /// <summary>
-    ///  Retrieves the <see cref="GitRevision"/> for a real commit.
+    ///     Retrieves the <see cref="GitRevision" /> for a real commit.
     /// </summary>
     /// <param name="commitHash">The Git commit hash.</param>
     /// <param name="hasNotes">Specifies whether Git Notes should be retrieved.</param>
-    /// <param name="throwOnError">Specifies whether an <see cref="ExternalOperationException"/> shall be thrown if the revision does not exist.</param>
+    /// <param name="throwOnError">
+    ///     Specifies whether an <see cref="ExternalOperationException" /> shall be thrown if the
+    ///     revision does not exist.
+    /// </param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The retrieved git revision or <see langword="null"/> if it does not exist.</returns>
-    public async Task<GitRevision?> GetRevisionAsync(string commitHash, bool hasNotes, bool throwOnError, CancellationToken cancellationToken)
+    /// <returns>The retrieved git revision or <see langword="null" /> if it does not exist.</returns>
+    public async Task<GitRevision?> GetRevisionAsync(string commitHash, bool hasNotes, bool throwOnError,
+        CancellationToken cancellationToken)
     {
         // output can be cached if git-notes is not included and hash is a sha.
-        bool isValidSha = ObjectId.TryParse(commitHash, out ObjectId objectId);
+        var isValidSha = ObjectId.TryParse(commitHash, out var objectId);
         if (isValidSha && objectId.IsArtificial)
         {
             throw new InvalidOperationException(nameof(commitHash));
         }
 
-        bool doCacheGitOutput = isValidSha && !hasNotes;
+        var doCacheGitOutput = isValidSha && !hasNotes;
 
         GitArgumentBuilder arguments = new("log")
         {
@@ -197,7 +207,8 @@ public sealed class RevisionReader
         };
 
         ReadOnlyMemory<byte> commandBytes;
-        if (doCacheGitOutput && GitModule.GitCommandCache.TryGet(arguments.ToString(), out string? commandOutput, out _) is true)
+        if (doCacheGitOutput &&
+            GitModule.GitCommandCache.TryGet(arguments.ToString(), out var commandOutput, out _) is true)
         {
             commandBytes = new ReadOnlyMemory<byte>(Convert.FromBase64String(commandOutput));
 
@@ -209,17 +220,20 @@ public sealed class RevisionReader
 #if DEBUG
             Debug.WriteLine($"git {arguments}");
 #endif
-            using IProcess process = _module.GitCommandRunner.RunDetached(cancellationToken, arguments, redirectOutput: true, outputEncoding: null, throwOnErrorExit: false);
+            using var process = _module.GitCommandRunner.RunDetached(cancellationToken, arguments,
+                redirectOutput: true, outputEncoding: null, throwOnErrorExit: false);
 
             // StandardError.CopyToAsync - done by the IProcess instance - may become unresponsive if lengthy StandardOutput is not consumed in parallel. So, buffer the StandardOutput.
             using MemoryStream standardOutputBuffer = new();
-            Task standardOutputTask = process.StandardOutput.BaseStream.CopyToAsync(standardOutputBuffer, cancellationToken);
+            var standardOutputTask =
+                process.StandardOutput.BaseStream.CopyToAsync(standardOutputBuffer, cancellationToken);
 
             await process.WaitForExitAsync(cancellationToken);
-            string errorOutput = process.StandardError;
+            var errorOutput = process.StandardError;
             if (!string.IsNullOrWhiteSpace(errorOutput) && throwOnError)
             {
-                throw new ExternalOperationException(AppSettings.GitCommand, arguments.ToString(), innerException: new Exception(errorOutput));
+                throw new ExternalOperationException(AppSettings.GitCommand, arguments.ToString(),
+                    innerException: new Exception(errorOutput));
             }
 
             await standardOutputTask;
@@ -249,28 +263,30 @@ public sealed class RevisionReader
         {
             // store the byte stream as a Base64 string to allow that it can be converted back.
             commandOutput = Convert.ToBase64String(commandBytes.ToArray());
-            GitModule.GitCommandCache.Add(arguments.ToString(), output: commandOutput, error: "");
+            GitModule.GitCommandCache.Add(arguments.ToString(), commandOutput, "");
         }
 
         return revision;
     }
 
     /// <summary>
-    /// Get the GitRevisions for Git argument.
+    ///     Get the GitRevisions for Git argument.
     /// </summary>
     /// <param name="arguments">Git command arguments.</param>
     /// <param name="cancellationToken">Cancellation cancellationToken.</param>
     /// <returns>List with GitRevisions.</returns>
-    private IReadOnlyCollection<GitRevision> GetRevisionsFromArguments(GitArgumentBuilder arguments, CancellationToken cancellationToken)
+    private IReadOnlyCollection<GitRevision> GetRevisionsFromArguments(GitArgumentBuilder arguments,
+        CancellationToken cancellationToken)
     {
         List<GitRevision> revisions = [];
 
-        using IProcess process = _module.GitCommandRunner.RunDetached(cancellationToken, arguments, redirectOutput: true, outputEncoding: GitModule.LosslessEncoding);
-        foreach (ReadOnlyMemory<byte> chunk in process.StandardOutput.BaseStream.SplitLogOutput())
+        using var process = _module.GitCommandRunner.RunDetached(cancellationToken, arguments,
+            redirectOutput: true, outputEncoding: GitModule.LosslessEncoding);
+        foreach (var chunk in process.StandardOutput.BaseStream.SplitLogOutput())
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (TryParseRevision(chunk, out GitRevision? revision))
+            if (TryParseRevision(chunk, out var revision))
             {
                 revisions.Add(revision);
             }
@@ -280,7 +296,7 @@ public sealed class RevisionReader
     }
 
     /// <summary>
-    /// Get the git-log revisions for the revision grid.
+    ///     Get the git-log revisions for the revision grid.
     /// </summary>
     /// <param name="subject">Observer to update the revision grid when the revisions are available.</param>
     /// <param name="revisionFilter">Revision filter, including branch filter.</param>
@@ -301,40 +317,41 @@ public sealed class RevisionReader
         }
 
 #if TRACE_REVISIONREADER
-        int revisionCount = 0;
-        Stopwatch sw = Stopwatch.StartNew();
+        var revisionCount = 0;
+        var sw = Stopwatch.StartNew();
 #endif
-        ArgumentBuilder arguments = BuildArguments(revisionFilter, pathFilter, hasNotes);
+        var arguments = BuildArguments(revisionFilter, pathFilter, hasNotes);
 #if DEBUG
         Debug.WriteLine($"git {arguments}");
 #endif
-        using IProcess process = _module.GitCommandRunner.RunDetached(cancellationToken, arguments, redirectOutput: true, outputEncoding: GitModule.LosslessEncoding);
+        using var process = _module.GitCommandRunner.RunDetached(cancellationToken, arguments,
+            redirectOutput: true, outputEncoding: GitModule.LosslessEncoding);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Initial buffer to give very quick feedback to user
         const int initialCommitsBatchSize = 100;
         const int furtherCommitsBatchSize = 25_000;
         const int maxUpdateDelayMs = 500;
-        int recentUpdateTimeStamp = Environment.TickCount;
-        List<GitRevision> revisions = new(capacity: initialCommitsBatchSize);
-        foreach (ReadOnlyMemory<byte> chunk in process.StandardOutput.BaseStream.SplitLogOutput())
+        var recentUpdateTimeStamp = Environment.TickCount;
+        List<GitRevision> revisions = new(initialCommitsBatchSize);
+        foreach (var chunk in process.StandardOutput.BaseStream.SplitLogOutput())
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (TryParseRevision(chunk, out GitRevision? revision))
+            if (TryParseRevision(chunk, out var revision))
             {
 #if TRACE_REVISIONREADER
                 revisionCount++;
 #endif
                 revisions.Add(revision);
-                int now = Environment.TickCount;
-                if (revisions.Count == revisions.Capacity || (now - recentUpdateTimeStamp) >= maxUpdateDelayMs)
+                var now = Environment.TickCount;
+                if (revisions.Count == revisions.Capacity || now - recentUpdateTimeStamp >= maxUpdateDelayMs)
                 {
                     subject.OnNext(revisions);
 
                     // ... then use big buffer to load all the remaining revisions with better performance
                     // by creating another array to avoid "Collection was modified" exception
-                    revisions = new(furtherCommitsBatchSize);
+                    revisions = new List<GitRevision>(furtherCommitsBatchSize);
                     recentUpdateTimeStamp = now;
                 }
             }
@@ -344,7 +361,8 @@ public sealed class RevisionReader
 
 #if TRACE_REVISIONREADER
         // TODO Make it possible to explicitly activate Trace printouts like this
-        Trace.WriteLine($"**** [{nameof(RevisionReader)}] Emitted {revisionCount} revisions in {sw.Elapsed.TotalMilliseconds:#,##0.#} ms. parseErrors={_noOfParseError}");
+        Trace.WriteLine(
+            $"**** [{nameof(RevisionReader)}] Emitted {revisionCount} revisions in {sw.Elapsed.TotalMilliseconds:#,##0.#} ms. parseErrors={_noOfParseError}");
 #endif
 
         if (!cancellationToken.IsCancellationRequested)
@@ -353,27 +371,25 @@ public sealed class RevisionReader
         }
     }
 
-    private static void AddAutoStash(string workingDirGitDir, IObserver<IReadOnlyList<GitRevision>> subject, string autostashLabel)
+    private static void AddAutoStash(string workingDirGitDir, IObserver<IReadOnlyList<GitRevision>> subject,
+        string autostashLabel)
     {
-        string autoStashFileName = Path.Join(workingDirGitDir, "rebase-merge/autostash");
+        var autoStashFileName = Path.Join(workingDirGitDir, "rebase-merge/autostash");
         if (!File.Exists(autoStashFileName)
-            || !ObjectId.TryParse(File.ReadLines(autoStashFileName).FirstOrDefault(), out ObjectId autoStashCommitId))
+            || !ObjectId.TryParse(File.ReadLines(autoStashFileName).FirstOrDefault(), out var autoStashCommitId))
         {
             return;
         }
 
-        long now = DateTimeUtils.ToUnixTime(File.GetLastWriteTime(autoStashFileName));
+        var now = DateTimeUtils.ToUnixTime(File.GetLastWriteTime(autoStashFileName));
         GitRevision autoStashRevision = new(autoStashCommitId)
         {
-            AuthorUnixTime = now,
-            CommitUnixTime = now,
-            IsAutostash = true,
-            Subject = autostashLabel
+            AuthorUnixTime = now, CommitUnixTime = now, IsAutostash = true, Subject = autostashLabel
         };
 
-        string origHeadFileName = Path.Join(workingDirGitDir, "rebase-merge/orig-head");
+        var origHeadFileName = Path.Join(workingDirGitDir, "rebase-merge/orig-head");
         if (File.Exists(origHeadFileName)
-            && ObjectId.TryParse(File.ReadLines(origHeadFileName).FirstOrDefault(), out ObjectId origHeadCommitId))
+            && ObjectId.TryParse(File.ReadLines(origHeadFileName).FirstOrDefault(), out var origHeadCommitId))
         {
             autoStashRevision.ParentIds = [origHeadCommitId];
         }
@@ -391,17 +407,14 @@ public sealed class RevisionReader
             // sorting
             { AppSettings.RevisionSortOrder == RevisionSortOrder.AuthorDate, "--author-date-order" },
             { AppSettings.RevisionSortOrder == RevisionSortOrder.Topology, "--topo-order" },
-
             revisionFilter,
             "--",
             { !string.IsNullOrWhiteSpace(pathFilter), pathFilter }
         };
     }
 
-    private (ReadOnlyMemory<byte> buffer, ObjectId objectId)? _cache = null;
-
     [SuppressMessage("Style", "IDE0057:Use range operator", Justification = "Performance")]
-    private bool TryParseRevision(in ReadOnlyMemory<byte> buffer, [NotNullWhen(returnValue: true)] out GitRevision? revision)
+    private bool TryParseRevision(in ReadOnlyMemory<byte> buffer, [NotNullWhen(true)] out GitRevision? revision)
     {
         // The 'chunk' of data contains a complete git log item, encoded.
         // This method decodes that chunk and produces a revision object.
@@ -420,8 +433,8 @@ public sealed class RevisionReader
         #region Object ID, Tree ID, Parent IDs
 
         // The first 40 bytes are the revision ID and the tree ID back to back
-        ReadOnlyMemory<byte> commitHash = buffer.Slice(0, ObjectId.Sha1CharCount);
-        ReadOnlySpan<byte> commitHashSpan = commitHash.Span;
+        var commitHash = buffer.Slice(0, ObjectId.Sha1CharCount);
+        var commitHashSpan = commitHash.Span;
         ObjectId objectId;
         if (_cache is not null && commitHashSpan.SequenceEqual(_cache.Value.buffer.Span))
         {
@@ -437,24 +450,24 @@ public sealed class RevisionReader
             }
         }
 
-        ReadOnlyMemory<byte> parentCommitHash = buffer.Slice(ObjectId.Sha1CharCount, ObjectId.Sha1CharCount);
-        if (!ObjectId.TryParse(parentCommitHash.Span, out ObjectId treeId))
+        var parentCommitHash = buffer.Slice(ObjectId.Sha1CharCount, ObjectId.Sha1CharCount);
+        if (!ObjectId.TryParse(parentCommitHash.Span, out var treeId))
         {
             ParseAssert($"Log parse error, object id: {buffer.Length}({parentCommitHash}");
             revision = default;
             return false;
         }
 
-        int offset = ObjectId.Sha1CharCount * 2;
-        ReadOnlySpan<byte> bufferSpan = buffer.Span;
+        var offset = ObjectId.Sha1CharCount * 2;
+        var bufferSpan = buffer.Span;
 
         // Next we have zero or more parent IDs separated by ' ' and terminated by '\n'
-        int noParents = CountParents(in bufferSpan, offset);
+        var noParents = CountParents(in bufferSpan, offset);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int CountParents(in ReadOnlySpan<byte> array, int baseOffset)
         {
-            int count = 0;
+            var count = 0;
             while (baseOffset < array.Length && array[baseOffset] != '\n')
             {
                 if (count > 0)
@@ -466,10 +479,11 @@ public sealed class RevisionReader
                 baseOffset += ObjectId.Sha1CharCount;
                 count++;
 
-                if (baseOffset >= array.Length || ((char)array[baseOffset] is not ('\n' or ' ')))
+                if (baseOffset >= array.Length || (char)array[baseOffset] is not ('\n' or ' '))
                 {
                     // Parse error, not using ParseAssert (or increasing _noOfParseError)
-                    ParseAssert($"Log parse error, unexpected contents in the parent array: {baseOffset - offset} for {objectId}");
+                    ParseAssert(
+                        $"Log parse error, unexpected contents in the parent array: {baseOffset - offset} for {objectId}");
                     return -1;
                 }
             }
@@ -487,19 +501,17 @@ public sealed class RevisionReader
         {
             parentIds = new ObjectId[noParents];
 
-            for (int parentIndex = 0; parentIndex < noParents; parentIndex++)
+            for (var parentIndex = 0; parentIndex < noParents; parentIndex++)
             {
-                ReadOnlyMemory<byte> hashParent = buffer.Slice(offset, ObjectId.Sha1CharCount);
-                if (!ObjectId.TryParse(hashParent.Span, out ObjectId parentId))
+                var hashParent = buffer.Slice(offset, ObjectId.Sha1CharCount);
+                if (!ObjectId.TryParse(hashParent.Span, out var parentId))
                 {
                     ParseAssert($"Log parse error, parent {parentIndex} for {objectId}");
                     revision = default;
                     return false;
                 }
-                else
-                {
-                    _cache = (hashParent, parentId);
-                }
+
+                _cache = (hashParent, parentId);
 
                 parentIds[parentIndex] = parentId;
                 offset += ObjectId.Sha1CharCount + 1;
@@ -511,9 +523,10 @@ public sealed class RevisionReader
         #region Timestamps
 
         // Decimal ASCII seconds since the unix epoch
-        if (!Utf8Parser.TryParse(bufferSpan.Slice(offset), out long authorUnixTime, out int bytesConsumed))
+        if (!Utf8Parser.TryParse(bufferSpan.Slice(offset), out long authorUnixTime, out var bytesConsumed))
         {
-            ParseAssert($"Log parse error, not enough data for authortime: {buffer.Length} {offset} {buffer.Slice(offset)}");
+            ParseAssert(
+                $"Log parse error, not enough data for authortime: {buffer.Length} {offset} {buffer.Slice(offset)}");
             revision = default;
             return false;
         }
@@ -521,7 +534,8 @@ public sealed class RevisionReader
         offset += bytesConsumed + 1;
         if (!Utf8Parser.TryParse(bufferSpan.Slice(offset), out long commitUnixTime, out bytesConsumed))
         {
-            ParseAssert($"Log parse error, not enough data for committime: {buffer.Length} {offset} {buffer.Slice(offset)}");
+            ParseAssert(
+                $"Log parse error, not enough data for committime: {buffer.Length} {offset} {buffer.Slice(offset)}");
             revision = default;
             return false;
         }
@@ -539,7 +553,6 @@ public sealed class RevisionReader
         {
             ParentIds = parentIds,
             TreeId = treeId,
-
             Author = GetNextLine(bufferSpan),
             AuthorEmail = GetNextLine(bufferSpan),
             AuthorUnixTime = authorUnixTime,
@@ -550,16 +563,16 @@ public sealed class RevisionReader
 
         // Body is occasionally big, like linux repo has 35K bytes, the buffer is over 100K
         // Use a backing buffer on the heap
-        int maxChars = _logOutputEncoding.GetMaxByteCount(buffer.Slice(offset).Length);
+        var maxChars = _logOutputEncoding.GetMaxByteCount(buffer.Slice(offset).Length);
         EnsureDecodeBufferSize(maxChars);
 
-        int decodedLength = _logOutputEncoding.GetChars(bufferSpan.Slice(offset), _decodeBuffer);
-        Span<char> decoded = _decodeBuffer.AsSpan(0, decodedLength).TrimEnd();
+        var decodedLength = _logOutputEncoding.GetChars(bufferSpan.Slice(offset), _decodeBuffer);
+        var decoded = _decodeBuffer.AsSpan(0, decodedLength).TrimEnd();
 
         // reflogSelector are only used when listing stashes
         if (_hasReflogSelector)
         {
-            int lineLength = decoded.IndexOf('\n');
+            var lineLength = decoded.IndexOf('\n');
             if (lineLength == -1)
             {
                 ParseAssert($"Log parse error, parent no reflogselector for {objectId}");
@@ -573,11 +586,11 @@ public sealed class RevisionReader
 
         // Keep a full multi-line message body within the last six months (by default).
         // Note also that if body and subject are identical (single line), the body never need to be stored
-        bool keepBody = commitUnixTime >= _oldestBody;
+        var keepBody = commitUnixTime >= _oldestBody;
 
         // Subject can also be defined as the contents before empty line (%s for --pretty),
         // this uses the alternative definition of first line in body.
-        int firstLineEnd = decoded.IndexOfAny(Delimiters.LineAndVerticalFeed);
+        var firstLineEnd = decoded.IndexOfAny(Delimiters.LineAndVerticalFeed);
         if (firstLineEnd < 0)
         {
             revision.Subject = decoded.ToString();
@@ -586,13 +599,13 @@ public sealed class RevisionReader
         else
         {
             revision.Subject = decoded[..firstLineEnd].TrimEnd().ToString();
-            Split(decoded, out ReadOnlySpan<char> body, out ReadOnlySpan<char> notes);
+            Split(decoded, out var body, out var notes);
             revision.HasMultiLineMessage = revision.Subject.Length < body.Length;
 
             if (keepBody)
             {
                 // Handle '\v' (Shift-Enter) as '\n' for users that by habit avoid Enter to 'send'
-                int currentOffset = firstLineEnd;
+                var currentOffset = firstLineEnd;
                 int verticalFeedIndex;
                 while ((verticalFeedIndex = decoded.Slice(currentOffset).IndexOf('\v')) >= 0)
                 {
@@ -618,7 +631,10 @@ public sealed class RevisionReader
         }
 
 #if DEBUG
-        if (revision.Author is null || revision.AuthorEmail is null || revision.Committer is null || revision.CommitterEmail is null || revision.Subject is null || (keepBody && revision.HasMultiLineMessage && revision.Body is null) || (keepBody && _hasNotes && revision.Notes is null))
+        if (revision.Author is null || revision.AuthorEmail is null || revision.Committer is null ||
+            revision.CommitterEmail is null || revision.Subject is null ||
+            (keepBody && revision.HasMultiLineMessage && revision.Body is null) ||
+            (keepBody && _hasNotes && revision.Notes is null))
         {
             ParseAssert($"Log parse error, decoded fields ({revision.Subject}::{revision.Body}) for {objectId}");
             revision = default;
@@ -639,23 +655,23 @@ public sealed class RevisionReader
                 return null;
             }
 
-            int lineLength = s.Slice(offset).IndexOf((byte)'\n');
+            var lineLength = s.Slice(offset).IndexOf((byte)'\n');
             if (lineLength == -1)
             {
                 // A line must be terminated
                 return null;
             }
 
-            ReadOnlySpan<byte> r = s.Slice(offset, lineLength);
+            var r = s.Slice(offset, lineLength);
             offset += lineLength + 1;
 
-            int maxCharCount = _logOutputEncoding.GetMaxCharCount(r.Length);
+            var maxCharCount = _logOutputEncoding.GetMaxCharCount(r.Length);
             EnsureDecodeBufferSize(maxCharCount);
 
-            int charCount = _logOutputEncoding.GetChars(r, _decodeBuffer);
+            var charCount = _logOutputEncoding.GetChars(r, _decodeBuffer);
             ReadOnlySpan<char> decoded = _decodeBuffer.AsSpan(0, charCount);
 
-            if (_stringPool.TryGetValue(decoded, out string? existing))
+            if (_stringPool.TryGetValue(decoded, out var existing))
             {
                 return existing;
             }
@@ -674,10 +690,11 @@ public sealed class RevisionReader
 
         void Split(ReadOnlySpan<char> decoded, out ReadOnlySpan<char> body, out ReadOnlySpan<char> notes)
         {
-            if (_hasNotes && decoded.LastIndexOf(NotesMarkerWithoutTrailingLF, StringComparison.Ordinal) is int splitPos and >= 0)
+            if (_hasNotes &&
+                decoded.LastIndexOf(NotesMarkerWithoutTrailingLf, StringComparison.Ordinal) is int splitPos and >= 0)
             {
                 body = decoded[..splitPos].TrimEnd();
-                splitPos += NotesMarkerWithoutTrailingLF.Length + /*LF*/ 1;
+                splitPos += NotesMarkerWithoutTrailingLf.Length + /*LF*/ 1;
                 notes = decoded.Slice(Math.Min(splitPos, decoded.Length));
                 return;
             }
@@ -688,7 +705,9 @@ public sealed class RevisionReader
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
+    {
+        return new TestAccessor(this);
+    }
 
     private void EnsureDecodeBufferSize(int requiredLength)
     {
@@ -697,7 +716,7 @@ public sealed class RevisionReader
             return;
         }
 
-        int newSize = _decodeBuffer.Length;
+        var newSize = _decodeBuffer.Length;
         while (newSize < requiredLength)
         {
             newSize *= 2;
@@ -727,16 +746,20 @@ public sealed class RevisionReader
             _revisionReader._hasNotes = hasNotes;
         }
 
-        internal ArgumentBuilder BuildArguments(string revisionFilter, string pathFilter) =>
-            _revisionReader.BuildArguments(revisionFilter, pathFilter, hasNotes: false);
+        internal ArgumentBuilder BuildArguments(string revisionFilter, string pathFilter)
+        {
+            return _revisionReader.BuildArguments(revisionFilter, pathFilter, false);
+        }
 
-        internal bool TryParseRevision(ReadOnlyMemory<byte> chunk, [NotNullWhen(returnValue: true)] out GitRevision? revision) =>
-            _revisionReader.TryParseRevision(chunk, out revision);
+        internal bool TryParseRevision(ReadOnlyMemory<byte> chunk, [NotNullWhen(true)] out GitRevision? revision)
+        {
+            return _revisionReader.TryParseRevision(chunk, out revision);
+        }
 
         internal int NoOfParseError
         {
-            get { return _revisionReader._noOfParseError; }
-            set { _revisionReader._noOfParseError = value; }
+            get => _revisionReader._noOfParseError;
+            set => _revisionReader._noOfParseError = value;
         }
     }
 }

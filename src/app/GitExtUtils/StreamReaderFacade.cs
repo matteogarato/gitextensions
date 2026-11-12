@@ -2,9 +2,15 @@
 
 public sealed class StreamReaderFacade(StreamReader streamReader) : IStreamReader
 {
-    private StreamReader _streamReader = streamReader;
+    private readonly StreamReader _streamReader = streamReader;
 
-    public bool EndOfStream => _streamReader.EndOfStream;
+    bool IStreamReader.EndOfStream
+    {
+        get => _streamReader.EndOfStream;
+    }
 
-    public ValueTask<int> ReadAsync(Memory<char> buffer, CancellationToken cancellationToken) => _streamReader.ReadAsync(buffer, cancellationToken);
+    ValueTask<int> IStreamReader.ReadAsync(Memory<char> buffer, CancellationToken cancellationToken)
+    {
+        return _streamReader.ReadAsync(buffer, cancellationToken);
+    }
 }

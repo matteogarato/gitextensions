@@ -4,8 +4,8 @@ using GitExtensions.Extensibility.Settings;
 namespace GitCommandsTests.Settings;
 
 /// <summary>
-///  Tests for <see cref="DistributedSettings"/> built with the same layering as
-///  <c>CommonLogic</c>, where each level uses its own independent settings file.
+///     Tests for <see cref="DistributedSettings" /> built with the same layering as
+///     <c>CommonLogic</c>, where each level uses its own independent settings file.
 /// </summary>
 public sealed class DistributedSettingsTests : IDisposable
 {
@@ -14,17 +14,17 @@ public sealed class DistributedSettingsTests : IDisposable
     private const string _globalValue = "global-value";
     private const string _distributedValue = "distributed-value";
     private const string _localValue = "local-value";
+    private readonly string _distributedFilePath = null!;
 
-    private string _globalFilePath = null!;
-    private string _distributedFilePath = null!;
-    private string _localFilePath = null!;
-    private GitExtSettingsCache _globalCache = null!;
+    private readonly string _globalFilePath = null!;
+    private readonly string _localFilePath = null!;
     private GitExtSettingsCache _distributedCache = null!;
-    private GitExtSettingsCache _localCache = null!;
-    private DistributedSettings _globalSettings = null!;
     private DistributedSettings _distributedSettings = null!;
-    private DistributedSettings _localSettings = null!;
     private DistributedSettings _effectiveSettings = null!;
+    private GitExtSettingsCache _globalCache = null!;
+    private DistributedSettings _globalSettings = null!;
+    private GitExtSettingsCache _localCache = null!;
+    private DistributedSettings _localSettings = null!;
 
     public DistributedSettingsTests()
     {
@@ -39,7 +39,7 @@ public sealed class DistributedSettingsTests : IDisposable
         CreateLayeredSettings();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _globalCache.Dispose();
         _distributedCache.Dispose();
@@ -56,17 +56,17 @@ public sealed class DistributedSettingsTests : IDisposable
     {
         // Mirror the construction in CommonLogic exactly:
         // Global and each level use their own isolated cache (useSharedCache: false / autoSave: false).
-        _globalCache = new GitExtSettingsCache(_globalFilePath, autoSave: false);
-        _distributedCache = new GitExtSettingsCache(_distributedFilePath, autoSave: false);
-        _localCache = new GitExtSettingsCache(_localFilePath, autoSave: false);
+        _globalCache = new GitExtSettingsCache(_globalFilePath, false);
+        _distributedCache = new GitExtSettingsCache(_distributedFilePath, false);
+        _localCache = new GitExtSettingsCache(_localFilePath, false);
 
-        _globalSettings = new DistributedSettings(lowerPriority: null, _globalCache, SettingLevel.Global);
-        _distributedSettings = new DistributedSettings(lowerPriority: null, _distributedCache, SettingLevel.Distributed);
-        _localSettings = new DistributedSettings(lowerPriority: null, _localCache, SettingLevel.Local);
+        _globalSettings = new DistributedSettings(null, _globalCache, SettingLevel.Global);
+        _distributedSettings = new DistributedSettings(null, _distributedCache, SettingLevel.Distributed);
+        _localSettings = new DistributedSettings(null, _localCache, SettingLevel.Local);
 
         // Effective chain mirrors CommonLogic: Effective (local cache) -> Distributed (distributed cache) -> Global (global cache)
         _effectiveSettings = new DistributedSettings(
-            lowerPriority: new DistributedSettings(lowerPriority: _globalSettings, _distributedCache, SettingLevel.Distributed),
+            new DistributedSettings(_globalSettings, _distributedCache, SettingLevel.Distributed),
             _localCache,
             SettingLevel.Effective);
     }
@@ -79,13 +79,13 @@ public sealed class DistributedSettingsTests : IDisposable
         {
             global = ReadSettingFrom(_globalFilePath),
             distributed = ReadSettingFrom(_distributedFilePath),
-            local = ReadSettingFrom(_localFilePath),
+            local = ReadSettingFrom(_localFilePath)
         };
 
         string? ReadSettingFrom(string path)
         {
-            using GitExtSettingsCache cache = new(path, autoSave: false);
-            return cache.TryGetValue(_testSettingName, out string? value) ? value : null;
+            using GitExtSettingsCache cache = new(path, false);
+            return cache.TryGetValue(_testSettingName, out var value) ? value : null;
         }
     }
 
@@ -94,7 +94,7 @@ public sealed class DistributedSettingsTests : IDisposable
     {
         _effectiveSettings.GetValue(_testSettingName).Should().BeNull();
 
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.GetValue_null_when_no_level_has_value");
     }
 
@@ -107,7 +107,7 @@ public sealed class DistributedSettingsTests : IDisposable
 
         _effectiveSettings.GetValue(_testSettingName).Should().Be(effectiveValue);
 
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName($"DistributedSettingsTests.GetValue_global_when_only_global_is_set_{effectiveValue}");
     }
 
@@ -116,15 +116,17 @@ public sealed class DistributedSettingsTests : IDisposable
     [InlineData(null, _distributedValue)]
     [InlineData(_globalValue, "")]
     [InlineData(_globalValue, _distributedValue)]
-    public async Task GetValue_on_effective_should_return_distributed_value_overriding_global(string? globalValue, string effectiveValue)
+    public async Task GetValue_on_effective_should_return_distributed_value_overriding_global(string? globalValue,
+        string effectiveValue)
     {
         _globalSettings.SetValue(_testSettingName, globalValue);
         _distributedSettings.SetValue(_testSettingName, effectiveValue);
 
         _effectiveSettings.GetValue(_testSettingName).Should().Be(effectiveValue);
 
-        await Verifier.Verify(SaveAndReadBack())
-            .UseFileName($"DistributedSettingsTests.GetValue_distributed_overriding_global_{globalValue ?? "null"}_{effectiveValue}");
+        await Verify(SaveAndReadBack())
+            .UseFileName(
+                $"DistributedSettingsTests.GetValue_distributed_overriding_global_{globalValue ?? "null"}_{effectiveValue}");
     }
 
     [Theory]
@@ -136,7 +138,8 @@ public sealed class DistributedSettingsTests : IDisposable
     [InlineData(_globalValue, null, _localValue)]
     [InlineData(_globalValue, _distributedValue, "")]
     [InlineData(_globalValue, _distributedValue, _localValue)]
-    public async Task GetValue_on_effective_should_return_local_value_overriding_distributed_and_global(string? globalValue, string? distributedValue, string effectiveValue)
+    public async Task GetValue_on_effective_should_return_local_value_overriding_distributed_and_global(
+        string? globalValue, string? distributedValue, string effectiveValue)
     {
         _globalSettings.SetValue(_testSettingName, globalValue);
         _distributedSettings.SetValue(_testSettingName, distributedValue);
@@ -144,8 +147,9 @@ public sealed class DistributedSettingsTests : IDisposable
 
         _effectiveSettings.GetValue(_testSettingName).Should().Be(effectiveValue);
 
-        await Verifier.Verify(SaveAndReadBack())
-            .UseFileName($"DistributedSettingsTests.GetValue_local_overriding_{globalValue ?? "null"}_{distributedValue ?? "null"}_{effectiveValue}");
+        await Verify(SaveAndReadBack())
+            .UseFileName(
+                $"DistributedSettingsTests.GetValue_local_overriding_{globalValue ?? "null"}_{distributedValue ?? "null"}_{effectiveValue}");
     }
 
     [Fact(DisplayName = "If this test should fail, it can be removed because SetValue on effective is not used.")]
@@ -158,7 +162,7 @@ public sealed class DistributedSettingsTests : IDisposable
         _distributedSettings.GetValue(_testSettingName).Should().BeNull();
         _localSettings.GetValue(_testSettingName).Should().BeNull();
 
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_writes_to_global_when_no_level_has_value");
     }
 
@@ -175,7 +179,7 @@ public sealed class DistributedSettingsTests : IDisposable
         _distributedSettings.GetValue(_testSettingName).Should().Be(_distributedValue);
         _globalSettings.GetValue(_testSettingName).Should().BeNull();
 
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_writes_to_local_when_distributed_differs");
     }
 
@@ -190,7 +194,7 @@ public sealed class DistributedSettingsTests : IDisposable
         _localSettings.GetValue(_testSettingName).Should().BeNull();
         _distributedSettings.GetValue(_testSettingName).Should().Be(_distributedValue);
 
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_no_write_to_local_when_distributed_same");
     }
 
@@ -205,7 +209,7 @@ public sealed class DistributedSettingsTests : IDisposable
         _distributedSettings.GetValue(_testSettingName).Should().Be(_distributedValue);
         _localSettings.GetValue(_testSettingName).Should().Be(_localValue);
 
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.GetValue_each_level_independent");
     }
 
@@ -219,17 +223,17 @@ public sealed class DistributedSettingsTests : IDisposable
 
         _localSettings.SetValue(_testSettingName, null);
         _effectiveSettings.GetValue(_testSettingName).Should().Be(_distributedValue);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.local_null");
 
         _distributedSettings.SetValue(_testSettingName, null);
         _effectiveSettings.GetValue(_testSettingName).Should().Be(_globalValue);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.distributed_null");
 
         _globalSettings.SetValue(_testSettingName, null);
         _effectiveSettings.GetValue(_testSettingName).Should().BeNull();
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.global_null");
     }
 
@@ -245,21 +249,21 @@ public sealed class DistributedSettingsTests : IDisposable
         _globalSettings.SetValue(_testSettingName, globalModified);
         _globalSettings.GetValue(_testSettingName).Should().Be(globalModified);
         _effectiveSettings.GetValue(_testSettingName).Should().Be(_localValue);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.global_modified");
 
         const string distributedModified = "distributed-modified";
         _distributedSettings.SetValue(_testSettingName, distributedModified);
         _distributedSettings.GetValue(_testSettingName).Should().Be(distributedModified);
         _effectiveSettings.GetValue(_testSettingName).Should().Be(_localValue);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.distributed_modified");
 
         const string localModified = "local-modified";
         _localSettings.SetValue(_testSettingName, localModified);
         _localSettings.GetValue(_testSettingName).Should().Be(localModified);
         _effectiveSettings.GetValue(_testSettingName).Should().Be(localModified);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.SetValue_each_level_independent.local_modified");
     }
 
@@ -271,7 +275,7 @@ public sealed class DistributedSettingsTests : IDisposable
         _globalSettings.SetValue(_testSettingName, _globalValue);
 
         _effectiveSettings.GetValue(_testSettingName).Should().Be(_globalValue);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.GetValue_on_effective.before");
 
         _globalCache.Dispose();
@@ -280,7 +284,7 @@ public sealed class DistributedSettingsTests : IDisposable
         CreateLayeredSettings();
 
         _effectiveSettings.GetValue(_testSettingName).Should().Be(_globalValue);
-        await Verifier.Verify(SaveAndReadBack())
+        await Verify(SaveAndReadBack())
             .UseFileName("DistributedSettingsTests.GetValue_on_effective.after");
     }
 }

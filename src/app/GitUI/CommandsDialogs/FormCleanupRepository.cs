@@ -12,9 +12,10 @@ public partial class FormCleanupRepository : GitModuleForm
 {
     private readonly TranslationString _reallyCleanupQuestion =
         new("Are you sure you want to cleanup the repository?");
+
     private readonly TranslationString _reallyCleanupQuestionCaption = new("Cleanup");
 
-    public FormCleanupRepository(IGitUICommands commands)
+    public FormCleanupRepository(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -47,33 +48,35 @@ public partial class FormCleanupRepository : GitModuleForm
 
     private void CleanUp(bool dryRun)
     {
-        string? includePathArgument = GetInclusivePathArgumentFromGui();
-        string? excludePathArguments = GetExclusivePathArgumentFromGui();
-        CleanMode mode = GetCleanMode();
-        ArgumentString cleanUpCmd = Commands.Clean(mode, dryRun, directories: RemoveDirectories.Checked,
-            paths: includePathArgument, excludes: excludePathArguments);
+        var includePathArgument = GetInclusivePathArgumentFromGui();
+        var excludePathArguments = GetExclusivePathArgumentFromGui();
+        var mode = GetCleanMode();
+        var cleanUpCmd = Commands.Clean(mode, dryRun, RemoveDirectories.Checked,
+            includePathArgument, excludePathArguments);
 
-        string cmdOutput = FormProcess.ReadDialog(this, UICommands, arguments: cleanUpCmd, Module.WorkingDir, input: null, useDialogSettings: true);
+        var cmdOutput = FormProcess.ReadDialog(this, UiCommands, cleanUpCmd, Module.WorkingDir, null, true);
         PreviewOutput.Text = EnvUtils.ReplaceLinuxNewLinesDependingOnPlatform(cmdOutput);
 
         if (CleanSubmodules.Checked)
         {
-            ArgumentString cleanSubmodulesCmd = Commands.CleanSubmodules(mode, dryRun, directories: RemoveDirectories.Checked, paths: includePathArgument);
-            cmdOutput = FormProcess.ReadDialog(this, UICommands, arguments: cleanSubmodulesCmd, Module.WorkingDir, input: null, useDialogSettings: true);
+            var cleanSubmodulesCmd =
+                Commands.CleanSubmodules(mode, dryRun, RemoveDirectories.Checked, includePathArgument);
+            cmdOutput = FormProcess.ReadDialog(this, UiCommands, cleanSubmodulesCmd, Module.WorkingDir, null, true);
             PreviewOutput.Text += EnvUtils.ReplaceLinuxNewLinesDependingOnPlatform(cmdOutput);
         }
     }
 
     private void Preview_Click(object sender, EventArgs e)
     {
-        CleanUp(dryRun: true);
+        CleanUp(true);
     }
 
     private void Cleanup_Click(object sender, EventArgs e)
     {
-        if (MessageBoxes.Show(this, _reallyCleanupQuestion.Text, _reallyCleanupQuestionCaption.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+        if (MessageBoxes.Show(this, _reallyCleanupQuestion.Text, _reallyCleanupQuestionCaption.Text,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
         {
-            CleanUp(dryRun: false);
+            CleanUp(false);
         }
     }
 
@@ -121,7 +124,9 @@ public partial class FormCleanupRepository : GitModuleForm
         // 2. Prepend lines with '--exclude='
         // 3. Replace whitespace with '?' and convert to POSIX path
         // 4. join together with space as separator
-        return string.Join(" ", textBoxExcludePaths.Lines.Where(p => !string.IsNullOrEmpty(p)).Select(p => $"--exclude={p.Replace(" ", "?")}".ToPosixPath()));
+        return string.Join(" ",
+            textBoxExcludePaths.Lines.Where(p => !string.IsNullOrEmpty(p))
+                .Select(p => $"--exclude={p.Replace(" ", "?")}".ToPosixPath()));
     }
 
     private void Close_Click(object sender, EventArgs e)
@@ -131,21 +136,21 @@ public partial class FormCleanupRepository : GitModuleForm
 
     private void checkBoxPathFilter_CheckedChanged(object sender, EventArgs e)
     {
-        bool filterByPath = checkBoxIncludePathFilter.Checked;
+        var filterByPath = checkBoxIncludePathFilter.Checked;
         textBoxIncludePaths.Enabled = filterByPath;
         labelPathHintInclude.Visible = filterByPath;
     }
 
     private void checkBoxExcludePathFilter_CheckedChanged(object sender, EventArgs e)
     {
-        bool filterByPath = checkBoxExcludePathFilter.Checked;
+        var filterByPath = checkBoxExcludePathFilter.Checked;
         textBoxExcludePaths.Enabled = filterByPath;
         labelPathHintExclude.Visible = filterByPath;
     }
 
     private void AddIncludePath_Click(object sender, EventArgs e)
     {
-        string? path = RequestUserFolderPath();
+        var path = RequestUserFolderPath();
 
         if (path is not null)
         {
@@ -155,7 +160,7 @@ public partial class FormCleanupRepository : GitModuleForm
 
     private void AddExcludePath_Click(object sender, EventArgs e)
     {
-        string? path = RequestUserFilePath();
+        var path = RequestUserFilePath();
 
         if (path is not null)
         {
@@ -166,18 +171,15 @@ public partial class FormCleanupRepository : GitModuleForm
 
     private string? RequestUserFolderPath()
     {
-        using FolderBrowserDialog dialog = new()
-        {
-            SelectedPath = Module.WorkingDir,
-        };
+        using FolderBrowserDialog dialog = new() { SelectedPath = Module.WorkingDir };
 
-        DialogResult result = dialog.ShowDialog(this);
+        var result = dialog.ShowDialog(this);
 
         string subFoldersToClean;
         if (result != DialogResult.OK
             || !(subFoldersToClean = dialog.SelectedPath).StartsWith(Module.WorkingDir)
             || !Directory.Exists(subFoldersToClean)
-            || subFoldersToClean.Equals(PathUtil.RemoveTrailingPathSeparator(Module.WorkingDirGitDir)))
+            || subFoldersToClean.Equals(Module.WorkingDirGitDir.RemoveTrailingPathSeparator()))
         {
             return null;
         }
@@ -189,7 +191,7 @@ public partial class FormCleanupRepository : GitModuleForm
             textBoxIncludePaths.Text += Environment.NewLine;
         }
 
-        string userPath = string.Join(Environment.NewLine, subFoldersToClean);
+        var userPath = string.Join(Environment.NewLine, subFoldersToClean);
         return userPath;
     }
 
@@ -200,7 +202,7 @@ public partial class FormCleanupRepository : GitModuleForm
         openFileDialog.InitialDirectory = Module.WorkingDir;
         openFileDialog.RestoreDirectory = true;
 
-        DialogResult result = openFileDialog.ShowDialog(this);
+        var result = openFileDialog.ShowDialog(this);
 
         string fileToExclude;
         if (result != DialogResult.OK
@@ -217,7 +219,7 @@ public partial class FormCleanupRepository : GitModuleForm
             textBoxExcludePaths.Text += Environment.NewLine;
         }
 
-        string userPath = string.Join(Environment.NewLine, fileToExclude);
+        var userPath = string.Join(Environment.NewLine, fileToExclude);
         return userPath;
     }
 }

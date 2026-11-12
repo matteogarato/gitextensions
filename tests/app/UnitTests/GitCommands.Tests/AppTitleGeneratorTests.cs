@@ -1,19 +1,21 @@
 ﻿using GitCommands;
 using GitCommands.UserRepositoryHistory;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitCommandsTests;
+
 public class AppTitleGeneratorTests
 {
-    private const string ShortName = "gitextension";
-    private string _defaultBranchName = "no branch";
-    private IRepositoryDescriptionProvider _repositoryDescriptionProvider = null!;
-    private AppTitleGenerator _appTitleGenerator = null!;
+    private const string _shortName = "gitextension";
+    private readonly AppTitleGenerator _appTitleGenerator = null!;
+    private readonly string _defaultBranchName = "no branch";
+    private readonly IRepositoryDescriptionProvider _repositoryDescriptionProvider = null!;
 
     public AppTitleGeneratorTests()
     {
         _repositoryDescriptionProvider = Substitute.For<IRepositoryDescriptionProvider>();
-        _repositoryDescriptionProvider.Get(Arg.Any<string>()).Returns(ShortName);
+        _repositoryDescriptionProvider.Get(Arg.Any<string>()).Returns(_shortName);
 
         _appTitleGenerator = new AppTitleGenerator(_repositoryDescriptionProvider);
     }
@@ -25,47 +27,49 @@ public class AppTitleGeneratorTests
     [InlineData("\t")]
     public void Generate_should_return_default_title_if_invalid_working_directory(string? path)
     {
-        string title = _appTitleGenerator.Generate(path, false, null);
+        var title = _appTitleGenerator.Generate(path, false, null);
         title.Should().Be(AppSettings.ApplicationName);
     }
 
     [Fact]
     public void Generate_should_return_default_title_if_not_valid_working_directory()
     {
-        string title = _appTitleGenerator.Generate("a", false, null);
+        var title = _appTitleGenerator.Generate("a", false, null);
         title.Should().Be(AppSettings.ApplicationName);
     }
 
     [Fact]
     public void Generate_should_include_no_branch_if_supplied()
     {
-        string title = _appTitleGenerator.Generate("a", true, null, defaultBranchName: _defaultBranchName);
-        title.Should().StartWith($"{ShortName} ({_defaultBranchName}) - {AppSettings.ApplicationName}");
+        var title = _appTitleGenerator.Generate("a", true, null, defaultBranchName: _defaultBranchName);
+        title.Should().StartWith($"{_shortName} ({_defaultBranchName}) - {AppSettings.ApplicationName}");
     }
 
     [Fact]
     public void Generate_should_include_supplied_branch()
     {
-        string branchName = "feature/my_(test)_branch";
-        string title = _appTitleGenerator.Generate("a", true, branchName: branchName, defaultBranchName: _defaultBranchName);
-        title.Should().StartWith($"{ShortName} ({branchName}) - {AppSettings.ApplicationName}");
+        var branchName = "feature/my_(test)_branch";
+        var title =
+            _appTitleGenerator.Generate("a", true, branchName: branchName, defaultBranchName: _defaultBranchName);
+        title.Should().StartWith($"{_shortName} ({branchName}) - {AppSettings.ApplicationName}");
     }
 
     [Fact]
     public void Generate_should_include_supplied_pathname()
     {
-        string branchName = "feature/my_(test)_branch";
-        string pathName = "folder/folder/file";
-        string title = _appTitleGenerator.Generate("a", true, branchName: branchName, pathName: pathName);
-        title.Should().StartWith($@"""file"" {ShortName} ({branchName}) - {AppSettings.ApplicationName}");
+        var branchName = "feature/my_(test)_branch";
+        var pathName = "folder/folder/file";
+        var title = _appTitleGenerator.Generate("a", true, branchName: branchName, pathName: pathName);
+        title.Should().StartWith($@"""file"" {_shortName} ({branchName}) - {AppSettings.ApplicationName}");
     }
 
     [Fact]
     public void Generate_should_not_quote_already_quoted_pathname()
     {
-        string pathName = @"""folder/folder/file""";
-        string title = _appTitleGenerator.Generate("a", true, pathName: pathName, defaultBranchName: _defaultBranchName);
-        title.Should().StartWith($@"""file"" {ShortName} ({_defaultBranchName}) - {AppSettings.ApplicationName}");
+        var pathName = @"""folder/folder/file""";
+        var title =
+            _appTitleGenerator.Generate("a", true, pathName: pathName, defaultBranchName: _defaultBranchName);
+        title.Should().StartWith($@"""file"" {_shortName} ({_defaultBranchName}) - {AppSettings.ApplicationName}");
     }
 
     [Theory]
@@ -74,8 +78,10 @@ public class AppTitleGeneratorTests
     [InlineData(@"""folder/folder/f*ile extra""", @"f*ile extra")]
     public void Generate_should_quote_paths_where_filenames_cannot_be_resolved(string pathName, string expectedPath)
     {
-        string title = _appTitleGenerator.Generate("a", true, pathName: pathName, defaultBranchName: _defaultBranchName);
-        title.Should().StartWith($@"""{expectedPath}"" {ShortName} ({_defaultBranchName}) - {AppSettings.ApplicationName}");
+        var title =
+            _appTitleGenerator.Generate("a", true, pathName: pathName, defaultBranchName: _defaultBranchName);
+        title.Should()
+            .StartWith($@"""{expectedPath}"" {_shortName} ({_defaultBranchName}) - {AppSettings.ApplicationName}");
     }
 
 #if DEBUG
@@ -84,22 +90,23 @@ public class AppTitleGeneratorTests
     [InlineData("invalid")]
     public void Generate_should_include_debug_suffix(string? buildSha)
     {
-        string buildBranch = "build_branch";
+        var buildBranch = "build_branch";
         AppTitleGenerator.Initialise(buildSha!, buildBranch);
-        string title = _appTitleGenerator.Generate("a", true, null, defaultBranchName: _defaultBranchName);
+        var title = _appTitleGenerator.Generate("a", true, null, defaultBranchName: _defaultBranchName);
 
-        title.Should().Be($"{ShortName} ({_defaultBranchName}) - {AppSettings.ApplicationName} [DEBUG]");
+        title.Should().Be($"{_shortName} ({_defaultBranchName}) - {AppSettings.ApplicationName} [DEBUG]");
     }
 
     [Fact]
     public void Generate_should_include_build_suffix()
     {
-        string buildSha = "1234567812345678123456781234567812345678";
-        string buildBranch = "build_branch";
+        var buildSha = "1234567812345678123456781234567812345678";
+        var buildBranch = "build_branch";
         AppTitleGenerator.Initialise(buildSha, buildBranch);
-        string title = _appTitleGenerator.Generate("a", true, null, defaultBranchName: _defaultBranchName);
+        var title = _appTitleGenerator.Generate("a", true, null, defaultBranchName: _defaultBranchName);
 
-        title.Should().Be($"{ShortName} ({_defaultBranchName}) - {AppSettings.ApplicationName} {buildSha[..8]} ({buildBranch})");
+        title.Should()
+            .Be($"{_shortName} ({_defaultBranchName}) - {AppSettings.ApplicationName} {buildSha[..8]} ({buildBranch})");
     }
 #endif
 }

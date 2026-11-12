@@ -3,60 +3,43 @@ using System.Text;
 
 namespace GitExtensions.Extensibility.Git;
 
-public sealed class GitBlame
+public sealed class GitBlame(IReadOnlyList<GitBlameLine> lines)
 {
-    public IReadOnlyList<GitBlameLine> Lines { get; }
-
-    public GitBlame(IReadOnlyList<GitBlameLine> lines)
-    {
-        Lines = lines;
-    }
+    public IReadOnlyList<GitBlameLine> Lines { get; } = lines;
 }
 
-public sealed class GitBlameLine
+public sealed class GitBlameLine(GitBlameCommit commit, int finalLineNumber, int originLineNumber, string text)
 {
-    public GitBlameCommit Commit { get; }
-    public int FinalLineNumber { get; }
-    public int OriginLineNumber { get; }
-    public string Text { get; }
-
-    public GitBlameLine(GitBlameCommit commit, int finalLineNumber, int originLineNumber, string text)
-    {
-        Commit = commit;
-        FinalLineNumber = finalLineNumber;
-        OriginLineNumber = originLineNumber;
-        Text = text;
-    }
+    public GitBlameCommit Commit { get; } = commit;
+    public int FinalLineNumber { get; } = finalLineNumber;
+    public int OriginLineNumber { get; } = originLineNumber;
+    public string Text { get; } = text;
 }
 
-public sealed class GitBlameCommit
+public sealed class GitBlameCommit(
+    ObjectId objectId,
+    string author,
+    string authorMail,
+    DateTime authorTime,
+    string authorTimeZone,
+    string committer,
+    string committerMail,
+    DateTime committerTime,
+    string committerTimeZone,
+    string summary,
+    string fileName)
 {
-    public ObjectId ObjectId { get; }
-    public string Author { get; }
-    public string AuthorMail { get; }
-    public DateTime AuthorTime { get; }
-    public string AuthorTimeZone { get; }
-    public string Committer { get; }
-    public string CommitterMail { get; }
-    public DateTime CommitterTime { get; }
-    public string CommitterTimeZone { get; }
-    public string Summary { get; }
-    public string FileName { get; }
-
-    public GitBlameCommit(ObjectId objectId, string author, string authorMail, DateTime authorTime, string authorTimeZone, string committer, string committerMail, DateTime committerTime, string committerTimeZone, string summary, string fileName)
-    {
-        ObjectId = objectId;
-        Author = author;
-        AuthorMail = authorMail;
-        AuthorTime = authorTime;
-        AuthorTimeZone = authorTimeZone;
-        Committer = committer;
-        CommitterMail = committerMail;
-        CommitterTime = committerTime;
-        CommitterTimeZone = committerTimeZone;
-        Summary = summary;
-        FileName = fileName;
-    }
+    public ObjectId ObjectId { get; } = objectId;
+    public string Author { get; } = author;
+    public string AuthorMail { get; } = authorMail;
+    public DateTime AuthorTime { get; } = authorTime;
+    public string AuthorTimeZone { get; } = authorTimeZone;
+    public string Committer { get; } = committer;
+    public string CommitterMail { get; } = committerMail;
+    public DateTime CommitterTime { get; } = committerTime;
+    public string CommitterTimeZone { get; } = committerTimeZone;
+    public string Summary { get; } = summary;
+    public string FileName { get; } = fileName;
 
     public string ToString(Func<string?, string?> summaryBuilderFunc)
     {

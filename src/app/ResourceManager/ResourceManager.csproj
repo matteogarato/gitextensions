@@ -15,38 +15,38 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <!-- WinForms base classes for forms/controls; GitUI.Avalonia provides twins. -->
-    <Compile Remove="GitExtensionsControl.cs" />
-    <Compile Remove="GitExtensionsControlInitialiser.cs" />
-    <Compile Remove="GitExtensionsFormBase.cs" />
-    <Compile Remove="TranslatedControl.cs" />
+    <Compile Remove="GitExtensionsControl.cs"/>
+    <Compile Remove="GitExtensionsControlInitialiser.cs"/>
+    <Compile Remove="GitExtensionsFormBase.cs"/>
+    <Compile Remove="TranslatedControl.cs"/>
     <!-- Win32 P/Invoke. -->
-    <Compile Remove="NativeMethods.cs" />
+    <Compile Remove="NativeMethods.cs"/>
     <!-- Contains System.Drawing.Icon resources; unused outside the excluded control bases. -->
-    <Compile Remove="Properties\Resources.Designer.cs" />
-    <EmbeddedResource Remove="Properties\Resources.resx" />
-    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
-    <Compile Include="..\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs" />
+    <Compile Remove="Properties\Resources.Designer.cs"/>
+    <EmbeddedResource Remove="Properties\Resources.resx"/>
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs"/>
+    <Compile Include="..\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\GitExtUtils\Validates.cs" Link="Utils\Validates.cs" />
+    <Compile Include="..\GitExtUtils\Validates.cs" Link="Utils\Validates.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" />
-    <PackageReference Include="SmartFormat" />
+    <PackageReference Include="JetBrains.Annotations"/>
+    <PackageReference Include="SmartFormat"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GitCommands\GitCommands.csproj" />
-    <ProjectReference Include="..\GitExtUtils\GitExtUtils.csproj" />
-    <ProjectReference Include="..\..\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj" />
+    <ProjectReference Include="..\GitCommands\GitCommands.csproj"/>
+    <ProjectReference Include="..\GitExtUtils\GitExtUtils.csproj"/>
+    <ProjectReference Include="..\..\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Resources -->
-    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
-    <Compile Update="Properties\Resources.Designer.cs" AutoGen="True" DependentUpon="Resources.resx" DesignTime="True" />
+    <EmbeddedResource Update="Properties\Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs"/>
+    <Compile Update="Properties\Resources.Designer.cs" AutoGen="True" DependentUpon="Resources.resx" DesignTime="True"/>
   </ItemGroup>
 
 </Project>

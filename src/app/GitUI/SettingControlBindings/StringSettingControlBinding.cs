@@ -2,27 +2,24 @@
 
 namespace GitUI.SettingControlBindings;
 
-internal class StringSettingControlBinding : SettingControlBinding<StringSetting, TextBox>
+internal class StringSettingControlBinding(StringSetting setting, TextBox? customControl)
+    : SettingControlBinding<StringSetting, TextBox>(setting, customControl)
 {
     /// <summary>
-    ///  Text to be shown / entered in the input control when the value is an empty string,
-    ///  since empty string is a valid value for a StringSetting but it would be indistinguishable from null or unset value in the UI.
+    ///     Text to be shown / entered in the input control when the value is an empty string,
+    ///     since empty string is a valid value for a StringSetting but it would be indistinguishable from null or unset value
+    ///     in the UI.
     /// </summary>
     /// <remarks>
-    ///  Has visibility internal because used by <see cref="PasswordSettingControlBinding"/>, too.
+    ///     Has visibility internal because used by <see cref="PasswordSettingControlBinding" />, too.
     /// </remarks>
     internal const string EmptyStringValue = "<empty string>";
 
     /// <summary>
-    ///  The text to be shown as a hint in the input control when the value is null.
-    ///  It should contain "{0}" where the <see cref="EmptyStringValue"/> replacement text should be shown.
+    ///     The text to be shown as a hint in the input control when the value is null.
+    ///     It should contain "{0}" where the <see cref="EmptyStringValue" /> replacement text should be shown.
     /// </summary>
     public static string PlaceholderText { get; set; } = "";
-
-    public StringSettingControlBinding(StringSetting setting, TextBox? customControl)
-        : base(setting, customControl)
-    {
-    }
 
     public override TextBox CreateControl()
     {
@@ -37,7 +34,7 @@ internal class StringSettingControlBinding : SettingControlBinding<StringSetting
             control.PlaceholderText = string.Format(PlaceholderText, EmptyStringValue);
         }
 
-        string? settingVal = settings.SettingLevel == SettingLevel.Effective
+        var settingVal = settings.SettingLevel == SettingLevel.Effective
             ? Setting.ValueOrDefault(settings)
             : Setting[settings];
 
@@ -55,7 +52,7 @@ internal class StringSettingControlBinding : SettingControlBinding<StringSetting
     public override void SaveSetting(SettingsSource settings, TextBox control)
     {
         // Trim value because the XML serializer will trim it on load anyway.
-        string? controlValue = control.Text.Trim();
+        var controlValue = control.Text.Trim();
         control.Text = controlValue;
         if (controlValue.Length == 0)
         {

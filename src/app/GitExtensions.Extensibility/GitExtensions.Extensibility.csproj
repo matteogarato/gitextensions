@@ -16,23 +16,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AdysTech.CredentialManager" Condition="'$(TargetFramework)' != 'net10.0'" />
-    <PackageReference Include="StrongOf" />
+    <PackageReference Include="AdysTech.CredentialManager" Condition="'$(TargetFramework)' != 'net10.0'"/>
+    <PackageReference Include="StrongOf"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <!-- Windows-only: Windows Credential Store storage and its WinForms editor control.
          CredentialsManager.NonWindows.cs keeps ICredentialsManager available on net10.0. -->
-    <Compile Remove="Settings\CredentialsManager.cs" />
-    <Compile Remove="Settings\CredentialsSetting.cs" />
-    <Compile Remove="Settings\UserControls\CredentialsControl.cs" />
-    <Compile Remove="Settings\UserControls\CredentialsControl.Designer.cs" />
-    <EmbeddedResource Remove="Settings\UserControls\CredentialsControl.resx" />
+    <Compile Remove="Settings\CredentialsManager.cs"/>
+    <Compile Remove="Settings\CredentialsSetting.cs"/>
+    <Compile Remove="Settings\UserControls\CredentialsControl.cs"/>
+    <Compile Remove="Settings\UserControls\CredentialsControl.Designer.cs"/>
+    <EmbeddedResource Remove="Settings\UserControls\CredentialsControl.resx"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
     <!-- Cross-platform substitute; the Windows flavor uses CredentialsManager.cs instead. -->
-    <Compile Remove="Settings\CredentialsManager.NonWindows.cs" />
+    <Compile Remove="Settings\CredentialsManager.NonWindows.cs"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -42,8 +42,8 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs" />
-    <Compile Include="..\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs" />
+    <Compile Remove="$(RepoRoot)\CommonAssemblyInfo.cs"/>
+    <Compile Include="..\GitUI.Avalonia\Properties\CommonAssemblyInfoAvalonia.cs" Link="Properties\CommonAssemblyInfoAvalonia.cs"/>
   </ItemGroup>
 
 </Project>

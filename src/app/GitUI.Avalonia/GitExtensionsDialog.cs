@@ -15,18 +15,18 @@ public class GitExtensionsDialog : GitModuleForm
     {
     }
 
-    protected GitExtensionsDialog(IGitUICommands? commands, bool enablePositionRestore)
+    protected GitExtensionsDialog(IGitUiCommands? commands, bool enablePositionRestore)
         : base(commands, enablePositionRestore)
     {
     }
 
     /// <summary>
-    ///  Gets or sets the anchor pointing to a section in the manual pertaining to this dialog.
+    ///     Gets or sets the anchor pointing to a section in the manual pertaining to this dialog.
     /// </summary>
     public string? ManualSectionAnchorName { get; set; }
 
     /// <summary>
-    ///  Gets or sets the name of a document pertaining to this dialog.
+    ///     Gets or sets the name of a document pertaining to this dialog.
     /// </summary>
     public string? ManualSectionSubfolder { get; set; }
 }

@@ -39,19 +39,21 @@ internal sealed class WorktreeNode(Tree tree, GitWorktree worktree, bool isCurre
             return;
         }
 
-        UICommands.WorktreeSwitch(ParentWindow(), Worktree.Path);
+        UiCommands.WorktreeSwitch(ParentWindow(), Worktree.Path);
     }
 
     public void DeleteWorktree()
     {
-        if (UICommands.WorktreeDelete(ParentWindow(), Worktree.Path))
+        if (UiCommands.WorktreeDelete(ParentWindow(), Worktree.Path))
         {
             ((WorktreeTree)Tree).Refresh();
         }
     }
 
     protected override FontStyle GetFontStyle()
-        => base.GetFontStyle() | (IsCurrent ? FontStyle.Bold : FontStyle.Regular);
+    {
+        return base.GetFontStyle() | (IsCurrent ? FontStyle.Bold : FontStyle.Regular);
+    }
 
     public override void ApplyStyle()
     {
@@ -69,13 +71,13 @@ internal sealed class WorktreeNode(Tree tree, GitWorktree worktree, bool isCurre
 
         string GetToolTipText()
         {
-            string? shortSha = Worktree.Sha1?.Length >= 7 ? Worktree.Sha1[..7] : Worktree.Sha1;
+            var shortSha = Worktree.Sha1?.Length >= 7 ? Worktree.Sha1[..7] : Worktree.Sha1;
 
-            string status = IsCurrent ? " (current)"
+            var status = IsCurrent ? " (current)"
                 : Worktree.IsDeleted ? " (deleted)"
                 : "";
 
-            string branchLine = Worktree.HeadType is GitWorktreeHeadType.Bare ? "bare"
+            var branchLine = Worktree.HeadType is GitWorktreeHeadType.Bare ? "bare"
                 : Worktree.HeadType is GitWorktreeHeadType.Detached ? $"detached at {shortSha}"
                 : Worktree.Branch ?? "unknown";
 
@@ -86,8 +88,12 @@ internal sealed class WorktreeNode(Tree tree, GitWorktree worktree, bool isCurre
     }
 
     protected override string DisplayText()
-        => Worktree.GetDisplayName(DisplayPath);
+    {
+        return Worktree.GetDisplayName(DisplayPath);
+    }
 
     protected override string NodeName()
-        => Worktree.Path;
+    {
+        return Worktree.Path;
+    }
 }

@@ -1,19 +1,19 @@
 ﻿using CommonTestUtils;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Git.Gpg;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
 #pragma warning disable SA1312 // Variable names should begin with lower-case letter (doesn't understand discards)
 
 namespace GitCommandsTests.Git.Gpg;
+
 public class GitGpgControllerTests
 {
-    private IGitModule _module = null!;
-    private GitGpgController _gpgController = null!;
-    private MockExecutable _executable = null!;
+    private readonly MockExecutable _executable = null!;
+    private readonly GitGpgController _gpgController = null!;
+    private readonly IGitModule _module = null!;
 
     public GitGpgControllerTests()
     {
@@ -34,19 +34,14 @@ public class GitGpgControllerTests
     [InlineData(CommitStatus.NoSignature, "N")]
     public async Task Validate_GetRevisionCommitSignatureStatusAsync(CommitStatus expected, string gitCmdReturn)
     {
-        ObjectId objectId = ObjectId.Random();
+        var objectId = ObjectId.Random();
 
         GitRevision revision = new(objectId);
-        GitArgumentBuilder args = new("log")
-        {
-            "--pretty=\"format:%G?\"",
-            "-1",
-            revision.Guid
-        };
+        GitArgumentBuilder args = new("log") { "--pretty=\"format:%G?\"", "-1", revision.Guid };
 
-        using IDisposable _ = _executable.StageOutput(args.ToString(), gitCmdReturn);
+        using var _ = _executable.StageOutput(args.ToString(), gitCmdReturn);
 
-        CommitStatus actual = await _gpgController.GetRevisionCommitSignatureStatusAsync(revision);
+        var actual = await _gpgController.GetRevisionCommitSignatureStatusAsync(revision);
 
         actual.Should().Be(expected);
     }
@@ -54,13 +49,15 @@ public class GitGpgControllerTests
     [Fact]
     public void Validate_GetRevisionCommitSignatureStatusAsync_null_revision()
     {
-        ((Func<Task>)(() => _gpgController.GetRevisionCommitSignatureStatusAsync(null!))).Should().ThrowAsync<ArgumentNullException>();
+        ((Func<Task>)(() => _gpgController.GetRevisionCommitSignatureStatusAsync(null!))).Should()
+            .ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Validate_GetRevisionTagSignatureStatusAsync_null_revision()
     {
-        ((Func<Task>)(() => _gpgController.GetRevisionTagSignatureStatusAsync(null!))).Should().ThrowAsync<ArgumentNullException>();
+        ((Func<Task>)(() => _gpgController.GetRevisionTagSignatureStatusAsync(null!))).Should()
+            .ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]
@@ -68,9 +65,9 @@ public class GitGpgControllerTests
     [InlineData(TagStatus.Many, 2)]
     public async Task Validate_GetRevisionTagSignatureStatusAsync(TagStatus tagStatus, int numberOfTags)
     {
-        ObjectId objectId = ObjectId.Random();
+        var objectId = ObjectId.Random();
 
-        string gitRefCompleteName = "refs/tags/FirstTag^{}";
+        var gitRefCompleteName = "refs/tags/FirstTag^{}";
 
         GitRevision revision = new(objectId)
         {
@@ -79,7 +76,7 @@ public class GitGpgControllerTests
                 .ToList()
         };
 
-        TagStatus actual = await _gpgController.GetRevisionTagSignatureStatusAsync(revision);
+        var actual = await _gpgController.GetRevisionTagSignatureStatusAsync(revision);
 
         actual.Should().Be(tagStatus);
     }
@@ -90,20 +87,16 @@ public class GitGpgControllerTests
     [InlineData(TagStatus.NoPubKey, "NO_PUBKEY ...")]
     public async Task Validate_GetRevisionTagSignatureStatusAsync_one_tag(TagStatus tagStatus, string gitCmdReturn)
     {
-        ObjectId objectId = ObjectId.Random();
+        var objectId = ObjectId.Random();
 
         GitRef gitRef = new(_module, objectId, "refs/tags/FirstTag^{}");
 
         GitRevision revision = new(objectId) { Refs = new[] { gitRef } };
-        GitArgumentBuilder args = new("verify-tag")
-        {
-            "--raw",
-            gitRef.LocalName
-        };
+        GitArgumentBuilder args = new("verify-tag") { "--raw", gitRef.LocalName };
 
-        using IDisposable _ = _executable.StageOutput(args.ToString(), output: "", error: gitCmdReturn);
+        using var _ = _executable.StageOutput(args.ToString(), "", error: gitCmdReturn);
 
-        TagStatus actual = await _gpgController.GetRevisionTagSignatureStatusAsync(revision);
+        var actual = await _gpgController.GetRevisionTagSignatureStatusAsync(revision);
 
         actual.Should().Be(tagStatus);
     }
@@ -112,18 +105,13 @@ public class GitGpgControllerTests
     [InlineData("return string")]
     public void Validate_GetCommitVerificationMessage(string returnString)
     {
-        ObjectId objectId = ObjectId.Random();
+        var objectId = ObjectId.Random();
         GitRevision revision = new(objectId);
-        GitArgumentBuilder args = new("log")
-        {
-            "--pretty=\"format:%GG\"",
-            "-1",
-            revision.Guid
-        };
+        GitArgumentBuilder args = new("log") { "--pretty=\"format:%GG\"", "-1", revision.Guid };
 
-        using IDisposable _ = _executable.StageOutput(args.ToString(), returnString);
+        using var _ = _executable.StageOutput(args.ToString(), returnString);
 
-        string actual = _gpgController.GetCommitVerificationMessage(revision);
+        var actual = _gpgController.GetCommitVerificationMessage(revision);
 
         actual.Should().Be(returnString);
     }
@@ -148,7 +136,7 @@ public class GitGpgControllerTests
     [InlineData(2, "FirstTag\r\nFirstTag\r\n\r\nSecondTag\r\nSecondTag\r\n\r\n")]
     public void Validate_GetTagVerifyMessage(int usefulTagRefNumber, string expected)
     {
-        ObjectId objectId = ObjectId.Random();
+        var objectId = ObjectId.Random();
         GitRevision revision = new(objectId);
 
         IDisposable? validate = null;
@@ -171,7 +159,7 @@ public class GitGpgControllerTests
                     revision.Refs = new[] { gitRef };
 
                     GitArgumentBuilder args = new("verify-tag") { gitRef.LocalName };
-                    validate = _executable.StageOutput(args.ToString(), output: "", error: gitRef.LocalName);
+                    validate = _executable.StageOutput(args.ToString(), "", error: gitRef.LocalName);
 
                     break;
                 }
@@ -182,19 +170,19 @@ public class GitGpgControllerTests
                     GitRef gitRef1 = new(_module, objectId, "refs/tags/FirstTag^{}");
 
                     GitArgumentBuilder args = new("verify-tag") { gitRef1.LocalName };
-                    _executable.StageOutput(args.ToString(), output: "", error: gitRef1.LocalName);
+                    _executable.StageOutput(args.ToString(), "", error: gitRef1.LocalName);
 
                     GitRef gitRef2 = new(_module, objectId, "refs/tags/SecondTag^{}");
                     revision.Refs = new[] { gitRef1, gitRef2 };
 
                     args = new GitArgumentBuilder("verify-tag") { gitRef2.LocalName };
-                    validate = _executable.StageOutput(args.ToString(), output: "", error: gitRef2.LocalName);
+                    validate = _executable.StageOutput(args.ToString(), "", error: gitRef2.LocalName);
 
                     break;
                 }
         }
 
-        string? actual = _gpgController.GetTagVerifyMessage(revision);
+        var actual = _gpgController.GetTagVerifyMessage(revision);
 
         actual.Should().Be(expected);
 

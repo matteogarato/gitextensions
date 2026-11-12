@@ -1,33 +1,42 @@
 ﻿using CommonTestUtils;
 using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
-using GitExtensions.UITests;
+using GitExtUtils.GitUI;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
+using AppSettings = GitCommands.Settings.AppSettings;
 
-namespace GitUITests.GitUICommandsTests;
+namespace UITests.GitUICommands;
 
-public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunCommandTestsFixture>
+public sealed class RunCommandTests : IDisposable, IClassFixture<RunCommandTestsFixture>
 {
+    // Created once for each test
+    private GitUiCommands _commands = null!;
+
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
-
-    // Created once for each test
-    private GitUICommands _commands = null!;
 
     public RunCommandTests(RunCommandTestsFixture fixture)
     {
         InitializeTest();
     }
 
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
+    }
+
     private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
-        string cmdPath = (Environment.GetEnvironmentVariable("COMSPEC") ?? "C:/WINDOWS/system32/cmd.exe").ToPosixPath().QuoteNE();
-        _referenceRepository.Module.GitExecutable.RunCommand($"config --local difftool.cmd.path {cmdPath}").Should().BeTrue();
-        _referenceRepository.Module.GitExecutable.RunCommand($"config --local mergetool.cmd.path {cmdPath}").Should().BeTrue();
+        var cmdPath = (Environment.GetEnvironmentVariable("COMSPEC") ?? "C:/WINDOWS/system32/cmd.exe").ToPosixPath()
+            .QuoteNe();
+        _referenceRepository.Module.GitExecutable.RunCommand($"config --local difftool.cmd.path {cmdPath}").Should()
+            .BeTrue();
+        _referenceRepository.Module.GitExecutable.RunCommand($"config --local mergetool.cmd.path {cmdPath}").Should()
+            .BeTrue();
         _referenceRepository.Module.GitExecutable.RunCommand("config --local diff.guitool cmd").Should().BeTrue();
         _referenceRepository.Module.GitExecutable.RunCommand("config --local merge.guitool cmd").Should().BeTrue();
 
@@ -35,7 +44,8 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
         AppSettings.CloseProcessDialog = true;
         AppSettings.UseBrowseForFileHistory.Value = false;
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
     }
 
     private void DisposeTest()
@@ -63,7 +73,7 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     [WinFormsFact]
     public void RunCommandBasedOnArgument_about()
     {
-        UserEnvironmentInformation.Initialise("1234567", isDirty: true);
+        UserEnvironmentInformation.Initialise("1234567", true);
         RunCommandBasedOnArgument<FormAbout>(["ge.exe", "about"]);
     }
 
@@ -71,13 +81,17 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     [InlineData("add")]
     [InlineData("addfiles")]
     public void RunCommandBasedOnArgument_add(string command)
-        => RunCommandBasedOnArgument<FormAddFiles>(["ge.exe", command]);
+    {
+        RunCommandBasedOnArgument<FormAddFiles>(["ge.exe", command]);
+    }
 
     [WinFormsTheory]
     [InlineData("apply")]
     [InlineData("applypatch")]
     public void RunCommandBasedOnArgument_apply(string command)
-        => RunCommandBasedOnArgument<FormApplyPatch>(["ge.exe", command]);
+    {
+        RunCommandBasedOnArgument<FormApplyPatch>(["ge.exe", command]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_blame_throws()
@@ -88,18 +102,22 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_blame()
-        => RunCommandBasedOnArgument<FormBlame>(["ge.exe", "blame", "filename"]);
+    {
+        RunCommandBasedOnArgument<FormBlame>(["ge.exe", "blame", "filename"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_blame_line()
-        => RunCommandBasedOnArgument<FormBlame>(["ge.exe", "blame", "filename", "42"]);
+    {
+        RunCommandBasedOnArgument<FormBlame>(["ge.exe", "blame", "filename", "42"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_branch()
     {
-        string branchName = _referenceRepository.Module.GetCurrentBranchName();
+        var branchName = _referenceRepository.Module.GetCurrentBranchName();
 
-        string newBranchName = $"{branchName}-subbranch";
+        var newBranchName = $"{branchName}-subbranch";
 
         _referenceRepository.CheckoutBranch(branchName);
         RunCommandBasedOnArgument<FormCreateBranch>(["ge.exe", "branch"], runTest: form =>
@@ -112,9 +130,9 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     [WinFormsFact]
     public void RunCommandBasedOnArgument_browse()
     {
-        ObjectId selected = ObjectId.Random();
-        ObjectId first = ObjectId.Random();
-        ObjectId otherIgnored = ObjectId.Random();
+        var selected = ObjectId.Random();
+        var first = ObjectId.Random();
+        var otherIgnored = ObjectId.Random();
         RunCommandBasedOnArgument<FormBrowse>(["ge.exe", "browse", $"-commit={selected},{first},,{otherIgnored}"]);
     }
 
@@ -122,27 +140,39 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     [InlineData("checkout")]
     [InlineData("checkoutbranch")]
     public void RunCommandBasedOnArgument_checkout(string command)
-        => RunCommandBasedOnArgument<FormCheckoutBranch>(["ge.exe", command], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormCheckoutBranch>(["ge.exe", command], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_checkoutrevision()
-        => RunCommandBasedOnArgument<FormCheckoutRevision>(["ge.exe", "checkoutrevision"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormCheckoutRevision>(["ge.exe", "checkoutrevision"], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_cherry()
-        => RunCommandBasedOnArgument<FormCherryPick>(["ge.exe", "cherry"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormCherryPick>(["ge.exe", "cherry"], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_cleanup()
-        => RunCommandBasedOnArgument<FormCleanupRepository>(["ge.exe", "cleanup"]);
+    {
+        RunCommandBasedOnArgument<FormCleanupRepository>(["ge.exe", "cleanup"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_clone()
-        => RunCommandBasedOnArgument<FormClone>(["ge.exe", "clone"]);
+    {
+        RunCommandBasedOnArgument<FormClone>(["ge.exe", "clone"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_commit()
-        => RunCommandBasedOnArgument<FormCommit>(["ge.exe", "commit"]);
+    {
+        RunCommandBasedOnArgument<FormCommit>(["ge.exe", "commit"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_difftool_returns_false_on_missing_argument()
@@ -153,7 +183,9 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_difftool()
-        => _commands.GetTestAccessor().RunCommandBasedOnArgument(["ge.exe", "difftool", "filename"]).Should().BeTrue();
+    {
+        _commands.GetTestAccessor().RunCommandBasedOnArgument(["ge.exe", "difftool", "filename"]).Should().BeTrue();
+    }
 
     [WinFormsTheory]
     [InlineData("blamehistory")]
@@ -179,7 +211,7 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
         bool commit,
         bool filter)
     {
-        string expectedTab = command.Contains("blame") ? "Blame" : "Diff";
+        var expectedTab = command.Contains("blame") ? "Blame" : "Diff";
 
         List<string> args = ["ge.exe", command, "filename"];
         if (commit)
@@ -192,7 +224,8 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
         }
 
         RunCommandBasedOnArgument<FormFileHistory>([.. args],
-            runTest: form => form.FindDescendantOfType<FullBleedTabControl>(_ => true)!.SelectedTab!.Text.Should().Be(expectedTab));
+            runTest: form => form.FindDescendantOfType<FullBleedTabControl>(_ => true)!.SelectedTab!.Text.Should()
+                .Be(expectedTab));
     }
 
     [WinFormsTheory]
@@ -216,9 +249,10 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
             (false, true, true),
             (true, true, false)
         ];
-        (bool commitValid, bool filter, bool filterValid) = invalidVariants[invalidVariant];
+        (var commitValid, var filter, var filterValid) = invalidVariants[invalidVariant];
 
-        List<string> args = ["ge.exe", command, "filename", commitValid ? _referenceRepository.CommitHash! : "no-commit"];
+        List<string> args =
+            ["ge.exe", command, "filename", commitValid ? _referenceRepository.CommitHash! : "no-commit"];
         if (filter)
         {
             args.Add(filterValid ? "--filter-by-revision" : "invalid");
@@ -236,67 +270,98 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_fileeditor()
-        => RunCommandBasedOnArgument<FormEditor>(["ge.exe", "fileeditor", "filename"]);
+    {
+        RunCommandBasedOnArgument<FormEditor>(["ge.exe", "fileeditor", "filename"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_formatpatch()
-        => RunCommandBasedOnArgument<FormFormatPatch>(["ge.exe", "formatpatch"]);
+    {
+        RunCommandBasedOnArgument<FormFormatPatch>(["ge.exe", "formatpatch"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_gitignore()
-        => RunCommandBasedOnArgument<FormGitIgnore>(["ge.exe", "gitignore"]);
+    {
+        RunCommandBasedOnArgument<FormGitIgnore>(["ge.exe", "gitignore"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_init()
-        => RunCommandBasedOnArgument<FormInit>(["ge.exe", "init"]);
+    {
+        RunCommandBasedOnArgument<FormInit>(["ge.exe", "init"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_merge()
-        => RunCommandBasedOnArgument<FormMergeBranch>(["ge.exe", "merge"]);
+    {
+        RunCommandBasedOnArgument<FormMergeBranch>(["ge.exe", "merge"]);
+    }
 
     [WinFormsTheory]
     [InlineData("mergeconflicts")]
     [InlineData("mergetool")]
     public void RunCommandBasedOnArgument_mergeconflicts(string command)
-        => RunCommandBasedOnArgument<FormResolveConflicts>(["ge.exe", command]);
+    {
+        RunCommandBasedOnArgument<FormResolveConflicts>(["ge.exe", command]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_openrepo()
-      => RunCommandBasedOnArgument<FormBrowse>(["ge.exe", "openrepo"]);
+    {
+        RunCommandBasedOnArgument<FormBrowse>(["ge.exe", "openrepo"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_pull()
-        => RunCommandBasedOnArgument<FormPull>(["ge.exe", "pull"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormPull>(["ge.exe", "pull"], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_push()
-        => RunCommandBasedOnArgument<FormPush>(["ge.exe", "push"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormPush>(["ge.exe", "push"], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_rebase()
-        => RunCommandBasedOnArgument<FormRebase>(["ge.exe", "rebase"]);
+    {
+        RunCommandBasedOnArgument<FormRebase>(["ge.exe", "rebase"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_remotes()
-        => RunCommandBasedOnArgument<FormRemotes>(["ge.exe", "remotes"]);
+    {
+        RunCommandBasedOnArgument<FormRemotes>(["ge.exe", "remotes"]);
+    }
 
     [WinFormsTheory]
     [InlineData("revert")]
     [InlineData("reset")]
     public void RunCommandBasedOnArgument_reset(string command)
-        => RunCommandBasedOnArgument<FormResetChanges>(["ge.exe", command], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormResetChanges>(["ge.exe", command], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_searchfile()
-        => RunCommandBasedOnArgument<SearchWindow<string>>(["ge.exe", "searchfile"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<SearchWindow<string>>(["ge.exe", "searchfile"], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_settings()
-        => RunCommandBasedOnArgument<FormSettings>(["ge.exe", "settings"], expectedResult: false /* because dialog is not closed using OK button */);
+    {
+        RunCommandBasedOnArgument<FormSettings>(["ge.exe", "settings"],
+            false /* because dialog is not closed using OK button */);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_stash()
-        => RunCommandBasedOnArgument<FormStash>(["ge.exe", "stash"]);
+    {
+        RunCommandBasedOnArgument<FormStash>(["ge.exe", "stash"]);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_synchronize()
@@ -307,8 +372,8 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
 
             while (true)
             {
-                await UITest.WaitForIdleAsync();
-                FormPull? formPull = Application.OpenForms.OfType<FormPull>().FirstOrDefault();
+                await UiTest.WaitForIdleAsync();
+                var formPull = Application.OpenForms.OfType<FormPull>().FirstOrDefault();
                 if (formPull is not null)
                 {
                     formPull.Close();
@@ -318,8 +383,8 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
 
             while (true)
             {
-                await UITest.WaitForIdleAsync();
-                FormPush? formPush = Application.OpenForms.OfType<FormPush>().FirstOrDefault();
+                await UiTest.WaitForIdleAsync();
+                var formPush = Application.OpenForms.OfType<FormPush>().FirstOrDefault();
                 if (formPush is not null)
                 {
                     formPush.Close();
@@ -328,16 +393,20 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
             }
         });
 
-        RunCommandBasedOnArgument<FormCommit>(["ge.exe", "synchronize"], expectedResult: false);
+        RunCommandBasedOnArgument<FormCommit>(["ge.exe", "synchronize"], false);
     }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_tag()
-        => RunCommandBasedOnArgument<FormCreateTag>(["ge.exe", "tag"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormCreateTag>(["ge.exe", "tag"], false);
+    }
 
     [WinFormsFact]
     public void RunCommandBasedOnArgument_viewdiff()
-        => RunCommandBasedOnArgument<FormLog>(["ge.exe", "viewdiff"], expectedResult: false);
+    {
+        RunCommandBasedOnArgument<FormLog>(["ge.exe", "viewdiff"], false);
+    }
 
     [WinFormsTheory]
     [InlineData("git://")]
@@ -346,7 +415,9 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     [InlineData("github-windows://openRepo/")]
     [InlineData("github-mac://openRepo/")]
     public void RunCommandBasedOnArgument_Url(string url)
-        => RunCommandBasedOnArgument<FormClone>(["ge.exe", url]);
+    {
+        RunCommandBasedOnArgument<FormClone>(["ge.exe", url]);
+    }
 
     [WinFormsTheory]
     [InlineData("")]
@@ -354,13 +425,16 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     [InlineData("help")]
     [InlineData("nonsense")]
     public void RunCommandBasedOnArgument_unsupported(string command)
-        => RunCommandBasedOnArgument<FormCommandlineHelp>(["ge.exe", command]);
-
-    private void RunCommandBasedOnArgument<TForm>(string[] args, bool expectedResult = true, Action<TForm>? runTest = null) where TForm : Form
     {
-        UITest.RunForm<TForm>(
-            showForm: () => _commands.GetTestAccessor().RunCommandBasedOnArgument(args).Should().Be(expectedResult),
-            runTestAsync: form =>
+        RunCommandBasedOnArgument<FormCommandlineHelp>(["ge.exe", command]);
+    }
+
+    private void RunCommandBasedOnArgument<TForm>(string[] args, bool expectedResult = true,
+        Action<TForm>? runTest = null) where TForm : Form
+    {
+        UiTest.RunForm<TForm>(
+            () => _commands.GetTestAccessor().RunCommandBasedOnArgument(args).Should().Be(expectedResult),
+            form =>
             {
                 runTest?.Invoke(form);
 
@@ -369,14 +443,13 @@ public sealed class RunCommandTests : System.IDisposable, IClassFixture<RunComma
     }
 
     private static void ClickButton(Form form, string buttonName)
-        => form.FindDescendantOfType<Button>(button => button.Name == buttonName)!.PerformClick();
+    {
+        form.FindDescendantOfType<Button>(button => button.Name == buttonName)!.PerformClick();
+    }
 
     private static void SetText(Form form, string controlName, string value)
-        => form.FindDescendantOfType<Control>(control => control.Name == controlName)!.Text = value;
-
-    public void Dispose()
     {
-        DisposeTest();
+        form.FindDescendantOfType<Control>(control => control.Name == controlName)!.Text = value;
     }
 }
 

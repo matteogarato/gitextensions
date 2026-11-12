@@ -1,7 +1,7 @@
 ﻿using GitUIPluginInterfaces.RepositoryHosts;
-using Xunit;
 
 namespace GitUIPluginInterfacesTests;
+
 public class GitProtocolTests
 {
     [Theory]

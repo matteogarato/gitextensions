@@ -1,6 +1,6 @@
 ﻿using GitExtensions.Extensibility.Git;
 
-namespace GitUI;
+namespace GitUI.UserControls.RevisionGrid;
 
 internal sealed class SuperProjectInfo
 {

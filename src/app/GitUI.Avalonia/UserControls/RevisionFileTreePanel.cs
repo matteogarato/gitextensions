@@ -1,30 +1,35 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using GitCommands;
+using Avalonia.Media;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
-using GitUIPluginInterfaces;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 /// <summary>
-///  Browses the files of a revision one directory at a time.
+///     Browses the files of a revision one directory at a time.
 /// </summary>
 public sealed class RevisionFileTreePanel : UserControl
 {
-    private readonly TextBlock _path = new() { Name = "lblTreePath", Margin = new Avalonia.Thickness(4), TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis };
     private readonly ListBox _entries = new() { Name = "lstTreeEntries" };
+
+    private readonly TextBlock _path = new()
+    {
+        Name = "lblTreePath", Margin = new Thickness(4), TextTrimming = TextTrimming.CharacterEllipsis
+    };
+
     private readonly CancellationTokenSequence _sequence = new();
+    private string _directory = string.Empty;
     private IGitModule? _module;
     private ObjectId _revision;
-    private string _directory = string.Empty;
 
     /// <summary>
-    ///  Initializes a new instance of the <see cref="RevisionFileTreePanel"/> class.
+    ///     Initializes a new instance of the <see cref="RevisionFileTreePanel" /> class.
     /// </summary>
     public RevisionFileTreePanel()
     {
-        Button up = new() { Name = "btnTreeUp", Content = "..", Margin = new Avalonia.Thickness(4, 0) };
+        Button up = new() { Name = "btnTreeUp", Content = "..", Margin = new Thickness(4, 0) };
         up.Click += (_, _) => NavigateUp();
         DockPanel header = new() { LastChildFill = true };
         DockPanel.SetDock(up, Dock.Left);
@@ -54,28 +59,33 @@ public sealed class RevisionFileTreePanel : UserControl
     }
 
     /// <summary>
-    ///  Raised when the selected entry changes.
+    ///     Gets the selected file entry, or <see langword="null" /> for directories, submodules or no selection.
+    /// </summary>
+    public RevisionTreeEntry? SelectedFile
+    {
+        get => _entries.SelectedItem is RevisionTreeEntry { ObjectType: GitObjectType.Blob } entry ? entry : null;
+    }
+
+    /// <summary>
+    ///     Gets the revision currently browsed.
+    /// </summary>
+    public ObjectId Revision
+    {
+        get => _revision;
+    }
+
+    /// <summary>
+    ///     Raised when the selected entry changes.
     /// </summary>
     public event EventHandler? SelectedFileChanged;
 
     /// <summary>
-    ///  Raised when a file entry is activated (double click or Enter).
+    ///     Raised when a file entry is activated (double click or Enter).
     /// </summary>
     public event EventHandler? FileActivated;
 
     /// <summary>
-    ///  Gets the selected file entry, or <see langword="null"/> for directories, submodules or no selection.
-    /// </summary>
-    public RevisionTreeEntry? SelectedFile
-        => _entries.SelectedItem is RevisionTreeEntry { ObjectType: GitObjectType.Blob } entry ? entry : null;
-
-    /// <summary>
-    ///  Gets the revision currently browsed.
-    /// </summary>
-    public ObjectId Revision => _revision;
-
-    /// <summary>
-    ///  Shows the root of <paramref name="revision"/>.
+    ///     Shows the root of <paramref name="revision" />.
     /// </summary>
     public void Show(IGitModule module, ObjectId revision)
     {
@@ -85,7 +95,7 @@ public sealed class RevisionFileTreePanel : UserControl
     }
 
     /// <summary>
-    ///  Clears the tree.
+    ///     Clears the tree.
     /// </summary>
     public void Clear()
     {
@@ -103,9 +113,9 @@ public sealed class RevisionFileTreePanel : UserControl
             return;
         }
 
-        IGitModule module = _module;
-        ObjectId revision = _revision;
-        CancellationToken cancellationToken = _sequence.Next();
+        var module = _module;
+        var revision = _revision;
+        var cancellationToken = _sequence.Next();
         _directory = directory;
         _path.Text = "/" + directory;
         _entries.ItemsSource = null;
@@ -113,7 +123,9 @@ public sealed class RevisionFileTreePanel : UserControl
         {
             try
             {
-                IReadOnlyList<RevisionTreeEntry> entries = await Task.Run(() => RevisionTreeWorkflow.ListDirectory(module, revision, directory, cancellationToken), cancellationToken);
+                var entries = await Task.Run(
+                    () => RevisionTreeWorkflow.ListDirectory(module, revision, directory, cancellationToken),
+                    cancellationToken);
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
                 _entries.ItemsSource = entries;
             }
@@ -125,7 +137,7 @@ public sealed class RevisionFileTreePanel : UserControl
 
     private void NavigateUp()
     {
-        if (RevisionTreeWorkflow.GetParentDirectory(_directory) is string parent)
+        if (RevisionTreeWorkflow.GetParentDirectory(_directory) is { } parent)
         {
             Load(parent);
         }

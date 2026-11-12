@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.VisualTree;
-using ResourceManager;
+using GitUI.Compat;
 
 namespace GitUI.UserControls;
 
@@ -38,7 +38,7 @@ public partial class PasswordInput : TranslatedControl
 
     private void Text_Enter(object sender, EventArgs e)
     {
-        if (this.FindAncestorOfType<GitExtensionsFormBase>() is GitExtensionsFormBase parentForm)
+        if (this.FindAncestorOfType<GitExtensionsFormBase>() is { } parentForm)
         {
             _originalAcceptButton = parentForm.AcceptButton;
             parentForm.AcceptButton = SendInput;
@@ -47,7 +47,7 @@ public partial class PasswordInput : TranslatedControl
 
     private void Text_Leave(object sender, EventArgs e)
     {
-        if (this.FindAncestorOfType<GitExtensionsFormBase>() is GitExtensionsFormBase parentForm && parentForm.AcceptButton == SendInput)
+        if (this.FindAncestorOfType<GitExtensionsFormBase>() is { } parentForm && parentForm.AcceptButton == SendInput)
         {
             parentForm.AcceptButton = _originalAcceptButton;
         }

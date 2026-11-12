@@ -1,9 +1,10 @@
 ﻿using GitCommands.Git;
 
 namespace GitCommandsTests.Git;
+
 public sealed class GitBranchNameNormaliserTest
 {
-    private GitBranchNameNormaliser _gitBranchNameNormaliser = null!;
+    private readonly GitBranchNameNormaliser _gitBranchNameNormaliser = null!;
     private GitBranchNameOptions _gitBranchNameOptions = null!;
 
     public GitBranchNameNormaliserTest()
@@ -13,9 +14,12 @@ public sealed class GitBranchNameNormaliserTest
     }
 
     [Theory]
-    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "_", "_BUG-1234]_some_long_description_located__/test/_/dir_/_lock]{3,}_and_foo_bar_can_")]
-    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "-", "-BUG-1234]-some-long-description-located--/test/-/dir-/-lock]{3,}-and-foo-bar-can-")]
-    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "", "BUG-1234]somelongdescriptionlocated/test/dir/lock]{3,}andfoobarcan")]
+    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "_",
+        "_BUG-1234]_some_long_description_located__/test/_/dir_/_lock]{3,}_and_foo_bar_can_")]
+    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "-",
+        "-BUG-1234]-some-long-description-located--/test/-/dir-/-lock]{3,}-and-foo-bar-can-")]
+    [InlineData("[BUG-1234] some long description located [//test/*/dir?/.lock]{3,} and foo:bar\\can...", "",
+        "BUG-1234]somelongdescriptionlocated/test/dir/lock]{3,}andfoobarcan")]
     public void Normalise(string input, string replacementToken, string expected)
     {
         _gitBranchNameOptions = new GitBranchNameOptions(replacementToken);
@@ -112,7 +116,7 @@ public sealed class GitBranchNameNormaliserTest
     [InlineData("///test///test///", true, "test/test/")]
     public void Normalise_rule06(string input, bool allowTrailingSlash, string expected)
     {
-        GitBranchNameOptions options = new(replacementToken: "_", allowTrailingSlash);
+        GitBranchNameOptions options = new("_", allowTrailingSlash);
         GitBranchNameNormaliser.Rule06(input, options).Should().Be(expected);
     }
 

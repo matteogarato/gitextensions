@@ -1,10 +1,8 @@
-﻿using static System.NativeMethods;
-
-namespace GitUI.UserControls;
+﻿namespace GitUI.UserControls;
 
 public class NativeTreeView : TreeView
 {
-    private const int MK_SHIFT = 0x0004;
+    private const int _mkShift = 0x0004;
 
     public NativeTreeView()
     {
@@ -18,7 +16,7 @@ public class NativeTreeView : TreeView
         {
             // explorer style selection painting in left panel
             // Not needed in dark mode, this is the same for "DarkMode_Explorer"
-            NativeMethods.SetWindowTheme(Handle, "explorer", null);
+            SetWindowTheme(Handle, "explorer", null);
         }
     }
 
@@ -26,29 +24,29 @@ public class NativeTreeView : TreeView
     {
         switch (m.Msg)
         {
-            case WM_MOUSEWHEEL when (m.WParam.ToInt64() & MK_SHIFT) != 0:
-            {
-                int delta = (short)(m.WParam.ToInt64() >> 16);
-                if (delta != 0)
+            case WmMousewheel when (m.WParam.ToInt64() & _mkShift) != 0:
                 {
-                    // Shift+wheel-up scrolls left, Shift+wheel-down scrolls right
-                    ScrollHorizontally(-delta);
+                    int delta = (short)(m.WParam.ToInt64() >> 16);
+                    if (delta != 0)
+                    {
+                        // Shift+wheel-up scrolls left, Shift+wheel-down scrolls right
+                        ScrollHorizontally(-delta);
+                    }
+
+                    return;
                 }
 
-                return;
-            }
-
-            case WM_MOUSEHWHEEL:
-            {
-                int delta = (short)(m.WParam.ToInt64() >> 16);
-                if (delta != 0)
+            case WmMousehwheel:
                 {
-                    // Positive delta = tilt right = scroll right
-                    ScrollHorizontally(delta);
-                }
+                    int delta = (short)(m.WParam.ToInt64() >> 16);
+                    if (delta != 0)
+                    {
+                        // Positive delta = tilt right = scroll right
+                        ScrollHorizontally(delta);
+                    }
 
-                return;
-            }
+                    return;
+                }
         }
 
         base.WndProc(ref m);
@@ -57,24 +55,24 @@ public class NativeTreeView : TreeView
 
         void ScrollHorizontally(int delta)
         {
-            SBH direction;
+            Sbh direction;
             int count;
 
-            int scrollLines = SystemInformation.MouseWheelScrollLines;
+            var scrollLines = SystemInformation.MouseWheelScrollLines;
             if (scrollLines == -1)
             {
-                direction = delta > 0 ? SBH.PAGERIGHT : SBH.PAGELEFT;
+                direction = delta > 0 ? Sbh.Pageright : Sbh.Pageleft;
                 count = 1;
             }
             else
             {
-                direction = delta > 0 ? SBH.LINERIGHT : SBH.LINELEFT;
+                direction = delta > 0 ? Sbh.Lineright : Sbh.Lineleft;
                 count = Math.Max(1, Math.Abs(delta) * scrollLines * 3 / SystemInformation.MouseWheelScrollDelta);
             }
 
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
-                Message hscrollMsg = Message.Create(Handle, WM_HSCROLL, (IntPtr)direction, IntPtr.Zero);
+                var hscrollMsg = Message.Create(Handle, WmHscroll, (IntPtr)direction, IntPtr.Zero);
                 DefWndProc(ref hscrollMsg);
             }
         }

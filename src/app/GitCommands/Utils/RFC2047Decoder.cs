@@ -1,28 +1,28 @@
 using System.Globalization;
 using System.Text;
 
-namespace GitCommands;
+namespace GitCommands.Utils;
 
 // This class is taken from https://github.com/petrohi/Stratosphere.Imap/blob/master/Stratosphere/Imap/RFC2047Decoder.cs
-public static class RFC2047Decoder
+public static class Rfc2047Decoder
 {
     public static string Parse(string input)
     {
         StringBuilder sb = new();
         StringBuilder currentWord = new();
         StringBuilder currentSurroundingText = new();
-        bool readingWord = false;
-        bool hasSeenAtLeastOneWord = false;
-        int wordQuestionMarkCount = 0;
-        int i = 0;
+        var readingWord = false;
+        var hasSeenAtLeastOneWord = false;
+        var wordQuestionMarkCount = 0;
+        var i = 0;
         while (i < input.Length)
         {
-            char currentChar = input[i];
+            var currentChar = input[i];
             char peekAhead;
             switch (currentChar)
             {
                 case '=':
-                    peekAhead = (i == input.Length - 1) ? ' ' : input[i + 1];
+                    peekAhead = i == input.Length - 1 ? ' ' : input[i + 1];
                     if (!readingWord && peekAhead == '?')
                     {
                         if (!hasSeenAtLeastOneWord || currentSurroundingText.ToString().Trim().Length > 0)
@@ -41,7 +41,7 @@ public static class RFC2047Decoder
                     if (readingWord)
                     {
                         wordQuestionMarkCount++;
-                        peekAhead = (i == input.Length - 1) ? ' ' : input[i + 1];
+                        peekAhead = i == input.Length - 1 ? ' ' : input[i + 1];
                         if (wordQuestionMarkCount > 3 && peekAhead == '=')
                         {
                             readingWord = false;
@@ -59,7 +59,7 @@ public static class RFC2047Decoder
 
             if (readingWord)
             {
-                currentWord.Append((currentChar == '_') ? ' ' : currentChar);
+                currentWord.Append(currentChar == '_' ? ' ' : currentChar);
             }
             else
             {
@@ -87,27 +87,27 @@ public static class RFC2047Decoder
         }
 
         // Get the name of the encoding but skip the leading =?
-        string encodingName = input[2..input.IndexOf('?', 2)];
-        Encoding enc = Encoding.ASCII;
+        var encodingName = input[2..input.IndexOf('?', 2)];
+        var enc = Encoding.ASCII;
         if (!string.IsNullOrEmpty(encodingName))
         {
             enc = Encoding.GetEncoding(encodingName);
         }
 
         // Get the type of the encoding
-        char type = input[encodingName.Length + 3];
+        var type = input[encodingName.Length + 3];
 
         // Start after the name of the encoding and the other required parts
-        int startPosition = encodingName.Length + 5;
+        var startPosition = encodingName.Length + 5;
         switch (char.ToLowerInvariant(type))
         {
             case 'q':
                 sb.Append(ParseQuotedPrintable(enc, input, startPosition, true));
                 break;
             case 'b':
-                string baseString = input.Substring(startPosition, input.Length - startPosition - 2);
-                byte[] baseDecoded = Convert.FromBase64String(baseString);
-                string intermediate = enc.GetString(baseDecoded);
+                var baseString = input.Substring(startPosition, input.Length - startPosition - 2);
+                var baseDecoded = Convert.FromBase64String(baseString);
+                var intermediate = enc.GetString(baseDecoded);
                 sb.Append(intermediate);
                 break;
         }
@@ -122,17 +122,17 @@ public static class RFC2047Decoder
 
     private static string ParseQuotedPrintable(Encoding enc, string input, int startPos, bool skipQuestionEquals)
     {
-        byte[] workingBytes = Encoding.ASCII.GetBytes(input);
-        int i = startPos;
-        int outputPos = i;
+        var workingBytes = Encoding.ASCII.GetBytes(input);
+        var i = startPos;
+        var outputPos = i;
         Span<char> peekAhead = stackalloc char[2];
         while (i < workingBytes.Length)
         {
-            byte currentByte = workingBytes[i];
+            var currentByte = workingBytes[i];
             switch (currentByte)
             {
                 case (byte)'=':
-                    bool canPeekAhead = i < workingBytes.Length - 2;
+                    var canPeekAhead = i < workingBytes.Length - 2;
                     if (!canPeekAhead)
                     {
                         workingBytes[outputPos] = workingBytes[i];
@@ -141,10 +141,10 @@ public static class RFC2047Decoder
                         break;
                     }
 
-                    int skipNewLineCount = 0;
-                    for (int j = 0; j < 2; ++j)
+                    var skipNewLineCount = 0;
+                    for (var j = 0; j < 2; ++j)
                     {
-                        char c = (char)workingBytes[i + j + 1];
+                        var c = (char)workingBytes[i + j + 1];
                         if (c == '\r' || c == '\n')
                         {
                             ++skipNewLineCount;
@@ -163,7 +163,7 @@ public static class RFC2047Decoder
                         {
                             peekAhead[0] = (char)workingBytes[i + 1];
                             peekAhead[1] = (char)workingBytes[i + 2];
-                            byte decodedByte = byte.Parse(peekAhead, NumberStyles.HexNumber);
+                            var decodedByte = byte.Parse(peekAhead, NumberStyles.HexNumber);
                             workingBytes[outputPos] = decodedByte;
                             ++outputPos;
                             i += 3;
@@ -197,8 +197,8 @@ public static class RFC2047Decoder
             }
         }
 
-        string output = string.Empty;
-        int numBytes = outputPos - startPos;
+        var output = string.Empty;
+        var numBytes = outputPos - startPos;
         if (numBytes > 0)
         {
             output = enc.GetString(workingBytes, startPos, numBytes);

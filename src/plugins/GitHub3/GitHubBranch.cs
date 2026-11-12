@@ -4,14 +4,8 @@ using GitExtensions.Extensibility.Plugins;
 
 namespace GitExtensions.Plugins.GitHub3;
 
-internal sealed class GitHubBranch : IHostedBranch
+internal sealed class GitHubBranch(Branch branch) : IHostedBranch
 {
-    public GitHubBranch(Branch branch)
-    {
-        Name = branch.Name;
-        Sha = ObjectId.Parse(branch.Commit.Sha);
-    }
-
-    public string Name { get; }
-    public ObjectId Sha { get; }
+    string IHostedBranch.Name { get; } = branch.Name;
+    ObjectId IHostedBranch.Sha { get; } = ObjectId.Parse(branch.Commit.Sha);
 }

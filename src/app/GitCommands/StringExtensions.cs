@@ -12,19 +12,22 @@ public static class StringExtensions
     // NOTE ordinal string comparison is the default as most string comparison in GE is against static ASCII output from git.exe
 
     /// <summary>
-    /// Returns <paramref name="str"/> without the mnemonic marker "&amp;".
+    ///     Returns <paramref name="str" /> without the mnemonic marker "&amp;".
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull(nameof(str))]
     public static string? RemoveMnemonicMarker(this string? str)
-        => str?.Replace("&", "");
+    {
+        return str?.Replace("&", "");
+    }
 
     /// <summary>
-    /// Returns <paramref name="str"/> without <paramref name="prefix"/>.
-    /// If <paramref name="prefix"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns <paramref name="str" /> without <paramref name="prefix" />.
+    ///     If <paramref name="prefix" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
-    public static string RemovePrefix(this string str, string prefix, StringComparison comparison = StringComparison.Ordinal)
+    public static string RemovePrefix(this string str, string prefix,
+        StringComparison comparison = StringComparison.Ordinal)
     {
         return str.StartsWith(prefix, comparison)
             ? str[prefix.Length..]
@@ -32,11 +35,12 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns <paramref name="str"/> without <paramref name="suffix"/>.
-    /// If <paramref name="suffix"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns <paramref name="str" /> without <paramref name="suffix" />.
+    ///     If <paramref name="suffix" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
-    public static string RemoveSuffix(this string str, string suffix, StringComparison comparison = StringComparison.Ordinal)
+    public static string RemoveSuffix(this string str, string suffix,
+        StringComparison comparison = StringComparison.Ordinal)
     {
         return str.EndsWith(suffix, comparison)
             ? str[..^suffix.Length]
@@ -44,14 +48,14 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns the substring of <paramref name="str"/> up until (and excluding) the first
-    /// instance of character <paramref name="c"/>.
-    /// If <paramref name="c"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns the substring of <paramref name="str" /> up until (and excluding) the first
+    ///     instance of character <paramref name="c" />.
+    ///     If <paramref name="c" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
     public static string SubstringUntil(this string str, char c)
     {
-        int index = str.IndexOf(c);
+        var index = str.IndexOf(c);
 
         return index != -1
             ? str[..index]
@@ -59,14 +63,14 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns the substring of <paramref name="str"/> up until (and excluding) the last
-    /// instance of character <paramref name="c"/>.
-    /// If <paramref name="c"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns the substring of <paramref name="str" /> up until (and excluding) the last
+    ///     instance of character <paramref name="c" />.
+    ///     If <paramref name="c" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
     public static string SubstringUntilLast(this string str, char c)
     {
-        int index = str.LastIndexOf(c);
+        var index = str.LastIndexOf(c);
 
         return index != -1
             ? str[..index]
@@ -74,14 +78,14 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns the substring of <paramref name="str"/> after (and excluding) the first
-    /// instance of character <paramref name="c"/>.
-    /// If <paramref name="c"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns the substring of <paramref name="str" /> after (and excluding) the first
+    ///     instance of character <paramref name="c" />.
+    ///     If <paramref name="c" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
     public static string SubstringAfter(this string str, char c)
     {
-        int index = str.IndexOf(c);
+        var index = str.IndexOf(c);
 
         return index != -1
             ? str[(index + 1)..]
@@ -89,14 +93,15 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns the substring of <paramref name="str"/> up until (and excluding) the first
-    /// instance of string <paramref name="s"/>.
-    /// If <paramref name="s"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns the substring of <paramref name="str" /> up until (and excluding) the first
+    ///     instance of string <paramref name="s" />.
+    ///     If <paramref name="s" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
-    public static string SubstringAfter(this string str, string s, StringComparison comparison = StringComparison.Ordinal)
+    public static string SubstringAfter(this string str, string s,
+        StringComparison comparison = StringComparison.Ordinal)
     {
-        int index = str.IndexOf(s, comparison);
+        var index = str.IndexOf(s, comparison);
 
         return index != -1
             ? str[(index + s.Length)..]
@@ -104,14 +109,14 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns the substring of <paramref name="str"/> after (and excluding) the last
-    /// instance of character <paramref name="c"/>.
-    /// If <paramref name="c"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns the substring of <paramref name="str" /> after (and excluding) the last
+    ///     instance of character <paramref name="c" />.
+    ///     If <paramref name="c" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
     public static string SubstringAfterLast(this string str, char c)
     {
-        int index = str.LastIndexOf(c);
+        var index = str.LastIndexOf(c);
 
         return index != -1
             ? str[(index + 1)..]
@@ -119,14 +124,15 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns the substring of <paramref name="str"/> up until (and excluding) the last
-    /// instance of string <paramref name="s"/>.
-    /// If <paramref name="s"/> is not found, <paramref name="str"/> is returned unchanged.
+    ///     Returns the substring of <paramref name="str" /> up until (and excluding) the last
+    ///     instance of string <paramref name="s" />.
+    ///     If <paramref name="s" /> is not found, <paramref name="str" /> is returned unchanged.
     /// </summary>
     [Pure]
-    public static string SubstringAfterLast(this string str, string s, StringComparison comparison = StringComparison.Ordinal)
+    public static string SubstringAfterLast(this string str, string s,
+        StringComparison comparison = StringComparison.Ordinal)
     {
-        int index = str.LastIndexOf(s, comparison);
+        var index = str.LastIndexOf(s, comparison);
 
         return index != -1
             ? str[(index + s.Length)..]
@@ -141,9 +147,9 @@ public static class StringExtensions
             return string.Empty;
         }
 
-        int prefixLength = 0;
+        var prefixLength = 0;
 
-        foreach (char c in other)
+        foreach (var c in other)
         {
             if (s.Length <= prefixLength || s[prefixLength] != c)
             {
@@ -163,18 +169,17 @@ public static class StringExtensions
         {
             return right;
         }
-        else if (string.IsNullOrEmpty(right))
+
+        if (string.IsNullOrEmpty(right))
         {
             return left;
         }
-        else
-        {
-            return left + sep + right;
-        }
+
+        return left + sep + right;
     }
 
     /// <summary>
-    /// Quotes this string with the specified <paramref name="q"/>.
+    ///     Quotes this string with the specified <paramref name="q" />.
     /// </summary>
     [Pure]
     public static string Quote(this string? s, string q = "\"")
@@ -188,49 +193,58 @@ public static class StringExtensions
     }
 
     /// <summary>
-    ///  Quotes this string if it is neither null nor empty nor quoted.
+    ///     Quotes this string if it is neither null nor empty nor quoted.
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull(nameof(s))]
-    public static string? QuoteIfNotQuotedAndNE(this string? s, string quote = "\"")
+    public static string? QuoteIfNotQuotedAndNe(this string? s, string quote = "\"")
     {
         return string.IsNullOrEmpty(s) || s.StartsWith(quote) ? s : s.Quote(quote);
     }
 
     /// <summary>
-    ///  Quotes this string if it is not null and not empty.
+    ///     Quotes this string if it is not null and not empty.
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull(nameof(s))]
-    public static string? QuoteNE(this string? s)
+    public static string? QuoteNe(this string? s)
     {
         return string.IsNullOrEmpty(s) ? s : s.Quote();
     }
 
     /// <summary>
-    ///  Escapes this string for use as a command line argument.
+    ///     Escapes this string for use as a command line argument.
     /// </summary>
     [Pure]
     public static string EscapeForCommandLine(this string s, bool? forWindows = null)
     {
-        return (forWindows ?? OperatingSystem.IsWindows()) ? EscapeForWindowsCommandLine(s) : EscapeForPosixCommandLine(s);
+        return forWindows ?? OperatingSystem.IsWindows()
+            ? EscapeForWindowsCommandLine(s)
+            : EscapeForPosixCommandLine(s);
 
-        static string EscapeForWindowsCommandLine(string s) => s.Replace("\"", "\"\"");
-        static string EscapeForPosixCommandLine(string s) => s.Replace(@"\", @"\\").Replace("\"", "\\\"").Replace("'", @"\'");
+        static string EscapeForWindowsCommandLine(string s)
+        {
+            return s.Replace("\"", "\"\"");
+        }
+
+        static string EscapeForPosixCommandLine(string s)
+        {
+            return s.Replace(@"\", @"\\").Replace("\"", "\\\"").Replace("'", @"\'");
+        }
     }
 
     /// <summary>
-    ///  Adds parentheses if string is not null and not empty.
+    ///     Adds parentheses if string is not null and not empty.
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull(nameof(s))]
-    public static string? AddParenthesesNE(this string? s)
+    public static string? AddParenthesesNe(this string? s)
     {
         return string.IsNullOrEmpty(s) ? s : "(" + s + ")";
     }
 
     /// <summary>
-    /// Determines whether the beginning of this instance matches any of the specified strings.
+    ///     Determines whether the beginning of this instance matches any of the specified strings.
     /// </summary>
     /// <param name="starts">array of strings to compare.</param>
     /// <returns>true if any starts element matches the beginning of this string; otherwise, false.</returns>
@@ -254,9 +268,9 @@ public static class StringExtensions
             value = value[..^1];
         }
 
-        StringBuilder sb = new(capacity: value.Length);
+        StringBuilder sb = new(value.Length);
 
-        foreach (string line in value.LazySplit('\n'))
+        foreach (var line in value.LazySplit('\n'))
         {
             if (!shouldRemoveLine(line))
             {
@@ -268,7 +282,7 @@ public static class StringExtensions
     }
 
     /// <summary>
-    ///  Returns the string with quotes removed from start and end (if they existed).
+    ///     Returns the string with quotes removed from start and end (if they existed).
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull(nameof(str))]
@@ -283,8 +297,9 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Shortens <paramref name="str"/> if necessary, so that the resulting string has fewer than <paramref name="maxLength"/> characters.
-    /// If shortened, ellipsis are appended to the truncated string.
+    ///     Shortens <paramref name="str" /> if necessary, so that the resulting string has fewer than
+    ///     <paramref name="maxLength" /> characters.
+    ///     If shortened, ellipsis are appended to the truncated string.
     /// </summary>
     public static string ShortenTo(this string? str, int maxLength)
     {
@@ -307,13 +322,13 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Returns a value indicating whether the <paramref name="other"/> occurs within <paramref name="str"/>.
+    ///     Returns a value indicating whether the <paramref name="other" /> occurs within <paramref name="str" />.
     /// </summary>
     /// <param name="other">The string to seek. </param>
     /// <param name="stringComparison">The Comparison type.</param>
     /// <returns>
-    /// true if the <paramref name="other"/> parameter occurs within <paramref name="str"/>,
-    /// or if <paramref name="other"/> is the empty string (""); otherwise, false.
+    ///     true if the <paramref name="other" /> parameter occurs within <paramref name="str" />,
+    ///     or if <paramref name="other" /> is the empty string (""); otherwise, false.
     /// </returns>
     public static bool Contains(this string str, string other, StringComparison stringComparison)
     {
@@ -321,9 +336,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    ///  Returns a <see langword="null"/> for an empty string. Primarily used to store settings.
+    ///     Returns a <see langword="null" /> for an empty string. Primarily used to store settings.
     /// </summary>
     [Pure]
     public static string? NullIfEmpty(this string? text)
-        => string.IsNullOrEmpty(text) ? null : text;
+    {
+        return string.IsNullOrEmpty(text) ? null : text;
+    }
 }

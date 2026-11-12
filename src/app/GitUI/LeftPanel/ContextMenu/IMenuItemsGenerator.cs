@@ -4,7 +4,7 @@ using GitUI.LeftPanel.Interfaces;
 namespace GitUI.LeftPanel.ContextMenu;
 
 /// <summary>
-/// Builds context menu actions for a <see cref="INode"/> depending on declared interfaces.
+///     Builds context menu actions for a <see cref="INode" /> depending on declared interfaces.
 /// </summary>
 public interface IMenuItemsGenerator<TNode> : IEnumerable<ToolStripItemWithKey>
     where TNode : class, INode
@@ -12,14 +12,8 @@ public interface IMenuItemsGenerator<TNode> : IEnumerable<ToolStripItemWithKey>
     bool TryGetMenuItem(MenuItemKey key, [NotNullWhen(true)] out ToolStripItem? item);
 }
 
-public class ToolStripItemWithKey
+public class ToolStripItemWithKey(MenuItemKey key, ToolStripItem item)
 {
-    public ToolStripItemWithKey(MenuItemKey key, ToolStripItem item)
-    {
-        Key = key;
-        Item = item;
-    }
-
-    public MenuItemKey Key { get; }
-    public ToolStripItem Item { get; }
+    public MenuItemKey Key { get; } = key;
+    public ToolStripItem Item { get; } = item;
 }

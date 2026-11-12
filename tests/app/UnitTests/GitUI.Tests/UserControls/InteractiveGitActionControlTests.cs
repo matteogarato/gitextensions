@@ -4,8 +4,8 @@ namespace GitUITests.UserControls;
 
 public class InteractiveGitActionControlTests : IDisposable
 {
-    private InteractiveGitActionControl _control = null!;
-    private InteractiveGitActionControl.TestAccessor _accessor;
+    private readonly InteractiveGitActionControl.TestAccessor _accessor;
+    private readonly InteractiveGitActionControl _control = null!;
 
     public InteractiveGitActionControlTests()
     {
@@ -13,7 +13,7 @@ public class InteractiveGitActionControlTests : IDisposable
         _accessor = _control.GetTestAccessor();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _control.Dispose();
     }

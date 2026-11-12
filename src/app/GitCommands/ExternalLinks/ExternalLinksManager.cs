@@ -6,9 +6,9 @@ namespace GitCommands.ExternalLinks;
 public sealed class ExternalLinksManager
 {
     private readonly DistributedSettings _cachedSettings;
-    private readonly ExternalLinksManager? _lowerPriority;
-    private readonly IExternalLinksStorage _externalLinksStorage = new ExternalLinksStorage();
     private readonly List<ExternalLinkDefinition> _definitions;
+    private readonly IExternalLinksStorage _externalLinksStorage = new ExternalLinksStorage();
+    private readonly ExternalLinksManager? _lowerPriority;
 
     public ExternalLinksManager(DistributedSettings settings)
     {
@@ -22,7 +22,7 @@ public sealed class ExternalLinksManager
     }
 
     /// <summary>
-    /// Adds the provided definition at the lowest available level.
+    ///     Adds the provided definition at the lowest available level.
     /// </summary>
     /// <param name="definition">External link definition.</param>
     public void Add(ExternalLinkDefinition definition)
@@ -45,31 +45,31 @@ public sealed class ExternalLinksManager
     }
 
     /// <summary>
-    /// Adds the provided definitions at the lowest available level.
+    ///     Adds the provided definitions at the lowest available level.
     /// </summary>
     /// <param name="definitions">External link definitions.</param>
     public void AddRange(IEnumerable<ExternalLinkDefinition> definitions)
     {
         ArgumentNullException.ThrowIfNull(definitions);
 
-        foreach (ExternalLinkDefinition externalLinkDefinition in definitions)
+        foreach (var externalLinkDefinition in definitions)
         {
             Add(externalLinkDefinition);
         }
     }
 
     /// <summary>
-    /// Checks if a definition with the supplied name exists in any level of available settings.
+    ///     Checks if a definition with the supplied name exists in any level of available settings.
     /// </summary>
     /// <param name="definitionName">The name of the definition to find.</param>
-    /// <returns><see langword="true"/> if a definition already exists; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if a definition already exists; otherwise <see langword="false" />.</returns>
     public bool Contains(string? definitionName)
     {
         return _definitions.Any(linkDef => linkDef.Name == definitionName);
     }
 
     /// <summary>
-    /// Loads all settings from all available levels.
+    ///     Loads all settings from all available levels.
     /// </summary>
     /// <returns>A collection of all available definitions.</returns>
     public IReadOnlyList<ExternalLinkDefinition> GetEffectiveSettings()
@@ -80,7 +80,7 @@ public sealed class ExternalLinksManager
     }
 
     /// <summary>
-    /// Removes the supplied definition.
+    ///     Removes the supplied definition.
     /// </summary>
     /// <param name="definition">External link definition.</param>
     public void Remove(ExternalLinkDefinition definition)
@@ -92,7 +92,7 @@ public sealed class ExternalLinksManager
     }
 
     /// <summary>
-    /// Saves the provided external link definitions to the settings.
+    ///     Saves the provided external link definitions to the settings.
     /// </summary>
     public void Save()
     {

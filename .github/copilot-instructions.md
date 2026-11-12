@@ -8,9 +8,12 @@ This repository uses **Docs-Augmented Generation (DAG)**: hierarchical, agent-op
 under [.github/copilot-docs/](copilot-docs/README.md) that let you build accurate context
 incrementally without loading the whole codebase.
 
-- **ALWAYS load the foundation:** [L0 Foundations Primer](copilot-docs/L0-foundations/gitextensions-primer.md) — architecture anchor, glossary, and ownership map. Read it every session.
-- **Navigate via the index:** the master [docs-index.md](copilot-docs/docs-index.md) has the ownership table and reading chains. Read the relevant index and follow a reading chain **before** grep-ing the code.
-- **Layers:** [L1 Conceptual](copilot-docs/L1-conceptual/docs-index.md) · [L2 Core Platform](copilot-docs/L2-core-platform/docs-index.md) · [L3 Flows](copilot-docs/L3-flows/docs-index.md).
+- **ALWAYS load the foundation:** [L0 Foundations Primer](copilot-docs/L0-foundations/gitextensions-primer.md) —
+  architecture anchor, glossary, and ownership map. Read it every session.
+- **Navigate via the index:** the master [docs-index.md](copilot-docs/docs-index.md) has the ownership table and reading
+  chains. Read the relevant index and follow a reading chain **before** grep-ing the code.
+-
+**Layers:** [L1 Conceptual](copilot-docs/L1-conceptual/docs-index.md) · [L2 Core Platform](copilot-docs/L2-core-platform/docs-index.md) · [L3 Flows](copilot-docs/L3-flows/docs-index.md).
 - **Cross-cutting:** [skills](skills/README.md) and [custom agents](agents/README.md).
 
 > **HARD RULE:** for any non-trivial task, first read the L0 primer, then the matching
@@ -31,24 +34,32 @@ git submodule update --init --recursive
 * Files must have CRLF line endings.
 * When creating or modifying code, follow all StyleCop analyzer rules.
 * Test changes locally or verify StyleCop compliance before committing when possible.
-* When reviewing, mention if files in src/app/GitExtensions.Extensibility/ are modified, as these affect the plugin interface version in https://github.com/gitextensions/gitextensions.extensibility.
+* When reviewing, mention if files in src/app/GitExtensions.Extensibility/ are modified, as these affect the plugin
+  interface version in https://github.com/gitextensions/gitextensions.extensibility.
 
 ## Comments
 
-* Add const with speaking name instead of using magic numbers or repeated string literals. Avoid hard-to-maintain comments which contain the magic number again.
+* Add const with speaking name instead of using magic numbers or repeated string literals. Avoid hard-to-maintain
+  comments which contain the magic number again.
 * When a string literal is used more than once in a class, extract it into a `const` field with a descriptive name.
 * When writing new comments, describe _why_ an implementation was chosen rather than _what_ is done.
-* Do not delete or modify existing comments unless they are factually incorrect. These guidelines apply to new code only.
+* Do not delete or modify existing comments unless they are factually incorrect. These guidelines apply to new code
+  only.
 
 ## XML Doc Comments
 
-* Use XML documentation comments for non-private APIs, including properties, methods, and classes. Do not remove existing XML documentation comments from private members.
+* Use XML documentation comments for non-private APIs, including properties, methods, and classes. Do not remove
+  existing XML documentation comments from private members.
 * Do not add `/// <inheritdoc />` nor other xmldoc when just implementing interface or abstract members.
 * Do not add XML documentation comments to `TestAccessor` structs or their members.
 * Use correct xmldoc tags, as well as "see", "langword", and "paramref" tags where appropriate.
-* Use single-line tags for simple XML comments, such as for the `<returns>` or `<params>` tag. Always use multi-line comment for `<summary>`, `<remarks>` and everything else.
-* When adding multi-line XML documentation comments, add an extra space after the `///` *within* the tags to ensure proper formatting and readability. However, do not add a space after the opening `///` tag in the single-line comments.
-For example:
+* Use single-line tags for simple XML comments, such as for the `<returns>` or `<params>` tag. Always use multi-line
+  comment for `<summary>`, `<remarks>` and everything else.
+* When adding multi-line XML documentation comments, add an extra space after the `///` *within* the tags to ensure
+  proper formatting and readability. However, do not add a space after the opening `///` tag in the single-line
+  comments.
+  For example:
+
 ```csharp
 /// <summary>
 ///  This is a summary of the method.
@@ -60,8 +71,10 @@ For example:
 
 * Apply code-formatting style defined in `.editorconfig`.
 * Prefer file-scoped namespace declarations and single-line `using` declarations.
-* Order `using` directives alphabetically by namespace, with `System.*` directives first (StyleCop SA1208/SA1210). When adding a new `using`, insert it at the correct alphabetical position rather than appending it to the end of the list.
-* Insert a newline before the opening curly brace of any code block (e.g., after `if`, `for`, `while`, `foreach`, `using`, `try`, etc.).
+* Order `using` directives alphabetically by namespace, with `System.*` directives first (StyleCop SA1208/SA1210). When
+  adding a new `using`, insert it at the correct alphabetical position rather than appending it to the end of the list.
+* Insert a newline before the opening curly brace of any code block (e.g., after `if`, `for`, `while`, `foreach`,
+  `using`, `try`, etc.).
 * Ensure that the final return statement of a method is on its own line.
 * Use pattern matching and switch expressions wherever possible.
 * Use `nameof` instead of string literals when referring to code symbols.
@@ -69,7 +82,7 @@ For example:
     - placed at the end of the parent method,
     - sorted in alphabetical order,
     - preceded with a `return` statement.
-  For example:
+      For example:
   ```cs
   private void MyMethod()
   {
@@ -88,38 +101,43 @@ For example:
 
 ## Variable Declarations
 
-* Never use `var` for primitive types. Use `var` only when the type is obvious from context. When in doubt, opt for an explicit type declaration.
-* Prefer simplified "new()" construct over to "new MyType()" where the type is already declared.
-  For example: "MyType t = new()" instead of "var t = new MyType()" or "MyType t = new MyType()".
+* Never use `var` for primitive types. Use `var` only when the type is obvious from context. When in doubt, opt for an
+  explicit type declaration.
+* Prefer simplified "new ()" construct over to "new MyType ()" where the type is already declared.
+  For example: "MyType t = new ()" instead of "var t = new MyType ()" or "MyType t = new MyType ()".
 
 ## Nullable Reference Types
 
 * Declare variables non-nullable, and check for `null` at entry points.
 * Always use `is null` or `is not null` instead of `== null` or `!= null`.
 * Trust the C# null annotations and don't add null checks when the type system says a value cannot be null.
-* Avoid null-forgiving (`!`) suppressions. Prefer making nullability explicit in the type system — for example, by declaring a parameter or property as nullable, adding a null guard, or restructuring code so that null states are unrepresentable. Use `!` only as a last resort when the type system cannot express a known invariant.
-* When modifying code that contains existing `!` suppressions, look for opportunities to remove them safely. Use `Validates.NotNull` for runtime null checks where a value is expected to be non-null but the type system cannot prove it.
+* Avoid null-forgiving (`!`) suppressions. Prefer making nullability explicit in the type system — for example, by
+  declaring a parameter or property as nullable, adding a null guard, or restructuring code so that null states are
+  unrepresentable. Use `!` only as a last resort when the type system cannot express a known invariant.
+* When modifying code that contains existing `!` suppressions, look for opportunities to remove them safely. Use
+  `Validates.NotNull` for runtime null checks where a value is expected to be non-null but the type system cannot prove
+  it.
 
 ## constants
 
 * In GitExtensions, libraries may be used by plugins, also not in GitExtensions.Extensibility.
-  Prefix/suffix string members must remain public static string auto-properties
-  (not const), because const would inline values into dependent plugin assemblies
+  Prefix/suffix string members must remain public static string auto-properties (not const), because const would inline
+  values into dependent plugin assemblies
   and break binary compatibility.
 
 ## WinForms UI
 
 * Follow the naming conventions in `.github/ui_design_guidelines.md` for all WinForms controls:
-  - Label: `lbl` prefix (e.g. `lblMainText`)
-  - Button: `btn` prefix (e.g. `btnAccept`)
-  - TextBox: `txt` prefix (e.g. `txtBranchName`)
-  - ComboBox: `cbx` prefix (e.g. `cbxOrders`)
-  - CheckBox: `chk` prefix (e.g. `chkOpenWorktree`)
-  - RadioButton: `rb` prefix (e.g. `rbCheckoutExisting`)
-  - GroupBox: `gbx` prefix (e.g. `gbxOrderDetails`)
-  - TableLayoutPanel: `tlpnl` prefix (e.g. `tlpnlMain`)
-  - FlowLayoutPanel: `flpnl` prefix (e.g. `flpnlLocalOptions`)
-  - LinkLabel: `lnk` prefix (e.g. `lnkTokenManagement`)
+    - Label: `lbl` prefix (e.g. `lblMainText`)
+    - Button: `btn` prefix (e.g. `btnAccept`)
+    - TextBox: `txt` prefix (e.g. `txtBranchName`)
+    - ComboBox: `cbx` prefix (e.g. `cbxOrders`)
+    - CheckBox: `chk` prefix (e.g. `chkOpenWorktree`)
+    - RadioButton: `rb` prefix (e.g. `rbCheckoutExisting`)
+    - GroupBox: `gbx` prefix (e.g. `gbxOrderDetails`)
+    - TableLayoutPanel: `tlpnl` prefix (e.g. `tlpnlMain`)
+    - FlowLayoutPanel: `flpnl` prefix (e.g. `flpnlLocalOptions`)
+    - LinkLabel: `lnk` prefix (e.g. `lnkTokenManagement`)
 
 ## Testing
 
@@ -135,25 +153,38 @@ For example:
 * Do not repeat in a comment what the test name already expresses.
 * Use `NSubstitute` for mocking.
 * Use `AwesomeAssertions` for assertions, i.e. do not use `ClassicAssert`.
-* When you encounter a flaky test failure, take the time to understand the root cause and fix it. Do not dismiss it as a pre-existing issue. Flaky tests erode confidence and should be fixed or removed.
+* When you encounter a flaky test failure, take the time to understand the root cause and fix it. Do not dismiss it as a
+  pre-existing issue. Flaky tests erode confidence and should be fixed or removed.
 
 ## Commit Messages
 
 * Use https://www.conventionalcommits.org/en/v1.0.0/ for commit messages.
-* Note especially that changes in directory src/app/GitExtensions.Extensibility affects the version for the plugin interface. This must be annotated in the commit message.
+* Note especially that changes in directory src/app/GitExtensions.Extensibility affects the version for the plugin
+  interface. This must be annotated in the commit message.
 
 ## Translations
 
-* When adding or modifying UI elements (forms, controls, toolbar items, menu items, or `TranslationString` fields), the English translation file `src/app/GitUI/Translation/English.xlf` must be updated.
-* Run `.\update-loc.cmd` from the repository root to regenerate translation files. This requires a successful build first (`dotnet build /v:q`).
-* The script runs `TranslationApp`, which discovers all translatable types via reflection, regenerates `English.xlf`, and stages the changes.
-* CI will **fail** if `English.xlf` is out of date. Always run `update-loc.cmd` and commit the updated `.xlf` file alongside your code changes.
+* When adding or modifying UI elements (forms, controls, toolbar items, menu items, or `TranslationString` fields), the
+  English translation file `src/app/GitUI/Translation/English.xlf` must be updated.
+* Run `.\update-loc.cmd` from the repository root to regenerate translation files. This requires a successful build
+  first (`dotnet build /v:q`).
+* The script runs `TranslationApp`, which discovers all translatable types via reflection, regenerates `English.xlf`,
+  and stages the changes.
+* CI will **fail** if `English.xlf` is out of date. Always run `update-loc.cmd` and commit the updated `.xlf` file
+  alongside your code changes.
 * Do not manually edit `.xlf` files — they are generated.
 
 ## Git Commands
 
 * All interactive git operations should be invoked through `IGitModule`, with unit tests added.
-* Structure git command arguments using `Commands` (in `GitCommands.Git`), which returns `IGitCommand` instances via the private `GitCommand` record. `IGitCommand` declares whether the command accesses a remote and whether it changes repo state.
-* Execute commands with UI feedback through `GitUICommands` (implements `IGitUICommands`). Use `StartCommandLineProcessDialog(owner, IGitCommand)` to run a structured command — it automatically selects the right process dialog (remote vs local) and fires `RepoChangedNotifier` based on `IGitCommand.ChangesRepoState`. For operations that need a dedicated form, use the existing `Start*Dialog` methods on `GitUICommands`.
-* Prefer the `-z` flag when available (e.g. `git worktree list`, `git status`) to use NUL-delimited output, which avoids issues with newlines or special characters in paths.
-* When parsing NUL or line-delimited git output that contains key-value pairs (e.g. `worktree /path/to/dir`), split on the first space only to handle values that contain spaces.
+* Structure git command arguments using `Commands` (in `GitCommands.Git`), which returns `IGitCommand` instances via the
+  private `GitCommand` record. `IGitCommand` declares whether the command accesses a remote and whether it changes repo
+  state.
+* Execute commands with UI feedback through `GitUICommands` (implements `IGitUICommands`). Use
+  `StartCommandLineProcessDialog(owner, IGitCommand)` to run a structured command — it automatically selects the right
+  process dialog (remote vs local) and fires `RepoChangedNotifier` based on `IGitCommand.ChangesRepoState`. For
+  operations that need a dedicated form, use the existing `Start*Dialog` methods on `GitUICommands`.
+* Prefer the `-z` flag when available (e.g. `git worktree list`, `git status`) to use NUL-delimited output, which avoids
+  issues with newlines or special characters in paths.
+* When parsing NUL or line-delimited git output that contains key-value pairs (e.g. `worktree /path/to/dir`), split on
+  the first space only to handle values that contain spaces.

@@ -1,4 +1,6 @@
 ﻿using GitUI.Editor;
+using GitUI.UserControls;
+using GitUI.UserControls.RevisionGrid;
 
 namespace GitUI.CommandsDialogs;
 
@@ -12,7 +14,7 @@ partial class FormFileHistory
     {
         components = new System.ComponentModel.Container();
         splitContainer1 = new SplitContainer();
-        RevisionGrid = new GitUI.RevisionGridControl();
+        RevisionGrid = new RevisionGridControl();
         FileHistoryContextMenu = new ContextMenuStrip(components);
         copyToClipboardToolStripMenuItem = new GitUI.UserControls.RevisionGrid.CopyContextMenuItem();
         separatorAfterCopySubmenu = new ToolStripSeparator();
@@ -35,7 +37,7 @@ partial class FormFileHistory
         ViewTab = new TabPage();
         View = new GitUI.Editor.FileViewer();
         BlameTab = new TabPage();
-        Blame = new GitUI.Blame.BlameControl();
+        Blame = new BlameControl();
         ToolStripFilters = new GitUI.UserControls.FilterToolBar();
         toolStripSeparator3 = new ToolStripSeparator();
         toolStripSplitLoad = new ToolStripSplitButton();
@@ -539,7 +541,7 @@ partial class FormFileHistory
     private RevisionGridControl RevisionGrid;
     private ContextMenuStrip FileHistoryContextMenu;
     private ToolStripMenuItem openWithDifftoolToolStripMenuItem;
-    private Blame.BlameControl Blame;
+    private BlameControl Blame;
     private ToolStripMenuItem saveAsToolStripMenuItem;
     private ToolStripSeparator toolStripSeparator1;
     private ToolStripMenuItem followFileHistoryToolStripMenuItem;

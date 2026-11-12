@@ -1,17 +1,18 @@
-﻿using ConEmu.WinForms;
-using GitCommands;
+﻿using ConEmuWinForms;
 using GitUI.ConsoleEmulation;
 using GitUI.ConsoleEmulation.ConEmu;
+using GitModule = GitCommands.Git.GitModule;
 
 namespace GitUITests.UserControls;
+
 public class ConsoleEmulatorOutputControllerFixture
 {
     [Fact]
     public void FilterOutConsoleCommandLine_NoFlush()
     {
-        string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
-        string outputData = "output data";
-        string received = string.Empty;
+        var cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
+        var outputData = "output data";
+        var received = string.Empty;
 
         void FireDataReceived(ConsoleOutputEventArgs e)
         {
@@ -20,8 +21,8 @@ public class ConsoleEmulatorOutputControllerFixture
 
         ConsoleCommandLineOutputProcessor filter = new(cmd.Length, FireDataReceived);
 
-        string chunk1 = cmd[..10];
-        string chunk2 = cmd[10..] + Environment.NewLine + outputData;
+        var chunk1 = cmd[..10];
+        var chunk2 = cmd[10..] + Environment.NewLine + outputData;
         filter.AnsiStreamChunkReceived(null!, new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk1)));
         filter.AnsiStreamChunkReceived(null!, new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk2)));
 
@@ -31,9 +32,9 @@ public class ConsoleEmulatorOutputControllerFixture
     [Fact]
     public void FilterOutConsoleCommandLine_Flush()
     {
-        string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
-        string outputData = "output data";
-        string received = string.Empty;
+        var cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
+        var outputData = "output data";
+        var received = string.Empty;
 
         void FireDataReceived(ConsoleOutputEventArgs e)
         {
@@ -42,8 +43,8 @@ public class ConsoleEmulatorOutputControllerFixture
 
         ConsoleCommandLineOutputProcessor filter = new(cmd.Length, FireDataReceived);
 
-        string chunk1 = cmd[..10];
-        string chunk2 = cmd[10..] + Environment.NewLine + outputData;
+        var chunk1 = cmd[..10];
+        var chunk2 = cmd[10..] + Environment.NewLine + outputData;
         filter.AnsiStreamChunkReceived(null!, new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk1)));
         filter.AnsiStreamChunkReceived(null!, new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk2)));
         filter.Flush();
@@ -54,7 +55,7 @@ public class ConsoleEmulatorOutputControllerFixture
     [Fact]
     public void PercentageOutput()
     {
-        string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
+        var cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
 
         string[] outputData =
         [
@@ -76,9 +77,10 @@ public class ConsoleEmulatorOutputControllerFixture
 
         ConsoleCommandLineOutputProcessor filter = new(cmd.Length, FireDataReceived);
 
-        foreach (string chunk in outputData)
+        foreach (var chunk in outputData)
         {
-            filter.AnsiStreamChunkReceived(null!, new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk)));
+            filter.AnsiStreamChunkReceived(null!,
+                new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk)));
         }
 
         filter.Flush();
@@ -97,9 +99,9 @@ public class ConsoleEmulatorOutputControllerFixture
     }
 
     [Fact]
-    public void CRLFInOutput()
+    public void CrlfInOutput()
     {
-        string cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
+        var cmd = "\"C:\\Program Files\\Git\\bin\\git.exe\" rebase  -i --autosquash --autostash \"branch_foo\"";
 
         string[] outputData =
         [
@@ -121,9 +123,10 @@ public class ConsoleEmulatorOutputControllerFixture
 
         ConsoleCommandLineOutputProcessor filter = new(cmd.Length, FireDataReceived);
 
-        foreach (string chunk in outputData)
+        foreach (var chunk in outputData)
         {
-            filter.AnsiStreamChunkReceived(null!, new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk)));
+            filter.AnsiStreamChunkReceived(null!,
+                new AnsiStreamChunkEventArgs(GitModule.SystemEncoding.GetBytes(chunk)));
         }
 
         filter.Flush();

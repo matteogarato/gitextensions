@@ -1,4 +1,3 @@
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Configurations;
@@ -26,7 +25,7 @@ internal static class SubmoduleWorkflow
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(submodule);
 
-        ISubmodulesConfigFile submoduleConfigFile = module.GetSubmodulesConfigFile();
+        var submoduleConfigFile = module.GetSubmodulesConfigFile();
         module.UnstageFile(submodule.LocalPath);
         submoduleConfigFile.RemoveConfigSection($"submodule \"{submodule.Name}\"");
         submoduleConfigFile.Save();

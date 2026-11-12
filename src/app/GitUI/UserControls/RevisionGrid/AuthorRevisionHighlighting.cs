@@ -1,9 +1,8 @@
 ﻿using GitCommands.Config;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using JetBrains.Annotations;
 
-namespace GitUI.UserControls;
+namespace GitUI.UserControls.RevisionGrid;
 
 internal sealed class AuthorRevisionHighlighting
 {
@@ -11,16 +10,18 @@ internal sealed class AuthorRevisionHighlighting
 
     /// <returns><c>true</c> if the UI should be refreshed in response to this change.</returns>
     [MustUseReturnValue]
-    public bool ProcessRevisionSelectionChange(IGitModule currentModule, IReadOnlyCollection<GitRevision> selectedRevisions)
+    public bool ProcessRevisionSelectionChange(IGitModule currentModule,
+        IReadOnlyCollection<GitRevision> selectedRevisions)
     {
         if (selectedRevisions.Count > 1)
         {
             return false;
         }
 
-        GitRevision? revision = selectedRevisions.FirstOrDefault();
+        var revision = selectedRevisions.FirstOrDefault();
 
-        bool changed = !string.Equals(revision?.AuthorEmail, AuthorEmailToHighlight, StringComparison.OrdinalIgnoreCase);
+        var changed = !string.Equals(revision?.AuthorEmail, AuthorEmailToHighlight,
+            StringComparison.OrdinalIgnoreCase);
         if (changed)
         {
             AuthorEmailToHighlight = revision is not null

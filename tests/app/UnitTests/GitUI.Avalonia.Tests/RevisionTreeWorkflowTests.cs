@@ -1,20 +1,19 @@
-using AwesomeAssertions;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
 using NSubstitute;
 
-namespace GitUI.Avalonia.Tests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class RevisionTreeWorkflowTests
 {
     [Fact]
     public void Sort_should_list_directories_first_and_strip_the_directory_prefix()
     {
-        IObjectGitItem file = Item("src/b.cs", GitObjectType.Blob);
-        IObjectGitItem folder = Item("src/z", GitObjectType.Tree);
-        IObjectGitItem other = Item("src/A.cs", GitObjectType.Blob);
+        var file = Item("src/b.cs", GitObjectType.Blob);
+        var folder = Item("src/z", GitObjectType.Tree);
+        var other = Item("src/A.cs", GitObjectType.Blob);
 
-        IReadOnlyList<RevisionTreeEntry> entries = RevisionTreeWorkflow.Sort([file, folder, other], "src");
+        var entries = RevisionTreeWorkflow.Sort([file, folder, other], "src");
 
         entries.Select(entry => entry.DisplayName).Should().Equal("z", "A.cs", "b.cs");
         entries[0].Path.Should().Be("src/z");
@@ -32,7 +31,7 @@ public sealed class RevisionTreeWorkflowTests
 
     private static IObjectGitItem Item(string name, GitObjectType type)
     {
-        IObjectGitItem item = Substitute.For<IObjectGitItem>();
+        var item = Substitute.For<IObjectGitItem>();
         item.Name.Returns(name);
         item.ObjectType.Returns(type);
         return item;

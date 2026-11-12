@@ -1,8 +1,7 @@
 using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Git;
 using GitCommands.Remotes;
 using GitExtensions.Extensibility.Settings;
-using GitUI;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using ResourceManager;
 
@@ -13,7 +12,7 @@ namespace GitExtensions.Plugins.GitHubActionsIntegration.Settings;
 [PartCreationPolicy(CreationPolicy.NonShared)]
 public partial class GitHubActionsSettingsUserControl : GitExtensionsControl, IBuildServerSettingsUserControl
 {
-    private const string DefaultApiUrl = "https://api.github.com";
+    private const string _defaultApiUrl = "https://api.github.com";
 
     private readonly GitHubRemoteParser _remoteParser = new();
 
@@ -23,12 +22,12 @@ public partial class GitHubActionsSettingsUserControl : GitExtensionsControl, IB
         InitializeComplete();
     }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
-        foreach (string? remote in remotes)
+        foreach (var remote in remotes)
         {
             if (remote is not null
-                && _remoteParser.TryExtractGitHubDataFromRemoteUrl(remote, out string? owner, out string? repository))
+                && _remoteParser.TryExtractGitHubDataFromRemoteUrl(remote, out var owner, out var repository))
             {
                 txtOwner.Text = owner;
                 txtRepository.Text = repository;
@@ -37,14 +36,14 @@ public partial class GitHubActionsSettingsUserControl : GitExtensionsControl, IB
         }
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
     {
-        string? apiUrl = buildServerConfig.GetString(GitHubActionsAdapter.SettingApiUrl, null);
-        string? owner = buildServerConfig.GetString(GitHubActionsAdapter.SettingOwner, null);
-        string? repository = buildServerConfig.GetString(GitHubActionsAdapter.SettingRepository, null);
-        string? apiToken = buildServerConfig.GetString(GitHubActionsAdapter.SettingApiToken, null);
+        var apiUrl = buildServerConfig.GetString(GitHubActionsAdapter.SettingApiUrl, null);
+        var owner = buildServerConfig.GetString(GitHubActionsAdapter.SettingOwner, null);
+        var repository = buildServerConfig.GetString(GitHubActionsAdapter.SettingRepository, null);
+        var apiToken = buildServerConfig.GetString(GitHubActionsAdapter.SettingApiToken, null);
 
-        txtApiUrl.Text = apiUrl ?? DefaultApiUrl;
+        txtApiUrl.Text = apiUrl ?? _defaultApiUrl;
 
         if (!string.IsNullOrWhiteSpace(owner))
         {
@@ -59,10 +58,10 @@ public partial class GitHubActionsSettingsUserControl : GitExtensionsControl, IB
         txtApiToken.Text = apiToken;
     }
 
-    public void SaveSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
     {
-        string? apiUrl = txtApiUrl.Text.Trim().TrimEnd('/').NullIfEmpty();
-        if (string.Equals(apiUrl, DefaultApiUrl, StringComparison.OrdinalIgnoreCase))
+        var apiUrl = txtApiUrl.Text.Trim().TrimEnd('/').NullIfEmpty();
+        if (string.Equals(apiUrl, _defaultApiUrl, StringComparison.OrdinalIgnoreCase))
         {
             apiUrl = null;
         }

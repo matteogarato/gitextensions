@@ -5,28 +5,29 @@ using NSubstitute;
 using ResourceManager;
 
 namespace GitUITests.LeftPanel;
+
 public class GitRefMenuItemsTest : IDisposable
 {
-    private const int expectedMenuItems = 7;
-    private const int expectedTotal = expectedMenuItems + 1; // + end separator
-    private Queue<ToolStripMenuItem> _factoryQueue = new();
-    private IMenuItemFactory _factory = null!;
-    private TestBranchNode _testNode = new();
+    private const int _expectedMenuItems = 7;
+    private const int _expectedTotal = _expectedMenuItems + 1; // + end separator
+    private readonly IMenuItemFactory _factory = null!;
+    private readonly Queue<ToolStripMenuItem> _factoryQueue = new();
+    private readonly TestBranchNode _testNode = new();
 
     public GitRefMenuItemsTest()
     {
         _factory = Substitute.For<IMenuItemFactory>();
         _factory.CreateMenuItem<ToolStripMenuItem, TestBranchNode>(
-            Arg.Do<Action<TestBranchNode>>(arg => _factoryQueue.Peek().Click += (sender, e) => arg(_testNode)),
-            Arg.Any<TranslationString>(),
-            Arg.Any<TranslationString>(),
-            Arg.Any<Bitmap>())
+                Arg.Do<Action<TestBranchNode>>(arg => _factoryQueue.Peek().Click += (sender, e) => arg(_testNode)),
+                Arg.Any<TranslationString>(),
+                Arg.Any<TranslationString>(),
+                Arg.Any<Bitmap>())
             .Returns(_ => _factoryQueue.Dequeue());
 
-        Enumerable.Range(0, expectedMenuItems).ForEach(_ => _factoryQueue.Enqueue(new ToolStripMenuItem()));
+        Enumerable.Range(0, _expectedMenuItems).ForEach(_ => _factoryQueue.Enqueue(new ToolStripMenuItem()));
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         while (_factoryQueue.Count > 0)
         {
@@ -38,7 +39,7 @@ public class GitRefMenuItemsTest : IDisposable
     public void WithInactiveLocalBranch_HasAllMenuItems()
     {
         // Arrange
-        MenuItemsGenerator<TestBranchNode> group = CreateGenerator(_factory);
+        var group = CreateGenerator(_factory);
         new LocalBranchMenuItemsStrings().ApplyTo(group.Strings);
         WithRefMenu_HasAllItems(group);
     }
@@ -47,7 +48,7 @@ public class GitRefMenuItemsTest : IDisposable
     public void WithRemoteBranch_HasAllMenuItems()
     {
         // Arrange
-        MenuItemsGenerator<TestBranchNode> group = CreateGenerator(_factory);
+        var group = CreateGenerator(_factory);
         new RemoteBranchMenuItemsStrings().ApplyTo(group.Strings);
         WithRefMenu_HasAllItems(group);
     }
@@ -56,7 +57,7 @@ public class GitRefMenuItemsTest : IDisposable
     public void WithTagNode_HasAllMenuItems()
     {
         // Arrange
-        MenuItemsGenerator<TestBranchNode> group = CreateGenerator(_factory);
+        var group = CreateGenerator(_factory);
         new TagMenuItemsStrings().ApplyTo(group.Strings);
 
         // mock rename to keep the test simple
@@ -69,8 +70,8 @@ public class GitRefMenuItemsTest : IDisposable
         // Act
         ToolStripItemWithKey[] menuItems = [.. group];
         _factoryQueue.Should().BeEmpty();
-        expectedTotal.Should().Be(menuItems.Length);
-        int testIndex = 0;
+        _expectedTotal.Should().Be(menuItems.Length);
+        var testIndex = 0;
         AssertItem(menuItems[testIndex++], nameof(TestBranchNode.Checkout));
         AssertItem(menuItems[testIndex++], nameof(TestBranchNode.Merge));
         AssertItem(menuItems[testIndex++], nameof(TestBranchNode.Rebase));
@@ -89,10 +90,11 @@ public class GitRefMenuItemsTest : IDisposable
 
         // Act
         const int expectedEnabled = 2; // create branch, rename
-        int expectedDisabled = expectedTotal - expectedEnabled;
-        ToolStripItemWithKey[] disabledItems = [.. generator.Where(t => !LocalBranchMenuItems<TestBranchNode>.CurrentBranchItemKeys.Contains(t.Key))];
+        var expectedDisabled = _expectedTotal - expectedEnabled;
+        ToolStripItemWithKey[] disabledItems =
+            [.. generator.Where(t => !LocalBranchMenuItems<TestBranchNode>.CurrentBranchItemKeys.Contains(t.Key))];
         expectedDisabled.Should().Be(disabledItems.Length);
-        int testIndex = 0;
+        var testIndex = 0;
         AssertItem(disabledItems[testIndex++], nameof(TestBranchNode.Checkout));
         AssertItem(disabledItems[testIndex++], nameof(TestBranchNode.Merge));
         AssertItem(disabledItems[testIndex++], nameof(TestBranchNode.Rebase));
@@ -103,7 +105,7 @@ public class GitRefMenuItemsTest : IDisposable
 
     private void AssertItem(ToolStripItemWithKey menuItem, string caption)
     {
-        ToolStripMenuItem? item = menuItem.Item as ToolStripMenuItem;
+        var item = menuItem.Item as ToolStripMenuItem;
         item!.PerformClick();
         _testNode.CallStatck.Pop().Should().Be(caption);
     }
@@ -116,40 +118,44 @@ public class GitRefMenuItemsTest : IDisposable
     // can't use a substitute here because of class constraint on INode
     public class TestBranchNode : INode, IGitRefActions, ICanDelete, ICanRename
     {
-        public Stack<string> CallStatck { get; } = new Stack<string>();
-        public string FullPath => throw new NotImplementedException();
+        public Stack<string> CallStatck { get; } = new();
 
-        public bool Checkout()
+        bool ICanDelete.Delete()
         {
             return Trace();
         }
 
-        public bool CreateBranch()
+        bool ICanRename.Rename()
         {
             return Trace();
         }
 
-        public bool Delete()
+        string IGitRefActions.FullPath
+        {
+            get => throw new NotImplementedException();
+        }
+
+        bool IGitRefActions.Checkout()
         {
             return Trace();
         }
 
-        public bool Merge()
+        bool IGitRefActions.CreateBranch()
         {
             return Trace();
         }
 
-        public bool Rebase()
+        bool IGitRefActions.Merge()
         {
             return Trace();
         }
 
-        public bool Rename()
+        bool IGitRefActions.Rebase()
         {
             return Trace();
         }
 
-        public bool Reset()
+        bool IGitRefActions.Reset()
         {
             return Trace();
         }

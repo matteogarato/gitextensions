@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -5,7 +6,7 @@ using Avalonia.Layout;
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  A minimal modal dialog asking for a single line of text.
+///     A minimal modal dialog asking for a single line of text.
 /// </summary>
 public sealed class TextPromptWindow : Window
 {
@@ -13,11 +14,12 @@ public sealed class TextPromptWindow : Window
     private readonly Func<string, string>? _normaliseOnLostFocus;
 
     public TextPromptWindow(string title, string prompt, string initialText = "")
-        : this(title, prompt, initialText, normaliseOnLostFocus: null)
+        : this(title, prompt, initialText, null)
     {
     }
 
-    internal TextPromptWindow(string title, string prompt, string initialText, Func<string, string>? normaliseOnLostFocus)
+    internal TextPromptWindow(string title, string prompt, string initialText,
+        Func<string, string>? normaliseOnLostFocus)
     {
         Title = title;
         SizeToContent = SizeToContent.WidthAndHeight;
@@ -46,7 +48,7 @@ public sealed class TextPromptWindow : Window
 
         Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             Spacing = 8,
             Children =
             {
@@ -57,9 +59,9 @@ public sealed class TextPromptWindow : Window
                     Orientation = Orientation.Horizontal,
                     HorizontalAlignment = HorizontalAlignment.Right,
                     Spacing = 8,
-                    Children = { accept, cancel },
-                },
-            },
+                    Children = { accept, cancel }
+                }
+            }
         };
     }
 
@@ -70,7 +72,7 @@ public sealed class TextPromptWindow : Window
             return;
         }
 
-        int caretIndex = _input.CaretIndex;
+        var caretIndex = _input.CaretIndex;
         _input.Text = _normaliseOnLostFocus(_input.Text ?? string.Empty);
         _input.CaretIndex = Math.Min(caretIndex, _input.Text.Length);
     }

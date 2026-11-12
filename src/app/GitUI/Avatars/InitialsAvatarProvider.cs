@@ -1,46 +1,53 @@
 ﻿using System.Drawing.Drawing2D;
 using System.Drawing.Text;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtUtils.GitUI.Theming;
-using Microsoft;
 
 namespace GitUI.Avatars;
 
 /// <summary>
-/// A provider that generates avatar images based on the initials of the user.
+///     A provider that generates avatar images based on the initials of the user.
 /// </summary>
 public class InitialsAvatarProvider : IAvatarProvider
 {
     private const float _fontSizeEstimation = 20f;
-    private int _unkownCounter = 0;
     private static readonly char[] _emailInitialSeparator = ['.', '-', '_'];
-    private FontFamily? _fontFamily;
+
+    private readonly (Brush foregroundBrush, Color backgroundColor)[] _avatarColors =
+        [.. AppSettings.AvatarAuthorInitialsPalette.Split(',').Select(GetAvatarDrawingMaterial)];
+
     private Font? _estimationFont;
+    private FontFamily? _fontFamily;
+    private int _unkownCounter;
 
     public InitialsAvatarProvider()
     {
         UpdateFontsSettings();
     }
 
-    /// <inheritdoc/>
-    public Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    /// <inheritdoc />
+    Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
     {
-        (string initials, int colorIndex) = GetInitialsAndColorIndex(email, name);
+        var (initials, colorIndex) = GetInitialsAndColorIndex(email, name);
 
-        (Brush foregroundBrush, Color backgroundColor) = _avatarColors[colorIndex];
-        Image avatar = DrawText(initials, foregroundBrush, backgroundColor, imageSize);
+        var (foregroundBrush, backgroundColor) = _avatarColors[colorIndex];
+        var avatar = DrawText(initials, foregroundBrush, backgroundColor, imageSize);
 
         return Task.FromResult<Image?>(avatar);
     }
 
-    public bool PerformsIo => false;
+    bool IAvatarProvider.PerformsIo
+    {
+        get => false;
+    }
 
     /// <summary>
-    /// Calculate the most simpler non-cryptographic deterministic hash (to get the same result every times it is calculated for the same string)
-    /// We just need an inexpensive way to convert a string to an integer, and calculating a hash is a good way to do it.
-    /// We are not using <c>GetHashCode()</c> because it returns a different value for each process.
-    /// Borrowed from https://stackoverflow.com/a/5155015
+    ///     Calculate the most simpler non-cryptographic deterministic hash (to get the same result every times it is
+    ///     calculated for the same string)
+    ///     We just need an inexpensive way to convert a string to an integer, and calculating a hash is a good way to do it.
+    ///     We are not using <c>GetHashCode()</c> because it returns a different value for each process.
+    ///     Borrowed from https://stackoverflow.com/a/5155015
     /// </summary>
     /// <param name="str">The string to calculate a hash for.</param>
     /// <returns>The calculated hash.</returns>
@@ -48,8 +55,8 @@ public class InitialsAvatarProvider : IAvatarProvider
     {
         unchecked
         {
-            int hash = 23;
-            foreach (char c in str)
+            var hash = 23;
+            foreach (var c in str)
             {
                 hash = (hash * 31) + c;
             }
@@ -60,15 +67,15 @@ public class InitialsAvatarProvider : IAvatarProvider
 
     protected internal (string initials, int hashCode) GetInitialsAndColorIndex(string email, string? name)
     {
-        (string? selectedName, char[]? separator) = NameSelector(name, email);
+        (var selectedName, var separator) = NameSelector(name, email);
 
         if (selectedName is null)
         {
             return ("?", _unkownCounter++);
         }
 
-        string[] nameParts = selectedName.Split(separator);
-        string initials = GetInitialsFromNames(nameParts);
+        var nameParts = selectedName.Split(separator);
+        var initials = GetInitialsFromNames(nameParts);
 
         return (initials, GetDeterministicHashCode(email) % _avatarColors.Length);
     }
@@ -82,7 +89,7 @@ public class InitialsAvatarProvider : IAvatarProvider
 
         if (!string.IsNullOrWhiteSpace(email))
         {
-            string withoutDomain = email.LazySplit('@').First().TrimStart();
+            var withoutDomain = email.LazySplit('@').First().TrimStart();
             return (withoutDomain, _emailInitialSeparator);
         }
 
@@ -98,7 +105,7 @@ public class InitialsAvatarProvider : IAvatarProvider
             return "?";
         }
 
-        string[]? names = possibleNames.Where(s => char.IsLetter(s[0]) || char.IsDigit(s[0])).ToArray();
+        var names = possibleNames.Where(s => char.IsLetter(s[0]) || char.IsDigit(s[0])).ToArray();
 
         // if no valid name-elements are found, return acceptable fallback
         if (names?.Length is not > 0)
@@ -106,7 +113,7 @@ public class InitialsAvatarProvider : IAvatarProvider
             return possibleNames.Length > 1 ? $"{possibleNames[0][0]}{possibleNames[1][0]}" : $"{possibleNames[0][0]}";
         }
 
-        string name = names[0];
+        var name = names[0];
 
         // If only a single valid name-element is found ...
         if (names.Length == 1)
@@ -123,7 +130,7 @@ public class InitialsAvatarProvider : IAvatarProvider
                 return $"{char.ToUpper(name[0])}{name[1]}";
             }
 
-            string[] splitNames = name.Split(_emailInitialSeparator);
+            var splitNames = name.Split(_emailInitialSeparator);
 
             if (splitNames.Length > 1)
             {
@@ -144,13 +151,12 @@ public class InitialsAvatarProvider : IAvatarProvider
         return $"{name[0]}{names[^1][0]}".ToUpper();
     }
 
-    private readonly (Brush foregroundBrush, Color backgroundColor)[] _avatarColors = [.. AppSettings.AvatarAuthorInitialsPalette.Split(',').Select(GetAvatarDrawingMaterial)];
-
     private static (Brush foregroundBrush, Color backgroundColor) GetAvatarDrawingMaterial(string colorCode)
     {
-        Color backgroundColor = ConvertToColor(colorCode);
+        var backgroundColor = ConvertToColor(colorCode);
 
-        return (new SolidBrush(backgroundColor.GetContrastColor(AppSettings.AvatarAuthorInitialsLuminanceThreshold)), backgroundColor);
+        return (new SolidBrush(backgroundColor.GetContrastColor(AppSettings.AvatarAuthorInitialsLuminanceThreshold)),
+            backgroundColor);
 
         static Color ConvertToColor(string colorCode)
         {
@@ -173,22 +179,22 @@ public class InitialsAvatarProvider : IAvatarProvider
         text ??= "?";
 
         Bitmap bitmap = new(avatarSize, avatarSize);
-        using Graphics graphics = Graphics.FromImage(bitmap);
+        using var graphics = Graphics.FromImage(bitmap);
         graphics.Clear(backColor);
         graphics.SmoothingMode = SmoothingMode.HighSpeed;
         graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        SizeF estimatedSize = graphics.MeasureString(text, _estimationFont);
+        var estimatedSize = graphics.MeasureString(text, _estimationFont);
 
         // Adjust font size based on the estimated measure of input text
-        int squareSize = Math.Max((int)estimatedSize.Width, (int)estimatedSize.Height);
-        float ratio = (float)avatarSize / squareSize;
+        var squareSize = Math.Max((int)estimatedSize.Width, (int)estimatedSize.Height);
+        var ratio = (float)avatarSize / squareSize;
         using Font drawingFont = new(_fontFamily, _fontSizeEstimation * ratio);
-        SizeF displayedSize = estimatedSize * ratio;
+        var displayedSize = estimatedSize * ratio;
 
         // centering horizontally and vertically
-        float xOffset = Math.Max((avatarSize - displayedSize.Width) / 2, 0);
-        float yOffset = Math.Max((avatarSize - displayedSize.Height) / 2, 0);
+        var xOffset = Math.Max((avatarSize - displayedSize.Width) / 2, 0);
+        var yOffset = Math.Max((avatarSize - displayedSize.Height) / 2, 0);
         graphics.DrawString(text, drawingFont, foreColor, xOffset, yOffset);
         graphics.Save();
 
@@ -197,9 +203,9 @@ public class InitialsAvatarProvider : IAvatarProvider
 
     public void UpdateFontsSettings()
     {
-        Font? oldFont = _estimationFont;
+        var oldFont = _estimationFont;
         _fontFamily = AppSettings.Font.FontFamily;
-        _estimationFont = new(_fontFamily, _fontSizeEstimation);
+        _estimationFont = new Font(_fontFamily, _fontSizeEstimation);
         oldFont?.Dispose();
     }
 }

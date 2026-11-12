@@ -4,7 +4,8 @@ namespace GitUI.CommandsDialogs;
 
 public static class MergeConflictHandler
 {
-    public static bool HandleMergeConflicts(IGitUICommands commands, IWin32Window? owner, bool offerCommit = true, bool offerUpdateSubmodules = true)
+    public static bool HandleMergeConflicts(IGitUiCommands commands, IWin32Window? owner, bool offerCommit = true,
+        bool offerUpdateSubmodules = true)
     {
         if (commands.Module.InTheMiddleOfConflictedMerge())
         {
@@ -24,7 +25,7 @@ public static class MergeConflictHandler
         return false;
     }
 
-    private static void SolveMergeConflicts(IGitUICommands commands, IWin32Window? owner, bool offerCommit)
+    private static void SolveMergeConflicts(IGitUiCommands commands, IWin32Window? owner, bool offerCommit)
     {
         if (commands.Module.InTheMiddleOfConflictedMerge())
         {

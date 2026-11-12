@@ -1,6 +1,8 @@
-﻿using GitUI;
+﻿using GitExtUtils.GitUI;
+using Xunit.Sdk;
 
 namespace GitUITests;
+
 public sealed class CancellationTokenSequenceTests
 {
     [Fact]
@@ -8,11 +10,11 @@ public sealed class CancellationTokenSequenceTests
     {
         CancellationTokenSequence sequence = new();
 
-        CancellationToken token1 = sequence.Next();
+        var token1 = sequence.Next();
 
         token1.IsCancellationRequested.Should().BeFalse();
 
-        CancellationToken token2 = sequence.Next();
+        var token2 = sequence.Next();
 
         token1.IsCancellationRequested.Should().BeTrue();
         token2.IsCancellationRequested.Should().BeFalse();
@@ -33,7 +35,7 @@ public sealed class CancellationTokenSequenceTests
     {
         CancellationTokenSequence sequence = new();
 
-        CancellationToken token = sequence.Next();
+        var token = sequence.Next();
 
         token.IsCancellationRequested.Should().BeFalse();
 
@@ -47,7 +49,7 @@ public sealed class CancellationTokenSequenceTests
     {
         CancellationTokenSequence sequence = new();
 
-        CancellationToken token = sequence.Next();
+        var token = sequence.Next();
 
         token.IsCancellationRequested.Should().BeFalse();
 
@@ -70,7 +72,7 @@ public sealed class CancellationTokenSequenceTests
     {
         CancellationTokenSequence sequence = new();
 
-        CancellationToken token = sequence.Next();
+        var token = sequence.Next();
 
         token.IsCancellationRequested.Should().BeFalse();
 
@@ -105,22 +107,26 @@ public sealed class CancellationTokenSequenceTests
     {
         const int loopCount = 1000;
 
-        int logicalProcessorCount = Environment.ProcessorCount;
+        var logicalProcessorCount = Environment.ProcessorCount;
 
         // Cap threads to avoid O(n²) CAS contention in Next() on high-core-count machines
-        int threadCount = Math.Min(8, Math.Max(2, logicalProcessorCount));
+        var threadCount = Math.Min(8, Math.Max(2, logicalProcessorCount));
 
         using CancellationTokenSequence sequence = new();
         using Barrier barrier = new(threadCount);
-        int completedCount = 0;
-        int[] winnerByIndex = new int[threadCount];
+        var completedCount = 0;
+        var winnerByIndex = new int[threadCount];
 
-        List<Task> tasks = [.. Enumerable
-            .Range(0, threadCount)
-            .Select(i => Task.Run(() => ThreadMethod(i)))];
+        List<Task> tasks =
+        [
+            .. Enumerable
+                .Range(0, threadCount)
+                .Select(i => Task.Run(() => ThreadMethod(i)))
+        ];
 
-        Task allTasks = Task.WhenAll(tasks);
-        Task completed = await Task.WhenAny(allTasks, Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+        var allTasks = Task.WhenAll(tasks);
+        var completed = await Task.WhenAny(allTasks,
+            Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
 
         completed.Should().Be(allTasks, "Test should have completed within a reasonable amount of time");
 
@@ -131,18 +137,18 @@ public sealed class CancellationTokenSequenceTests
         // Assume hyper threading, so halve logical processors (could use WMI or P/Invoke for more robust answer)
         if (logicalProcessorCount <= 2)
         {
-            throw Xunit.Sdk.SkipException.ForSkip("This test requires more than one physical processor to run.");
+            throw SkipException.ForSkip("This test requires more than one physical processor to run.");
         }
 
         return;
 
         void ThreadMethod(int i)
         {
-            for (int j = 0; j < loopCount; j++)
+            for (var j = 0; j < loopCount; j++)
             {
                 barrier.SignalAndWait();
 
-                CancellationToken token = sequence.Next();
+                var token = sequence.Next();
 
                 barrier.SignalAndWait();
 

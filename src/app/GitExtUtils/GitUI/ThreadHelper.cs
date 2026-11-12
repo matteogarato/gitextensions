@@ -6,35 +6,51 @@ using System.Runtime.InteropServices;
 using GitExtensions.Extensibility;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ThreadHelper
 {
-    private const int RPC_E_WRONG_THREAD = unchecked((int)0x8001010E);
+    private const int _rpcEWrongThread = unchecked((int)0x8001010E);
 
     private static TaskManager? _taskManager;
 
-    private static TaskManager TaskManager =>
-        _taskManager ?? throw new InvalidOperationException($"{nameof(ThreadHelper)}.{nameof(JoinableTaskContext)} has not been initialized.");
+    private static TaskManager TaskManager
+    {
+        get => _taskManager ??
+               throw new InvalidOperationException(
+                   $"{nameof(ThreadHelper)}.{nameof(JoinableTaskContext)} has not been initialized.");
+    }
 
-    public static bool HasJoinableTaskContext => _taskManager is not null;
+    public static bool HasJoinableTaskContext
+    {
+        get => _taskManager is not null;
+    }
 
     public static JoinableTaskContext JoinableTaskContext
     {
         get => TaskManager.JoinableTaskContext;
-        internal set => _taskManager = value is null ? null : new(value);
+        internal set => _taskManager = value is null ? null : new TaskManager(value);
     }
 
-    public static JoinableTaskFactory JoinableTaskFactory => TaskManager.JoinableTaskFactory;
+    public static JoinableTaskFactory JoinableTaskFactory
+    {
+        get => TaskManager.JoinableTaskFactory;
+    }
 
     internal static void CancelSwitchToMainThread()
-        => TaskManager.CancelSwitchToMainThread();
+    {
+        TaskManager.CancelSwitchToMainThread();
+    }
 
     public static ExclusiveTaskRunner CreateExclusiveTaskRunner()
-        => new(TaskManager);
+    {
+        return new ExclusiveTaskRunner(TaskManager);
+    }
 
     public static TaskManager CreateTaskManager()
-        => new(TaskManager.JoinableTaskContext);
+    {
+        return new TaskManager(TaskManager.JoinableTaskContext);
+    }
 
     public static void ThrowIfNotOnUIThread([CallerMemberName] string callerMemberName = "")
     {
@@ -45,8 +61,9 @@ public static class ThreadHelper
 
         if (!JoinableTaskContext.IsOnMainThread)
         {
-            string message = string.Format(CultureInfo.CurrentCulture, "{0} must be called on the UI thread.", callerMemberName);
-            throw new COMException(message, RPC_E_WRONG_THREAD);
+            var message = string.Format(CultureInfo.CurrentCulture, "{0} must be called on the UI thread.",
+                callerMemberName);
+            throw new COMException(message, _rpcEWrongThread);
         }
     }
 
@@ -66,49 +83,78 @@ public static class ThreadHelper
     {
         if (JoinableTaskContext.IsOnMainThread)
         {
-            string message = string.Format(CultureInfo.CurrentCulture, "{0} must be called on a background thread.", callerMemberName);
-            throw new COMException(message, RPC_E_WRONG_THREAD);
+            var message = string.Format(CultureInfo.CurrentCulture, "{0} must be called on a background thread.",
+                callerMemberName);
+            throw new COMException(message, _rpcEWrongThread);
         }
     }
 
     /// <summary>
-    /// Asynchronously run <paramref name="asyncAction"/> on a background thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
+    ///     Asynchronously run <paramref name="asyncAction" /> on a background thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
     /// </summary>
     public static void FileAndForget(Func<Task> asyncAction)
-        => TaskManager.FileAndForget(asyncAction);
+    {
+        TaskManager.FileAndForget(asyncAction);
+    }
 
     /// <summary>
-    /// Asynchronously run <paramref name="action"/> on a background thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
+    ///     Asynchronously run <paramref name="action" /> on a background thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
     /// </summary>
     public static void FileAndForget(Action action)
-        => TaskManager.FileAndForget(action);
+    {
+        TaskManager.FileAndForget(action);
+    }
 
     /// <summary>
-    /// Asynchronously run <paramref name="joinableTask"/> on a background thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
+    ///     Asynchronously run <paramref name="joinableTask" /> on a background thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
     /// </summary>
     public static void FileAndForget(this JoinableTask joinableTask)
-        => TaskManager.FileAndForget(joinableTask.Task);
+    {
+        TaskManager.FileAndForget(joinableTask.Task);
+    }
 
     /// <summary>
-    /// Asynchronously run <paramref name="task"/> on a background thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
+    ///     Asynchronously run <paramref name="task" /> on a background thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
     /// </summary>
     public static void FileAndForget(this Task task)
-        => TaskManager.FileAndForget(task);
+    {
+        TaskManager.FileAndForget(task);
+    }
 
     /// <summary>
-    /// Asynchronously run <paramref name="asyncAction"/> on the UI thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
+    ///     Asynchronously run <paramref name="asyncAction" /> on the UI thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
     /// </summary>
-    public static void InvokeAndForget(this Control control, Func<Task> asyncAction, TaskManager? taskManager = null, CancellationToken cancellationToken = default)
-        => (taskManager ?? TaskManager).InvokeAndForget(control, asyncAction, cancellationToken);
+    public static void InvokeAndForget(this Control control, Func<Task> asyncAction, TaskManager? taskManager = null,
+        CancellationToken cancellationToken = default)
+    {
+        (taskManager ?? TaskManager).InvokeAndForget(control, asyncAction, cancellationToken);
+    }
 
     /// <summary>
-    /// Asynchronously run <paramref name="action"/> on the UI thread and forward all exceptions to <see cref="Application.OnThreadException"/> except for <see cref="OperationCanceledException"/>, which is ignored.
+    ///     Asynchronously run <paramref name="action" /> on the UI thread and forward all exceptions to
+    ///     <see cref="Application.OnThreadException" /> except for <see cref="OperationCanceledException" />, which is
+    ///     ignored.
     /// </summary>
-    public static void InvokeAndForget(this Control control, Action action, TaskManager? taskManager = null, CancellationToken cancellationToken = default)
-        => InvokeAndForget(control, TaskManager.AsyncAction(action), taskManager, cancellationToken);
+    public static void InvokeAndForget(this Control control, Action action, TaskManager? taskManager = null,
+        CancellationToken cancellationToken = default)
+    {
+        control.InvokeAndForget(TaskManager.AsyncAction(action), taskManager, cancellationToken);
+    }
 
     public static async Task JoinPendingOperationsAsync(CancellationToken cancellationToken)
-        => await TaskManager.JoinPendingOperationsAsync(cancellationToken);
+    {
+        await TaskManager.JoinPendingOperationsAsync(cancellationToken);
+    }
 
     public static T CompletedResult<T>(this Task<T> task)
     {

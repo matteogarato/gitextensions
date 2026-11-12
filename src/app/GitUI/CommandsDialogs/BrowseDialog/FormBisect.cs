@@ -2,7 +2,7 @@
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitUI.HelperDialogs;
-using GitUIPluginInterfaces;
+using GitUI.UserControls.RevisionGrid;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.BrowseDialog;
@@ -16,7 +16,7 @@ public sealed partial class FormBisect : GitModuleForm
     private readonly IRevisionGridInfo _revisionGridInfo;
 
     public FormBisect(RevisionGridControl revisionGrid)
-        : base(revisionGrid.UICommands)
+        : base(revisionGrid.UiCommands)
     {
         _revisionGridInfo = revisionGrid;
         InitializeComponent();
@@ -26,7 +26,7 @@ public sealed partial class FormBisect : GitModuleForm
 
     private void UpdateButtonsState()
     {
-        bool inTheMiddleOfBisect = Module.InTheMiddleOfBisect();
+        var inTheMiddleOfBisect = Module.InTheMiddleOfBisect();
         Start.Enabled = !inTheMiddleOfBisect;
         Good.Enabled = inTheMiddleOfBisect;
         Bad.Enabled = inTheMiddleOfBisect;
@@ -36,14 +36,15 @@ public sealed partial class FormBisect : GitModuleForm
 
     private void Start_Click(object sender, EventArgs e)
     {
-        FormProcess.ShowDialog(this, UICommands, arguments: Commands.StartBisect(), Module.WorkingDir, input: null, useDialogSettings: true);
+        FormProcess.ShowDialog(this, UiCommands, Commands.StartBisect(), Module.WorkingDir, null, true);
 
         UpdateButtonsState();
 
-        IReadOnlyList<GitRevision> revisions = _revisionGridInfo.GetSelectedRevisions();
+        var revisions = _revisionGridInfo.GetSelectedRevisions();
         if (revisions.Count > 1)
         {
-            if (MessageBoxes.Show(this, _bisectStart.Text, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (MessageBoxes.Show(this, _bisectStart.Text, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) ==
+                DialogResult.Yes)
             {
                 BisectRange(revisions[0].ObjectId, revisions[^1].ObjectId);
                 Close();
@@ -54,15 +55,15 @@ public sealed partial class FormBisect : GitModuleForm
 
         void BisectRange(ObjectId startObjectId, ObjectId endObjectId)
         {
-            ArgumentString command = Commands.ContinueBisect(GitBisectOption.Good, startObjectId);
-            bool success = FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+            var command = Commands.ContinueBisect(GitBisectOption.Good, startObjectId);
+            var success = FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
             if (!success)
             {
                 return;
             }
 
             command = Commands.ContinueBisect(GitBisectOption.Bad, endObjectId);
-            FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+            FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
         }
     }
 
@@ -78,7 +79,7 @@ public sealed partial class FormBisect : GitModuleForm
 
     private void Stop_Click(object sender, EventArgs e)
     {
-        FormProcess.ShowDialog(this, UICommands, arguments: Commands.StopBisect(), Module.WorkingDir, input: null, useDialogSettings: false);
+        FormProcess.ShowDialog(this, UiCommands, Commands.StopBisect(), Module.WorkingDir, null, false);
         Close();
     }
 
@@ -89,7 +90,7 @@ public sealed partial class FormBisect : GitModuleForm
 
     private void ContinueBisect(GitBisectOption bisectOption)
     {
-        FormProcess.ShowDialog(this, UICommands, arguments: Commands.ContinueBisect(bisectOption), Module.WorkingDir, input: null, useDialogSettings: false);
+        FormProcess.ShowDialog(this, UiCommands, Commands.ContinueBisect(bisectOption), Module.WorkingDir, null, false);
         Close();
     }
 }

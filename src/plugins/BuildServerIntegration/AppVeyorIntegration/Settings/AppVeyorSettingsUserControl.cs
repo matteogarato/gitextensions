@@ -3,7 +3,7 @@ using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces.BuildServerIntegration;
 using ResourceManager;
 
-namespace AppVeyorIntegration.Settings;
+namespace GitExtensions.Plugins.AppVeyorIntegration.Settings;
 
 [Export(typeof(IBuildServerSettingsUserControl))]
 [BuildServerSettingsUserControlMetadata(AppVeyorAdapter.PluginName)]
@@ -20,12 +20,12 @@ public partial class AppVeyorSettingsUserControl : GitExtensionsControl, IBuildS
         Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
     }
 
-    public void Initialize(string defaultProjectName, IEnumerable<string?> remotes)
+    void IBuildServerSettingsUserControl.Initialize(string defaultProjectName, IEnumerable<string?> remotes)
     {
         _defaultProjectName = defaultProjectName;
     }
 
-    public void LoadSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.LoadSettings(SettingsSource buildServerConfig)
     {
         AppVeyorProjectName.Text = buildServerConfig.GetString("AppVeyorProjectName", _defaultProjectName);
         AppVeyorAccountName.Text = buildServerConfig.GetString("AppVeyorAccountName", null);
@@ -36,12 +36,12 @@ public partial class AppVeyorSettingsUserControl : GitExtensionsControl, IBuildS
         static CheckState SetNullableChecked(bool? value)
         {
             return value.HasValue
-            ? value.Value ? CheckState.Checked : CheckState.Unchecked
-            : CheckState.Indeterminate;
+                ? value.Value ? CheckState.Checked : CheckState.Unchecked
+                : CheckState.Indeterminate;
         }
     }
 
-    public void SaveSettings(SettingsSource buildServerConfig)
+    void IBuildServerSettingsUserControl.SaveSettings(SettingsSource buildServerConfig)
     {
         buildServerConfig.SetString("AppVeyorProjectName", AppVeyorProjectName.Text.NullIfEmpty());
         buildServerConfig.SetString("AppVeyorAccountName", AppVeyorAccountName.Text.NullIfEmpty());

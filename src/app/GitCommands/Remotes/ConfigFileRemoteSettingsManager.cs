@@ -1,56 +1,62 @@
 ﻿using GitCommands.Config;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Configurations;
 using GitExtensions.Extensibility.Git;
-using Microsoft;
 
 namespace GitCommands.Remotes;
 
 public interface IConfigFileRemoteSettingsManager
 {
     /// <summary>
-    /// Returns the default remote for push operation.
+    ///     Returns the default remote for push operation.
     /// </summary>
-    /// <returns>The <see cref="GitRef.Name"/> if found; otherwise, <see langword="null"/>.</returns>
+    /// <returns>The <see cref="GitRef.Name" /> if found; otherwise, <see langword="null" />.</returns>
     string? GetDefaultPushRemote(ConfigFileRemote remote, string branch);
 
     /// <summary>
-    /// Loads the list of remotes configured in .git/config file.
+    ///     Loads the list of remotes configured in .git/config file.
     /// </summary>
     IEnumerable<ConfigFileRemote> LoadRemotes(bool loadDisabled);
 
     /// <summary>
-    /// Removes the specified remote from .git/config file.
+    ///     Removes the specified remote from .git/config file.
     /// </summary>
     /// <param name="remote">Remote to remove.</param>
     /// <returns>Output of the operation.</returns>
     string RemoveRemote(ConfigFileRemote remote);
 
     /// <summary>
-    /// Returns true if input remote exists and is enabled.
+    ///     Returns true if input remote exists and is enabled.
     /// </summary>
     /// <param name="remoteName">Name of remote to check.</param>
-    /// <returns><see langword="true"/> if input remote exists and is enabled; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if input remote exists and is enabled; otherwise, <see langword="false" />.</returns>
     bool EnabledRemoteExists(string remoteName);
 
     /// <summary>
-    /// Returns true if input remote exists and is disabled.
+    ///     Returns true if input remote exists and is disabled.
     /// </summary>
     /// <param name="remoteName">Name of remote to check.</param>
-    /// <returns><see langword="true"/> if input remote exists and is disabled; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if input remote exists and is disabled; otherwise, <see langword="false" />.</returns>
     bool DisabledRemoteExists(string remoteName);
 
     /// <summary>
-    ///   Saves the remote details by creating a new or updating an existing remote entry in .git/config file.
+    ///     Saves the remote details by creating a new or updating an existing remote entry in .git/config file.
     /// </summary>
-    /// <param name="remote">An existing remote instance or <see langword="null"/> if creating a new entry.</param>
+    /// <param name="remote">An existing remote instance or <see langword="null" /> if creating a new entry.</param>
     /// <param name="remoteName">
-    ///   <para>The remote name.</para>
-    ///   <para>If updating an existing remote and the name changed, it will result in remote name change and prompt for "remote update".</para>
+    ///     <para>The remote name.</para>
+    ///     <para>
+    ///         If updating an existing remote and the name changed, it will result in remote name change and prompt for
+    ///         "remote update".
+    ///     </para>
     /// </param>
     /// <param name="remoteUrl">
-    ///   <para>The remote URL.</para>
-    ///   <para>If updating an existing remote and the URL changed, it will result in remote URL change and prompt for "remote update".</para>
+    ///     <para>The remote URL.</para>
+    ///     <para>
+    ///         If updating an existing remote and the URL changed, it will result in remote URL change and prompt for
+    ///         "remote update".
+    ///     </para>
     /// </param>
     /// <param name="remotePushUrl">An optional alternative remote push URL.</param>
     /// <param name="remotePuttySshKey">An optional Putty SSH key.</param>
@@ -62,106 +68,103 @@ public interface IConfigFileRemoteSettingsManager
         string remotePuttySshKey, string? remoteColor, string? remotePrefix);
 
     /// <summary>
-    ///  Marks the remote as enabled or disabled in .git/config file.
+    ///     Marks the remote as enabled or disabled in .git/config file.
     /// </summary>
     /// <param name="remoteName">An existing remote instance.</param>
-    /// <param name="disabled">The new state of the remote. <see langword="true"/> to disable the remote; otherwise <see langword="false"/>.</param>
+    /// <param name="disabled">
+    ///     The new state of the remote. <see langword="true" /> to disable the remote; otherwise
+    ///     <see langword="false" />.
+    /// </param>
     void ToggleRemoteState(string remoteName, bool disabled);
 
     /// <summary>
-    /// Retrieves disabled remotes from .git/config file.
+    ///     Retrieves disabled remotes from .git/config file.
     /// </summary>
     IReadOnlyList<Remote> GetDisabledRemotes();
 
     /// <summary>
-    /// Retrieves disabled remote names from the .git/config file.
+    ///     Retrieves disabled remote names from the .git/config file.
     /// </summary>
     IReadOnlyList<string> GetDisabledRemoteNames();
 
     /// <summary>
-    /// Retrieves enabled remote names.
+    ///     Retrieves enabled remote names.
     /// </summary>
     IReadOnlyList<string> GetEnabledRemoteNames();
 }
 
-public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
+public class ConfigFileRemoteSettingsManager(Func<IGitModule?> getModule) : IConfigFileRemoteSettingsManager
 {
     internal static readonly string DisabledSectionPrefix = "-";
     internal static readonly string SectionRemote = "remote";
     internal static readonly string SectionRemoteDisabled = $"{DisabledSectionPrefix}{SectionRemote}";
-    private readonly Func<IGitModule?> _getModule;
-
-    public ConfigFileRemoteSettingsManager(Func<IGitModule?> getModule)
-    {
-        _getModule = getModule;
-    }
 
     /// <summary>
-    /// Returns the default remote for push operation.
+    ///     Returns the default remote for push operation.
     /// </summary>
-    /// <returns>The <see cref="GitRef.Name"/> if found, otherwise <see langword="null"/>.</returns>
+    /// <returns>The <see cref="GitRef.Name" /> if found, otherwise <see langword="null" />.</returns>
     // TODO: moved verbatim from FormPush.cs, perhaps needs refactoring
-    public string? GetDefaultPushRemote(ConfigFileRemote remote, string branch)
+    string? IConfigFileRemoteSettingsManager.GetDefaultPushRemote(ConfigFileRemote remote, string branch)
     {
         ArgumentNullException.ThrowIfNull(remote);
 
-        IGitModule module = GetModule();
+        var module = GetModule();
 
-        GitRef? remoteHead = remote.Push?
-                               .Select(s => s.Split(Delimiters.Colon))
-                               .Where(t => t.Length == 2)
-                               .Where(t => IsSettingForBranch(t[0], branch))
-                               .Select(t => new GitRef(module, objectId: default, t[1]))
-                               .FirstOrDefault(h => h.IsHead);
+        var remoteHead = remote.Push?
+            .Select(s => s.Split(Delimiters.Colon))
+            .Where(t => t.Length == 2)
+            .Where(t => IsSettingForBranch(t[0], branch))
+            .Select(t => new GitRef(module, default, t[1]))
+            .FirstOrDefault(h => h.IsHead);
 
         if (remoteHead is not null)
         {
             return remoteHead.Name;
         }
 
-        GitRef? remoteWildcardHead = remote.Push?
-                               .Select(s => s.Split(Delimiters.Colon))
-                               .Where(t => t.Length == 2)
-                               .Where(t => IsSettingForWildcardBranch(t[0]))
-                               .Select(t => new GitRef(module, objectId: default, t[1].Replace("*", branch)))
-                               .FirstOrDefault(h => h.IsHead);
+        var remoteWildcardHead = remote.Push?
+            .Select(s => s.Split(Delimiters.Colon))
+            .Where(t => t.Length == 2)
+            .Where(t => IsSettingForWildcardBranch(t[0]))
+            .Select(t => new GitRef(module, default, t[1].Replace("*", branch)))
+            .FirstOrDefault(h => h.IsHead);
 
         return remoteWildcardHead?.Name;
 
         bool IsSettingForBranch(string setting, string branchName)
         {
-            GitRef head = new(module, objectId: default, setting);
+            GitRef head = new(module, default, setting);
             return head.IsHead && head.Name.Equals(branchName, StringComparison.OrdinalIgnoreCase);
         }
 
         bool IsSettingForWildcardBranch(string setting)
         {
-            GitRef head = new(module, objectId: default, setting);
+            GitRef head = new(module, default, setting);
             return head.IsHead && head.Name == "*";
         }
     }
 
     /// <summary>
-    /// Retrieves disabled remotes from .git/config file.
+    ///     Retrieves disabled remotes from .git/config file.
     /// </summary>
-    public IReadOnlyList<Remote> GetDisabledRemotes()
+    IReadOnlyList<Remote> IConfigFileRemoteSettingsManager.GetDisabledRemotes()
     {
-        IGitModule module = GetModule();
+        var module = GetModule();
 
         return GetDisabledRemoteNames()
             .Select(remoteName =>
             {
-                string settingPrefix = $"{SectionRemoteDisabled}.{remoteName}.";
-                string url = module.GetEffectiveSetting($"{settingPrefix}url");
-                string firstPushUrl = module.GetSettings($"{settingPrefix}pushurl").FirstOrDefault(defaultValue: url);
-                return new Remote(name: remoteName, fetchUrl: url, firstPushUrl);
+                var settingPrefix = $"{SectionRemoteDisabled}.{remoteName}.";
+                var url = module.GetEffectiveSetting($"{settingPrefix}url");
+                var firstPushUrl = module.GetSettings($"{settingPrefix}pushurl").FirstOrDefault(url);
+                return new Remote(remoteName, url, firstPushUrl);
             })
             .ToList();
     }
 
-    public IReadOnlyList<string> GetDisabledRemoteNames()
+    IReadOnlyList<string> IConfigFileRemoteSettingsManager.GetDisabledRemoteNames()
     {
-        IGitModule module = GetModule();
+        var module = GetModule();
 
         return EnumerateDisabledRemoteNames()
             .WhereNotNull()
@@ -170,9 +173,9 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
 
         IEnumerable<string?> EnumerateDisabledRemoteNames()
         {
-            foreach ((string setting, string _) in module.GetAllLocalSettings())
+            foreach ((var setting, var _) in module.GetAllLocalSettings())
             {
-                (string section, string? subsection, string _) = IGitConfigSettingsGetter.SplitSetting(setting);
+                (var section, var subsection, _) = IGitConfigSettingsGetter.SplitSetting(setting);
                 if (section == SectionRemoteDisabled)
                 {
                     yield return subsection;
@@ -181,16 +184,16 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
         }
     }
 
-    public IReadOnlyList<string> GetEnabledRemoteNames()
+    IReadOnlyList<string> IConfigFileRemoteSettingsManager.GetEnabledRemoteNames()
     {
         return GetModule().GetRemoteNames();
     }
 
     // TODO: candidate for Async implementations
-    public IEnumerable<ConfigFileRemote> LoadRemotes(bool loadDisabled)
+    IEnumerable<ConfigFileRemote> IConfigFileRemoteSettingsManager.LoadRemotes(bool loadDisabled)
     {
         List<ConfigFileRemote> remotes = [];
-        IGitModule? module = _getModule();
+        var module = getModule();
         if (module is null)
         {
             return remotes;
@@ -240,36 +243,39 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
     }
 
     /// <summary>
-    /// Removes the specified remote from .git/config file.
+    ///     Removes the specified remote from .git/config file.
     /// </summary>
     /// <param name="remote">Remote to remove.</param>
-    /// <returns>Output of <see cref="IGitModule.RemoveRemote"/> operation, if the remote is active; otherwise <see cref="string.Empty"/>.</returns>
-    public string RemoveRemote(ConfigFileRemote remote)
+    /// <returns>
+    ///     Output of <see cref="IGitModule.RemoveRemote" /> operation, if the remote is active; otherwise
+    ///     <see cref="string.Empty" />.
+    /// </returns>
+    string IConfigFileRemoteSettingsManager.RemoveRemote(ConfigFileRemote remote)
     {
         ArgumentNullException.ThrowIfNull(remote);
 
-        IGitModule module = GetModule();
+        var module = GetModule();
         if (!remote.Disabled)
         {
             Validates.NotNull(remote.Name);
             return module.RemoveRemote(remote.Name);
         }
 
-        module.RemoveConfigSection(SectionRemoteDisabled, subsection: remote.Name);
+        module.RemoveConfigSection(SectionRemoteDisabled, remote.Name);
         return string.Empty;
     }
 
-    public bool EnabledRemoteExists(string remoteName)
+    bool IConfigFileRemoteSettingsManager.EnabledRemoteExists(string remoteName)
     {
         return GetEnabledRemoteNames().Any(r => r == remoteName);
     }
 
-    public bool DisabledRemoteExists(string remoteName)
+    bool IConfigFileRemoteSettingsManager.DisabledRemoteExists(string remoteName)
     {
         return GetDisabledRemoteNames().Any(r => r == remoteName);
     }
 
-    public ConfigFileRemoteSaveResult SaveRemote(
+    ConfigFileRemoteSaveResult IConfigFileRemoteSettingsManager.SaveRemote(
         ConfigFileRemote? remote, string remoteName, string remoteUrl, string? remotePushUrl,
         string remotePuttySshKey, string? remoteColor, string? remotePrefix)
     {
@@ -278,13 +284,13 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
         remoteName = remoteName.Trim();
 
         // if create a new remote or updated the url - we may need to perform "update remote"
-        bool updateRemoteRequired = false;
+        var updateRemoteRequired = false;
 
         // if operation return anything back, relay that to the user
-        string output = string.Empty;
+        var output = string.Empty;
 
-        IGitModule module = GetModule();
-        bool remoteDisabled = false;
+        var module = GetModule();
+        var remoteDisabled = false;
         if (remote is null)
         {
             output = module.AddRemote(remoteName, remoteUrl);
@@ -343,21 +349,21 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
         return new ConfigFileRemoteSaveResult(output, updateRemoteRequired);
     }
 
-    public void ToggleRemoteState(string remoteName, bool disabled)
+    void IConfigFileRemoteSettingsManager.ToggleRemoteState(string remoteName, bool disabled)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
 
         // disabled is the new state, so if the new state is 'false' (=enabled), then the existing state is 'true' (=disabled, i.e. '-remote')
-        string sectionName = disabled ? SectionRemote : SectionRemoteDisabled;
-        string newSectionName = disabled ? SectionRemoteDisabled : SectionRemote;
+        var sectionName = disabled ? SectionRemote : SectionRemoteDisabled;
+        var newSectionName = disabled ? SectionRemoteDisabled : SectionRemote;
 
-        IGitModule module = GetModule();
+        var module = GetModule();
 
         List<(string, string)> newSectionValues = [];
-        bool newSectionAlreadyExists = false;
-        foreach ((string setting, string value) in module.GetAllLocalSettings())
+        var newSectionAlreadyExists = false;
+        foreach ((var setting, var value) in module.GetAllLocalSettings())
         {
-            (string section, string? subsection, string name) = IGitConfigSettingsGetter.SplitSetting(setting);
+            (var section, var subsection, var name) = IGitConfigSettingsGetter.SplitSetting(setting);
             if (subsection != remoteName)
             {
                 continue;
@@ -374,7 +380,7 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
                 continue;
             }
 
-            string newSetting = $"{newSectionName}.{remoteName}.{name}";
+            var newSetting = $"{newSectionName}.{remoteName}.{name}";
             newSectionValues.Add((newSetting, value));
         }
 
@@ -390,7 +396,7 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
         }
         else
         {
-            module.RemoveConfigSection(sectionName, subsection: remoteName);
+            module.RemoveConfigSection(sectionName, remoteName);
         }
 
         // ensure that the section with the same name doesn't already exist
@@ -401,29 +407,32 @@ public class ConfigFileRemoteSettingsManager : IConfigFileRemoteSettingsManager
         // - then attempted to deactivate the new remote
         if (newSectionAlreadyExists)
         {
-            module.RemoveConfigSection(newSectionName, subsection: remoteName);
+            module.RemoveConfigSection(newSectionName, remoteName);
         }
 
         // add the renamed remote settings
-        foreach ((string setting, string value) in newSectionValues)
+        foreach ((var setting, var value) in newSectionValues)
         {
-            module.SetSetting(setting, value, append: true);
+            module.SetSetting(setting, value, true);
         }
     }
 
     private IGitModule GetModule()
-        => _getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
+    {
+        return getModule() ?? throw new ArgumentException($"Require a valid instance of {nameof(IGitModule)}");
+    }
 
     private static string GetSettingKey(string settingKey, string remoteName, bool remoteEnabled)
     {
-        string key = string.Format(settingKey, remoteName);
+        var key = string.Format(settingKey, remoteName);
         return remoteEnabled ? key : DisabledSectionPrefix + key;
     }
 
-    private static void UpdateSettings(IGitModule module, string remoteName, bool remoteDisabled, string settingName, string? value)
+    private static void UpdateSettings(IGitModule module, string remoteName, bool remoteDisabled, string settingName,
+        string? value)
     {
-        string prefix = remoteDisabled ? DisabledSectionPrefix : string.Empty;
-        string fullSettingName = prefix + string.Format(settingName, remoteName);
+        var prefix = remoteDisabled ? DisabledSectionPrefix : string.Empty;
+        var fullSettingName = prefix + string.Format(settingName, remoteName);
 
         if (!string.IsNullOrWhiteSpace(value))
         {

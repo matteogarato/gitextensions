@@ -1,17 +1,18 @@
 ﻿using GitUI.UserControls;
 
 namespace GitUITests.UserControls;
+
 public class TreeViewExtensionsTests : IDisposable
 {
-    private TreeView _treeView = null!;
-    private TreeNode _root = null!;
-    private TreeNode _a = null!;
-    private TreeNode _b = null!;
-    private TreeNode _c = null!;
-    private TreeNode _b1 = null!;
-    private TreeNode _b2 = null!;
-    private TreeNode _b3 = null!;
-    private TreeNode _b2_1 = null!;
+    private readonly TreeNode _a = null!;
+    private readonly TreeNode _b = null!;
+    private readonly TreeNode _b1 = null!;
+    private readonly TreeNode _b2 = null!;
+    private readonly TreeNode _b21 = null!;
+    private readonly TreeNode _b3 = null!;
+    private readonly TreeNode _c = null!;
+    private readonly TreeNode _root = null!;
+    private readonly TreeView _treeView = null!;
 
     public TreeViewExtensionsTests()
     {
@@ -27,10 +28,10 @@ public class TreeViewExtensionsTests : IDisposable
         _b2 = _b.Nodes.Add("B_2");
         _b3 = _b.Nodes.Add("B_3");
 
-        _b2_1 = _b2.Nodes.Add("B_2_1");
+        _b21 = _b2.Nodes.Add("B_2_1");
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _treeView.Dispose();
     }
@@ -38,7 +39,7 @@ public class TreeViewExtensionsTests : IDisposable
     [Fact]
     public void GetExpandedNodesState_should_return_no_expanded_nodes()
     {
-        HashSet<string> expandedNodes = _root.GetExpandedNodesState();
+        var expandedNodes = _root.GetExpandedNodesState();
         expandedNodes.Count.Should().Be(0);
     }
 
@@ -46,7 +47,7 @@ public class TreeViewExtensionsTests : IDisposable
     public void GetExpandedNodesState_should_return_one_expanded_node()
     {
         _b.Expand();
-        HashSet<string> expandedNodes = _root.GetExpandedNodesState();
+        var expandedNodes = _root.GetExpandedNodesState();
         expandedNodes.Count.Should().Be(1);
         expandedNodes.Contains(@"Root\B").Should().Be(true);
     }
@@ -55,7 +56,7 @@ public class TreeViewExtensionsTests : IDisposable
     public void GetExpandedNodesState_should_return_all_expanded_nodes()
     {
         _root.ExpandAll();
-        HashSet<string> expandedNodes = _root.GetExpandedNodesState();
+        var expandedNodes = _root.GetExpandedNodesState();
         expandedNodes.Count.Should().Be(8);
     }
 
@@ -65,7 +66,7 @@ public class TreeViewExtensionsTests : IDisposable
         HashSet<string> expandedNodes = [];
         _root.RestoreExpandedNodesState(expandedNodes);
 
-        HashSet<string> expandedNodesPost = _root.GetExpandedNodesState();
+        var expandedNodesPost = _root.GetExpandedNodesState();
         expandedNodesPost.Count.Should().Be(0);
     }
 
@@ -75,7 +76,7 @@ public class TreeViewExtensionsTests : IDisposable
         HashSet<string> expandedNodes = [@"Root\B"];
         _root.RestoreExpandedNodesState(expandedNodes);
 
-        HashSet<string> expandedNodesPost = _root.GetExpandedNodesState();
+        var expandedNodesPost = _root.GetExpandedNodesState();
         expandedNodesPost.Count.Should().Be(1);
         expandedNodes.Contains(@"Root\B").Should().Be(true);
     }
@@ -90,14 +91,14 @@ public class TreeViewExtensionsTests : IDisposable
             $"{_b.GetFullNamePath()}",
             $"{_b1.GetFullNamePath()}",
             $"{_b2.GetFullNamePath()}",
-            $"{_b2_1.GetFullNamePath()}",
+            $"{_b21.GetFullNamePath()}",
             $"{_b3.GetFullNamePath()}",
-            $"{_c.GetFullNamePath()}",
+            $"{_c.GetFullNamePath()}"
         ];
 
         _root.RestoreExpandedNodesState(expandedNodes);
 
-        HashSet<string> expandedNodesPost = _root.GetExpandedNodesState();
+        var expandedNodesPost = _root.GetExpandedNodesState();
         expandedNodesPost.Count.Should().Be(8);
         expandedNodesPost.Should().BeEquivalentTo(expandedNodes);
     }
@@ -107,8 +108,8 @@ public class TreeViewExtensionsTests : IDisposable
     {
         // Only override the names for 2 of the 4 nodes
         _b.Name = "B_Name";
-        _b2_1.Name = "B_2_1_Name";
-        _b2_1.GetFullNamePath().Should().Be(@"Root\B_Name\B_2\B_2_1_Name");
+        _b21.Name = "B_2_1_Name";
+        _b21.GetFullNamePath().Should().Be(@"Root\B_Name\B_2\B_2_1_Name");
     }
 
     [StaFact]

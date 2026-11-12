@@ -1,24 +1,24 @@
 ﻿using System.Reactive.Linq;
 using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI.Editor.RichTextBoxExtension;
+using GitExtUtils.GitUI;
+using GitUI.Editor;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
 using ResourceManager;
 using ResourceManager.CommitDataRenders;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommitInfo;
 
 public partial class CommitInfoHeader : GitModuleControl
 {
+    private readonly ICommitDataHeaderRenderer _commitDataHeaderRenderer;
+    private readonly ICommitDataManager _commitDataManager;
     private readonly IDateFormatter _dateFormatter = new DateFormatter();
     private readonly ILinkFactory _linkFactory = new LinkFactory();
-    private readonly ICommitDataManager _commitDataManager;
-    private readonly ICommitDataHeaderRenderer _commitDataHeaderRenderer;
     private readonly IDisposable _rtbResizedSubscription;
-
-    public event EventHandler<CommandEventArgs>? CommandClicked;
 
     public CommitInfoHeader()
     {
@@ -29,9 +29,10 @@ public partial class CommitInfoHeader : GitModuleControl
         TabbedHeaderRenderStyleProvider headerRenderer = new();
 
         _commitDataManager = new CommitDataManager(() => Module);
-        _commitDataHeaderRenderer = new CommitDataHeaderRenderer(labelFormatter, _dateFormatter, headerRenderer, _linkFactory);
+        _commitDataHeaderRenderer =
+            new CommitDataHeaderRenderer(labelFormatter, _dateFormatter, headerRenderer, _linkFactory);
 
-        using (Graphics g = CreateGraphics())
+        using (var g = CreateGraphics())
         {
             rtbRevisionHeader.Font = _commitDataHeaderRenderer.GetFont(g);
         }
@@ -44,8 +45,12 @@ public partial class CommitInfoHeader : GitModuleControl
                 h => rtbRevisionHeader.ContentsResized -= h)
             .Throttle(TimeSpan.FromMilliseconds(100))
             .ObserveOn(MainThreadScheduler.Instance)
-            .Subscribe(eventPattern => TaskManager.HandleExceptions(() => rtbRevisionHeader_ContentsResized(eventPattern.EventArgs), Application.OnThreadException));
+            .Subscribe(eventPattern =>
+                TaskManager.HandleExceptions(() => rtbRevisionHeader_ContentsResized(eventPattern.EventArgs),
+                    Application.OnThreadException));
     }
+
+    public event EventHandler<CommandEventArgs>? CommandClicked;
 
     public void SetContextMenuStrip(ContextMenuStrip contextMenuStrip)
     {
@@ -56,16 +61,16 @@ public partial class CommitInfoHeader : GitModuleControl
     {
         this.InvokeAndForget(() =>
         {
-            CommitData data = _commitDataManager.CreateFromRevision(revision, children);
-            string header = _commitDataHeaderRenderer.Render(data, showRevisionsAsLinks: CommandClicked is not null);
+            var data = _commitDataManager.CreateFromRevision(revision, children);
+            var header = _commitDataHeaderRenderer.Render(data, CommandClicked is not null);
 
             rtbRevisionHeader.SuspendLayout();
 
             rtbRevisionHeader.Clear();
-            rtbRevisionHeader.SetXHTMLText(header);
+            rtbRevisionHeader.SetXhtmlText(header);
 
             rtbRevisionHeader.SelectionStart = 0; // scroll up
-            rtbRevisionHeader.ScrollToCaret();    // scroll up
+            rtbRevisionHeader.ScrollToCaret(); // scroll up
 
             rtbRevisionHeader.ResumeLayout(true);
 
@@ -80,7 +85,7 @@ public partial class CommitInfoHeader : GitModuleControl
 
     private void LoadAuthorImage(GitRevision? revision)
     {
-        bool showAvatar = AppSettings.ShowAuthorAvatarInCommitInfo;
+        var showAvatar = AppSettings.ShowAuthorAvatarInCommitInfo;
         avatarControl.Visible = showAvatar;
 
         if (!showAvatar)
@@ -118,7 +123,7 @@ public partial class CommitInfoHeader : GitModuleControl
     {
         try
         {
-            string? linkUri = rtbRevisionHeader.GetLink(e.LinkStart);
+            var linkUri = rtbRevisionHeader.GetLink(e.LinkStart);
             _linkFactory.ExecuteLink(linkUri, commandEventArgs => CommandClicked?.Invoke(sender, commandEventArgs));
         }
         catch (Exception ex)

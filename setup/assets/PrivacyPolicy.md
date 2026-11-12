@@ -1,11 +1,15 @@
 # Information collected and transmitted by Git Extensions
 
-We would like your permission to collect a little information about how you use Git Extensions. This will help us to make the application better.
+We would like your permission to collect a little information about how you use Git Extensions. This will help us to
+make the application better.
 You can opt-out any time.
 
-First, a reminder: Git Extensions is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement.
+First, a reminder: Git Extensions is provided "as is", without warranty of any kind, express or implied, including but
+not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement.
 
-For telemetry we employ [Microsoft Application Insights](https://docs.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview). The information is collected on rolling basis, and is stored for a limited amount of time.
+For telemetry we
+employ [Microsoft Application Insights](https://docs.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview).
+The information is collected on rolling basis, and is stored for a limited amount of time.
 Here's a breakdown of all the information we may collect via the Application Insights.
 
 ### Application-Level

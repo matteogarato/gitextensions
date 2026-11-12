@@ -14,18 +14,120 @@ using GitExtUtils;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.CommandsDialogs;
-using GitUI.Editor.RichTextBoxExtension;
+using GitUI.Editor;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 using ResourceManager;
 using ResourceManager.CommitDataRenders;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommitInfo;
 
 public partial class CommitInfo : GitModuleControl
 {
+    private static readonly TranslationString _brokenRefs = new("The repository refs seem to be broken:");
+    private static readonly TranslationString _copyLink = new("Copy &link ({0})");
+    private static readonly TranslationString _trsLinksRelatedToRevision = new("Related links:");
+    private static readonly TranslationString _derivesFromTag = new("Derives from tag:");
+    private static readonly TranslationString _derivesFromNoTag = new("Derives from no tag");
+    private static readonly TranslationString _plusCommits = new("commits");
+    private static readonly TranslationString _repoFailure = new("Repository failure");
+    private readonly CancellationTokenSequence _asyncLoadCancellation = new();
+
+    private readonly ICommitDataManager _commitDataManager;
+    private readonly IDisposable _commitMessageResizedSubscription;
+    private readonly IConfiguredLinkDefinitionsProvider _effectiveLinkDefinitionsProvider;
+    private readonly IExternalLinkRevisionParser _externalLinkRevisionParser;
+    private readonly IExternalLinksStorage _externalLinksStorage;
+    private readonly GitDescribeProvider _gitDescribeProvider;
+    private readonly IGitRevisionExternalLinksParser _gitRevisionExternalLinksParser;
+    private readonly IConfigFileRemoteSettingsManager _remotesManager;
+
+    private readonly IDisposable _revisionInfoResizedSubscription;
+    private string? _annotatedTagsInfo;
+    private IDictionary<string, string>? _annotatedTagsMessages;
+    private string? _branchInfo;
+    private string[]? _branches;
+    private IReadOnlyList<ObjectId>? _children;
+
+    private ICommitDataBodyRenderer? _commitDataBodyRenderer;
+    private int _commitMessageHeight;
+    private string? _gitDescribeInfo;
+    private ILinkFactory? _linkFactory;
+    private string? _linksInfo;
+    private RefsFormatter? _refsFormatter;
+
+    private GitRevision? _revision;
+    private int _revisionInfoHeight;
+    private bool _showAllBranches;
+    private bool _showAllTags;
+    private string? _tagInfo;
+    private string[]? _tags;
+    private IDictionary<string, int>? _tagsOrderDict;
+
+    public CommitInfo()
+        : this(null)
+    {
+    }
+
+    public CommitInfo(ICommitDataManager? commitDataManager)
+    {
+        InitializeComponent();
+        InitializeComplete();
+
+        _commitDataManager = commitDataManager ?? new CommitDataManager(() => Module);
+
+        _externalLinksStorage = new ExternalLinksStorage();
+        _effectiveLinkDefinitionsProvider = new ConfiguredLinkDefinitionsProvider(_externalLinksStorage);
+        _remotesManager = new ConfigFileRemoteSettingsManager(() => Module);
+        _externalLinkRevisionParser = new ExternalLinkRevisionParser(_remotesManager);
+        _gitRevisionExternalLinksParser =
+            new GitRevisionExternalLinksParser(_effectiveLinkDefinitionsProvider, _externalLinkRevisionParser);
+        _gitDescribeProvider = new GitDescribeProvider(() => Module);
+
+        var messageBackground = SystemColors.Window.MakeDarkerBy(0.04);
+        pnlCommitMessage.BackColor = messageBackground;
+        rtbxCommitMessage.BackColor = messageBackground;
+
+        rtbxCommitMessage.Font = AppSettings.CommitFont;
+        RevisionInfo.Font = AppSettings.Font;
+        addNoteToolStripMenuItem.ShortcutKeyDisplayString = GetShortcutKeyDisplayString(FormBrowse.Command.AddNotes);
+
+        _commitMessageResizedSubscription =
+            SubscribeToContentsResized(rtbxCommitMessage, CommitMessage_ContentsResized);
+        _revisionInfoResizedSubscription = SubscribeToContentsResized(RevisionInfo, RevisionInfo_ContentsResized);
+
+        IDisposable SubscribeToContentsResized(RichTextBox richTextBox, Action<ContentsResizedEventArgs> handler)
+        {
+            return Observable
+                .FromEventPattern<ContentsResizedEventHandler, ContentsResizedEventArgs>(
+                    h => richTextBox.ContentsResized += h,
+                    h => richTextBox.ContentsResized -= h)
+                .Throttle(TimeSpan.FromMilliseconds(100))
+                .ObserveOn(MainThreadScheduler.Instance)
+                .Subscribe(eventPattern =>
+                    TaskManager.HandleExceptions(() => handler(eventPattern.EventArgs), Application.OnThreadException));
+        }
+
+        commitInfoHeader.SetContextMenuStrip(commitInfoContextMenuStrip);
+
+        // This issue surfaces at 150% scale factor.
+        // At this point rtbxCommitMessage.Bounds = {X = 8 Y = 8 Width = 440 Height = 0}
+        // and with Height=0 we won't be receiving any ContentsResizedEvents.
+        // To workaround the zero-height - force the min size.
+        rtbxCommitMessage.MinimumSize = new Size(1, 1);
+    }
+
+    [DefaultValue(false)] public bool ShowBranchesAsLinks { get; set; }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public GitRevision? Revision
+    {
+        get => _revision;
+        set => SetRevisionWithChildren(value, null);
+    }
+
     private event EventHandler<CommandEventArgs>? CommandClickedEvent;
 
     public event EventHandler<CommandEventArgs>? CommandClicked
@@ -42,99 +144,8 @@ public partial class CommitInfo : GitModuleControl
         }
     }
 
-    private static readonly TranslationString _brokenRefs = new("The repository refs seem to be broken:");
-    private static readonly TranslationString _copyLink = new("Copy &link ({0})");
-    private static readonly TranslationString _trsLinksRelatedToRevision = new("Related links:");
-    private static readonly TranslationString _derivesFromTag = new("Derives from tag:");
-    private static readonly TranslationString _derivesFromNoTag = new("Derives from no tag");
-    private static readonly TranslationString _plusCommits = new("commits");
-    private static readonly TranslationString _repoFailure = new("Repository failure");
-
-    private ICommitDataBodyRenderer? _commitDataBodyRenderer;
-    private ILinkFactory? _linkFactory;
-    private RefsFormatter? _refsFormatter;
-
-    private readonly ICommitDataManager _commitDataManager;
-    private readonly IExternalLinksStorage _externalLinksStorage;
-    private readonly IConfiguredLinkDefinitionsProvider _effectiveLinkDefinitionsProvider;
-    private readonly IGitRevisionExternalLinksParser _gitRevisionExternalLinksParser;
-    private readonly IExternalLinkRevisionParser _externalLinkRevisionParser;
-    private readonly IConfigFileRemoteSettingsManager _remotesManager;
-    private readonly GitDescribeProvider _gitDescribeProvider;
-    private readonly CancellationTokenSequence _asyncLoadCancellation = new();
-
-    private readonly IDisposable _revisionInfoResizedSubscription;
-    private readonly IDisposable _commitMessageResizedSubscription;
-
-    private GitRevision? _revision;
-    private IReadOnlyList<ObjectId>? _children;
-    private string? _linksInfo;
-    private IDictionary<string, string>? _annotatedTagsMessages;
-    private string? _annotatedTagsInfo;
-    private string[]? _tags;
-    private string? _tagInfo;
-    private string[]? _branches;
-    private string? _branchInfo;
-    private string? _gitDescribeInfo;
-    private IDictionary<string, int>? _tagsOrderDict;
-    private int _revisionInfoHeight;
-    private int _commitMessageHeight;
-    private bool _showAllBranches;
-    private bool _showAllTags;
-
-    [DefaultValue(false)]
-    public bool ShowBranchesAsLinks { get; set; }
-
-    public CommitInfo()
-        : this(commitDataManager: null)
-    {
-    }
-
-    public CommitInfo(ICommitDataManager? commitDataManager)
-    {
-        InitializeComponent();
-        InitializeComplete();
-
-        _commitDataManager = commitDataManager ?? new CommitDataManager(() => Module);
-
-        _externalLinksStorage = new ExternalLinksStorage();
-        _effectiveLinkDefinitionsProvider = new ConfiguredLinkDefinitionsProvider(_externalLinksStorage);
-        _remotesManager = new ConfigFileRemoteSettingsManager(() => Module);
-        _externalLinkRevisionParser = new ExternalLinkRevisionParser(_remotesManager);
-        _gitRevisionExternalLinksParser = new GitRevisionExternalLinksParser(_effectiveLinkDefinitionsProvider, _externalLinkRevisionParser);
-        _gitDescribeProvider = new GitDescribeProvider(() => Module);
-
-        Color messageBackground = SystemColors.Window.MakeDarkerBy(0.04);
-        pnlCommitMessage.BackColor = messageBackground;
-        rtbxCommitMessage.BackColor = messageBackground;
-
-        rtbxCommitMessage.Font = AppSettings.CommitFont;
-        RevisionInfo.Font = AppSettings.Font;
-        addNoteToolStripMenuItem.ShortcutKeyDisplayString = GetShortcutKeyDisplayString(FormBrowse.Command.AddNotes);
-
-        _commitMessageResizedSubscription = subscribeToContentsResized(rtbxCommitMessage, CommitMessage_ContentsResized);
-        _revisionInfoResizedSubscription = subscribeToContentsResized(RevisionInfo, RevisionInfo_ContentsResized);
-
-        IDisposable subscribeToContentsResized(RichTextBox richTextBox, Action<ContentsResizedEventArgs> handler) =>
-            Observable
-                .FromEventPattern<ContentsResizedEventHandler, ContentsResizedEventArgs>(
-                    h => richTextBox.ContentsResized += h,
-                    h => richTextBox.ContentsResized -= h)
-                .Throttle(TimeSpan.FromMilliseconds(100))
-                .ObserveOn(MainThreadScheduler.Instance)
-                .Subscribe(eventPattern => TaskManager.HandleExceptions(() => handler(eventPattern.EventArgs), Application.OnThreadException));
-
-        commitInfoHeader.SetContextMenuStrip(commitInfoContextMenuStrip);
-
-        // This issue surfaces at 150% scale factor.
-        // At this point rtbxCommitMessage.Bounds = {X = 8 Y = 8 Width = 440 Height = 0}
-        // and with Height=0 we won't be receiving any ContentsResizedEvents.
-        // To workaround the zero-height - force the min size.
-        rtbxCommitMessage.MinimumSize = new(1, 1);
-    }
-
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -155,7 +166,7 @@ public partial class CommitInfo : GitModuleControl
         ReloadHotkeys();
     }
 
-    protected override void OnUICommandsSourceSet(IGitUICommandsSource source)
+    protected override void OnUICommandsSourceSet(IGitUiCommandsSource source)
     {
         base.OnUICommandsSourceSet(source);
 
@@ -167,11 +178,11 @@ public partial class CommitInfo : GitModuleControl
         }
         else
         {
-            _linkFactory = source.UICommands.GetRequiredService<ILinkFactory>();
+            _linkFactory = source.UiCommands.GetRequiredService<ILinkFactory>();
             _commitDataBodyRenderer = new CommitDataBodyRenderer(() => Module, _linkFactory);
             _refsFormatter = new RefsFormatter(_linkFactory);
 
-            source.UICommandsChanged += delegate { RefreshSortedTags(); };
+            source.UiCommandsChanged += delegate { RefreshSortedTags(); };
 
             // call this event handler also now (necessary for "Contained in branches/tags")
             RefreshSortedTags();
@@ -193,21 +204,14 @@ public partial class CommitInfo : GitModuleControl
         ThreadHelper.FileAndForget(LoadSortedTagsAsync);
     }
 
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public GitRevision? Revision
-    {
-        get => _revision;
-        set => SetRevisionWithChildren(value, null);
-    }
-
     private void LinkClicked(object sender, LinkClickedEventArgs e)
     {
         try
         {
-            string? linkUri = ((RichTextBox)sender).GetLink(e.LinkStart);
+            var linkUri = ((RichTextBox)sender).GetLink(e.LinkStart);
             Validates.NotNull(_linkFactory);
-            _linkFactory?.ExecuteLink(linkUri, commandEventArgs => CommandClickedEvent?.Invoke(sender, commandEventArgs), ShowAll);
+            _linkFactory?.ExecuteLink(linkUri,
+                commandEventArgs => CommandClickedEvent?.Invoke(sender, commandEventArgs), ShowAll);
         }
         catch (Exception ex)
         {
@@ -217,7 +221,7 @@ public partial class CommitInfo : GitModuleControl
 
     public void SetRevisionWithChildren(GitRevision? revision, IReadOnlyList<ObjectId>? children)
     {
-        CancellationToken cancellationToken = _asyncLoadCancellation.Next();
+        var cancellationToken = _asyncLoadCancellation.Next();
 
         _revision = revision;
         _children = children;
@@ -257,21 +261,20 @@ public partial class CommitInfo : GitModuleControl
     {
         GitArgumentBuilder args = new("for-each-ref")
         {
-            @"--sort=""-taggerdate""",
-            @"--format=""%(refname)""",
-            "refs/tags/"
+            @"--sort=""-taggerdate""", @"--format=""%(refname)""", "refs/tags/"
         };
 
-        string tree = Module.GitExecutable.GetOutput(args);
-        int warningPos = tree.IndexOf("warning:");
+        var tree = Module.GitExecutable.GetOutput(args);
+        var warningPos = tree.IndexOf("warning:");
         if (warningPos >= 0)
         {
-            throw new RefsWarningException(tree[warningPos..].LazySplit('\n', StringSplitOptions.RemoveEmptyEntries).First());
+            throw new RefsWarningException(tree[warningPos..].LazySplit('\n', StringSplitOptions.RemoveEmptyEntries)
+                .First());
         }
 
-        int i = 0;
+        var i = 0;
         Dictionary<string, int> dict = [];
-        foreach (string entry in tree.LazySplit('\n'))
+        foreach (var entry in tree.LazySplit('\n'))
         {
             if (dict.TryAdd(entry, i))
             {
@@ -286,7 +289,7 @@ public partial class CommitInfo : GitModuleControl
     {
         try
         {
-            IDictionary<string, int> tagsOrderDict = GetSortedTags();
+            var tagsOrderDict = GetSortedTags();
 
             await this.SwitchToMainThreadAsync();
             _tagsOrderDict = tagsOrderDict;
@@ -295,7 +298,8 @@ public partial class CommitInfo : GitModuleControl
         catch (RefsWarningException ex)
         {
             await this.SwitchToMainThreadAsync();
-            MessageBoxes.Show(this, string.Format("{0}{1}{1}{2}", _brokenRefs.Text, Environment.NewLine, ex.Message), _repoFailure.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBoxes.Show(this, string.Format("{0}{1}{1}{2}", _brokenRefs.Text, Environment.NewLine, ex.Message),
+                _repoFailure.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -308,7 +312,8 @@ public partial class CommitInfo : GitModuleControl
     {
         showContainedInBranchesToolStripMenuItem.Checked = AppSettings.CommitInfoShowContainedInBranchesLocal;
         showContainedInBranchesRemoteToolStripMenuItem.Checked = AppSettings.CommitInfoShowContainedInBranchesRemote;
-        showContainedInBranchesRemoteIfNoLocalToolStripMenuItem.Checked = AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
+        showContainedInBranchesRemoteIfNoLocalToolStripMenuItem.Checked =
+            AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
         showContainedInTagsToolStripMenuItem.Checked = AppSettings.CommitInfoShowContainedInTags;
         showMessagesOfAnnotatedTagsToolStripMenuItem.Checked = AppSettings.ShowAnnotatedTagsMessages;
         showTagThisCommitDerivesFromMenuItem.Checked = AppSettings.CommitInfoShowTagThisCommitDerivesFrom;
@@ -338,7 +343,7 @@ public partial class CommitInfo : GitModuleControl
         }
         else
         {
-            rtbxCommitMessage.SetXHTMLText(GetFixCommitMessage());
+            rtbxCommitMessage.SetXhtmlText(GetFixCommitMessage());
             RevisionInfo.Clear();
         }
 
@@ -351,46 +356,48 @@ public partial class CommitInfo : GitModuleControl
                 return string.Empty;
             }
 
-            CommitData data = _commitDataManager.CreateFromRevision(_revision, _children);
-            return _commitDataBodyRenderer?.Render(data, showRevisionsAsLinks: false) ?? string.Empty;
+            var data = _commitDataManager.CreateFromRevision(_revision, _children);
+            return _commitDataBodyRenderer?.Render(data, false) ?? string.Empty;
         }
 
         async Task UpdateCommitMessageAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (_revision.Body is null || (_revision.Notes is null && (AppSettings.ShowGitNotesColumn.Value || AppSettings.ShowGitNotes)))
+            if (_revision.Body is null || (_revision.Notes is null &&
+                                           (AppSettings.ShowGitNotesColumn.Value || AppSettings.ShowGitNotes)))
             {
                 _commitDataManager.UpdateBodyAndNotes(_revision);
             }
 
-            CommitData data = _commitDataManager.CreateFromRevision(_revision, _children);
+            var data = _commitDataManager.CreateFromRevision(_revision, _children);
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            ICommitDataBodyRenderer? commitDataBodyRenderer = _commitDataBodyRenderer;
+            var commitDataBodyRenderer = _commitDataBodyRenderer;
             if (commitDataBodyRenderer is null)
             {
                 // Cancel the update if the commands source has been unset
                 return;
             }
 
-            string commitMessage = commitDataBodyRenderer.Render(data, showRevisionsAsLinks: CommandClickedEvent is not null);
+            var commitMessage = commitDataBodyRenderer.Render(data, CommandClickedEvent is not null);
 
             await this.SwitchToMainThreadAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            rtbxCommitMessage.SetXHTMLText(commitMessage);
+            rtbxCommitMessage.SetXhtmlText(commitMessage);
         }
 
         void StartAsyncDataLoad(DistributedSettings settings, CancellationToken cancellationToken)
         {
-            GitRevision initialRevision = _revision;
+            var initialRevision = _revision;
 
             ThreadHelper.FileAndForget(async () =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                List<Task> tasks = [
+                List<Task> tasks =
+                [
                     UpdateCommitMessageAsync(cancellationToken),
                     LoadLinksForRevisionAsync(initialRevision, settings).WithCancellation(cancellationToken)
                 ];
@@ -431,14 +438,14 @@ public partial class CommitInfo : GitModuleControl
                 await TaskScheduler.Default;
                 cancellationToken.ThrowIfCancellationRequested();
 
-                ILinkFactory? linkFactory = _linkFactory;
+                var linkFactory = _linkFactory;
                 if (linkFactory is null)
                 {
                     // Cancel the update if the commands source has been unset
                     return;
                 }
 
-                string linksInfo = GetLinksForRevision(settings);
+                var linksInfo = GetLinksForRevision(settings);
 
                 // Most commits do not have link; do not switch to main thread if nothing is changed
                 if (_linksInfo == linksInfo)
@@ -453,9 +460,10 @@ public partial class CommitInfo : GitModuleControl
 
                 string GetLinksForRevision(DistributedSettings settings)
                 {
-                    IEnumerable<ExternalLink> links = _gitRevisionExternalLinksParser.Parse(revision, settings);
+                    var links = _gitRevisionExternalLinksParser.Parse(revision, settings);
                     cancellationToken.ThrowIfCancellationRequested();
-                    string result = string.Join(", ", links.Distinct().Select(link => linkFactory.CreateLink(link.Caption, link.Uri)));
+                    var result = string.Join(", ",
+                        links.Distinct().Select(link => linkFactory.CreateLink(link.Caption, link.Uri)));
 
                     if (string.IsNullOrEmpty(result))
                     {
@@ -470,7 +478,7 @@ public partial class CommitInfo : GitModuleControl
             {
                 await TaskScheduler.Default;
 
-                IDictionary<string, string>? annotatedTagsMessages = GetAnnotatedTagsMessages();
+                var annotatedTagsMessages = GetAnnotatedTagsMessages();
 
                 await this.SwitchToMainThreadAsync(cancellationToken);
                 _annotatedTagsMessages = annotatedTagsMessages;
@@ -486,9 +494,10 @@ public partial class CommitInfo : GitModuleControl
 
                     Dictionary<string, string> result = [];
 
-                    foreach (IGitRef gitRef in refs)
+                    foreach (var gitRef in refs)
                     {
                         #region Note on annotated tags
+
                         // Notice that for the annotated tags, gitRef's come in pairs because they're produced
                         // by the "show-ref --dereference" command. GitRef's in such pair have the same Name,
                         // a bit different CompleteName's, and completely different checksums:
@@ -511,11 +520,13 @@ public partial class CommitInfo : GitModuleControl
                         // so this collection contains only dereferencing GitRef's - just because GitRef_2 has the same
                         // Guid as the GitRevision, while GitRef_1 doesn't. So annotated tag's GitRef would always be
                         // of 2nd type in GitRevision.Refs collection, i.e. the one that has IsDereference==true.
+
                         #endregion
 
                         if (gitRef is { IsTag: true, IsDereference: true })
                         {
-                            string? content = WebUtility.HtmlEncode(Module.GetTagMessage(gitRef.LocalName, cancellationToken));
+                            var content =
+                                WebUtility.HtmlEncode(Module.GetTagMessage(gitRef.LocalName, cancellationToken));
                             if (content is not null)
                             {
                                 result.Add(gitRef.LocalName, content);
@@ -542,13 +553,14 @@ public partial class CommitInfo : GitModuleControl
                 await TaskScheduler.Default;
 
                 // Include local branches if explicitly requested or when needed to decide whether to show remotes
-                bool getLocal = AppSettings.CommitInfoShowContainedInBranchesLocal ||
-                                AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
+                var getLocal = AppSettings.CommitInfoShowContainedInBranchesLocal ||
+                               AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
 
                 // Include remote branches if requested
-                bool getRemote = AppSettings.CommitInfoShowContainedInBranchesRemote ||
-                                 AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
-                string[] branches = [.. Module.GetAllBranchesWhichContainGivenCommit(objectId, getLocal, getRemote, cancellationToken)];
+                var getRemote = AppSettings.CommitInfoShowContainedInBranchesRemote ||
+                                AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
+                string[] branches =
+                    [.. Module.GetAllBranchesWhichContainGivenCommit(objectId, getLocal, getRemote, cancellationToken)];
 
                 await this.SwitchToMainThreadAsync(cancellationToken);
                 _branches = branches;
@@ -558,14 +570,14 @@ public partial class CommitInfo : GitModuleControl
             {
                 await TaskScheduler.Default;
 
-                ILinkFactory? linkFactory = _linkFactory;
+                var linkFactory = _linkFactory;
                 if (linkFactory is null)
                 {
                     // Cancel the update if the commands source has been unset
                     return;
                 }
 
-                string info = GetDescribeInfoForRevision();
+                var info = GetDescribeInfoForRevision();
 
                 await this.SwitchToMainThreadAsync(cancellationToken);
                 _gitDescribeInfo = info;
@@ -574,16 +586,20 @@ public partial class CommitInfo : GitModuleControl
 
                 string GetDescribeInfoForRevision()
                 {
-                    (string precedingTag, string commitCount) = _gitDescribeProvider.Get(commitId, cancellationToken);
+                    (var precedingTag, var commitCount) = _gitDescribeProvider.Get(commitId, cancellationToken);
 
                     StringBuilder gitDescribeInfo = new();
                     if (!string.IsNullOrEmpty(precedingTag))
                     {
-                        string tagString = ShowBranchesAsLinks ? linkFactory.CreateTagLink(precedingTag) : WebUtility.HtmlEncode(precedingTag);
-                        gitDescribeInfo.Append(WebUtility.HtmlEncode(_derivesFromTag.Text)).Append(' ').Append(tagString);
+                        var tagString = ShowBranchesAsLinks
+                            ? linkFactory.CreateTagLink(precedingTag)
+                            : WebUtility.HtmlEncode(precedingTag);
+                        gitDescribeInfo.Append(WebUtility.HtmlEncode(_derivesFromTag.Text)).Append(' ')
+                            .Append(tagString);
                         if (!string.IsNullOrEmpty(commitCount))
                         {
-                            gitDescribeInfo.Append(" + ").Append(commitCount).Append(' ').Append(WebUtility.HtmlEncode(_plusCommits.Text));
+                            gitDescribeInfo.Append(" + ").Append(commitCount).Append(' ')
+                                .Append(WebUtility.HtmlEncode(_plusCommits.Text));
                         }
                     }
                     else
@@ -599,7 +615,7 @@ public partial class CommitInfo : GitModuleControl
 
     private void UpdateRevisionInfo()
     {
-        RefsFormatter? refsFormatter = _refsFormatter;
+        var refsFormatter = _refsFormatter;
         if (refsFormatter is null)
         {
             // Cancel the update if the commands source has been unset
@@ -616,10 +632,12 @@ public partial class CommitInfo : GitModuleControl
                 // having both lightweight & annotated tags in thisRevisionTagNames,
                 // but GetAnnotatedTagsInfo will process annotated only:
                 List<string> thisRevisionTagNames =
-                    [.. Revision
-                    .Refs
-                    .Where(r => r.IsTag)
-                    .Select(r => r.LocalName)];
+                [
+                    .. Revision
+                        .Refs
+                        .Where(r => r.IsTag)
+                        .Select(r => r.LocalName)
+                ];
 
                 thisRevisionTagNames.Sort(new TagsComparer(_tagsOrderDict));
                 _annotatedTagsInfo = GetAnnotatedTagsInfo(thisRevisionTagNames, _annotatedTagsMessages);
@@ -628,21 +646,21 @@ public partial class CommitInfo : GitModuleControl
             if (_tags is not null && string.IsNullOrEmpty(_tagInfo))
             {
                 Array.Sort(_tags, new TagsComparer(_tagsOrderDict));
-                _tagInfo = refsFormatter.FormatTags(_tags, ShowBranchesAsLinks, limit: !_showAllTags);
+                _tagInfo = refsFormatter.FormatTags(_tags, ShowBranchesAsLinks, !_showAllTags);
             }
         }
 
         if (_branches is not null && string.IsNullOrEmpty(_branchInfo))
         {
             Array.Sort(_branches, new BranchComparer(_branches, Module.GetSelectedBranch()));
-            _branchInfo = refsFormatter.FormatBranches(_branches, ShowBranchesAsLinks, limit: !_showAllBranches);
+            _branchInfo = refsFormatter.FormatBranches(_branches, ShowBranchesAsLinks, !_showAllBranches);
         }
 
-        string body = string.Join(Environment.NewLine + Environment.NewLine,
+        var body = string.Join(Environment.NewLine + Environment.NewLine,
             new[] { _annotatedTagsInfo, _linksInfo, _branchInfo, _tagInfo, _gitDescribeInfo }
                 .Where(_ => !string.IsNullOrEmpty(_)));
 
-        RevisionInfo.SetXHTMLText(body);
+        RevisionInfo.SetXhtmlText(body);
         return;
 
         static string GetAnnotatedTagsInfo(
@@ -651,9 +669,9 @@ public partial class CommitInfo : GitModuleControl
         {
             StringBuilder result = new();
 
-            foreach (string tag in tagNames)
+            foreach (var tag in tagNames)
             {
-                if (annotatedTagsMessages.TryGetValue(tag, out string? annotatedContents))
+                if (annotatedTagsMessages.TryGetValue(tag, out var annotatedContents))
                 {
                     result.Append("<u>").Append(tag).Append("</u>: ").Append(annotatedContents).AppendLine();
                 }
@@ -671,8 +689,8 @@ public partial class CommitInfo : GitModuleControl
             return;
         }
 
-        int charIndex = rtb.GetCharIndexFromPosition(rtb.PointToClient(MousePosition));
-        string? link = rtb.GetLink(charIndex);
+        var charIndex = rtb.GetCharIndexFromPosition(rtb.PointToClient(MousePosition));
+        var link = rtb.GetLink(charIndex);
         copyLinkToolStripMenuItem.Visible = link is not null;
         copyLinkToolStripMenuItem.Text = string.Format(_copyLink.Text, link);
         copyLinkToolStripMenuItem.Tag = link;
@@ -703,7 +721,8 @@ public partial class CommitInfo : GitModuleControl
 
     private void copyCommitInfoToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        string commitInfo = $"{commitInfoHeader.GetPlainText()}{Environment.NewLine}{Environment.NewLine}{rtbxCommitMessage.GetPlainText()}";
+        var commitInfo =
+            $"{commitInfoHeader.GetPlainText()}{Environment.NewLine}{Environment.NewLine}{rtbxCommitMessage.GetPlainText()}";
         ClipboardUtil.TrySetText(commitInfo);
     }
 
@@ -715,7 +734,8 @@ public partial class CommitInfo : GitModuleControl
 
     private void showContainedInBranchesRemoteIfNoLocalToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal = !AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
+        AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal =
+            !AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal;
         ReloadCommitInfo();
     }
 
@@ -790,21 +810,21 @@ public partial class CommitInfo : GitModuleControl
         ];
 
         // leave 1st row SizeType = AutoWidth to let CommitInfoHeader.AutoSize be correctly applied
-        for (int i = 1; i < tableLayout.RowStyles.Count; i++)
+        for (var i = 1; i < tableLayout.RowStyles.Count; i++)
         {
             tableLayout.RowStyles[i].SizeType = SizeType.Absolute;
             tableLayout.RowStyles[i].Height = heights[i];
         }
 
-        int height = heights.Sum();
+        var height = heights.Sum();
 
-        int clientWidth = Width;
+        var clientWidth = Width;
         if (height > Height)
         {
             clientWidth -= SystemInformation.VerticalScrollBarWidth;
         }
 
-        int width = Math.Max(clientWidth, commitInfoHeader.Width + commitInfoHeader.Margin.Horizontal);
+        var width = Math.Max(clientWidth, commitInfoHeader.Width + commitInfoHeader.Margin.Horizontal);
 
         tableLayout.ColumnStyles[0].SizeType = SizeType.Absolute;
         tableLayout.ColumnStyles[0].Width = width;
@@ -845,6 +865,11 @@ public partial class CommitInfo : GitModuleControl
         }
     }
 
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
+
     internal sealed class BranchComparer : IComparer<string>
     {
         private const string _remoteBranchPrefix = "remotes/";
@@ -856,12 +881,19 @@ public partial class CommitInfo : GitModuleControl
         {
             _currentBranch = currentBranch;
             _isDetachedHead = DetachedHeadParser.IsDetachedHead(currentBranch);
-            string[] branchRegexes = AppSettings.PrioritizedBranchNames.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var branchRegexes = AppSettings.PrioritizedBranchNames.Split(';',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             string[] localBranchRegexes = [.. branchRegexes.Select(regex => $"^({regex})$")];
-            string[] remoteBranchRegexes = [.. branchRegexes.Select(regex => $"^{_remoteBranchPrefix}[^/]+/({regex})$")];
-            string[] remoteRegexes = [.. AppSettings.PrioritizedRemoteNames.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(regex => $"^{_remoteBranchPrefix}({regex})/")];
+            string[] remoteBranchRegexes =
+                [.. branchRegexes.Select(regex => $"^{_remoteBranchPrefix}[^/]+/({regex})$")];
+            string[] remoteRegexes =
+            [
+                .. AppSettings.PrioritizedRemoteNames
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(regex => $"^{_remoteBranchPrefix}({regex})/")
+            ];
 
-            foreach (string branch in branches)
+            foreach (var branch in branches)
             {
                 _orderByBranch[branch] = GetBranchOrder(branch);
             }
@@ -872,7 +904,7 @@ public partial class CommitInfo : GitModuleControl
             // Add max possible order value to next "level" to sort properly with the order for each regex.
             int GetBranchOrder(string branch)
             {
-                int order = 0;
+                var order = 0;
                 if (_isDetachedHead ? DetachedHeadParser.IsDetachedHead(branch) : branch == _currentBranch)
                 {
                     return order;
@@ -883,11 +915,11 @@ public partial class CommitInfo : GitModuleControl
 
                 if (IsLocalBranch())
                 {
-                    if (!TryGetOrder(branch, localBranchRegexes, out int localBranchOrder))
+                    if (!TryGetOrder(branch, localBranchRegexes, out var localBranchOrder))
                     {
                         // Non prioritized local branches added after prioritized remote branches
                         // localBranchOrder==localBranchRegexes.Length, an extra priority level
-                        order += prioritizedRemoteBranchesLength();
+                        order += PrioritizedRemoteBranchesLength();
                     }
 
                     // Order by branch priority
@@ -899,7 +931,7 @@ public partial class CommitInfo : GitModuleControl
                 // Remote branches after local prioritized branches
                 order += localBranchRegexes.Length;
 
-                if (!TryGetOrder(branch, remoteBranchRegexes, out int remoteBranchOrder))
+                if (!TryGetOrder(branch, remoteBranchRegexes, out var remoteBranchOrder))
                 {
                     // after non priority local branches (that are inserted after remote prioritzed branches)
                     const int localNonprioritizedBranchesLength = 1;
@@ -907,24 +939,33 @@ public partial class CommitInfo : GitModuleControl
                 }
 
                 // Group by branch priority then order by remote
-                order += (remoteBranchOrder * remotesGroupLength()) + GetOrder(branch, remoteRegexes);
+                order += (remoteBranchOrder * RemotesGroupLength()) + GetOrder(branch, remoteRegexes);
 
                 return order;
 
-                bool IsLocalBranch() => !branch.StartsWith(_remoteBranchPrefix);
+                bool IsLocalBranch()
+                {
+                    return !branch.StartsWith(_remoteBranchPrefix);
+                }
 
                 // The groups for a prioritized remote branch adds the unprioritized remotes to the regexes
-                int remotesGroupLength() => remoteRegexes.Length + 1;
+                int RemotesGroupLength()
+                {
+                    return remoteRegexes.Length + 1;
+                }
 
                 // Length of the block of all prioritized remote branches (non prioritized branches separate)
-                int prioritizedRemoteBranchesLength() => remoteBranchRegexes.Length * remotesGroupLength();
+                int PrioritizedRemoteBranchesLength()
+                {
+                    return remoteBranchRegexes.Length * RemotesGroupLength();
+                }
 
                 // Get the index of the match for prioritized sorting,
                 // set order to regexes.Length at no match
                 bool TryGetOrder(string branch, string[] regexes, out int order)
                 {
-                    int currentOrder = 0;
-                    foreach (string regex in regexes)
+                    var currentOrder = 0;
+                    foreach (var regex in regexes)
                     {
                         if (Regex.IsMatch(branch, regex, RegexOptions.ExplicitCapture))
                         {
@@ -941,13 +982,13 @@ public partial class CommitInfo : GitModuleControl
 
                 int GetOrder(string branch, string[] regexes)
                 {
-                    TryGetOrder(branch, regexes, out int order);
+                    TryGetOrder(branch, regexes, out var order);
                     return order;
                 }
             }
         }
 
-        public int Compare(string? a, string? b)
+        int IComparer<string>.Compare(string? a, string? b)
         {
             if (b is null)
             {
@@ -959,24 +1000,16 @@ public partial class CommitInfo : GitModuleControl
                 return 1;
             }
 
-            int priorityA = _orderByBranch[a];
-            int priorityB = _orderByBranch[b];
+            var priorityA = _orderByBranch[a];
+            var priorityB = _orderByBranch[b];
             return priorityA == priorityB ? StringComparer.Ordinal.Compare(a, b) : priorityA - priorityB;
         }
     }
 
-    private sealed class TagsComparer : IComparer<string>
+    private sealed class TagsComparer(IDictionary<string, int> orderDict, string prefix = "refs/tags/")
+        : IComparer<string>
     {
-        private readonly IDictionary<string, int> _orderDict;
-        private readonly string _prefix;
-
-        public TagsComparer(IDictionary<string, int> orderDict, string prefix = "refs/tags/")
-        {
-            _orderDict = orderDict;
-            _prefix = prefix;
-        }
-
-        public int Compare(string? a, string? b)
+        int IComparer<string>.Compare(string? a, string? b)
         {
             return b is null ? -1 : a is null ? 1 : IndexOf(a) - IndexOf(b);
 
@@ -988,10 +1021,10 @@ public partial class CommitInfo : GitModuleControl
                 }
                 else
                 {
-                    s = _prefix + s;
+                    s = prefix + s;
                 }
 
-                if (_orderDict.TryGetValue(s, out int index))
+                if (orderDict.TryGetValue(s, out var index))
                 {
                     return index;
                 }
@@ -1001,24 +1034,26 @@ public partial class CommitInfo : GitModuleControl
         }
     }
 
-    internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
+    internal readonly struct TestAccessor(CommitInfo commitInfo)
     {
-        private readonly CommitInfo _commitInfo;
-
-        public TestAccessor(CommitInfo commitInfo)
+        public RichTextBox CommitMessage
         {
-            _commitInfo = commitInfo;
+            get => commitInfo.rtbxCommitMessage;
         }
 
-        public RichTextBox CommitMessage => _commitInfo.rtbxCommitMessage;
+        public RichTextBox RevisionInfo
+        {
+            get => commitInfo.RevisionInfo;
+        }
 
-        public RichTextBox RevisionInfo => _commitInfo.RevisionInfo;
+        public IDictionary<string, int> GetSortedTags()
+        {
+            return commitInfo.GetSortedTags();
+        }
 
-        public IDictionary<string, int> GetSortedTags() => _commitInfo.GetSortedTags();
-
-        public void LinkClicked(object sender, LinkClickedEventArgs e) => _commitInfo.LinkClicked(sender, e);
+        public void LinkClicked(object sender, LinkClickedEventArgs e)
+        {
+            commitInfo.LinkClicked(sender, e);
+        }
     }
 }

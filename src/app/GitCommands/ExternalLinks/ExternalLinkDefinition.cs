@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 
@@ -7,6 +8,12 @@ namespace GitCommands.ExternalLinks;
 [XmlType("GitExtLinkDef")]
 public class ExternalLinkDefinition
 {
+    public enum RemotePart
+    {
+        Url,
+        PushUrl
+    }
+
     // revision's parts that can be searched for candidates for a link
     public enum RevisionPart
     {
@@ -15,24 +22,19 @@ public class ExternalLinkDefinition
         RemoteBranches
     }
 
-    public enum RemotePart
-    {
-        URL,
-        PushURL
-    }
-
-    private string? _searchPattern;
     private string? _nestedSearchPattern;
     private string? _remoteSearchPattern;
+
+    private string? _searchPattern;
     private string? _useRemotesPattern;
 
     /// <summary>
-    /// Non-local link def can be locally disabled
+    ///     Non-local link def can be locally disabled
     /// </summary>
     public bool Enabled { get; set; }
 
     /// <summary>
-    /// List of formats to be applied for each revision part matched by SearchPattern
+    ///     List of formats to be applied for each revision part matched by SearchPattern
     /// </summary>
     public BindingList<ExternalLinkFormat> LinkFormats { get; } = [];
 
@@ -40,8 +42,8 @@ public class ExternalLinkDefinition
     public string? Name { get; set; }
 
     /// <summary>
-    /// RegEx for revision parts that have to be transformed into links
-    /// empty string stands for unconditionally always added link
+    ///     RegEx for revision parts that have to be transformed into links
+    ///     empty string stands for unconditionally always added link
     /// </summary>
     public string? NestedSearchPattern
     {
@@ -57,7 +59,7 @@ public class ExternalLinkDefinition
                 }
                 catch (Exception e)
                 {
-                    System.Diagnostics.Debug.Print(e.ToStringWithData());
+                    Debug.Print(e.ToStringWithData());
                     return null;
                 }
             });
@@ -67,8 +69,8 @@ public class ExternalLinkDefinition
     public HashSet<RemotePart> RemoteSearchInParts { get; } = [];
 
     /// <summary>
-    /// RegEx for remote parts that have to be transformed into links
-    /// empty string stands for unconditionally always added link
+    ///     RegEx for remote parts that have to be transformed into links
+    ///     empty string stands for unconditionally always added link
     /// </summary>
     public string? RemoteSearchPattern
     {
@@ -84,7 +86,7 @@ public class ExternalLinkDefinition
                 }
                 catch (Exception e)
                 {
-                    System.Diagnostics.Debug.Print(e.ToStringWithData());
+                    Debug.Print(e.ToStringWithData());
                     return null;
                 }
             });
@@ -94,8 +96,8 @@ public class ExternalLinkDefinition
     public HashSet<RevisionPart> SearchInParts { get; } = [];
 
     /// <summary>
-    /// RegEx for revision parts that have to be transformed into links
-    /// empty string stands for unconditionally always added link
+    ///     RegEx for revision parts that have to be transformed into links
+    ///     empty string stands for unconditionally always added link
     /// </summary>
     public string? SearchPattern
     {
@@ -104,23 +106,23 @@ public class ExternalLinkDefinition
         {
             _searchPattern = value;
             SearchPatternRegex = new Lazy<Regex?>(() =>
+            {
+                try
                 {
-                    try
-                    {
-                        return new Regex(SearchPattern!, RegexOptions.Compiled);
-                    }
-                    catch (Exception e)
-                    {
-                        System.Diagnostics.Debug.Print(e.ToStringWithData());
-                        return null;
-                    }
-                });
+                    return new Regex(SearchPattern!, RegexOptions.Compiled);
+                }
+                catch (Exception e)
+                {
+                    Debug.Print(e.ToStringWithData());
+                    return null;
+                }
+            });
         }
     }
 
     /// <summary>
-    /// RegEx for remotes that have to be use to search in
-    /// empty string stands for an unconditionally use of the all remotes
+    ///     RegEx for remotes that have to be used to search in
+    ///     empty string stands for an unconditionally use of the all remotes
     /// </summary>
     public string? UseRemotesPattern
     {
@@ -129,17 +131,17 @@ public class ExternalLinkDefinition
         {
             _useRemotesPattern = value;
             UseRemotesRegex = new Lazy<Regex?>(() =>
+            {
+                try
                 {
-                    try
-                    {
-                        return new Regex(UseRemotesPattern!, RegexOptions.Compiled);
-                    }
-                    catch (Exception e)
-                    {
-                        System.Diagnostics.Debug.Print(e.ToStringWithData());
-                        return null;
-                    }
-                });
+                    return new Regex(UseRemotesPattern!, RegexOptions.Compiled);
+                }
+                catch (Exception e)
+                {
+                    Debug.Print(e.ToStringWithData());
+                    return null;
+                }
+            });
         }
     }
 
@@ -164,9 +166,10 @@ public class ExternalLinkDefinition
 
     public void RemoveEmptyFormats()
     {
-        ExternalLinkFormat[] toRemove = [.. LinkFormats.Where(f => string.IsNullOrWhiteSpace(f.Caption) && string.IsNullOrWhiteSpace(f.Format))];
+        ExternalLinkFormat[] toRemove =
+            [.. LinkFormats.Where(f => string.IsNullOrWhiteSpace(f.Caption) && string.IsNullOrWhiteSpace(f.Format))];
 
-        foreach (ExternalLinkFormat format in toRemove)
+        foreach (var format in toRemove)
         {
             LinkFormats.Remove(format);
         }

@@ -1,26 +1,28 @@
 ﻿using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 
 namespace GitUI.CommandsDialogs.BrowseDialog;
 
 public sealed partial class FormGoToCommit : GitModuleForm
 {
     private const int _maxDropDownCount = 1_000;
+    private readonly AsyncLoader _branchesLoader = new();
+
+    private readonly AsyncLoader _tagsLoader = new();
+    private IGitRef? _selectedBranch;
 
     /// <summary>
-    /// this will be used when Go() is called.
+    ///     this will be used when Go() is called.
     /// </summary>
     private string? _selectedRevision;
 
     // these two are used to prepare for _selectedRevision
     private IGitRef? _selectedTag;
-    private IGitRef? _selectedBranch;
 
-    private readonly AsyncLoader _tagsLoader = new();
-    private readonly AsyncLoader _branchesLoader = new();
-
-    public FormGoToCommit(IGitUICommands commands)
+    public FormGoToCommit(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -41,7 +43,7 @@ public sealed partial class FormGoToCommit : GitModuleForm
     }
 
     /// <summary>
-    /// returns null if revision does not exist (could not be revparsed).
+    ///     returns null if revision does not exist (could not be revparsed).
     /// </summary>
     public ObjectId ValidateAndGetSelectedObjectId()
     {
@@ -115,12 +117,12 @@ public sealed partial class FormGoToCommit : GitModuleForm
     }
 
     /// <summary>
-    ///  Updates <see cref="_selectedRevision"/> from the control which supplies the revision to go to.
+    ///     Updates <see cref="_selectedRevision" /> from the control which supplies the revision to go to.
     /// </summary>
     /// <param name="enteredControl">
-    ///  The control raising <see cref="Control.Enter"/>. Such a control does not report itself as
-    ///  <see cref="Control.Focused"/> yet, so it has to be recognised explicitly; otherwise the focus
-    ///  would be moved away from it below. Pass <see langword="null"/> outside of that event.
+    ///     The control raising <see cref="Control.Enter" />. Such a control does not report itself as
+    ///     <see cref="Control.Focused" /> yet, so it has to be recognised explicitly; otherwise the focus
+    ///     would be moved away from it below. Pass <see langword="null" /> outside of that event.
     /// </param>
     private void SetSelectedRevisionByFocusedControl(Control? enteredControl = null)
     {
@@ -145,7 +147,10 @@ public sealed partial class FormGoToCommit : GitModuleForm
 
         return;
 
-        bool IsSupplyingRevision(Control control) => control.Focused || control == enteredControl;
+        bool IsSupplyingRevision(Control control)
+        {
+            return control.Focused || control == enteredControl;
+        }
     }
 
     private void comboBoxTags_TextChanged(object? sender, EventArgs e)
@@ -166,7 +171,8 @@ public sealed partial class FormGoToCommit : GitModuleForm
             return;
         }
 
-        _selectedBranch = DataSourceToGitRefs(comboBoxBranches).FirstOrDefault(a => a.LocalName == comboBoxBranches.Text);
+        _selectedBranch = DataSourceToGitRefs(comboBoxBranches)
+            .FirstOrDefault(a => a.LocalName == comboBoxBranches.Text);
         SetSelectedRevisionByFocusedControl();
     }
 
@@ -214,13 +220,13 @@ public sealed partial class FormGoToCommit : GitModuleForm
 
     private void SetCommitExpressionFromClipboard()
     {
-        string text = Clipboard.GetText().Trim();
+        var text = Clipboard.GetText().Trim();
         if (string.IsNullOrEmpty(text))
         {
             return;
         }
 
-        ObjectId objectId = Module.RevParse(text);
+        var objectId = Module.RevParse(text);
         if (!objectId.IsZero)
         {
             textboxCommitExpression.Text = text;
@@ -229,7 +235,7 @@ public sealed partial class FormGoToCommit : GitModuleForm
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)

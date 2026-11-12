@@ -1,6 +1,7 @@
 ﻿using GitUI.UserManual;
 
 namespace GitUITests.UserManual;
+
 public class SingleHtmlUserManualFixture
 {
     [Theory]
@@ -10,7 +11,7 @@ public class SingleHtmlUserManualFixture
     {
         SingleHtmlUserManual sut = new(anchor!);
 
-        string expected = SingleHtmlUserManual.Location + "/index.html".Combine("#", anchor);
+        var expected = SingleHtmlUserManual.Location + "/index.html".Combine("#", anchor);
 
         sut.GetUrl().Should().Be(expected);
     }

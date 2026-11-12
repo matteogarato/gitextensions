@@ -1,4 +1,6 @@
-﻿namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
+﻿using GitUI.UserControls;
+
+namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 sealed partial class RevisionLinksSettingsPage
 {
@@ -719,7 +721,7 @@ sealed partial class RevisionLinksSettingsPage
     private FlowLayoutPanel flowLayoutPanel4;
     private TextBox _NO_TRANSLATE_UseRemotes;
     private CheckBox chkOnlyFirstRemote;
-    private GitUI.ToolStripEx toolStripManageCategories;
+    private ToolStripEx toolStripManageCategories;
     private ToolStripSplitButton Add;
     private ToolStripButton Remove;
     private ToolStripSeparator toolStripSeparator1;

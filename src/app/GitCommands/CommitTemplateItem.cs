@@ -1,40 +1,29 @@
-﻿using GitCommands.Utils;
+﻿using GitCommands.Settings;
+using GitCommands.Utils;
 
 namespace GitCommands;
 
-public sealed class CommitTemplateItem
+public sealed class CommitTemplateItem(string name, string text, Image? icon, bool isRegex)
 {
-    public string Name { get; set; }
-    public string Text { get; set; }
-    public Image? Icon { get; set; }
-    public bool IsRegex { get; set; }
-
-    public CommitTemplateItem(string name, string text, Image? icon, bool isRegex)
+    public CommitTemplateItem() : this(string.Empty, string.Empty, null, false)
     {
-        Name = name;
-        Text = text;
-        Icon = icon;
-        IsRegex = isRegex;
     }
 
-    public CommitTemplateItem()
-    {
-        Name = string.Empty;
-        Text = string.Empty;
-        Icon = null;
-        IsRegex = false;
-    }
+    public string Name { get; set; } = name;
+    public string Text { get; set; } = text;
+    public Image? Icon { get; set; } = icon;
+    public bool IsRegex { get; set; } = isRegex;
 
     public static void SaveToSettings(CommitTemplateItem[]? items)
     {
-        string strVal = SerializeCommitTemplates(items);
+        var strVal = SerializeCommitTemplates(items);
         AppSettings.CommitTemplates = strVal;
     }
 
     public static CommitTemplateItem[]? LoadFromSettings()
     {
-        string? serializedString = AppSettings.CommitTemplates;
-        CommitTemplateItem[]? templates = DeserializeCommitTemplates(serializedString, out bool shouldBeUpdated);
+        var serializedString = AppSettings.CommitTemplates;
+        var templates = DeserializeCommitTemplates(serializedString, out var shouldBeUpdated);
         if (shouldBeUpdated)
         {
             SaveToSettings(templates!);

@@ -6,24 +6,24 @@ namespace GitExtUtils.GitUI;
 internal static class HighDpiMouseCursors
 {
     /// <summary>
-    /// Replaces some .NET Framework 96-dpi .cur file mouse cursors with system cursors.
+    ///     Replaces some .NET Framework 96-dpi .cur file mouse cursors with system cursors.
     /// </summary>
     public static void Enable()
     {
         try
         {
-            SetCursor("hand", IDC.HAND);
-            SetCursor("hSplit", IDC.SIZENS);
-            SetCursor("vSplit", IDC.SIZEWE);
+            SetCursor("hand", Idc.Hand);
+            SetCursor("hSplit", Idc.Sizens);
+            SetCursor("vSplit", Idc.Sizewe);
         }
         catch
         {
             // ignore
         }
 
-        static void SetCursor(string fieldName, IDC idc)
+        static void SetCursor(string fieldName, Idc idc)
         {
-            FieldInfo? field = typeof(Cursors).GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static);
+            var field = typeof(Cursors).GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static);
             field?.SetValue(null, new Cursor(NativeMethods.LoadCursor(IntPtr.Zero, idc)));
         }
     }
@@ -31,26 +31,26 @@ internal static class HighDpiMouseCursors
     private static class NativeMethods
     {
         [DllImport("user32.dll")]
-        public static extern IntPtr LoadCursor(IntPtr hInstance, IDC lpCursorName);
+        public static extern IntPtr LoadCursor(IntPtr hInstance, Idc lpCursorName);
     }
 
-    private enum IDC
+    private enum Idc
     {
-        ARROW = 32512,
-        IBEAM = 32513,
-        WAIT = 32514,
-        CROSS = 32515,
-        UPARROW = 32516,
-        SIZE = 32640,
-        ICON = 32641,
-        SIZENWSE = 32642,
-        SIZENESW = 32643,
-        SIZEWE = 32644,
-        SIZENS = 32645,
-        SIZEALL = 32646,
-        NO = 32648,
-        HAND = 32649,
-        APPSTARTING = 32650,
-        HELP = 32651
+        Arrow = 32512,
+        Ibeam = 32513,
+        Wait = 32514,
+        Cross = 32515,
+        Uparrow = 32516,
+        Size = 32640,
+        Icon = 32641,
+        Sizenwse = 32642,
+        Sizenesw = 32643,
+        Sizewe = 32644,
+        Sizens = 32645,
+        Sizeall = 32646,
+        No = 32648,
+        Hand = 32649,
+        Appstarting = 32650,
+        Help = 32651
     }
 }

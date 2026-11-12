@@ -1,22 +1,21 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUI.UserControls;
-using Microsoft;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusList
 {
     internal sealed class StatusSorter : IStatusSorter
     {
-        public TreeNode CreateTreeSortedByPath(IEnumerable<GitItemStatus> statuses, bool flat, bool mergeSingleItemsWithFolder, Func<GitItemStatus, TreeNode> createNode)
+        TreeNode IStatusSorter.CreateTreeSortedByPath(IEnumerable<GitItemStatus> statuses, bool flat,
+            bool mergeSingleItemsWithFolder, Func<GitItemStatus, TreeNode> createNode)
         {
-            TreeNode root = CreateParent(RelativePath.From(""));
+            var root = CreateParent(RelativePath.From(""));
 
-            TreeNode parent = root;
-            foreach (GitItemStatus status in statuses.OrderBy(s => s, new PathFirstComparer()))
+            var parent = root;
+            foreach (var status in statuses.OrderBy(s => s, new PathFirstComparer()))
             {
                 parent = flat ? root : GetOrCreateParent(parent, status.Path, root);
-                TreeNode leaf = createNode(status);
+                var leaf = createNode(status);
                 parent.Nodes.Add(leaf);
             }
 
@@ -29,9 +28,10 @@ partial class FileStatusList
 
             void RemoveParentPath(TreeNode node)
             {
-                if (mergeSingleItemsWithFolder && node.Nodes.Count == 1 && node.Nodes[0].Nodes.Count == 0 && node.Parent is not null)
+                if (mergeSingleItemsWithFolder && node.Nodes.Count == 1 && node.Nodes[0].Nodes.Count == 0 &&
+                    node.Parent is not null)
                 {
-                    TreeNode singleItem = node.Nodes[0];
+                    var singleItem = node.Nodes[0];
                     node.Nodes.Clear();
                     node.ImageIndex = singleItem.ImageIndex;
                     node.SelectedImageIndex = singleItem.SelectedImageIndex;
@@ -50,13 +50,16 @@ partial class FileStatusList
             }
         }
 
-        private static TreeNode CreateParent(RelativePath relativePath) => new(text: relativePath.Value) { Tag = relativePath };
+        private static TreeNode CreateParent(RelativePath relativePath)
+        {
+            return new TreeNode(relativePath.Value) { Tag = relativePath };
+        }
 
         private static RelativePath GetCommonPath(RelativePath relativePathA, RelativePath relativePathB)
         {
-            string a = $"{relativePathA}/";
-            string b = $"{relativePathB}/";
-            for (int commonEnd = 0; ; ++commonEnd)
+            var a = $"{relativePathA}/";
+            var b = $"{relativePathB}/";
+            for (var commonEnd = 0;; ++commonEnd)
             {
                 if (commonEnd >= a.Length || commonEnd >= b.Length || a[commonEnd] != b[commonEnd])
                 {
@@ -73,20 +76,20 @@ partial class FileStatusList
         private static TreeNode GetOrCreateParent(TreeNode previousParent, RelativePath currentPath, TreeNode root)
         {
             Validates.NotNull(previousParent.Tag);
-            RelativePath previousPath = (RelativePath)previousParent.Tag;
+            var previousPath = (RelativePath)previousParent.Tag;
             if (previousPath == currentPath)
             {
                 return previousParent;
             }
 
-            RelativePath commonPath = GetCommonPath(previousPath, currentPath);
-            TreeNode commonParent = GetOrCreateCommonParent();
+            var commonPath = GetCommonPath(previousPath, currentPath);
+            var commonParent = GetOrCreateCommonParent();
             if (currentPath == commonPath)
             {
                 return commonParent;
             }
 
-            TreeNode parent = CreateParent(currentPath);
+            var parent = CreateParent(currentPath);
             commonParent.Nodes.Add(parent);
             return parent;
 
@@ -97,8 +100,8 @@ partial class FileStatusList
                     return root;
                 }
 
-                TreeNode splitCandidate = previousParent;
-                RelativePath splitCandidatePath = previousPath;
+                var splitCandidate = previousParent;
+                var splitCandidatePath = previousPath;
                 while (splitCandidate.Parent?.Tag is RelativePath path && path.Value.StartsWith(commonPath.Value))
                 {
                     splitCandidate = splitCandidate.Parent;
@@ -113,10 +116,11 @@ partial class FileStatusList
 
         private static TreeNode Split(TreeNode subNode, RelativePath commonPath)
         {
-            TreeNode parentNode = subNode.Parent ?? throw new ArgumentNullException($"{nameof(subNode)}.{nameof(subNode.Parent)}");
-            int index = parentNode.Nodes.IndexOf(subNode);
+            var parentNode = subNode.Parent ??
+                             throw new ArgumentNullException($"{nameof(subNode)}.{nameof(subNode.Parent)}");
+            var index = parentNode.Nodes.IndexOf(subNode);
             parentNode.Nodes.Remove(subNode);
-            TreeNode commonFolderNode = CreateParent(commonPath);
+            var commonFolderNode = CreateParent(commonPath);
             commonFolderNode.Nodes.Add(subNode);
             parentNode.Nodes.Insert(index, commonFolderNode);
             return commonFolderNode;
@@ -124,18 +128,20 @@ partial class FileStatusList
 
         private sealed class PathFirstComparer : IComparer<GitItemStatus>
         {
-            public int Compare(GitItemStatus? l, GitItemStatus? r)
-                => (l, r) switch
+            int IComparer<GitItemStatus>.Compare(GitItemStatus? l, GitItemStatus? r)
+            {
+                return (l, r) switch
                 {
                     (null, null) => 0,
                     (_, null) => -1,
                     (null, _) => 1,
                     _ => CompareNonNull(l, r)
                 };
+            }
 
             private static int CompareNonNull(GitItemStatus l, GitItemStatus r)
             {
-                int pathComparison = (l.Path.Value, r.Path.Value) switch
+                var pathComparison = (l.Path.Value, r.Path.Value) switch
                 {
                     ("", "") => 0,
                     (_, "") => -1,
@@ -157,8 +163,8 @@ partial class FileStatusList
                         return l.IsEmpty && r.IsEmpty ? 0 : l.IsEmpty ? -1 : 1;
                     }
 
-                    Split(l, out ReadOnlySpan<char> topL, out ReadOnlySpan<char> subL);
-                    Split(r, out ReadOnlySpan<char> topR, out ReadOnlySpan<char> subR);
+                    Split(l, out var topL, out var subL);
+                    Split(r, out var topR, out var subR);
                     return topL.CompareTo(topR, StringComparison.InvariantCulture) switch
                     {
                         -1 => -1,
@@ -168,7 +174,7 @@ partial class FileStatusList
 
                     static void Split(ReadOnlySpan<char> path, out ReadOnlySpan<char> top, out ReadOnlySpan<char> sub)
                     {
-                        int separatorIndex = path.IndexOf('/');
+                        var separatorIndex = path.IndexOf('/');
                         if (separatorIndex == -1)
                         {
                             top = path;
@@ -184,15 +190,22 @@ partial class FileStatusList
                 static bool StartsWith(RelativePath longPath, RelativePath shortPath)
                 {
                     return longPath.Value.StartsWith(shortPath.Value, StringComparison.InvariantCulture)
-                        && longPath.Value[shortPath.Length] == '/';
+                           && longPath.Value[shortPath.Length] == '/';
                 }
             }
         }
 
         internal static class TestAccessor
         {
-            public static string GetCommonPath(string a, string b) => StatusSorter.GetCommonPath(RelativePath.From(a), RelativePath.From(b)).Value;
-            public static int Compare(string l, string r) => new PathFirstComparer().Compare(new GitItemStatus(l), new GitItemStatus(r));
+            public static string GetCommonPath(string a, string b)
+            {
+                return StatusSorter.GetCommonPath(RelativePath.From(a), RelativePath.From(b)).Value;
+            }
+
+            public static int Compare(string l, string r)
+            {
+                return new PathFirstComparer().Compare(new GitItemStatus(l), new GitItemStatus(r));
+            }
         }
     }
 }

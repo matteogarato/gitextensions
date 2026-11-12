@@ -1,30 +1,35 @@
 using System.Text.RegularExpressions;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtUtils;
 using GitUI.HelperDialogs;
+using GitUI.Plugin;
 
 namespace GitUI.ScriptsEngine;
 
-partial class ScriptsManager
+internal partial class ScriptsManager
 {
     /// <summary>Runs scripts.</summary>
     internal static partial class ScriptRunner
     {
-        private const string PluginPrefix = "plugin:";
-        private const string NavigateToPrefix = "navigateTo:";
-        private const string userInput = "UserInput";
-        private const string userFiles = "UserFiles";
+        private const string _pluginPrefix = "plugin:";
+        private const string _navigateToPrefix = "navigateTo:";
+        private const string _userInput = "UserInput";
+        private const string _userFiles = "UserFiles";
 
         // Regex that ensure that in the default value, there is the same number of '{' than '}' to find the right end of the default value expression.
-        [GeneratedRegex(@"\{UserInput:(?<label>[^}=]+)(=(?<defaultValue>[^{}]*(({[^{}]+})+[^{}]*)*))?\}", RegexOptions.ExplicitCapture)]
+        [GeneratedRegex(@"\{UserInput:(?<label>[^}=]+)(=(?<defaultValue>[^{}]*(({[^{}]+})+[^{}]*)*))?\}",
+            RegexOptions.ExplicitCapture)]
         private static partial Regex UserInputRegex { get; }
+
         [GeneratedRegex(@"\{plugin.(?<name>.+)\}", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture)]
         private static partial Regex PluginRegex { get; }
 
-        public static bool RunScript(ScriptInfo script, IWin32Window owner, IGitUICommands commands, IScriptOptionsProvider scriptOptionsProvider)
+        public static bool RunScript(ScriptInfo script, IWin32Window owner, IGitUiCommands commands,
+            IScriptOptionsProvider scriptOptionsProvider)
         {
             try
             {
@@ -32,37 +37,42 @@ partial class ScriptsManager
             }
             catch (ExternalOperationException ex) when (ex is not UserExternalOperationException)
             {
-                throw new UserExternalOperationException($"{TranslatedStrings.ScriptErrorFailedToExecute}: '{script.GetDisplayName()}'", ex);
+                throw new UserExternalOperationException(
+                    $"{TranslatedStrings.ScriptErrorFailedToExecute}: '{script.GetDisplayName()}'", ex);
             }
         }
 
-        internal static (string? arguments, bool abort, bool cancel) ParseUserInputs(string scriptName, string? arguments, IGitUICommands uiCommands, IWin32Window owner, IScriptOptionsProvider scriptOptionsProvider)
+        internal static (string? arguments, bool abort, bool cancel) ParseUserInputs(string scriptName,
+            string? arguments, IGitUiCommands uiCommands, IWin32Window owner,
+            IScriptOptionsProvider scriptOptionsProvider)
         {
             if (arguments is null)
             {
                 return (arguments: null, abort: false, cancel: false);
             }
 
-            string userInputCaption = string.Format(TranslatedStrings.ScriptUserInputCaption, scriptName);
+            var userInputCaption = string.Format(TranslatedStrings.ScriptUserInputCaption, scriptName);
 
             // Specific handling of "UserInput" because the value entered should replace only "UserInput" with same label
             Match match;
             while ((match = UserInputRegex.Match(arguments)).Success)
             {
-                Group defaultValueMatch = match.Groups["defaultValue"];
-                (string? arguments, bool abort) defaultValue = defaultValueMatch is null
+                var defaultValueMatch = match.Groups["defaultValue"];
+                var defaultValue = defaultValueMatch is null
                     ? (string.Empty, false)
-                    : ScriptOptionsParser.Parse(defaultValueMatch.Value ?? string.Empty, uiCommands, owner, scriptOptionsProvider);
+                    : ScriptOptionsParser.Parse(defaultValueMatch.Value ?? string.Empty, uiCommands, owner,
+                        scriptOptionsProvider);
 
                 if (defaultValue.abort)
                 {
                     return (arguments: null, abort: true, cancel: false);
                 }
 
-                string label = match.Groups["label"].Value;
+                var label = match.Groups["label"].Value;
 
-                using IUserInputPrompt prompt = uiCommands.GetRequiredService<ISimplePromptCreator>().Create(userInputCaption, label, defaultValue.arguments);
-                DialogResult result = prompt.ShowDialog(owner);
+                using var prompt = uiCommands.GetRequiredService<ISimplePromptCreator>()
+                    .Create(userInputCaption, label, defaultValue.arguments);
+                var result = prompt.ShowDialog(owner);
                 if (result != DialogResult.OK)
                 {
                     return (arguments: null, abort: false, cancel: true);
@@ -72,80 +82,88 @@ partial class ScriptsManager
                 arguments = ScriptOptionsParser.ReplaceOption(match.Value[1..^1], arguments, [prompt.UserInput]);
             }
 
-            if (ScriptOptionsParser.Contains(arguments, userInput))
+            if (ScriptOptionsParser.Contains(arguments, _userInput))
             {
                 userInputCaption = string.Format(TranslatedStrings.ScriptUserInputCaption, scriptName);
-                using IUserInputPrompt prompt = uiCommands.GetRequiredService<ISimplePromptCreator>().Create(userInputCaption, label: null, defaultValue: string.Empty);
-                DialogResult result = prompt.ShowDialog(owner);
+                using var prompt = uiCommands.GetRequiredService<ISimplePromptCreator>()
+                    .Create(userInputCaption, null, string.Empty);
+                var result = prompt.ShowDialog(owner);
                 if (result == DialogResult.Cancel)
                 {
                     return (arguments: null, abort: false, cancel: true);
                 }
 
-                arguments = ScriptOptionsParser.ReplaceOption(userInput, arguments, [prompt.UserInput]);
+                arguments = ScriptOptionsParser.ReplaceOption(_userInput, arguments, [prompt.UserInput]);
             }
 
-            if (ScriptOptionsParser.Contains(arguments, userFiles))
+            if (ScriptOptionsParser.Contains(arguments, _userFiles))
             {
-                using IUserInputPrompt prompt = uiCommands.GetRequiredService<IFilePromptCreator>().Create();
+                using var prompt = uiCommands.GetRequiredService<IFilePromptCreator>().Create();
                 if (prompt.ShowDialog(owner) != DialogResult.OK)
                 {
                     return (arguments: null, abort: false, cancel: true);
                 }
 
-                arguments = ScriptOptionsParser.ReplaceOption(userFiles, arguments, [prompt.UserInput]);
+                arguments = ScriptOptionsParser.ReplaceOption(_userFiles, arguments, [prompt.UserInput]);
             }
 
             return (arguments, abort: false, cancel: false);
         }
 
-        private static bool RunScriptInternal(ScriptInfo script, IWin32Window owner, IGitUICommands uiCommands, IScriptOptionsProvider scriptOptionsProvider)
+        private static bool RunScriptInternal(ScriptInfo script, IWin32Window owner, IGitUiCommands uiCommands,
+            IScriptOptionsProvider scriptOptionsProvider)
         {
             if (string.IsNullOrEmpty(script.Command))
             {
                 return false;
             }
 
-            string? arguments = script.Arguments;
+            var arguments = script.Arguments;
             if (!string.IsNullOrEmpty(arguments) && uiCommands.BrowseRepo is null)
             {
-                string? optionDependingOnSelectedRevision
-                    = ScriptOptionsParser.Options.FirstOrDefault(option => ScriptOptionsParser.DependsOnSelectedRevision(option)
-                                                                        && ScriptOptionsParser.Contains(arguments, option));
+                var optionDependingOnSelectedRevision
+                    = ScriptOptionsParser.Options.FirstOrDefault(option =>
+                        ScriptOptionsParser.DependsOnSelectedRevision(option)
+                        && ScriptOptionsParser.Contains(arguments, option));
                 if (optionDependingOnSelectedRevision is not null)
                 {
-                    throw new UserExternalOperationException($"{TranslatedStrings.ScriptText}: '{script.GetDisplayName()}'{Environment.NewLine}'{optionDependingOnSelectedRevision}' {TranslatedStrings.ScriptErrorOptionWithoutRevisionGridText}",
+                    throw new UserExternalOperationException(
+                        $"{TranslatedStrings.ScriptText}: '{script.GetDisplayName()}'{Environment.NewLine}'{optionDependingOnSelectedRevision}' {TranslatedStrings.ScriptErrorOptionWithoutRevisionGridText}",
                         new ExternalOperationException(script.Command, arguments, uiCommands.Module.WorkingDir));
                 }
             }
 
             if (script.AskConfirmation &&
-                MessageBoxes.Show(owner, $"{TranslatedStrings.ScriptConfirmExecute}: '{script.GetDisplayName()}'?", TranslatedStrings.ScriptText,
-                                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+                MessageBoxes.Show(owner, $"{TranslatedStrings.ScriptConfirmExecute}: '{script.GetDisplayName()}'?",
+                    TranslatedStrings.ScriptText,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
             {
                 return false;
             }
 
-            string? originalCommand = script.Command;
+            var originalCommand = script.Command;
 
-            (arguments, bool abort, bool cancelled) = ParseUserInputs(script.GetDisplayName() ?? "<_nameless_script_>", script.Arguments, uiCommands, owner, scriptOptionsProvider);
+            (arguments, var abort, var cancelled) = ParseUserInputs(script.GetDisplayName() ?? "<_nameless_script_>",
+                script.Arguments, uiCommands, owner, scriptOptionsProvider);
 
             if (cancelled)
             {
-                MessageBoxes.Show(owner, TranslatedStrings.ScriptUserCanceledRun, script.GetDisplayName(), MessageBoxButtons.OK);
+                MessageBoxes.Show(owner, TranslatedStrings.ScriptUserCanceledRun, script.GetDisplayName(),
+                    MessageBoxButtons.OK);
                 return false;
             }
 
-            (string? argument, abort) = abort
+            (var argument, abort) = abort
                 ? (null, true)
                 : ScriptOptionsParser.Parse(arguments, uiCommands, owner, scriptOptionsProvider);
             if (abort)
             {
-                throw new UserExternalOperationException($"{TranslatedStrings.ScriptText}: '{script.GetDisplayName()}'{Environment.NewLine}{TranslatedStrings.ScriptErrorOptionWithoutRevisionText}",
+                throw new UserExternalOperationException(
+                    $"{TranslatedStrings.ScriptText}: '{script.GetDisplayName()}'{Environment.NewLine}{TranslatedStrings.ScriptErrorOptionWithoutRevisionText}",
                     new ExternalOperationException(script.Command, arguments, uiCommands.Module.WorkingDir));
             }
 
-            string command = OverrideCommandWhenNecessary(originalCommand);
+            var command = OverrideCommandWhenNecessary(originalCommand);
             command = ExpandCommandVariables(command, uiCommands.Module);
 
             if (script.IsPowerShell)
@@ -157,17 +175,17 @@ partial class ScriptsManager
                 return true;
             }
 
-            if (command.StartsWith(PluginPrefix))
+            if (command.StartsWith(_pluginPrefix))
             {
-                command = command.Replace(PluginPrefix, string.Empty);
+                command = command.Replace(_pluginPrefix, string.Empty);
 
                 lock (PluginRegistry.Plugins)
                 {
-                    foreach (IGitPlugin plugin in PluginRegistry.Plugins)
+                    foreach (var plugin in PluginRegistry.Plugins)
                     {
                         if (string.Equals(plugin.Name, command, StringComparison.CurrentCultureIgnoreCase))
                         {
-                            GitUIEventArgs eventArgs = new(owner, uiCommands);
+                            GitUiEventArgs eventArgs = new(owner, uiCommands);
                             if (plugin.Execute(eventArgs))
                             {
                                 uiCommands.RepoChangedNotifier.Notify();
@@ -181,18 +199,18 @@ partial class ScriptsManager
                 return false;
             }
 
-            if (command.StartsWith(NavigateToPrefix))
+            if (command.StartsWith(_navigateToPrefix))
             {
                 if (uiCommands.BrowseRepo is null)
                 {
                     return false;
                 }
 
-                command = command.Replace(NavigateToPrefix, string.Empty);
+                command = command.Replace(_navigateToPrefix, string.Empty);
                 if (!string.IsNullOrEmpty(command))
                 {
-                    ExecutionResult result = new Executable(command, uiCommands.Module.WorkingDir).Execute(argument);
-                    string? revisionRef = result.StandardOutput.Split('\n').FirstOrDefault();
+                    var result = new Executable(command, uiCommands.Module.WorkingDir).Execute(argument);
+                    var revisionRef = result.StandardOutput.Split('\n').FirstOrDefault();
 
                     if (revisionRef is not null)
                     {
@@ -205,7 +223,8 @@ partial class ScriptsManager
 
             if (!script.RunInBackground)
             {
-                bool success = FormProcess.ShowDialog(owner, uiCommands, argument, uiCommands.Module.WorkingDir, null, true, process: command);
+                var success = FormProcess.ShowDialog(owner, uiCommands, argument, uiCommands.Module.WorkingDir, null,
+                    true, command);
                 if (!success)
                 {
                     return false;
@@ -259,10 +278,10 @@ partial class ScriptsManager
             }
 
             // Prefix should be {plugin:pluginname},{plugin=pluginname}
-            Match match = PluginRegex.Match(originalCommand);
+            var match = PluginRegex.Match(originalCommand);
             if (match.Success && match.Groups.Count > 1)
             {
-                originalCommand = $"{PluginPrefix}{match.Groups["name"].Value.ToLower()}";
+                originalCommand = $"{_pluginPrefix}{match.Groups["name"].Value.ToLower()}";
             }
 
             return originalCommand;

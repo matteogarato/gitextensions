@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
-using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 
 namespace GitCommands.Git;
@@ -9,7 +9,7 @@ namespace GitCommands.Git;
 public interface ISystemEncodingReader
 {
     /// <summary>
-    /// Checks whether Git Extensions works with standard msysgit or msysgit-unicode.
+    ///     Checks whether Git Extensions works with standard msysgit or msysgit-unicode.
     /// </summary>
     /// <returns>System encoding.</returns>
     Encoding Read();
@@ -17,10 +17,10 @@ public interface ISystemEncodingReader
 
 public sealed class SystemEncodingReader : ISystemEncodingReader
 {
-    private readonly IExecutable _gitExecutable = new Executable(() => AppSettings.GitCommand, "");
+    private readonly IExecutable _gitExecutable = new Executable(() => AppSettings.GitCommand);
 
     /// <inheritdoc />
-    public Encoding Read()
+    Encoding ISystemEncodingReader.Read()
     {
         try
         {
@@ -32,14 +32,11 @@ public sealed class SystemEncodingReader : ISystemEncodingReader
             // git config --get with a malformed key (no section) returns:
             // "error: key does not contain a section: <key>"
             const string controlStr = "ą"; // "a caudata"
-            GitArgumentBuilder arguments = new("config")
-            {
-                "--get",
-                controlStr
-            };
+            GitArgumentBuilder arguments = new("config") { "--get", controlStr };
 
-            ExecutionResult result = _gitExecutable.Execute(arguments, outputEncoding: Encoding.UTF8, throwOnErrorExit: false);
-            string? s = result.StandardError;
+            var result =
+                _gitExecutable.Execute(arguments, outputEncoding: Encoding.UTF8, throwOnErrorExit: false);
+            var s = result.StandardError;
             systemEncoding = s?.IndexOf(controlStr) is >= 0
                 ? new UTF8Encoding(false)
                 : Encoding.Default;

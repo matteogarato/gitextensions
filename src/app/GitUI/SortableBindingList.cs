@@ -4,16 +4,25 @@ using System.Linq.Expressions;
 namespace GitUI;
 
 /// <summary>
-/// Custom sortable list, used to support user-defined sorting in <see cref="DataGridView"/>.
+///     Custom sortable list, used to support user-defined sorting in <see cref="DataGridView" />.
 /// </summary>
-/// <remarks>The class is abstract so that it is not used directly.<br/>Instead, it is expected to be derived, with a static constructor adding sortable properties through the <see cref="AddSortableProperty{TValue}"/> method</remarks>
+/// <remarks>
+///     The class is abstract so that it is not used directly.<br />Instead, it is expected to be derived, with a
+///     static constructor adding sortable properties through the <see cref="AddSortableProperty{TValue}" /> method
+/// </remarks>
 public abstract class SortableBindingList<T> : BindingList<T>
 {
     public static Dictionary<string, Comparison<T>> PropertyComparers { get; } = [];
 
-    private List<T> Elements => (List<T>)Items;
+    private List<T> Elements
+    {
+        get => (List<T>)Items;
+    }
 
-    protected override bool SupportsSortingCore => true;
+    protected override bool SupportsSortingCore
+    {
+        get => true;
+    }
 
     public void AddRange(IEnumerable<T> items)
     {
@@ -34,24 +43,25 @@ public abstract class SortableBindingList<T> : BindingList<T>
     }
 
     /// <summary>
-    /// Adds custom property comparer.
+    ///     Adds custom property comparer.
     /// </summary>
     /// <typeparam name="TValue">Property type.</typeparam>
     /// <param name="expr">Property to sort by.</param>
     /// <param name="propertyComparer">Property values comparer.</param>
-    protected internal static void AddSortableProperty<TValue>(Expression<Func<T, TValue>> expr, Comparison<T> propertyComparer)
+    protected internal static void AddSortableProperty<TValue>(Expression<Func<T, TValue>> expr,
+        Comparison<T> propertyComparer)
     {
         PropertyComparers[((MemberExpression)expr.Body).Member.Name] = propertyComparer;
     }
 
     /// <summary>
-    /// Creates a comparison to sort branches by specified property.
+    ///     Creates a comparison to sort branches by specified property.
     /// </summary>
     /// <param name="propertyDescriptor">Property to sort by.</param>
     /// <param name="isReversedComparing">Use reversed sorting order.</param>
     public static Comparison<T> CreateComparison(PropertyDescriptor propertyDescriptor, bool isReversedComparing)
     {
-        if (PropertyComparers.TryGetValue(propertyDescriptor.Name, out Comparison<T>? comparer))
+        if (PropertyComparers.TryGetValue(propertyDescriptor.Name, out var comparer))
         {
             return isReversedComparing ? (x, y) => comparer(y, x) : comparer;
         }

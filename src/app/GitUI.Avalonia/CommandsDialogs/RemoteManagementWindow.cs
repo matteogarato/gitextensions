@@ -1,38 +1,34 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Layout;
 using GitCommands.Remotes;
+using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Shims.WinForms;
-using ResourceManager;
+using GitUI.Compat;
 using ListBox = Avalonia.Controls.ListBox;
 using TextBox = Avalonia.Controls.TextBox;
 
 namespace GitUI.CommandsDialogs;
 
 /// <summary>
-///  Adds, edits, activates, deactivates, and removes repository remotes.
+///     Adds, edits, activates, deactivates, and removes repository remotes.
 /// </summary>
 public sealed class RemoteManagementWindow : GitExtensionsFormBase
 {
-    private readonly IConfigFileRemoteSettingsManager _remotesManager;
-    private readonly ListBox _remoteList = new() { MinWidth = 210 };
-    private readonly TextBox _name = new();
-    private readonly TextBox _fetchUrl = new();
-    private readonly TextBox _pushUrl = new();
-    private readonly Button _save = new() { IsDefault = true };
     private readonly Button _delete = new();
+    private readonly TextBox _fetchUrl = new();
+    private readonly TextBox _name = new();
+    private readonly TextBox _pushUrl = new();
+    private readonly ListBox _remoteList = new() { MinWidth = 210 };
+    private readonly IConfigFileRemoteSettingsManager _remotesManager;
+    private readonly Button _save = new() { IsDefault = true };
     private readonly Button _toggleState = new();
     private List<ConfigFileRemote> _remotes = [];
     private ConfigFileRemote? _selectedRemote;
-    private bool _hasChanges;
 
     /// <summary>
-    ///  Gets a value indicating whether any remote configuration changed while this window was open.
-    /// </summary>
-    public bool HasChanges => _hasChanges;
-
-    /// <summary>
-    ///  Initializes a new instance of the <see cref="RemoteManagementWindow"/> class.
+    ///     Initializes a new instance of the <see cref="RemoteManagementWindow" /> class.
     /// </summary>
     /// <param name="module">The repository whose remotes are managed.</param>
     public RemoteManagementWindow(IGitModule module)
@@ -40,7 +36,7 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
         ArgumentNullException.ThrowIfNull(module);
 
         _remotesManager = new ConfigFileRemoteSettingsManager(() => module);
-        Title = GitUI.TranslatedStrings.RemoteManagementTitle;
+        Title = TranslatedStrings.RemoteManagementTitle;
         Width = 680;
         Height = 390;
         MinWidth = 560;
@@ -48,32 +44,32 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
         _remoteList.SelectionChanged += (_, _) => SelectRemote(_remoteList.SelectedIndex);
-        _save.Content = GitUI.TranslatedStrings.AddRemote;
+        _save.Content = TranslatedStrings.AddRemote;
         _save.Click += (_, _) => SaveRemote();
-        _delete.Content = GitUI.TranslatedStrings.DeleteRemote;
+        _delete.Content = TranslatedStrings.DeleteRemote;
         _delete.Click += (_, _) => DeleteRemote();
         _toggleState.Click += (_, _) => ToggleRemoteState();
-        Button add = new() { Content = GitUI.TranslatedStrings.AddRemote };
-        add.Click += (_, _) => SelectRemote(index: -1);
-        Button close = new() { Content = GitUI.TranslatedStrings.Close, IsCancel = true };
-        close.Click += (_, _) => Close(_hasChanges);
+        Button add = new() { Content = TranslatedStrings.AddRemote };
+        add.Click += (_, _) => SelectRemote(-1);
+        Button close = new() { Content = TranslatedStrings.Close, IsCancel = true };
+        close.Click += (_, _) => Close(HasChanges);
 
         StackPanel remoteDetails = new()
         {
             Spacing = 8,
             Children =
             {
-                CreateField(GitUI.TranslatedStrings.RemoteName, _name),
-                CreateField(GitUI.TranslatedStrings.FetchUrl, _fetchUrl),
-                CreateField(GitUI.TranslatedStrings.PushUrl, _pushUrl),
-            },
+                CreateField(TranslatedStrings.RemoteName, _name),
+                CreateField(TranslatedStrings.FetchUrl, _fetchUrl),
+                CreateField(TranslatedStrings.PushUrl, _pushUrl)
+            }
         };
         StackPanel actions = new()
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Margin = new Avalonia.Thickness(0, 12, 0, 0),
+            Margin = new Thickness(0, 12, 0, 0)
         };
         actions.Children.Add(add);
         actions.Children.Add(_save);
@@ -86,48 +82,42 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
 
         Grid layout = new()
         {
-            Margin = new Avalonia.Thickness(12),
+            Margin = new Thickness(12),
             ColumnDefinitions = new ColumnDefinitions("Auto,12,*"),
             RowDefinitions = new RowDefinitions("*,Auto"),
-            Children =
-            {
-                _remoteList,
-                remoteDetails,
-                actions,
-            },
+            Children = { _remoteList, remoteDetails, actions }
         };
         Content = layout;
 
         ReloadRemotes();
     }
 
+    /// <summary>
+    ///     Gets a value indicating whether any remote configuration changed while this window was open.
+    /// </summary>
+    public bool HasChanges { get; private set; }
+
     private static StackPanel CreateField(string label, TextBox input)
-        => new()
-        {
-            Spacing = 4,
-            Children =
-            {
-                new TextBlock { Text = label },
-                input,
-            },
-        };
+    {
+        return new StackPanel { Spacing = 4, Children = { new TextBlock { Text = label }, input } };
+    }
 
     private void ReloadRemotes(string? selectedName = null)
     {
-        _remotes = [.. _remotesManager.LoadRemotes(loadDisabled: true)];
+        _remotes = [.. _remotesManager.LoadRemotes(true)];
         _remoteList.ItemsSource = _remotes
             .Select(remote => remote.Disabled
-                ? string.Format(GitUI.TranslatedStrings.RemoteInactive, remote.Name)
+                ? string.Format(TranslatedStrings.RemoteInactive, remote.Name)
                 : remote.Name ?? string.Empty)
             .ToArray();
 
-        int selectedIndex = selectedName is null
+        var selectedIndex = selectedName is null
             ? -1
             : _remotes.FindIndex(remote => remote.Name == selectedName);
         _remoteList.SelectedIndex = selectedIndex;
         if (selectedIndex < 0)
         {
-            SelectRemote(index: -1);
+            SelectRemote(-1);
         }
     }
 
@@ -141,47 +131,47 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
         _fetchUrl.Text = _selectedRemote?.Url ?? string.Empty;
         _pushUrl.Text = _selectedRemote?.PushUrl ?? string.Empty;
 
-        bool isEditable = _selectedRemote?.Disabled != true;
+        var isEditable = _selectedRemote?.Disabled != true;
         _name.IsEnabled = isEditable;
         _fetchUrl.IsEnabled = isEditable;
         _pushUrl.IsEnabled = isEditable;
         _save.Content = _selectedRemote is null
-            ? GitUI.TranslatedStrings.AddRemote
-            : GitUI.TranslatedStrings.SaveRemote;
+            ? TranslatedStrings.AddRemote
+            : TranslatedStrings.SaveRemote;
         _save.IsEnabled = isEditable;
         _delete.IsEnabled = _selectedRemote is not null;
         _toggleState.IsEnabled = _selectedRemote is not null;
         _toggleState.Content = _selectedRemote?.Disabled == true
-            ? GitUI.TranslatedStrings.ActivateRemote
-            : GitUI.TranslatedStrings.DeactivateRemote;
+            ? TranslatedStrings.ActivateRemote
+            : TranslatedStrings.DeactivateRemote;
     }
 
     private void SaveRemote()
     {
-        string name = _name.Text?.Trim() ?? string.Empty;
-        string fetchUrl = _fetchUrl.Text?.Trim() ?? string.Empty;
-        string pushUrl = _pushUrl.Text?.Trim() ?? string.Empty;
+        var name = _name.Text?.Trim() ?? string.Empty;
+        var fetchUrl = _fetchUrl.Text?.Trim() ?? string.Empty;
+        var pushUrl = _pushUrl.Text?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            GitExtensions.Extensibility.MessageBoxes.ShowError(this, GitUI.TranslatedStrings.RemoteNameRequiredError);
+            MessageBoxes.ShowError(this, TranslatedStrings.RemoteNameRequiredError);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(fetchUrl))
         {
-            GitExtensions.Extensibility.MessageBoxes.ShowError(this, GitUI.TranslatedStrings.RemoteUrlRequiredError);
+            MessageBoxes.ShowError(this, TranslatedStrings.RemoteUrlRequiredError);
             return;
         }
 
         if (!string.Equals(_selectedRemote?.Name, name, StringComparison.Ordinal)
             && (_remotesManager.EnabledRemoteExists(name) || _remotesManager.DisabledRemoteExists(name)))
         {
-            GitExtensions.Extensibility.MessageBoxes.ShowError(this, string.Format(GitUI.TranslatedStrings.RemoteAlreadyExistsError, name));
+            MessageBoxes.ShowError(this, string.Format(TranslatedStrings.RemoteAlreadyExistsError, name));
             return;
         }
 
-        ConfigFileRemoteSaveResult result = _remotesManager.SaveRemote(
+        var result = _remotesManager.SaveRemote(
             _selectedRemote,
             name,
             fetchUrl,
@@ -192,11 +182,11 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
 
         if (!string.IsNullOrWhiteSpace(result.UserMessage))
         {
-            GitExtensions.Extensibility.MessageBoxes.ShowError(this, result.UserMessage);
+            MessageBoxes.ShowError(this, result.UserMessage);
             return;
         }
 
-        _hasChanges = true;
+        HasChanges = true;
         ReloadRemotes(name);
     }
 
@@ -207,11 +197,11 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
             return;
         }
 
-        string name = _selectedRemote.Name ?? string.Empty;
-        if (GitExtensions.Extensibility.MessageBoxes.Show(
+        var name = _selectedRemote.Name ?? string.Empty;
+        if (MessageBoxes.Show(
                 this,
-                string.Format(GitUI.TranslatedStrings.ConfirmDeleteRemote, name),
-                GitUI.TranslatedStrings.DeleteRemote,
+                string.Format(TranslatedStrings.ConfirmDeleteRemote, name),
+                TranslatedStrings.DeleteRemote,
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
@@ -219,27 +209,27 @@ public sealed class RemoteManagementWindow : GitExtensionsFormBase
             return;
         }
 
-        string output = _remotesManager.RemoveRemote(_selectedRemote);
+        var output = _remotesManager.RemoveRemote(_selectedRemote);
         if (!string.IsNullOrWhiteSpace(output))
         {
-            GitExtensions.Extensibility.MessageBoxes.ShowError(this, output);
+            MessageBoxes.ShowError(this, output);
             return;
         }
 
-        _hasChanges = true;
+        HasChanges = true;
         ReloadRemotes();
     }
 
     private void ToggleRemoteState()
     {
-        if (_selectedRemote?.Name is not string remoteName)
+        if (_selectedRemote?.Name is not { } remoteName)
         {
             return;
         }
 
-        string selectedName = remoteName;
-        _remotesManager.ToggleRemoteState(remoteName, disabled: !_selectedRemote.Disabled);
-        _hasChanges = true;
+        var selectedName = remoteName;
+        _remotesManager.ToggleRemoteState(remoteName, !_selectedRemote.Disabled);
+        HasChanges = true;
         ReloadRemotes(selectedName);
     }
 }

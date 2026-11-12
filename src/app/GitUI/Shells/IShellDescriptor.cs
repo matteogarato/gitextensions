@@ -3,39 +3,39 @@
 public interface IShellDescriptor
 {
     /// <summary>
-    /// Gets the executable command line.
+    ///     Gets the executable command line.
     /// </summary>
-    public string? ExecutableCommandLine { get; }
+    string? ExecutableCommandLine { get; }
 
     /// <summary>
-    /// Gets the executable name.
+    ///     Gets the executable name.
     /// </summary>
-    public string ExecutableName { get; }
+    string ExecutableName { get; }
 
     /// <summary>
-    /// Gets the executable resolved path.
+    ///     Gets the executable resolved path.
     /// </summary>
-    public string? ExecutablePath { get; }
+    string? ExecutablePath { get; }
 
     /// <summary>
-    /// Indicates whether the executable for the given shell is located and the shell can be run.
+    ///     Indicates whether the executable for the given shell is located and the shell can be run.
     /// </summary>
-    public bool HasExecutable { get; }
+    bool HasExecutable { get; }
 
     /// <summary>
-    /// Gets the shell icon.
+    ///     Gets the shell icon.
     /// </summary>
-    public Image Icon { get; }
+    Image Icon { get; }
 
     /// <summary>
-    /// Gets the user visible shell name.
+    ///     Gets the user visible shell name.
     /// </summary>
-    public string Name { get; }
+    string Name { get; }
 
     /// <summary>
-    /// Gets the command to execute when a working directory is switched.
+    ///     Gets the command to execute when a working directory is switched.
     /// </summary>
     /// <param name="path">The working directory path.</param>
     /// <returns>The chdir command.</returns>
-    public string GetChangeDirCommand(string path);
+    string GetChangeDirCommand(string path);
 }

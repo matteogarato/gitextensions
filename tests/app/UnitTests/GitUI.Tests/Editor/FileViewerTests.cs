@@ -5,14 +5,14 @@ namespace GitUITests.Editor;
 
 public class FileViewerTests : IDisposable
 {
-    private FileViewer _fileViewer = null!;
+    private readonly FileViewer _fileViewer = null!;
 
     public FileViewerTests()
     {
         _fileViewer = new FileViewer();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _fileViewer.Dispose();
     }
@@ -27,11 +27,12 @@ public class FileViewerTests : IDisposable
     [InlineData(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.AllSpace, true, true, true)]
     [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Eol, true, false, false)]
     [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Change, true, true, false)]
-    public void Should_correctly_setup_IgnoreWhitespaceMethod_with_one_click(IgnoreWhitespaceKind oldIgnoreWhitespace, IgnoreWhitespaceKind newIgnoreWhitespace, bool ignoreEol, bool ignoreChange, bool ignoreAllSpace)
+    public void Should_correctly_setup_IgnoreWhitespaceMethod_with_one_click(IgnoreWhitespaceKind oldIgnoreWhitespace,
+        IgnoreWhitespaceKind newIgnoreWhitespace, bool ignoreEol, bool ignoreChange, bool ignoreAllSpace)
     {
         newIgnoreWhitespace.Should().NotBe(oldIgnoreWhitespace);
 
-        FileViewer.TestAccessor accessor = _fileViewer.GetTestAccessor();
+        var accessor = _fileViewer.GetTestAccessor();
 
         accessor.IgnoreWhitespace = oldIgnoreWhitespace;
 
@@ -70,11 +71,12 @@ public class FileViewerTests : IDisposable
     [InlineData(IgnoreWhitespaceKind.Change, IgnoreWhitespaceKind.AllSpace)]
     [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Eol)]
     [InlineData(IgnoreWhitespaceKind.AllSpace, IgnoreWhitespaceKind.Change)]
-    public void Should_correctly_reset_IgnoreWhitespaceMethod_to_None_with_two_clicks(IgnoreWhitespaceKind oldIgnoreWhitespace, IgnoreWhitespaceKind newIgnoreWhitespace)
+    public void Should_correctly_reset_IgnoreWhitespaceMethod_to_None_with_two_clicks(
+        IgnoreWhitespaceKind oldIgnoreWhitespace, IgnoreWhitespaceKind newIgnoreWhitespace)
     {
         newIgnoreWhitespace.Should().NotBe(oldIgnoreWhitespace);
 
-        FileViewer.TestAccessor accessor = _fileViewer.GetTestAccessor();
+        var accessor = _fileViewer.GetTestAccessor();
 
         accessor.IgnoreWhitespace = oldIgnoreWhitespace;
 

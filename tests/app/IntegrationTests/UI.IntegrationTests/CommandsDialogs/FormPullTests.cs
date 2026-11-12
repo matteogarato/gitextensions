@@ -3,20 +3,22 @@ using GitCommands;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
-using Xunit;
+using AppSettings = GitCommands.Settings.AppSettings;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormPullTests : System.IDisposable
+public class FormPullTests : IDisposable
 {
-    // Created once for the fixture
-    private ReferenceRepository _referenceRepository = null!;
-
     // Created once for each test
-    private GitUICommands _commands = null!;
-    private GitPullAction _originalDefaultPullAction;
-    private GitPullAction _originalFormPullAction;
-    private bool _originalAutoStash;
+    private readonly GitUiCommands _commands = null!;
+    private readonly bool _originalAutoStash;
+    private readonly GitPullAction _originalDefaultPullAction;
+
+    private readonly GitPullAction _originalFormPullAction;
+
+    // Created once for the fixture
+    private readonly ReferenceRepository _referenceRepository = null!;
+
     public FormPullTests()
     {
         _originalDefaultPullAction = AppSettings.DefaultPullAction;
@@ -24,7 +26,13 @@ public class FormPullTests : System.IDisposable
         _originalAutoStash = AppSettings.AutoStash;
 
         _referenceRepository = new ReferenceRepository();
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _referenceRepository.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(),
+            _referenceRepository.Module);
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void DisposeTest()
@@ -42,10 +50,11 @@ public class FormPullTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormPull.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
                 accessor.Merge.Checked = true;
-                string expected = string.Format(accessor.PullTitleText, PathUtil.GetDisplayPath(_referenceRepository.Module.WorkingDir));
+                var expected = string.Format(accessor.PullTitleText,
+                    PathUtil.GetDisplayPath(_referenceRepository.Module.WorkingDir));
 
                 accessor.Title.Should().StartWith(expected);
             },
@@ -60,10 +69,11 @@ public class FormPullTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormPull.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
                 accessor.Rebase.Checked = true;
-                string expected = string.Format(accessor.PullTitleText, PathUtil.GetDisplayPath(_referenceRepository.Module.WorkingDir));
+                var expected = string.Format(accessor.PullTitleText,
+                    PathUtil.GetDisplayPath(_referenceRepository.Module.WorkingDir));
 
                 accessor.Title.Should().StartWith(expected);
             },
@@ -78,10 +88,11 @@ public class FormPullTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormPull.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
                 accessor.Fetch.Checked = true;
-                string expected = string.Format(accessor.FetchTitleText, PathUtil.GetDisplayPath(_referenceRepository.Module.WorkingDir));
+                var expected = string.Format(accessor.FetchTitleText,
+                    PathUtil.GetDisplayPath(_referenceRepository.Module.WorkingDir));
 
                 accessor.Title.Should().StartWith(expected);
             },
@@ -98,16 +109,18 @@ public class FormPullTests : System.IDisposable
     [InlineData(GitPullAction.FetchAll, false, false, false, false, true, false, true, true)]
     [InlineData(GitPullAction.FetchPruneAll, false, true, false, false, true, false, true, true)]
     public void Should_correctly_setup_for_defined_pull_action(GitPullAction pullAction,
-        bool mergeChecked, bool pruneRemoteBranches, bool pruneRemoteBranchesAndTags, bool rebaseChecked, bool fetchChecked, bool autoStashChecked, bool pruneRemoteBranchesEnabled, bool pruneRemoteBranchesAndTagsEnabled)
+        bool mergeChecked, bool pruneRemoteBranches, bool pruneRemoteBranchesAndTags, bool rebaseChecked,
+        bool fetchChecked, bool autoStashChecked, bool pruneRemoteBranchesEnabled,
+        bool pruneRemoteBranchesAndTagsEnabled)
     {
-        GitPullAction defaultPullAction = AppSettings.DefaultPullAction;
+        var defaultPullAction = AppSettings.DefaultPullAction;
         AppSettings.DefaultPullAction = GitPullAction.Merge;
         RunFormTest(
             form =>
             {
                 try
                 {
-                    FormPull.TestAccessor accessor = form.GetTestAccessor();
+                    var accessor = form.GetTestAccessor();
 
                     accessor.Merge.Checked.Should().Be(mergeChecked);
                     accessor.Prune.Checked.Should().Be(pruneRemoteBranches);
@@ -135,14 +148,16 @@ public class FormPullTests : System.IDisposable
     [InlineData(GitPullAction.FetchAll, false, false, false, false, true, false, true, true)]
     [InlineData(GitPullAction.FetchPruneAll, false, true, false, false, true, false, true, true)]
     public void Should_use_user_DefaultPullAction_pull_action_None(GitPullAction pullAction,
-        bool mergeChecked, bool pruneRemoteBranches, bool pruneRemoteBranchesAndTags, bool rebaseChecked, bool fetchChecked, bool autoStashChecked, bool pruneRemoteBranchesEnabled, bool pruneRemoteBranchesAndTagsEnabled)
+        bool mergeChecked, bool pruneRemoteBranches, bool pruneRemoteBranchesAndTags, bool rebaseChecked,
+        bool fetchChecked, bool autoStashChecked, bool pruneRemoteBranchesEnabled,
+        bool pruneRemoteBranchesAndTagsEnabled)
     {
         AppSettings.DefaultPullAction = pullAction;
 
         RunFormTest(
             form =>
             {
-                FormPull.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
                 accessor.Merge.Checked.Should().Be(mergeChecked);
                 accessor.Prune.Checked.Should().Be(pruneRemoteBranches);
@@ -161,12 +176,13 @@ public class FormPullTests : System.IDisposable
     [InlineData(true, false, false, GitPullAction.Merge)]
     [InlineData(false, true, false, GitPullAction.Rebase)]
     [InlineData(false, false, true, GitPullAction.Fetch)]
-    public void Should_remember_user_choice_upon_pull_action(bool mergeChecked, bool rebaseChecked, bool fetchChecked, GitPullAction expectedFormPullAction)
+    public void Should_remember_user_choice_upon_pull_action(bool mergeChecked, bool rebaseChecked, bool fetchChecked,
+        GitPullAction expectedFormPullAction)
     {
         RunFormTest(
             form =>
             {
-                FormPull.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
 
                 accessor.Merge.Checked = mergeChecked;
                 accessor.Rebase.Checked = rebaseChecked;
@@ -189,7 +205,7 @@ public class FormPullTests : System.IDisposable
         RunFormTest(
             form =>
             {
-                FormPull.TestAccessor accessor = form.GetTestAccessor();
+                var accessor = form.GetTestAccessor();
                 accessor.AutoStash.Checked = autoStashChecked;
 
                 accessor.UpdateSettingsDuringPull();
@@ -201,7 +217,8 @@ public class FormPullTests : System.IDisposable
             GitPullAction.Merge);
     }
 
-    private void RunFormTest(Action<FormPull> testDriver, string? remoteBranch, string? remote, GitPullAction pullAction)
+    private void RunFormTest(Action<FormPull> testDriver, string? remoteBranch, string? remote,
+        GitPullAction pullAction)
     {
         RunFormTest(
             form =>
@@ -212,19 +229,16 @@ public class FormPullTests : System.IDisposable
             remoteBranch, remote, pullAction);
     }
 
-    private void RunFormTest(Func<FormPull, Task> testDriverAsync, string? remoteBranch, string? remote, GitPullAction pullAction)
+    private void RunFormTest(Func<FormPull, Task> testDriverAsync, string? remoteBranch, string? remote,
+        GitPullAction pullAction)
     {
-        UITest.RunForm(
+        UiTest.RunForm(
             () =>
             {
                 // False because we haven't performed any actions
-                _commands.StartPullDialog(owner: null, remoteBranch: remoteBranch, remote: remote, pullAction: pullAction).Should().BeFalse();
+                _commands.StartPullDialog(owner: null, remoteBranch: remoteBranch, remote: remote,
+                    pullAction: pullAction).Should().BeFalse();
             },
             testDriverAsync);
-    }
-
-    public void Dispose()
-    {
-        DisposeTest();
     }
 }

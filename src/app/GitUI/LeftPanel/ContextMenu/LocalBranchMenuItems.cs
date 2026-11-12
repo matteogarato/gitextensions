@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitUI.LeftPanel.Interfaces;
 using ResourceManager;
@@ -8,8 +8,10 @@ namespace GitUI.LeftPanel.ContextMenu;
 internal sealed class LocalBranchMenuItems<TNode> : MenuItemsGenerator<TNode>
     where TNode : class, INode
 {
-    /// <summary>Keys of local branch menu items applying to the currently checked out branch.
-    /// See <see cref="LocalBranchNode.IsCurrent"/> and <see cref="MenuItemsGenerator{TNode}"/>.</summary>
+    /// <summary>
+    ///     Keys of local branch menu items applying to the currently checked out branch.
+    ///     See <see cref="LocalBranchNode.IsCurrent" /> and <see cref="MenuItemsGenerator{TNode}" />.
+    /// </summary>
     internal static MenuItemKey[] CurrentBranchItemKeys = [MenuItemKey.GitRefCreateBranch, MenuItemKey.Rename];
 
     public LocalBranchMenuItems(IMenuItemFactory menuItemFactory) : base(menuItemFactory)
@@ -20,7 +22,8 @@ internal sealed class LocalBranchMenuItems<TNode> : MenuItemsGenerator<TNode>
 
 public class LocalBranchMenuItemsStrings : Translate
 {
-    internal readonly TranslationString DeleteTooltip = new("Delete the branch, which must be fully merged in its upstream branch or in HEAD");
+    internal readonly TranslationString DeleteTooltip =
+        new("Delete the branch, which must be fully merged in its upstream branch or in HEAD");
 
     public LocalBranchMenuItemsStrings()
     {

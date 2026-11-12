@@ -1,13 +1,7 @@
 ﻿namespace GitCommands;
 
-public class CustomDiffMergeTool
+public class CustomDiffMergeTool(ToolStripMenuItem menuItem, EventHandler click)
 {
-    public CustomDiffMergeTool(ToolStripMenuItem menuItem, EventHandler click)
-    {
-        MenuItem = menuItem;
-        Click = click;
-    }
-
-    public ToolStripMenuItem MenuItem { get; }
-    public EventHandler Click { get; }
+    public ToolStripMenuItem MenuItem { get; } = menuItem;
+    public EventHandler Click { get; } = click;
 }

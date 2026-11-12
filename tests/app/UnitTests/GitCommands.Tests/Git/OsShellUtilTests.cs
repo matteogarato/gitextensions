@@ -1,33 +1,34 @@
 ﻿using System.Text;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using NSubstitute;
 
 namespace GitCommandsTests.Git;
+
 public class OsShellUtilTests : IDisposable
 {
-    private IExecutable _executable = null!;
-    private IProcess _process = null!;
+    private readonly IExecutable _executable = null!;
+    private readonly IProcess _process = null!;
 
     public OsShellUtilTests()
     {
         _process = Substitute.For<IProcess>();
         _executable = Substitute.For<IExecutable>();
         _executable.Start(
-            Arg.Any<ArgumentString>(),
-            Arg.Any<bool>(),
-            Arg.Any<bool>(),
-            Arg.Any<bool>(),
-            Arg.Any<Encoding?>(),
-            Arg.Any<bool>(),
-            Arg.Any<bool>(),
-            Arg.Any<CancellationToken>())
+                Arg.Any<ArgumentString>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<Encoding?>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
             .Returns(_process);
 
         OsShellUtil.TestAccessor.MockExecutable = _executable;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _process?.Dispose();
         OsShellUtil.TestAccessor.MockExecutable = null;
@@ -40,28 +41,28 @@ public class OsShellUtilTests : IDisposable
 
         _executable.Received(1).Start(
             Arg.Is<ArgumentString>(a => a.Length == 0),
-            createWindow: false,
-            redirectInput: false,
-            redirectOutput: false,
-            outputEncoding: null,
-            useShellExecute: true,
-            throwOnErrorExit: false,
+            false,
+            false,
+            false,
+            null,
+            true,
+            false,
             Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public void Open_should_fall_back_to_OpenAs_when_Start_throws()
     {
-        int callCount = 0;
+        var callCount = 0;
         _executable.Start(
-            Arg.Any<ArgumentString>(),
-            Arg.Any<bool>(),
-            Arg.Any<bool>(),
-            Arg.Any<bool>(),
-            Arg.Any<Encoding?>(),
-            Arg.Any<bool>(),
-            Arg.Any<bool>(),
-            Arg.Any<CancellationToken>())
+                Arg.Any<ArgumentString>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<Encoding?>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
                 callCount++;
@@ -92,13 +93,13 @@ public class OsShellUtilTests : IDisposable
         OsShellUtil.OpenAs("test.txt");
 
         _executable.Received(1).Start(
-            Arg.Is<ArgumentString>(a => ((string)a) == "shell32.dll,OpenAs_RunDLL test.txt"),
-            createWindow: false,
-            redirectInput: false,
-            redirectOutput: true,
+            Arg.Is<ArgumentString>(a => (string)a == "shell32.dll,OpenAs_RunDLL test.txt"),
+            false,
+            false,
+            true,
             Arg.Is<Encoding>(e => e == Encoding.UTF8),
-            useShellExecute: false,
-            throwOnErrorExit: true,
+            false,
+            true,
             Arg.Any<CancellationToken>());
     }
 
@@ -108,7 +109,7 @@ public class OsShellUtilTests : IDisposable
         OsShellUtil.SelectPathInFileExplorer(@"C:\some\file.txt");
 
         _executable.Received(1).Start(
-            Arg.Is<ArgumentString>(a => ((string)a) == @"/select, ""C:\some\file.txt"""),
+            Arg.Is<ArgumentString>(a => (string)a == @"/select, ""C:\some\file.txt"""),
             Arg.Any<bool>(),
             Arg.Any<bool>(),
             Arg.Any<bool>(),
@@ -124,7 +125,7 @@ public class OsShellUtilTests : IDisposable
         OsShellUtil.OpenWithFileExplorer(@"C:\some\folder");
 
         _executable.Received(1).Start(
-            Arg.Is<ArgumentString>(a => ((string)a) == @"""C:\some\folder"""),
+            Arg.Is<ArgumentString>(a => (string)a == @"""C:\some\folder"""),
             Arg.Any<bool>(),
             Arg.Any<bool>(),
             Arg.Any<bool>(),
@@ -137,10 +138,10 @@ public class OsShellUtilTests : IDisposable
     [Fact]
     public void OpenWithFileExplorer_should_not_quote_when_quote_is_false()
     {
-        OsShellUtil.OpenWithFileExplorer(@"/select, ""C:\some\file.txt""", quote: false);
+        OsShellUtil.OpenWithFileExplorer(@"/select, ""C:\some\file.txt""", false);
 
         _executable.Received(1).Start(
-            Arg.Is<ArgumentString>(a => ((string)a) == @"/select, ""C:\some\file.txt"""),
+            Arg.Is<ArgumentString>(a => (string)a == @"/select, ""C:\some\file.txt"""),
             Arg.Any<bool>(),
             Arg.Any<bool>(),
             Arg.Any<bool>(),
@@ -157,12 +158,12 @@ public class OsShellUtilTests : IDisposable
 
         _executable.Received(1).Start(
             Arg.Is<ArgumentString>(a => a.Length == 0),
-            createWindow: false,
-            redirectInput: false,
-            redirectOutput: false,
-            outputEncoding: null,
-            useShellExecute: true,
-            throwOnErrorExit: false,
+            false,
+            false,
+            false,
+            null,
+            true,
+            false,
             Arg.Any<CancellationToken>());
     }
 

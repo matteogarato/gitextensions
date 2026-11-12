@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
@@ -31,7 +31,8 @@ public partial class CommitDialogSettingsPage : SettingsPageWithHeader
         AppSettings.ShowErrorsWhenStagingFiles = chkShowErrorsWhenStagingFiles.Checked;
         AppSettings.EnsureCommitMessageSecondLineEmpty = chkEnsureCommitMessageSecondLineEmpty.Checked;
         AppSettings.UseFormCommitMessage = chkWriteCommitMessageInCommitWindow.Checked;
-        AppSettings.CommitDialogNumberOfPreviousMessages = (int)_NO_TRANSLATE_CommitDialogNumberOfPreviousMessages.Value;
+        AppSettings.CommitDialogNumberOfPreviousMessages =
+            (int)_NO_TRANSLATE_CommitDialogNumberOfPreviousMessages.Value;
         AppSettings.ShowCommitAndPush = chkShowCommitAndPush.Checked;
         AppSettings.ShowResetWorkTreeChanges = chkShowResetWorkTreeChanges.Checked;
         AppSettings.ShowResetAllChanges = chkShowResetAllChanges.Checked;

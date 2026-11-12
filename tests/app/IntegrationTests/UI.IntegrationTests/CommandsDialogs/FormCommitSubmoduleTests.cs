@@ -1,27 +1,30 @@
 ﻿using CommonTestUtils;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitUI;
 using GitUI.CommandsDialogs;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormCommitSubmoduleTests : System.IDisposable, IClassFixture<FormCommitSubmoduleTestsFixture>
+public class FormCommitSubmoduleTests : IDisposable, IClassFixture<FormCommitSubmoduleTestsFixture>
 {
     private const string _submodulePath = "sub";
+    private GitUiCommands _commands = null!;
 
     // Created once for each test
     private GitModuleTestHelper _parentRepo = null!;
     private GitModuleTestHelper _submoduleRepo = null!;
-    private GitUICommands _commands = null!;
 
     public FormCommitSubmoduleTests(FormCommitSubmoduleTestsFixture fixture)
     {
         InitializeTest();
+    }
+
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
     }
 
     private void InitializeTest()
@@ -37,7 +40,7 @@ public class FormCommitSubmoduleTests : System.IDisposable, IClassFixture<FormCo
         _parentRepo.AddSubmodule(_submoduleRepo, _submodulePath);
         _parentRepo.Module.GitExecutable.GetOutput("reset --soft HEAD~1");
 
-        _commands = new GitUICommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _parentRepo.Module);
+        _commands = new GitUiCommands(GlobalServiceContainer.CreateDefaultMockServiceContainer(), _parentRepo.Module);
     }
 
     private void DisposeTest()
@@ -51,15 +54,15 @@ public class FormCommitSubmoduleTests : System.IDisposable, IClassFixture<FormCo
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor ta = form.GetTestAccessor();
+            var ta = form.GetTestAccessor();
 
-            GitItemStatus staged = GetSubmoduleItem(ta.StagedList);
+            var staged = GetSubmoduleItem(ta.StagedList);
             staged.IsSubmodule.Should().BeTrue("`git submodule add` stages the submodule");
 
             ta.StagedList.SelectedGitItems = [staged];
             ta.Unstage();
 
-            bool afterUnstaging = GetSubmoduleItem(ta.UnstagedList).IsSubmodule;
+            var afterUnstaging = GetSubmoduleItem(ta.UnstagedList).IsSubmodule;
 
             ta.RescanChanges();
             AsyncTestHelper.JoinPendingOperations();
@@ -73,13 +76,15 @@ public class FormCommitSubmoduleTests : System.IDisposable, IClassFixture<FormCo
         return;
 
         static GitItemStatus GetSubmoduleItem(FileStatusList list)
-            => list.AllItems.Items().Single(item => item.Name.TrimEnd('/') == _submodulePath);
+        {
+            return list.AllItems.Items().Single(item => item.Name.TrimEnd('/') == _submodulePath);
+        }
     }
 
     private void RunFormTest(Func<FormCommit, Task> testDriverAsync)
     {
-        UITest.RunForm(
-            showForm: () =>
+        UiTest.RunForm(
+            () =>
             {
                 _commands.StartCommitDialog(owner: null).Should().BeTrue();
 
@@ -88,17 +93,12 @@ public class FormCommitSubmoduleTests : System.IDisposable, IClassFixture<FormCo
             },
             testDriverAsync);
     }
-
-    public void Dispose()
-    {
-        DisposeTest();
-    }
 }
 
-public sealed class FormCommitSubmoduleTestsFixture : System.IDisposable
+public sealed class FormCommitSubmoduleTestsFixture : IDisposable
 {
     // Track the original setting value
-    private bool _showAvailableDiffTools;
+    private readonly bool _showAvailableDiffTools;
 
     public FormCommitSubmoduleTestsFixture()
     {
@@ -108,7 +108,7 @@ public sealed class FormCommitSubmoduleTestsFixture : System.IDisposable
         AppSettings.ShowAvailableDiffTools = false;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
     }

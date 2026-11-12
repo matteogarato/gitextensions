@@ -2,21 +2,21 @@
 
 internal sealed class WordAtCursorExtractor : IWordAtCursorExtractor
 {
-    public string Extract(string text, int index)
+    string IWordAtCursorExtractor.Extract(string text, int index)
     {
-        int start = FindStartOfWord(text, index);
+        var start = FindStartOfWord(text, index);
         return start < 0 ? string.Empty : text.Substring(start, index - start + 1);
     }
 
-    public (int start, int length) GetWordBounds(string text, int index)
+    (int start, int length) IWordAtCursorExtractor.GetWordBounds(string text, int index)
     {
-        int start = Math.Min(FindStartOfWord(text, index), index);
+        var start = Math.Min(FindStartOfWord(text, index), index);
         if (start < 0)
         {
             return (0, 0);
         }
 
-        int end = FindEndOfWord(text, index);
+        var end = FindEndOfWord(text, index);
         return (start, Math.Max(1, end - start));
     }
 
@@ -29,12 +29,12 @@ internal sealed class WordAtCursorExtractor : IWordAtCursorExtractor
         }
 
         // do not avoid that the result can be right from the initial index index
-        #if false
+#if false
         if (!BelongsToStartOfWord(text, index))
         {
             return index;
         }
-        #endif
+#endif
 
         while (index >= 0 && BelongsToStartOfWord(text, index))
         {

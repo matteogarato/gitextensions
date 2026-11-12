@@ -8,5 +8,8 @@ public readonly record struct DistributedSettingsSet(
     DistributedSettings DistributedSettings,
     DistributedSettings GlobalSettings)
 {
-    public void Save() => EffectiveSettings.Save();
+    public void Save()
+    {
+        EffectiveSettings.Save();
+    }
 }

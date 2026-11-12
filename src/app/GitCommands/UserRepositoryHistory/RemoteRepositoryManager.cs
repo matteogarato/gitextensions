@@ -1,33 +1,33 @@
-﻿using Microsoft.VisualStudio.Threading;
+﻿using GitCommands.Settings;
+using Microsoft.VisualStudio.Threading;
 
 namespace GitCommands.UserRepositoryHistory;
 
 /// <summary>
-/// Manages the history of remote git repositories.
+///     Manages the history of remote git repositories.
 /// </summary>
-public sealed class RemoteRepositoryManager : IRepositoryManager
+public sealed class RemoteRepositoryManager(IRepositoryStorage repositoryStorage) : IRepositoryManager
 {
-    private const string KeyRemoteHistory = "history remote";
-    private readonly IRepositoryStorage _repositoryStorage;
-
-    public RemoteRepositoryManager(IRepositoryStorage repositoryStorage)
-    {
-        _repositoryStorage = repositoryStorage;
-    }
+    private const string _keyRemoteHistory = "history remote";
 
     /// <summary>
-    /// <para>Saves the provided repository URL to the list of recently used remote git repositories as the top entry.</para>
-    /// <para>If the history contains an entry for the provided URL, the entry is physically moved
-    /// to the top of the history list.</para>
+    ///     <para>Saves the provided repository URL to the list of recently used remote git repositories as the top entry.</para>
+    ///     <para>
+    ///         If the history contains an entry for the provided URL, the entry is physically moved
+    ///         to the top of the history list.
+    ///     </para>
     /// </summary>
     /// <remarks>
-    /// The history is loaded from the persistent storage to ensure the most current version of
-    /// the history is updated, as it may have been updated by another instance of GE.
+    ///     The history is loaded from the persistent storage to ensure the most current version of
+    ///     the history is updated, as it may have been updated by another instance of GE.
     /// </remarks>
     /// <param name="repositoryPathUrl">A repository URL to be save as "most recent".</param>
     /// <returns>The current version of the list of recently used git repositories after the update.</returns>
-    /// <exception cref="ArgumentException"><paramref name="repositoryPathUrl"/> is <see langword="null"/> or <see cref="string.Empty"/>.</exception>
-    public async Task<IList<Repository>> AddAsMostRecentAsync(string repositoryPathUrl)
+    /// <exception cref="ArgumentException">
+    ///     <paramref name="repositoryPathUrl" /> is <see langword="null" /> or
+    ///     <see cref="string.Empty" />.
+    /// </exception>
+    async Task<IList<Repository>> IRepositoryManager.AddAsMostRecentAsync(string repositoryPathUrl)
     {
         if (string.IsNullOrWhiteSpace(repositoryPathUrl))
         {
@@ -39,9 +39,10 @@ public sealed class RemoteRepositoryManager : IRepositoryManager
         async Task<IList<Repository>> AddAsMostRecentRepositoryAsync(string path)
         {
             await TaskScheduler.Default;
-            IList<Repository> repositoryHistory = await LoadRecentHistoryAsync();
+            var repositoryHistory = await LoadRecentHistoryAsync();
 
-            Repository? repository = repositoryHistory.FirstOrDefault(r => r.Path.Equals(path, StringComparison.CurrentCultureIgnoreCase));
+            var repository =
+                repositoryHistory.FirstOrDefault(r => r.Path.Equals(path, StringComparison.CurrentCultureIgnoreCase));
             if (repository is not null)
             {
                 if (repositoryHistory[0] == repository)
@@ -65,24 +66,28 @@ public sealed class RemoteRepositoryManager : IRepositoryManager
     }
 
     /// <summary>
-    /// Loads the list of recently used remote git repositories from a persistent storage.
+    ///     Loads the list of recently used remote git repositories from a persistent storage.
     /// </summary>
     /// <returns>The list of recently used remote git repositories.</returns>
-    public async Task<IList<Repository>> LoadRecentHistoryAsync()
+    async Task<IList<Repository>> IRepositoryManager.LoadRecentHistoryAsync()
     {
         await TaskScheduler.Default;
 
-        IReadOnlyList<Repository> history = _repositoryStorage.Load(KeyRemoteHistory);
+        var history = repositoryStorage.Load(_keyRemoteHistory);
         return history is null ? [] : AdjustHistorySize(history, AppSettings.RemotesCacheLength).ToList();
     }
 
     /// <summary>
-    /// Removes <paramref name="repositoryPath"/> from the the list of recently used remote git repositories in a persistent storage.
+    ///     Removes <paramref name="repositoryPath" /> from the the list of recently used remote git repositories in a
+    ///     persistent storage.
     /// </summary>
     /// <param name="repositoryPath">A repository path to remove.</param>
     /// <returns>The current version of the list of recently used git repositories after the update.</returns>
-    /// <exception cref="ArgumentException"><paramref name="repositoryPath"/> is <see langword="null"/> or <see cref="string.Empty"/>.</exception>
-    public async Task<IList<Repository>> RemoveRecentAsync(string repositoryPath)
+    /// <exception cref="ArgumentException">
+    ///     <paramref name="repositoryPath" /> is <see langword="null" /> or
+    ///     <see cref="string.Empty" />.
+    /// </exception>
+    async Task<IList<Repository>> IRepositoryManager.RemoveRecentAsync(string repositoryPath)
     {
         if (string.IsNullOrWhiteSpace(repositoryPath))
         {
@@ -90,8 +95,9 @@ public sealed class RemoteRepositoryManager : IRepositoryManager
         }
 
         await TaskScheduler.Default;
-        IList<Repository> repositoryHistory = await LoadRecentHistoryAsync();
-        Repository? repository = repositoryHistory.FirstOrDefault(r => r.Path.Equals(repositoryPath, StringComparison.CurrentCultureIgnoreCase));
+        var repositoryHistory = await LoadRecentHistoryAsync();
+        var repository = repositoryHistory.FirstOrDefault(r =>
+            r.Path.Equals(repositoryPath, StringComparison.CurrentCultureIgnoreCase));
         if (repository is null)
         {
             return repositoryHistory;
@@ -107,13 +113,16 @@ public sealed class RemoteRepositoryManager : IRepositoryManager
     }
 
     /// <summary>
-    /// Saves the list of recently used remote git repositories to a persistent storage.
+    ///     Saves the list of recently used remote git repositories to a persistent storage.
     /// </summary>
     /// <param name="repositoryHistory">A list of recently used remote git repositories.</param>
     /// <returns>An awaitable task.</returns>
-    /// <remarks>The size of the history will be adjusted as per <see cref="AppSettings.RecentRepositoriesHistorySize"/> setting.</remarks>
-    /// <exception cref="ArgumentNullException"><paramref name="repositoryHistory"/> is <see langword="null"/>.</exception>
-    public async Task SaveRecentHistoryAsync(IEnumerable<Repository> repositoryHistory)
+    /// <remarks>
+    ///     The size of the history will be adjusted as per
+    ///     <see cref="Settings.AppSettings.RecentRepositoriesHistorySize" /> setting.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="repositoryHistory" /> is <see langword="null" />.</exception>
+    async Task IRepositoryManager.SaveRecentHistoryAsync(IEnumerable<Repository> repositoryHistory)
     {
         ArgumentNullException.ThrowIfNull(repositoryHistory);
 
@@ -121,10 +130,12 @@ public sealed class RemoteRepositoryManager : IRepositoryManager
 
         // BUG: this must be a separate settings
         // TODO: to be addressed separately
-        _repositoryStorage.Save(KeyRemoteHistory, AdjustHistorySize(repositoryHistory, AppSettings.RecentRepositoriesHistorySize));
+        repositoryStorage.Save(_keyRemoteHistory,
+            AdjustHistorySize(repositoryHistory, AppSettings.RecentRepositoriesHistorySize));
     }
 
-    private static IEnumerable<Repository> AdjustHistorySize(IEnumerable<Repository> repositories, int recentRepositoriesHistorySize)
+    private static IEnumerable<Repository> AdjustHistorySize(IEnumerable<Repository> repositories,
+        int recentRepositoriesHistorySize)
     {
         return repositories.Take(recentRepositoriesHistorySize);
     }

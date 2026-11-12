@@ -59,24 +59,25 @@ public static class AppColorDefaults
             { AppColor.AnsiTerminalWhiteForeNormal, Color.FromArgb(0xbf, 0xbf, 0xbf) },
             { AppColor.AnsiTerminalWhiteBackNormal, Color.FromArgb(0xe0, 0xe0, 0xe0) },
             { AppColor.AnsiTerminalWhiteForeBold, Color.FromArgb(0xff, 0xff, 0xff) },
-            { AppColor.AnsiTerminalWhiteBackBold, Color.FromArgb(0xff, 0xff, 0xff) },
+            { AppColor.AnsiTerminalWhiteBackBold, Color.FromArgb(0xff, 0xff, 0xff) }
         };
 
     private static readonly Dictionary<string, Dictionary<AppColor, Color>> _variations = new()
     {
         {
-            "colorblind", new()
+            "colorblind",
+            new Dictionary<AppColor, Color>
             {
-               { AppColor.RemoteBranch, Color.FromArgb(0x06, 0x00, 0xa8) },
-               { AppColor.AnsiTerminalRedBackNormal, Color.FromArgb(0x94, 0xcb, 0xff) },
-               { AppColor.AnsiTerminalRedBackBold, Color.FromArgb(0x4d, 0xa6, 0xff) },
+                { AppColor.RemoteBranch, Color.FromArgb(0x06, 0x00, 0xa8) },
+                { AppColor.AnsiTerminalRedBackNormal, Color.FromArgb(0x94, 0xcb, 0xff) },
+                { AppColor.AnsiTerminalRedBackBold, Color.FromArgb(0x4d, 0xa6, 0xff) }
             }
         }
     };
 
     public static Color GetBy(AppColor name, string[]? variations = null)
     {
-        if (!_values.TryGetValue(name, out Color result))
+        if (!_values.TryGetValue(name, out var result))
         {
             result = FallbackColor;
         }
@@ -86,14 +87,14 @@ public static class AppColorDefaults
             return result;
         }
 
-        foreach (string variation in variations)
+        foreach (var variation in variations)
         {
-            if (!_variations.TryGetValue(variation, out Dictionary<AppColor, Color>? colorOverrides))
+            if (!_variations.TryGetValue(variation, out var colorOverrides))
             {
                 continue;
             }
 
-            if (colorOverrides.TryGetValue(name, out Color colorOverride))
+            if (colorOverrides.TryGetValue(name, out var colorOverride))
             {
                 result = colorOverride;
             }

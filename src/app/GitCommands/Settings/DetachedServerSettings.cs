@@ -2,21 +2,14 @@
 
 namespace GitCommands.Settings;
 
-internal sealed class DetachedSettings : IDetachedSettings
+internal sealed class DetachedSettings(SettingsSource settingsSource) : IDetachedSettings
 {
-    private const string DictionaryDefault = "en-US";
-    private const bool NoFastForwardMergeDefault = false;
+    private const string _dictionaryDefault = "en-US";
+    private const bool _noFastForwardMergeDefault = false;
 
-    private readonly SettingsSource _settingsSource;
-
-    public DetachedSettings(SettingsSource settingsSource)
+    string IDetachedSettings.Dictionary
     {
-        _settingsSource = settingsSource;
-    }
-
-    public string Dictionary
-    {
-        get => _settingsSource.GetString(nameof(Dictionary).ToLower(), DictionaryDefault);
+        get => settingsSource.GetString(nameof(Dictionary).ToLower(), _dictionaryDefault);
         set
         {
             if (Dictionary == value)
@@ -24,13 +17,13 @@ internal sealed class DetachedSettings : IDetachedSettings
                 return;
             }
 
-            _settingsSource.SetString(nameof(Dictionary).ToLower(), value);
+            settingsSource.SetString(nameof(Dictionary).ToLower(), value);
         }
     }
 
-    public bool NoFastForwardMerge
+    bool IDetachedSettings.NoFastForwardMerge
     {
-        get => _settingsSource.GetBool(nameof(NoFastForwardMerge), NoFastForwardMergeDefault);
+        get => settingsSource.GetBool(nameof(NoFastForwardMerge), _noFastForwardMergeDefault);
         set
         {
             if (NoFastForwardMerge == value)
@@ -38,7 +31,7 @@ internal sealed class DetachedSettings : IDetachedSettings
                 return;
             }
 
-            _settingsSource.SetBool(nameof(NoFastForwardMerge), value);
+            settingsSource.SetBool(nameof(NoFastForwardMerge), value);
         }
     }
 }

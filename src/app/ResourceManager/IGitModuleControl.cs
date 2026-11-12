@@ -5,7 +5,7 @@ namespace ResourceManager;
 public interface IGitModuleControl
 {
     /// <summary>
-    ///  Gets the currently assigned <see cref="IGitUICommands"/> instance.
+    ///     Gets the currently assigned <see cref="IGitUiCommands" /> instance.
     /// </summary>
-    IGitUICommands UICommands { get; }
+    IGitUiCommands UiCommands { get; }
 }

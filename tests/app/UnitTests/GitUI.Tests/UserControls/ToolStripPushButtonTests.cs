@@ -1,18 +1,18 @@
-﻿using Castle.Core.Internal;
-using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
 using GitUI.CommandsDialogs;
 using GitUI.Properties;
 using JetBrains.Annotations;
 using NSubstitute;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.UserControls;
+
 public class ToolStripPushButtonTests : IDisposable
 {
-    private static readonly int PushImageHashCode = Images.Push.RawFormat.GetHashCode();
-    private bool _originalShowAheadBehindData;
-    private IAheadBehindDataProvider _aheadBehindDataProvider = null!;
-    private ToolStripPushButton _sut = null!;
+    private static readonly int _pushImageHashCode = Images.Push.RawFormat.GetHashCode();
+    private readonly IAheadBehindDataProvider _aheadBehindDataProvider = null!;
+    private readonly bool _originalShowAheadBehindData;
+    private readonly ToolStripPushButton _sut = null!;
 
     public ToolStripPushButtonTests()
     {
@@ -25,7 +25,23 @@ public class ToolStripPushButtonTests : IDisposable
         _sut.ResetToDefaultState();
     }
 
-    public void Dispose()
+    public static IEnumerable<object?[]> GetInvalidAheadBehindData
+    {
+        [UsedImplicitly]
+        get
+        {
+            yield return new object?[] { null };
+
+            yield return new object?[] { new Dictionary<string, AheadBehindData>() };
+
+            yield return new object?[]
+            {
+                new Dictionary<string, AheadBehindData> { { "some_branch", new AheadBehindData() } }
+            };
+        }
+    }
+
+    void IDisposable.Dispose()
     {
         _sut.Dispose();
         AppSettings.ShowAheadBehindData = _originalShowAheadBehindData;
@@ -40,54 +56,44 @@ public class ToolStripPushButtonTests : IDisposable
 
         _sut.DisplayStyle.Should().Be(ToolStripItemDisplayStyle.Image);
         _sut.ToolTipText.Should().Be("Push");
-        _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
+        _sut!.Image!.RawFormat.GetHashCode().Should().Be(_pushImageHashCode);
     }
 
     [Theory]
     [MemberData(nameof(GetInvalidAheadBehindData))]
-    public void DisplayAheadBehindInformation_should_display_default_text_image_if_ahead_behind_data_null(IReadOnlyDictionary<string, AheadBehindData>? data)
+    public void DisplayAheadBehindInformation_should_display_default_text_image_if_ahead_behind_data_null(
+        IReadOnlyDictionary<string, AheadBehindData>? data)
     {
-        string branchName = "who_cares";
+        var branchName = "who_cares";
         _aheadBehindDataProvider.GetData(branchName).Returns(x => data);
 
         _sut.DisplayStyle.Should().Be(ToolStripItemDisplayStyle.Image);
         _sut.ToolTipText.Should().Be("Push");
-        _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
-    }
-
-    public static IEnumerable<object?[]> GetInvalidAheadBehindData
-    {
-        [UsedImplicitly]
-        get
-        {
-            yield return new object?[] { null };
-
-            yield return new object?[] { new Dictionary<string, AheadBehindData>() };
-
-            yield return new object?[] { new Dictionary<string, AheadBehindData> { { "some_branch", new AheadBehindData() } } };
-        }
+        _sut!.Image!.RawFormat.GetHashCode().Should().Be(_pushImageHashCode);
     }
 
     [Fact]
     public void DisplayAheadBehindInformation_should_display_normal_state_when_no_data_returned()
     {
-        string branchName = "(no branch) or any-branch";
+        var branchName = "(no branch) or any-branch";
         _aheadBehindDataProvider.GetData(branchName).Returns(x => null);
 
         _sut.DisplayAheadBehindInformation(_aheadBehindDataProvider?.GetData(branchName), branchName, string.Empty);
 
         _sut.DisplayStyle.Should().Be(ToolStripItemDisplayStyle.Image);
         _sut.ToolTipText.Should().Be("Push");
-        _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
+        _sut!.Image!.RawFormat.GetHashCode().Should().Be(_pushImageHashCode);
     }
 
     [Fact]
     public void DisplayAheadBehindInformation_should_display_normal_state_when_in_ahead_state()
     {
-        string branchName = "my-branch";
+        var branchName = "my-branch";
         Dictionary<string, AheadBehindData> data = new()
         {
-            { branchName, new AheadBehindData { AheadCount = "9", BehindCount = string.Empty, Branch = branchName } }
+            {
+                branchName, new AheadBehindData { AheadCount = "9", BehindCount = string.Empty, Branch = branchName }
+            }
         };
         _aheadBehindDataProvider.GetData(branchName).Returns(x => data);
 
@@ -96,16 +102,18 @@ public class ToolStripPushButtonTests : IDisposable
         _sut.DisplayStyle.Should().Be(ToolStripItemDisplayStyle.ImageAndText);
         _sut.ToolTipText.Should().Contain("9 new commit(s) will be pushed");
         _sut.ToolTipText.Should().NotContain("commit(s) should be integrated");
-        _sut!.Image!.RawFormat.GetHashCode().Should().Be(PushImageHashCode);
+        _sut!.Image!.RawFormat.GetHashCode().Should().Be(_pushImageHashCode);
     }
 
     [Fact]
     public void DisplayAheadBehindInformation_should_display_warning_state_when_in_behind_state()
     {
-        string branchName = "my-branch";
+        var branchName = "my-branch";
         Dictionary<string, AheadBehindData> data = new()
         {
-            { branchName, new AheadBehindData { AheadCount = string.Empty, BehindCount = "2", Branch = branchName } }
+            {
+                branchName, new AheadBehindData { AheadCount = string.Empty, BehindCount = "2", Branch = branchName }
+            }
         };
         _aheadBehindDataProvider.GetData(branchName).Returns(x => data);
 
@@ -120,7 +128,7 @@ public class ToolStripPushButtonTests : IDisposable
     [Fact]
     public void DisplayAheadBehindInformation_should_display_warning_state_when_in_ahead_and_behind_state()
     {
-        string branchName = "my-branch";
+        var branchName = "my-branch";
         Dictionary<string, AheadBehindData> data = new()
         {
             { branchName, new AheadBehindData { AheadCount = "99", BehindCount = "3", Branch = branchName } }
@@ -140,7 +148,7 @@ public class ToolStripPushButtonTests : IDisposable
     {
         AppSettings.ShowAheadBehindData = false;
 
-        string branchName = "my-branch";
+        var branchName = "my-branch";
 
         _sut.DisplayAheadBehindInformation(_aheadBehindDataProvider?.GetData(branchName), branchName, string.Empty);
 
@@ -153,7 +161,7 @@ public class ToolStripPushButtonTests : IDisposable
     [Fact]
     public void PushButton_should_keep_size_before_update_and_decrease_if_fewer_changes()
     {
-        string branchName = "my-branch";
+        var branchName = "my-branch";
         Dictionary<string, AheadBehindData> data = new()
         {
             { branchName, new AheadBehindData { AheadCount = "99", BehindCount = "33", Branch = branchName } }
@@ -161,7 +169,7 @@ public class ToolStripPushButtonTests : IDisposable
         _aheadBehindDataProvider.GetData(branchName).Returns(x => data);
 
         _sut.DisplayAheadBehindInformation(_aheadBehindDataProvider?.GetData(branchName), branchName, string.Empty);
-        int updatedSize = _sut.GetTestAccessor().GetButtonWidth();
+        var updatedSize = _sut.GetTestAccessor().GetButtonWidth();
         _sut.ResetBeforeUpdate();
         _sut.GetTestAccessor().GetButtonWidth().Should().Be(updatedSize);
         _sut.GetTestAccessor().GetButtonText().Should().BeNullOrEmpty();

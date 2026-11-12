@@ -1,25 +1,16 @@
-﻿using GitCommands;
-using GitCommands.Settings;
+﻿using GitCommands.Settings;
 
 namespace GitCommandsTests.Settings;
+
 public sealed class RuntimeSettingTests
 {
-    private enum Enum
-    {
-        Foo,
-        Bar,
-        HardCodedDefault,
-        PersistentValue,
-        RuntimeValue,
-    }
-
     [Fact]
     public void EnumRuntimeSetting()
     {
-        SettingsPath rootSettingsPath = new AppSettingsPath(pathName: "");
+        SettingsPath rootSettingsPath = new AppSettingsPath("");
         const string name = "SettingX";
 
-        ISetting<Enum> persistentSetting = Setting.Create(rootSettingsPath, name, Enum.HardCodedDefault);
+        var persistentSetting = Setting.Create(rootSettingsPath, name, Enum.HardCodedDefault);
         RuntimeSetting<Enum> runtimeSetting = new(persistentSetting);
 
         runtimeSetting.Value.Should().Be(Enum.HardCodedDefault);
@@ -43,5 +34,14 @@ public sealed class RuntimeSettingTests
         runtimeSetting.ResetToDefault();
         runtimeSetting.Value.Should().Be(Enum.HardCodedDefault);
         persistentSetting.Value.Should().Be(Enum.PersistentValue);
+    }
+
+    private enum Enum
+    {
+        Foo,
+        Bar,
+        HardCodedDefault,
+        PersistentValue,
+        RuntimeValue
     }
 }

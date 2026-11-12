@@ -1,7 +1,7 @@
 using System.Xml.Serialization;
-using GitCommands;
 using GitExtensions.Shims.WinForms;
 using ResourceManager;
+using ResourceManager.Hotkey;
 
 namespace GitUI.Hotkey;
 
@@ -11,7 +11,7 @@ internal enum AvaloniaBrowseHotkeyCommand
     ToggleDashboard = 50,
     Refresh = 51,
     Pull = 39,
-    Push = 40,
+    Push = 40
 }
 
 /// <summary>Loads and saves the shortcuts supported by the Avalonia browse window.</summary>
@@ -32,15 +32,15 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
             return [];
         }
 
-        HotkeyCommand[] defaults = CreateDefaultBrowseHotkeys();
-        HotkeySettings? settings = LoadSerializedSettings()
+        var defaults = CreateDefaultBrowseHotkeys();
+        var settings = LoadSerializedSettings()
             .SingleOrDefault(setting => setting.Name == BrowseSettingsName);
 
         if (settings?.Commands is not null)
         {
-            foreach (HotkeyCommand command in defaults)
+            foreach (var command in defaults)
             {
-                HotkeyCommand? savedCommand = settings.Commands
+                var savedCommand = settings.Commands
                     .FirstOrDefault(saved => saved.CommandCode == command.CommandCode);
                 if (savedCommand is not null)
                 {
@@ -56,8 +56,8 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
     /// <param name="hotkeys">The browse shortcuts to save.</param>
     public void SaveBrowseHotkeys(IEnumerable<HotkeyCommand> hotkeys)
     {
-        HotkeyCommand[] updatedCommands = hotkeys.ToArray();
-        int[] supportedCommandCodes = Enum.GetValues<AvaloniaBrowseHotkeyCommand>()
+        var updatedCommands = hotkeys.ToArray();
+        var supportedCommandCodes = Enum.GetValues<AvaloniaBrowseHotkeyCommand>()
             .Select(command => (int)command)
             .ToArray();
 
@@ -65,10 +65,11 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
             || updatedCommands.Select(command => command.CommandCode).Distinct().Count() != supportedCommandCodes.Length
             || updatedCommands.Any(command => !supportedCommandCodes.Contains(command.CommandCode)))
         {
-            throw new ArgumentException("The hotkey list must contain each supported Avalonia browse command exactly once.", nameof(hotkeys));
+            throw new ArgumentException(
+                "The hotkey list must contain each supported Avalonia browse command exactly once.", nameof(hotkeys));
         }
 
-        Keys[] assignedKeys = updatedCommands
+        var assignedKeys = updatedCommands
             .Where(command => command.KeyData != Keys.None)
             .Select(command => command.KeyData)
             .ToArray();
@@ -77,8 +78,8 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
             throw new InvalidOperationException(ResourceManager.TranslatedStrings.HotkeyDuplicateError);
         }
 
-        List<HotkeySettings> allSettings = LoadSerializedSettings().ToList();
-        HotkeySettings? browseSettings = allSettings.SingleOrDefault(setting => setting.Name == BrowseSettingsName);
+        var allSettings = LoadSerializedSettings().ToList();
+        var browseSettings = allSettings.SingleOrDefault(setting => setting.Name == BrowseSettingsName);
         if (browseSettings is null)
         {
             browseSettings = new HotkeySettings(BrowseSettingsName);
@@ -86,7 +87,7 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
         }
 
         HashSet<int> supportedCodes = [.. supportedCommandCodes];
-        HotkeyCommand[] existingCommands = browseSettings.Commands ?? [];
+        var existingCommands = browseSettings.Commands ?? [];
         browseSettings.Commands = existingCommands
             .Where(command => !supportedCodes.Contains(command.CommandCode))
             .Concat(updatedCommands)
@@ -99,14 +100,14 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
 
     private static List<HotkeySettings> LoadSerializedSettings()
     {
-        string? serializedHotkeys = AppSettings.SerializedHotkeys;
+        var serializedHotkeys = AppSettings.SerializedHotkeys;
         if (string.IsNullOrWhiteSpace(serializedHotkeys))
         {
             return [];
         }
 
         using StringReader reader = new(serializedHotkeys);
-        object? deserialized = _serializer.Deserialize(reader);
+        var deserialized = _serializer.Deserialize(reader);
         return deserialized is HotkeySettings[] settings
             ? [.. settings]
             : throw new InvalidOperationException("The saved hotkey configuration has an unexpected format.");
@@ -120,7 +121,7 @@ public sealed class AvaloniaHotkeySettingsManager : IHotkeySettingsLoader
             Create(AvaloniaBrowseHotkeyCommand.ToggleDashboard, Keys.Control | Keys.Shift | Keys.O),
             Create(AvaloniaBrowseHotkeyCommand.Refresh, Keys.F5),
             Create(AvaloniaBrowseHotkeyCommand.Pull, Keys.Control | Keys.Down),
-            Create(AvaloniaBrowseHotkeyCommand.Push, Keys.Control | Keys.Up),
+            Create(AvaloniaBrowseHotkeyCommand.Push, Keys.Control | Keys.Up)
         ];
 
         static HotkeyCommand Create(AvaloniaBrowseHotkeyCommand command, Keys keyData)

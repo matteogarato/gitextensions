@@ -18,7 +18,9 @@ public sealed class StringExtensionsTests
     [InlineData(",", 1, -1)]
     [InlineData("", 0, -1)]
     public void IndexOfAny_returns_expected(string input, int startIndex, int expected)
-        => input.IndexOfAny(_separators, startIndex).Should().Be(expected);
+    {
+        input.IndexOfAny(_separators, startIndex).Should().Be(expected);
+    }
 
     [Theory]
     [InlineData("abc", 0, 3)] // no line ending → string length
@@ -33,5 +35,7 @@ public sealed class StringExtensionsTests
     [InlineData("a\r\nb", 3, 4)] // startIndex past CRLF → no ending
     [InlineData("a\nb\nc", 2, 3)] // second LF
     public void GetLineEnd_returns_expected(string input, int startIndex, int expected)
-        => input.GetLineEnd(startIndex).Should().Be(expected);
+    {
+        input.GetLineEnd(startIndex).Should().Be(expected);
+    }
 }

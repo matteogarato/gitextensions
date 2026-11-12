@@ -6,9 +6,10 @@ using GitCommands.UserRepositoryHistory.Legacy;
 using Current = GitCommands.UserRepositoryHistory;
 
 namespace GitCommandsTests.UserRepositoryHistory.Legacy;
+
 public class RepositoryCategorySerialiserTests
 {
-    private RepositoryCategoryXmlSerialiser _repositoryXmlSerialiser = null!;
+    private readonly RepositoryCategoryXmlSerialiser _repositoryXmlSerialiser = null!;
 
     public RepositoryCategorySerialiserTests()
     {
@@ -24,13 +25,14 @@ public class RepositoryCategorySerialiserTests
     [Fact]
     public void Deserialize_should_load_legacy_categorised_repositories()
     {
-        string xml = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.CategorisedRepositories01.xml");
+        var xml = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.CategorisedRepositories01.xml");
         if (string.IsNullOrWhiteSpace(xml))
         {
             throw new FileFormatException("Unexpected data");
         }
 
-        IReadOnlyList<RepositoryCategory>? categorisedHistory = _repositoryXmlSerialiser.Deserialize(xml);
+        var categorisedHistory = _repositoryXmlSerialiser.Deserialize(xml);
 
         categorisedHistory.Should().HaveCount(2);
         categorisedHistory[0].Description.Should().Be("3rd Party");
@@ -53,7 +55,8 @@ public class RepositoryCategorySerialiserTests
     [Fact]
     public void Serialize_must_fail_as_not_supported()
     {
-        ((Action)(() => ((Current.IRepositorySerialiser<RepositoryCategory>)_repositoryXmlSerialiser).Serialize(null!))).Should().Throw<NotSupportedException>();
+        ((Action)(() => ((Current.IRepositorySerialiser<RepositoryCategory>)_repositoryXmlSerialiser).Serialize(null!)))
+            .Should().Throw<NotSupportedException>();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -62,22 +65,34 @@ public class RepositoryCategorySerialiserTests
     {
         List<RepositoryCategory> surrogate =
         [
-            new RepositoryCategory
+            new()
             {
                 Repositories =
                 [
-                    new Repository { Path = "C:\\Development\\RibbonWinForms\\", Description = "Check it out!", Anchor = "None" },
-                    new Repository { Path = "", Anchor = "None" },
+                    new Repository
+                    {
+                        Path = "C:\\Development\\RibbonWinForms\\", Description = "Check it out!", Anchor = "None"
+                    },
+                    new Repository { Path = "", Anchor = "None" }
                 ],
                 CategoryType = "Repositories",
                 Description = "3rd Party"
             },
-            new RepositoryCategory
+            new()
             {
-                Repositories = [new Repository { Title = "Git Extensions", Path = "C:\\Development\\gitextensions\\", Description = "Mega project!", Anchor = "Pinned" }],
+                Repositories =
+                [
+                    new Repository
+                    {
+                        Title = "Git Extensions",
+                        Path = "C:\\Development\\gitextensions\\",
+                        Description = "Mega project!",
+                        Anchor = "Pinned"
+                    }
+                ],
                 CategoryType = "Repositories",
                 Description = "Test"
-            },
+            }
         ];
 
         string xml;
@@ -88,6 +103,6 @@ public class RepositoryCategorySerialiserTests
         serializer.Serialize(sw, surrogate, ns);
         xml = sw.ToString();
 
-        await Verifier.VerifyXml(xml);
+        await VerifyXml(xml);
     }
 }

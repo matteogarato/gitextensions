@@ -1,7 +1,6 @@
 ﻿using GitCommands;
-using GitUI.UserControls;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusList
 {

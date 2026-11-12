@@ -4,26 +4,29 @@ namespace GitCommands.Settings;
 
 public static class BuildServerSettings
 {
-    private static readonly SettingsPath _settingsPath = new(parent: null, "BuildServer");
+    private static readonly SettingsPath _settingsPath = new(null, "BuildServer");
 
     /// <summary>
-    ///  Gets the type of the build server (e.g. AppVeyor, TeamCity, etc.).
+    ///     Gets the type of the build server (e.g. AppVeyor, TeamCity, etc.).
     /// </summary>
-    public static StringSetting ServerName { get; } = new(_settingsPath.PathFor("Type"), defaultValue: "");
+    public static StringSetting ServerName { get; } = new(_settingsPath.PathFor("Type"), "");
 
     /// <summary>
-    ///  Gets whether the integration with the build server is enabled.
+    ///     Gets whether the integration with the build server is enabled.
     /// </summary>
-    public static BoolSetting IntegrationEnabled { get; } = new(_settingsPath.PathFor("EnableIntegration"), defaultValue: false);
+    public static BoolSetting IntegrationEnabled { get; } = new(_settingsPath.PathFor("EnableIntegration"), false);
 
     /// <summary>
-    ///  Gets whether the build server's build result page is displayed.
+    ///     Gets whether the build server's build result page is displayed.
     /// </summary>
-    public static BoolSetting ShowBuildResultPage { get; } = new(_settingsPath.PathFor(nameof(ShowBuildResultPage)), defaultValue: false);
+    public static BoolSetting ShowBuildResultPage { get; } =
+        new(_settingsPath.PathFor(nameof(ShowBuildResultPage)), false);
 
     /// <summary>
-    ///  Gets the settings source for the build server configured in <paramref name="settingsSource"/>.
+    ///     Gets the settings source for the build server configured in <paramref name="settingsSource" />.
     /// </summary>
     public static SettingsSource GetSettingsSource(SettingsSource settingsSource)
-        => new SettingsPath(settingsSource, _settingsPath.PathFor(ServerName.ValueOrDefault(settingsSource)));
+    {
+        return new SettingsPath(settingsSource, _settingsPath.PathFor(ServerName.ValueOrDefault(settingsSource)));
+    }
 }

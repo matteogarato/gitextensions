@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using GitCommands;
+using GitCommands.Settings;
 
 namespace GitUI.CommandsDialogs.SettingsDialog;
 
@@ -14,7 +14,7 @@ public partial class FormAvailableEncodings : GitExtensionsForm
 
     private void LoadEncoding()
     {
-        Dictionary<string, Encoding> includedEncoding = AppSettings.AvailableEncodings;
+        var includedEncoding = AppSettings.AvailableEncodings;
         ListIncludedEncodings.BeginUpdate();
         try
         {
@@ -26,15 +26,23 @@ public partial class FormAvailableEncodings : GitExtensionsForm
             ListIncludedEncodings.EndUpdate();
         }
 
-        object[] selectableEncodings = [.. Encoding.GetEncodings()
-            .Select(ei => ei.GetEncoding())
-            .Select(e => e.GetType() == typeof(UTF8Encoding) ? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false) : e) // If exists utf-8, then replace to utf-8 without BOM
+        object[] selectableEncodings =
+        [
+            .. Encoding.GetEncodings()
+                .Select(ei => ei.GetEncoding())
+                .Select(e =>
+                    e.GetType() == typeof(UTF8Encoding)
+                        ? new UTF8Encoding(false)
+                        : e) // If exists utf-8, then replace to utf-8 without BOM
 #pragma warning disable SYSLIB0001 // Type or member is obsolete
-            .Where(e => e != Encoding.UTF7) // UTF-7 is no longer supported, see: https://github.com/dotnet/docs/issues/19274
+                .Where(e => e !=
+                            Encoding
+                                .UTF7) // UTF-7 is no longer supported, see: https://github.com/dotnet/docs/issues/19274
 #pragma warning restore SYSLIB0001 // Type or member is obsolete
-            .Where(e => !includedEncoding.ContainsKey(e.WebName))
-            .GroupBy(e => e.WebName)
-            .Select(group => group.First())];
+                .Where(e => !includedEncoding.ContainsKey(e.WebName))
+                .GroupBy(e => e.WebName)
+                .Select(group => group.First())
+        ];
 
         ListAvailableEncodings.BeginUpdate();
         try
@@ -77,7 +85,7 @@ public partial class FormAvailableEncodings : GitExtensionsForm
     {
         if (ListIncludedEncodings.SelectedItem is not null)
         {
-            int index = ListIncludedEncodings.SelectedIndex;
+            var index = ListIncludedEncodings.SelectedIndex;
             ListAvailableEncodings.Items.Add(ListIncludedEncodings.SelectedItem);
             ListIncludedEncodings.Items.RemoveAt(index);
         }
@@ -86,7 +94,7 @@ public partial class FormAvailableEncodings : GitExtensionsForm
     private void ListIncludedEncodings_SelectedValueChanged(object sender, EventArgs e)
     {
         // Get selected encoding
-        Encoding? encoding = ListIncludedEncodings.SelectedItem as Encoding;
+        var encoding = ListIncludedEncodings.SelectedItem as Encoding;
         Type? encodingType = null;
 
         // Get type if exists
@@ -97,12 +105,12 @@ public partial class FormAvailableEncodings : GitExtensionsForm
 
         // If selected encoding and encoding not default list
         ToRight.Enabled = encoding is not null &&
-            !(
-                encodingType == typeof(ASCIIEncoding) ||
-                encodingType == typeof(UnicodeEncoding) ||
-                encodingType == typeof(UTF8Encoding) ||
-                encodingType == typeof(UTF7Encoding) ||
-                encoding == Encoding.Default);
+                          !(
+                              encodingType == typeof(ASCIIEncoding) ||
+                              encodingType == typeof(UnicodeEncoding) ||
+                              encodingType == typeof(UTF8Encoding) ||
+                              encodingType == typeof(UTF7Encoding) ||
+                              encoding == Encoding.Default);
     }
 
     private void ListAvailableEncodings_SelectedValueChanged(object sender, EventArgs e)

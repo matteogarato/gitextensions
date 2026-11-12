@@ -8,6 +8,6 @@ public partial class RepoObjectsTree
         Rename = 1,
         Search = 2,
         MultiSelect = 3,
-        MultiSelectWithChildren = 4,
+        MultiSelectWithChildren = 4
     }
 }

@@ -1,9 +1,10 @@
 ﻿using ResourceManager.CommitDataRenders;
 
 namespace ResourceManagerTests.CommitDataRenders;
+
 public class MonospacedHeaderLabelFormatterTests
 {
-    private MonospacedHeaderLabelFormatter _formatter = null!;
+    private readonly MonospacedHeaderLabelFormatter _formatter = null!;
 
     public MonospacedHeaderLabelFormatterTests()
     {

@@ -1,9 +1,10 @@
 ﻿using ResourceManager.CommitDataRenders;
 
 namespace ResourceManagerTests.CommitDataRenders;
+
 public class TabbedHeaderLabelFormatterTests
 {
-    private TabbedHeaderLabelFormatter _formatter = null!;
+    private readonly TabbedHeaderLabelFormatter _formatter = null!;
 
     public TabbedHeaderLabelFormatterTests()
     {

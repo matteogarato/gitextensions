@@ -1,10 +1,9 @@
 ﻿using System.Runtime.InteropServices;
-using static System.Interop;
 
-namespace System;
+namespace GitExtUtils.GitUI.Interops.User32;
 
 internal static partial class NativeMethods
 {
     [DllImport("user32.dll", SetLastError = true, ExactSpelling = true)]
-    internal static unsafe extern BOOL GetComboBoxInfo(nint hWnd, COMBOBOXINFO* pcbi);
+    internal static extern unsafe BOOL GetComboBoxInfo(nint hWnd, Interops.NativeMethods.Comboboxinfo* pcbi);
 }

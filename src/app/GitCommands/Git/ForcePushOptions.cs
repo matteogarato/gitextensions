@@ -4,5 +4,5 @@ public enum ForcePushOptions
 {
     DoNotForce = 0,
     Force,
-    ForceWithLease,
+    ForceWithLease
 }

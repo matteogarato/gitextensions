@@ -16,8 +16,23 @@ public interface IGitVersion : IComparable<IGitVersion>
 
     string ToString();
 
-    public static bool operator >(IGitVersion left, IGitVersion? right) => left.CompareTo(right) > 0;
-    public static bool operator <(IGitVersion left, IGitVersion? right) => left.CompareTo(right) < 0;
-    public static bool operator >=(IGitVersion left, IGitVersion? right) => left.CompareTo(right) >= 0;
-    public static bool operator <=(IGitVersion left, IGitVersion? right) => left.CompareTo(right) <= 0;
+    public static bool operator >(IGitVersion left, IGitVersion? right)
+    {
+        return left.CompareTo(right) > 0;
+    }
+
+    public static bool operator <(IGitVersion left, IGitVersion? right)
+    {
+        return left.CompareTo(right) < 0;
+    }
+
+    public static bool operator >=(IGitVersion left, IGitVersion? right)
+    {
+        return left.CompareTo(right) >= 0;
+    }
+
+    public static bool operator <=(IGitVersion left, IGitVersion? right)
+    {
+        return left.CompareTo(right) <= 0;
+    }
 }

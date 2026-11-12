@@ -5,7 +5,7 @@ namespace GitExtUtils;
 public static class FileUtility
 {
     /// <summary>
-    /// Writes all text to a file. Works around issues with hidden files encountered by File.WriteAllText.
+    ///     Writes all text to a file. Works around issues with hidden files encountered by File.WriteAllText.
     /// </summary>
     /// <param name="fileName">Destination file.</param>
     /// <param name="contents">Text to write as file contents.</param>
@@ -14,7 +14,7 @@ public static class FileUtility
     public static void SafeWriteAllText(string fileName, string contents, Encoding encoding, byte[] filePreamble)
     {
         using FileStream fs = new(fileName, FileMode.Open);
-        using (TextWriter tw = new StreamWriter(fs, encoding, bufferSize: 4096, leaveOpen: true))
+        using (TextWriter tw = new StreamWriter(fs, encoding, 4096, true))
         {
             if (filePreamble.Length > 0)
             {

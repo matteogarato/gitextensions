@@ -1,5 +1,5 @@
-﻿using GitCommands;
-using GitCommands.Git;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtUtils;
 using GitUI.Properties;
 using ResourceManager;
@@ -8,19 +8,20 @@ namespace GitUI.CommandsDialogs;
 
 public class ToolStripPushButton : ToolStripButton
 {
-    private readonly TranslationString _push = new("Push");
-
     private readonly TranslationString _aheadCommitsToPush =
         new("{0} new commit(s) will be pushed");
 
     private readonly TranslationString _behindCommitsTointegrateOrForcePush =
         new("{0} commit(s) should be integrated (or will be lost if force pushed)");
 
-    public void DisplayAheadBehindInformation(IReadOnlyDictionary<string, AheadBehindData>? aheadBehindData, string branchName, string shortcut)
+    private readonly TranslationString _push = new("Push");
+
+    public void DisplayAheadBehindInformation(IReadOnlyDictionary<string, AheadBehindData>? aheadBehindData,
+        string branchName, string shortcut)
     {
         if (string.IsNullOrWhiteSpace(branchName)
             || !AppSettings.ShowAheadBehindData
-            || aheadBehindData?.TryGetValue(branchName, out AheadBehindData data) is not true)
+            || aheadBehindData?.TryGetValue(branchName, out var data) is not true)
         {
             ResetToDefaultState();
             ToolTipText = ToolTipText?.UpdateSuffix(shortcut);
@@ -37,7 +38,7 @@ public class ToolStripPushButton : ToolStripButton
     }
 
     /// <summary>
-    /// Reset the contents keeping the size the same, to avoid toolbar resizing.
+    ///     Reset the contents keeping the size the same, to avoid toolbar resizing.
     /// </summary>
     public void ResetBeforeUpdate()
     {
@@ -76,18 +77,20 @@ public class ToolStripPushButton : ToolStripButton
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
     {
-        private readonly ToolStripPushButton _button;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(ToolStripPushButton button)
+    internal readonly struct TestAccessor(ToolStripPushButton button)
+    {
+        public string? GetButtonText()
         {
-            _button = button;
+            return button.Text;
         }
 
-        public string? GetButtonText() => _button.Text;
-        public int GetButtonWidth() => _button.Width;
+        public int GetButtonWidth()
+        {
+            return button.Width;
+        }
     }
 }

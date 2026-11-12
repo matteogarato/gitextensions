@@ -1,22 +1,24 @@
 ﻿using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Editor.Diff;
 using GitUI.Theming;
-using ICSharpCode.TextEditor;
+using ICSharpCode.TextEditor.Gui;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.Editor.Diff;
 
 public class DiffLineNumAnalyzerTests : IDisposable
 {
     private static readonly string _testDataDir = Path.Combine(AppContext.BaseDirectory, "Editor", "Diff");
-    private readonly string _sampleDiff;
-    private readonly string _sampleAddedDiff;
-    private readonly string _sampleRemovedDiff;
-    private readonly string _sampleCombinedDiff;
-    private readonly string _sampleGitWordDiff;
-    private readonly string _sampleDifftastic;
-    private readonly TextEditorControl _textEditor;
     private readonly DiffViewerLineNumberControl _diffViewerLineNumber;
+    private readonly string _sampleAddedDiff;
+    private readonly string _sampleCombinedDiff;
+    private readonly string _sampleDiff;
+    private readonly string _sampleDifftastic;
+    private readonly string _sampleGitWordDiff;
+    private readonly string _sampleRemovedDiff;
+    private readonly TextEditorControl _textEditor;
 
     public DiffLineNumAnalyzerTests()
     {
@@ -29,23 +31,23 @@ public class DiffLineNumAnalyzerTests : IDisposable
         _sampleGitWordDiff = FixGitTerminalColors("SampleGitWord.diff");
         _sampleDifftastic = File.ReadAllText(Path.Combine(_testDataDir, "SampleDifftastic.diff"));
         _textEditor = new TextEditorControl();
-        _diffViewerLineNumber = new(_textEditor.ActiveTextAreaControl.TextArea);
+        _diffViewerLineNumber = new DiffViewerLineNumberControl(_textEditor.ActiveTextAreaControl.TextArea);
 
         return;
 
         static string FixGitTerminalColors(string filename)
         {
             // Adjust the colors to match the current theme. (See code comments for limitations.)
-            Color added = AppColor.AnsiTerminalGreenBackNormal.GetThemeColor();
-            Color removed = AppColor.AnsiTerminalRedBackNormal.GetThemeColor();
+            var added = AppColor.AnsiTerminalGreenBackNormal.GetThemeColor();
+            var removed = AppColor.AnsiTerminalRedBackNormal.GetThemeColor();
 
             return File.ReadAllText(Path.Combine(_testDataDir, filename))
-            .Replace(@";200;255;200m", $";{added.R};{added.G};{added.B}m")
-            .Replace(@";255;200;200m", $";{removed.R};{removed.G};{removed.B}m");
+                .Replace(@";200;255;200m", $";{added.R};{added.G};{added.B}m")
+                .Replace(@";255;200;200m", $";{removed.R};{removed.G};{removed.B}m");
         }
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _textEditor.Dispose();
     }
@@ -54,9 +56,9 @@ public class DiffLineNumAnalyzerTests : IDisposable
     public void CanGetHeaders()
     {
         _textEditor.Text = _sampleDiff;
-        DiffLinesInfo result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, allTextMarkers: [], isCombinedDiff: true);
+        var result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, [], true);
         List<int> headerLines = [5, 17];
-        foreach (int header in headerLines)
+        foreach (var header in headerLines)
         {
             result.DiffLines[header].LineType.Should().Be(DiffLineType.Header);
             result.DiffLines[header].LeftLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum);
@@ -68,7 +70,7 @@ public class DiffLineNumAnalyzerTests : IDisposable
     public void CanGetContextLines()
     {
         _textEditor.Text = _sampleDiff;
-        DiffLinesInfo result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, allTextMarkers: [], isCombinedDiff: false);
+        var result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, [], false);
 
         GenericResultCheck(result);
 
@@ -97,7 +99,7 @@ public class DiffLineNumAnalyzerTests : IDisposable
     public void CanGetMinusLines()
     {
         _textEditor.Text = _sampleDiff;
-        DiffLinesInfo result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, allTextMarkers: [], isCombinedDiff: false);
+        var result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, [], false);
 
         GenericResultCheck(result);
 
@@ -116,7 +118,7 @@ public class DiffLineNumAnalyzerTests : IDisposable
     public void CanGetPlusLines()
     {
         _textEditor.Text = _sampleDiff;
-        DiffLinesInfo result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, allTextMarkers: [], isCombinedDiff: false);
+        var result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, [], false);
 
         GenericResultCheck(result);
 
@@ -140,9 +142,9 @@ public class DiffLineNumAnalyzerTests : IDisposable
     public void CanGetLineNumbersForCombinedDiff()
     {
         _textEditor.Text = _sampleCombinedDiff;
-        DiffLinesInfo result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, allTextMarkers: [], isCombinedDiff: true);
+        var result = DiffLineNumAnalyzer.Analyze(_textEditor.Text, [], true);
 
-        GenericResultCheck(result, allowNotApplicable: false);
+        GenericResultCheck(result, false);
 
         result.DiffLines[6].LeftLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum);
         result.DiffLines[6].RightLineNumber.Should().Be(70);
@@ -172,13 +174,13 @@ public class DiffLineNumAnalyzerTests : IDisposable
     [StaFact]
     public void CanGetAddedMovedDiffInfo()
     {
-        GitCommands.Settings.DiffDisplayAppearance theme = AppSettings.DiffDisplayAppearance.Value;
-        AppSettings.DiffDisplayAppearance.Value = GitCommands.Settings.DiffDisplayAppearance.Patch;
+        var theme = AppSettings.DiffDisplayAppearance.Value;
+        AppSettings.DiffDisplayAppearance.Value = DiffDisplayAppearance.Patch;
 
-        string text = _sampleAddedDiff;
-        _ = new PatchHighlightService(ref text, useGitColoring: true, _diffViewerLineNumber);
+        var text = _sampleAddedDiff;
+        _ = new PatchHighlightService(ref text, true, _diffViewerLineNumber);
         _textEditor.Text = text;
-        DiffLinesInfo result = _diffViewerLineNumber.GetTestAccessor().Result;
+        var result = _diffViewerLineNumber.GetTestAccessor().Result;
 
         GenericResultCheck(result);
 
@@ -295,13 +297,13 @@ public class DiffLineNumAnalyzerTests : IDisposable
     [StaFact]
     public void CanGetRemovedMovedDiffInfo()
     {
-        GitCommands.Settings.DiffDisplayAppearance theme = AppSettings.DiffDisplayAppearance.Value;
-        AppSettings.DiffDisplayAppearance.Value = GitCommands.Settings.DiffDisplayAppearance.Patch;
+        var theme = AppSettings.DiffDisplayAppearance.Value;
+        AppSettings.DiffDisplayAppearance.Value = DiffDisplayAppearance.Patch;
 
-        string text = _sampleRemovedDiff;
-        _ = new PatchHighlightService(ref text, useGitColoring: true, _diffViewerLineNumber);
+        var text = _sampleRemovedDiff;
+        _ = new PatchHighlightService(ref text, true, _diffViewerLineNumber);
         _textEditor.Text = text;
-        DiffLinesInfo result = _diffViewerLineNumber.GetTestAccessor().Result;
+        var result = _diffViewerLineNumber.GetTestAccessor().Result;
 
         GenericResultCheck(result);
 
@@ -367,13 +369,13 @@ public class DiffLineNumAnalyzerTests : IDisposable
     [StaFact]
     public void CanGetGitWordDiffInfo()
     {
-        GitCommands.Settings.DiffDisplayAppearance theme = AppSettings.DiffDisplayAppearance.Value;
-        AppSettings.DiffDisplayAppearance.Value = GitCommands.Settings.DiffDisplayAppearance.GitWordDiff;
+        var theme = AppSettings.DiffDisplayAppearance.Value;
+        AppSettings.DiffDisplayAppearance.Value = DiffDisplayAppearance.GitWordDiff;
 
-        string text = _sampleGitWordDiff;
-        _ = new PatchHighlightService(ref text, useGitColoring: true, _diffViewerLineNumber);
+        var text = _sampleGitWordDiff;
+        _ = new PatchHighlightService(ref text, true, _diffViewerLineNumber);
         _textEditor.Text = text;
-        DiffLinesInfo result = _diffViewerLineNumber.GetTestAccessor().Result;
+        var result = _diffViewerLineNumber.GetTestAccessor().Result;
 
         GenericResultCheck(result);
 
@@ -422,17 +424,17 @@ public class DiffLineNumAnalyzerTests : IDisposable
     [StaFact]
     public void CanGetDifftasticInfo()
     {
-        string text = _sampleDifftastic;
+        var text = _sampleDifftastic;
         EnvironmentAbstraction env = new();
         env.SetEnvironmentVariable("DFT_WIDTH", "200"); // Matching the value when getting the sample
-        bool theme = AppSettings.ReverseGitColoring.Value;
+        var theme = AppSettings.ReverseGitColoring.Value;
         AppSettings.ReverseGitColoring.Value = false;
 
-        _ = new DifftasticHighlightService(ref text, _diffViewerLineNumber, out int vrulerpos);
+        _ = new DifftasticHighlightService(ref text, _diffViewerLineNumber, out var vrulerpos);
         _textEditor.Text = text;
-        DiffLinesInfo result = _diffViewerLineNumber.GetTestAccessor().Result;
+        var result = _diffViewerLineNumber.GetTestAccessor().Result;
 
-        GenericResultCheck(result, allowNotApplicable: false);
+        GenericResultCheck(result, false);
 
         vrulerpos.Should().Be(97);
 
@@ -469,36 +471,45 @@ public class DiffLineNumAnalyzerTests : IDisposable
 
     private static void GenericResultCheck(DiffLinesInfo result, bool allowNotApplicable = true)
     {
-        foreach (DiffLineInfo line in result.DiffLines.Values)
+        foreach (var line in result.DiffLines.Values)
         {
-            if (line.IsMovedLine || line.LineType is (DiffLineType.Plus or DiffLineType.Minus))
+            if (line.IsMovedLine || line.LineType is DiffLineType.Plus or DiffLineType.Minus)
             {
-                line.LineSegment.Should().NotBeNull($" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
+                line.LineSegment.Should()
+                    .NotBeNull($" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
             }
 
             if (line.LineType is not (DiffLineType.Plus or DiffLineType.Minus))
             {
-                line.IsMovedLine.Should().Be(false, $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
+                line.IsMovedLine.Should()
+                    .Be(false, $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
             }
 
-            if (line.LineType is DiffLineType.Grep || (allowNotApplicable && line.LineType is (DiffLineType.MinusLeft or DiffLineType.Minus or DiffLineType.MinusPlus or DiffLineType.Context)))
+            if (line.LineType is DiffLineType.Grep || (allowNotApplicable && line.LineType is DiffLineType.MinusLeft
+                    or DiffLineType.Minus or DiffLineType.MinusPlus or DiffLineType.Context))
             {
-                line.LeftLineNumber.Should().NotBe(DiffLineInfo.NotApplicableLineNum, $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
+                line.LeftLineNumber.Should().NotBe(DiffLineInfo.NotApplicableLineNum,
+                    $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
             }
 
-            if (line.LineType is (DiffLineType.Minus or DiffLineType.Header or DiffLineType.Grep))
+            if (line.LineType is DiffLineType.Minus or DiffLineType.Header or DiffLineType.Grep)
             {
-                line.RightLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum, $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
+                line.RightLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum,
+                    $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
             }
 
-            if (line.LineType is (DiffLineType.Plus or DiffLineType.Header))
+            if (line.LineType is DiffLineType.Plus or DiffLineType.Header)
             {
-                line.LeftLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum, $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
+                line.LeftLineNumber.Should().Be(DiffLineInfo.NotApplicableLineNum,
+                    $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
             }
 
-            if (line.LineType is DiffLineType.Plus || (allowNotApplicable && line.LineType is (DiffLineType.PlusRight or DiffLineType.MinusPlus or DiffLineType.Context)))
+            if (line.LineType is DiffLineType.Plus || (allowNotApplicable &&
+                                                       line.LineType is DiffLineType.PlusRight or DiffLineType.MinusPlus
+                                                           or DiffLineType.Context))
             {
-                line.RightLineNumber.Should().NotBe(DiffLineInfo.NotApplicableLineNum, $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
+                line.RightLineNumber.Should().NotBe(DiffLineInfo.NotApplicableLineNum,
+                    $" unexpected on line-in-diff {line.LineNumInDiff}, {line.LineType}");
             }
         }
     }

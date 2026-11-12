@@ -14,8 +14,23 @@ public readonly struct ArgumentString
         Arguments = arguments;
     }
 
-    public static implicit operator ArgumentString(string? args) => new(args ?? "");
-    public static implicit operator ArgumentString(ArgumentBuilder args) => new(args.ToString());
-    public static implicit operator string(ArgumentString args) => args.Arguments ?? "";
-    public override string ToString() => Arguments ?? "";
+    public static implicit operator ArgumentString(string? args)
+    {
+        return new ArgumentString(args ?? "");
+    }
+
+    public static implicit operator ArgumentString(ArgumentBuilder args)
+    {
+        return new ArgumentString(args.ToString());
+    }
+
+    public static implicit operator string(ArgumentString args)
+    {
+        return args.Arguments ?? "";
+    }
+
+    public override string ToString()
+    {
+        return Arguments ?? "";
+    }
 }

@@ -4,6 +4,7 @@ using GitCommands;
 using GitCommands.Config;
 using GitCommands.Git;
 using GitCommands.Remotes;
+using GitCommands.Settings;
 using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
@@ -20,117 +21,18 @@ namespace GitUI.CommandsDialogs;
 
 public sealed partial class FormPull : GitExtensionsDialog
 {
-    #region Mnemonics
-    // Available: IJKQVXYZ
-    // A Fetch all tags
-    // B Browse...
-    // C Stash changes
-    // D Prune remote branches and tags
-    // E Rebase
-    // F Do not merge, only fetch
-    // G Manage remotes
-    // H Auto stash
-    // L Local branch
-    // M Merge
-    // N Fetch no tag
-    // O Remote branch
-    // P Prune remote branches
-    // R Remote
-    // S Solve conflicts
-    // T Follow tagopt
-    // U URL
-    // W Download full history
-    #endregion
-
-    #region Translation
-    private readonly TranslationString _areYouSureYouWantToRebaseMerge =
-        new("The current commit is a merge." + Environment.NewLine +
-                              "Are you sure you want to rebase this merge?");
-
-    private readonly TranslationString _areYouSureYouWantToRebaseMergeCaption =
-        new("Rebase merge commit?");
-
-    private readonly TranslationString _allMergeConflictSolvedQuestion =
-        new("Are all merge conflicts solved? Do you want to commit?");
-
-    private readonly TranslationString _allMergeConflictSolvedQuestionCaption =
-        new("Conflicts solved");
-
-    private readonly TranslationString _applyStashedItemsAgain =
-        new("Apply stashed items to working directory again?");
-
-    private readonly TranslationString _applyStashedItemsAgainCaption =
-        new("Auto stash");
-
-    private readonly TranslationString _fetchAllBranchesCanOnlyWithFetch =
-        new("You can only fetch all remote branches (*) without merge or rebase." +
-                              Environment.NewLine + "If you want to fetch all remote branches, choose fetch." +
-                              Environment.NewLine +
-                              "If you want to fetch and merge a branch, choose a specific branch.");
-
-    private readonly TranslationString _selectRemoteRepository =
-        new("Please select a remote repository");
-
-    private readonly TranslationString _selectSourceDirectory =
-        new("Please select a source directory");
-
-    private readonly TranslationString _questionInitSubmodules =
-        new("The pulled has submodules configured." + Environment.NewLine +
-                               "Do you want to initialize the submodules?" + Environment.NewLine +
-                               "This will initialize and update all submodules recursive.");
-
-    private readonly TranslationString _questionInitSubmodulesCaption =
-        new("Submodules");
-
-    private readonly TranslationString _notOnBranch = new("You cannot \"pull\" when git head detached." +
-                              Environment.NewLine + Environment.NewLine + "Do you want to continue?");
-
-    private readonly TranslationString _noRemoteBranch = new("You didn't specify a remote branch");
-    private readonly TranslationString _noRemoteBranchMainInstruction = new(
-        "You asked to pull from the remote '{0}'," + Environment.NewLine +
-        "but did not specify a remote branch." + Environment.NewLine +
-        "Because this is not the default configured remote for your local branch," + Environment.NewLine +
-        "you must specify a remote branch.");
-    private readonly TranslationString _noRemoteBranchForFetchMainInstruction = new(
-        "You asked to fetch from the remote '{0}'," + Environment.NewLine +
-        "but did not specify a remote branch." + Environment.NewLine +
-        "Because this is not the current branch, you must specify a remote branch.");
-    private readonly TranslationString _noRemoteBranchButton = new("Pull from {0}");
-    private readonly TranslationString _noRemoteBranchForFetchButton = new("Fetch from {0}");
-    private readonly TranslationString _noRemoteBranchCaption = new("Remote branch not specified");
-
-    private readonly TranslationString _pruneBranchesCaption = new("Pull was rejected");
-    private readonly TranslationString _pruneBranchesMainInstruction = new("Remote branch no longer exist");
-    private readonly TranslationString _pruneBranchesBranch =
-        new("Do you want to delete all stale remote-tracking branches?");
-
-    private readonly TranslationString _pruneFromCaption = new("Prune remote branches from {0}");
-
-    private readonly TranslationString _hoverShowImageLabelText = new("Hover to see scenario when fast forward is possible.");
-    private readonly TranslationString _formTitlePull = new("Pull ({0})");
-    private readonly TranslationString _formTitleFetch = new("Fetch ({0})");
-    private readonly TranslationString _buttonPull = new("&Pull");
-    private readonly TranslationString _buttonFetch = new("&Fetch");
-
-    private readonly TranslationString _pullFetchPruneAllConfirmation = new("Warning! The fetch with prune will remove all the remote-tracking references which no longer exist on remotes. Do you want to proceed?");
-    #endregion
-
-    private const string AllRemotes = "[ All ]";
+    private const string _allRemotes = "[ All ]";
+    private readonly string _branch;
+    private readonly IFullPathResolver _fullPathResolver;
 
     private readonly IConfigFileRemoteSettingsManager _remotesManager;
-    private readonly IFullPathResolver _fullPathResolver;
-    private readonly string _branch;
-
-    private List<IGitRef>? _heads;
     private bool _bInternalUpdate;
 
-    [GeneratedRegex(@"Your configuration specifies to .* the ref '.*'[\r]?\nfrom the remote, but no such ref was fetched.", RegexOptions.ExplicitCapture)]
-    private static partial Regex IsRefRemoved { get; }
+    private List<IGitRef>? _heads;
 
-    public bool ErrorOccurred { get; private set; }
-
-    public FormPull(GitUICommands commands, string? defaultRemoteBranch, string? defaultRemote, GitPullAction pullAction)
-        : base(commands, enablePositionRestore: false)
+    public FormPull(GitUiCommands commands, string? defaultRemoteBranch, string? defaultRemote,
+        GitPullAction pullAction)
+        : base(commands, false)
     {
         InitializeComponent();
         InitializeComplete();
@@ -169,7 +71,7 @@ public sealed partial class FormPull : GitExtensionsDialog
                 break;
             case GitPullAction.FetchAll:
                 Fetch.Checked = true;
-                _NO_TRANSLATE_Remotes.Text = AllRemotes;
+                _NO_TRANSLATE_Remotes.Text = _allRemotes;
                 break;
             case GitPullAction.FetchPruneAll:
                 Fetch.Checked = true;
@@ -178,7 +80,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
                 if (string.IsNullOrEmpty(defaultRemote))
                 {
-                    _NO_TRANSLATE_Remotes.Text = AllRemotes;
+                    _NO_TRANSLATE_Remotes.Text = _allRemotes;
                 }
                 else
                 {
@@ -203,7 +105,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
         // If this repo is shallow, show an option to Unshallow
         // Detect by presence of the shallow file, not 100% sure it's the best way, but it's created upon shallow cloning and removed upon unshallowing
-        bool isRepoShallow = File.Exists(commands.Module.ResolveGitInternalPath("shallow"));
+        var isRepoShallow = File.Exists(commands.Module.ResolveGitInternalPath("shallow"));
         if (isRepoShallow)
         {
             Unshallow.Visible = true;
@@ -212,13 +114,21 @@ public sealed partial class FormPull : GitExtensionsDialog
         _fullPathResolver = new FullPathResolver(() => Module.WorkingDir);
     }
 
+    [GeneratedRegex(
+        @"Your configuration specifies to .* the ref '.*'[\r]?\nfrom the remote, but no such ref was fetched.",
+        RegexOptions.ExplicitCapture)]
+    private static partial Regex IsRefRemoved { get; }
+
+    public bool ErrorOccurred { get; private set; }
+
     private void BindRemotesDropDown(string? selectedRemoteName)
     {
         // refresh registered git remotes
-        IEnumerable<ConfigFileRemote> remotes = _remotesManager.LoadRemotes(false);
+        var remotes = _remotesManager.LoadRemotes(false);
 
         _NO_TRANSLATE_Remotes.Sorted = false;
-        _NO_TRANSLATE_Remotes.DataSource = new[] { new ConfigFileRemote { Name = AllRemotes } }.Union(remotes).ToList();
+        _NO_TRANSLATE_Remotes.DataSource =
+            new[] { new ConfigFileRemote { Name = _allRemotes } }.Union(remotes).ToList();
         _NO_TRANSLATE_Remotes.DisplayMember = nameof(ConfigFileRemote.Name);
         _NO_TRANSLATE_Remotes.SelectedIndex = -1;
         _NO_TRANSLATE_Remotes.ResizeDropDownWidth();
@@ -228,7 +138,8 @@ public sealed partial class FormPull : GitExtensionsDialog
             selectedRemoteName = Module.GetSetting(string.Format(SettingKeyString.BranchRemote, _branch));
         }
 
-        ConfigFileRemote? currentBranchRemote = remotes.FirstOrDefault(x => StringComparer.OrdinalIgnoreCase.Equals(x.Name, selectedRemoteName));
+        var currentBranchRemote =
+            remotes.FirstOrDefault(x => StringComparer.OrdinalIgnoreCase.Equals(x.Name, selectedRemoteName));
         if (currentBranchRemote is not null)
         {
             _NO_TRANSLATE_Remotes.SelectedItem = currentBranchRemote;
@@ -254,14 +165,15 @@ public sealed partial class FormPull : GitExtensionsDialog
             string messageBoxTitle;
             if (string.IsNullOrEmpty(remote))
             {
-                messageBoxTitle = string.Format(_pruneFromCaption.Text, AllRemotes);
+                messageBoxTitle = string.Format(_pruneFromCaption.Text, _allRemotes);
             }
             else
             {
                 messageBoxTitle = string.Format(_pruneFromCaption.Text, remote);
             }
 
-            bool isActionConfirmed = MessageBoxes.ConfirmSuppressible(owner ?? this, _pullFetchPruneAllConfirmation.Text, messageBoxTitle, AppSettings.DontConfirmFetchAndPruneAll);
+            var isActionConfirmed = MessageBoxes.ConfirmSuppressible(owner ?? this,
+                _pullFetchPruneAllConfirmation.Text, messageBoxTitle, AppSettings.DontConfirmFetchAndPruneAll);
 
             if (!isActionConfirmed)
             {
@@ -269,7 +181,7 @@ public sealed partial class FormPull : GitExtensionsDialog
             }
         }
 
-        DialogResult result = PullChanges(owner);
+        var result = PullChanges(owner);
 
         if (result == DialogResult.No)
         {
@@ -292,20 +204,21 @@ public sealed partial class FormPull : GitExtensionsDialog
                 await Task.Run(() => Module.RunMergeTool());
             }
 
-            if (MessageBoxes.Show(this, _allMergeConflictSolvedQuestion.Text, _allMergeConflictSolvedQuestionCaption.Text,
-                                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (MessageBoxes.Show(this, _allMergeConflictSolvedQuestion.Text,
+                    _allMergeConflictSolvedQuestionCaption.Text,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             {
                 return;
             }
 
-            UICommands.StartCommitDialog(this);
+            UiCommands.StartCommitDialog(this);
         });
     }
 
     private void BranchesDropDown(object sender, EventArgs e)
     {
-        if ((PullFromUrl.Checked && string.IsNullOrEmpty(comboBoxPullSource.Text)) &&
-            (PullFromRemote.Checked && string.IsNullOrEmpty(_NO_TRANSLATE_Remotes.Text)))
+        if (PullFromUrl.Checked && string.IsNullOrEmpty(comboBoxPullSource.Text) &&
+            PullFromRemote.Checked && string.IsNullOrEmpty(_NO_TRANSLATE_Remotes.Text))
         {
             Branches.DataSource = null;
             return;
@@ -332,9 +245,10 @@ public sealed partial class FormPull : GitExtensionsDialog
                     // doesn't return heads that are new on the server. This can be updated using
                     // update branch info in the manage remotes dialog.
                     _heads = [];
-                    foreach (IGitRef head in Module.GetRefs(RefsFilter.Remotes))
+                    foreach (var head in Module.GetRefs(RefsFilter.Remotes))
                     {
-                        if (!head.Name.StartsWith(_NO_TRANSLATE_Remotes.Text, StringComparison.CurrentCultureIgnoreCase))
+                        if (!head.Name.StartsWith(_NO_TRANSLATE_Remotes.Text,
+                                StringComparison.CurrentCultureIgnoreCase))
                         {
                             continue;
                         }
@@ -356,7 +270,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
     private void PullClick(object sender, EventArgs e)
     {
-        DialogResult dialogResult = PullChanges(this);
+        var dialogResult = PullChanges(this);
 
         if (dialogResult != DialogResult.No)
         {
@@ -374,7 +288,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
         UpdateSettingsDuringPull();
 
-        DialogResult dr = ShouldRebaseMergeCommit();
+        var dr = ShouldRebaseMergeCommit();
         if (dr != DialogResult.Yes)
         {
             return dr;
@@ -397,7 +311,7 @@ public sealed partial class FormPull : GitExtensionsDialog
             page.Buttons.Add(btnCheckout);
             page.Buttons.Add(btnContinue);
 
-            TaskDialogButton result = TaskDialog.ShowDialog(owner?.Handle ?? Handle, page);
+            var result = TaskDialog.ShowDialog(owner?.Handle ?? Handle, page);
             if (result == TaskDialogButton.Cancel)
             {
                 return DialogResult.Cancel;
@@ -405,7 +319,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
             if (result == btnCheckout)
             {
-                if (!UICommands.StartCheckoutBranch(owner))
+                if (!UiCommands.StartCheckoutBranch(owner))
                 {
                     return DialogResult.Cancel;
                 }
@@ -414,25 +328,25 @@ public sealed partial class FormPull : GitExtensionsDialog
 
         if (PullFromUrl.Checked && Directory.Exists(comboBoxPullSource.Text))
         {
-            string path = comboBoxPullSource.Text;
+            var path = comboBoxPullSource.Text;
             ThreadHelper.JoinableTaskFactory.Run(() => RepositoryHistoryManager.Remotes.AddAsMostRecentAsync(path));
         }
 
-        string source = CalculateSource();
+        var source = CalculateSource();
 
-        if (!CalculateLocalBranch(source, out string? curLocalBranch, out string? curRemoteBranch))
+        if (!CalculateLocalBranch(source, out var curLocalBranch, out var curRemoteBranch))
         {
             return DialogResult.No;
         }
 
-        if (!executeBeforeScripts())
+        if (!ExecuteBeforeScripts())
         {
             return DialogResult.No;
         }
 
-        bool stashed = CalculateStashedValue(owner);
+        var stashed = CalculateStashedValue(owner);
 
-        using FormProcess form = CreateFormProcess(source, curLocalBranch, curRemoteBranch);
+        using var form = CreateFormProcess(source, curLocalBranch, curRemoteBranch);
         if (!IsPullAll())
         {
             form.Remote = source;
@@ -441,10 +355,10 @@ public sealed partial class FormPull : GitExtensionsDialog
         form.ShowDialog(owner);
         ErrorOccurred = form.ErrorOccurred();
 
-        bool executeScripts = false;
+        var executeScripts = false;
         try
         {
-            bool aborted = form.DialogResult == DialogResult.Abort;
+            var aborted = form.DialogResult == DialogResult.Abort;
             executeScripts = !aborted && !ErrorOccurred;
 
             if (!aborted && !Fetch.Checked)
@@ -453,7 +367,7 @@ public sealed partial class FormPull : GitExtensionsDialog
                 {
                     if (!InitModules())
                     {
-                        UICommands.UpdateSubmodules(owner);
+                        UiCommands.UpdateSubmodules(owner);
                     }
                 }
                 else
@@ -471,7 +385,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
             if (executeScripts)
             {
-                executeAfterScripts();
+                ExecuteAfterScripts();
             }
         }
 
@@ -481,19 +395,22 @@ public sealed partial class FormPull : GitExtensionsDialog
         {
             if (PullFromUrl.Checked && string.IsNullOrEmpty(comboBoxPullSource.Text))
             {
-                MessageBoxes.Show(this, _selectSourceDirectory.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _selectSourceDirectory.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 return false;
             }
 
             if (PullFromRemote.Checked && string.IsNullOrEmpty(_NO_TRANSLATE_Remotes.Text) && !IsPullAll())
             {
-                MessageBoxes.Show(this, _selectRemoteRepository.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _selectRemoteRepository.Text, TranslatedStrings.Error, MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 return false;
             }
 
             if (!Fetch.Checked && Branches.Text == "*")
             {
-                MessageBoxes.Show(this, _fetchAllBranchesCanOnlyWithFetch.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBoxes.Show(this, _fetchAllBranchesCanOnlyWithFetch.Text, TranslatedStrings.Error,
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
@@ -523,9 +440,10 @@ public sealed partial class FormPull : GitExtensionsDialog
                 // If the "Update submodules on checkout" option is `true`, initialize and update
                 // all submodules. If it's `false` don't initialize/update the submodules. If it's
                 // indeterminate, ask the user what they'd like to do.
-                if (AppSettings.UpdateSubmodulesOnCheckout ?? AppSettings.DontConfirmUpdateSubmodulesOnCheckout ?? AskIfSubmodulesShouldBeInitialized())
+                if (AppSettings.UpdateSubmodulesOnCheckout ?? AppSettings.DontConfirmUpdateSubmodulesOnCheckout ??
+                    AskIfSubmodulesShouldBeInitialized())
                 {
-                    UICommands.StartUpdateSubmodulesDialog(this);
+                    UiCommands.StartUpdateSubmodulesDialog(this);
                 }
 
                 return true;
@@ -544,7 +462,7 @@ public sealed partial class FormPull : GitExtensionsDialog
             bool AskIfSubmodulesShouldBeInitialized()
             {
                 return MessageBoxes.Show(this, _questionInitSubmodules.Text, _questionInitSubmodulesCaption.Text,
-                           MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
             }
         }
 
@@ -553,11 +471,12 @@ public sealed partial class FormPull : GitExtensionsDialog
             // Rebase failed -> special 'rebase' merge conflict
             if (Rebase.Checked && Module.InTheMiddleOfRebase())
             {
-                return UICommands.StartTheContinueRebaseDialog(owner);
+                return UiCommands.StartTheContinueRebaseDialog(owner);
             }
-            else if (Module.InTheMiddleOfAction())
+
+            if (Module.InTheMiddleOfAction())
             {
-                return MergeConflictHandler.HandleMergeConflicts(UICommands, owner);
+                return MergeConflictHandler.HandleMergeConflicts(UiCommands, owner);
             }
 
             return false;
@@ -570,7 +489,7 @@ public sealed partial class FormPull : GitExtensionsDialog
                 return;
             }
 
-            bool? messageBoxResult = AppSettings.AutoPopStashAfterPull;
+            var messageBoxResult = AppSettings.AutoPopStashAfterPull;
             if (messageBoxResult is null)
             {
                 TaskDialogPage page = new()
@@ -579,15 +498,12 @@ public sealed partial class FormPull : GitExtensionsDialog
                     Caption = _applyStashedItemsAgainCaption.Text,
                     Buttons = { TaskDialogButton.Yes, TaskDialogButton.No },
                     Icon = TaskDialogIcon.Information,
-                    Verification = new TaskDialogVerificationCheckBox
-                    {
-                        Text = TranslatedStrings.DontShowAgain
-                    },
+                    Verification = new TaskDialogVerificationCheckBox { Text = TranslatedStrings.DontShowAgain },
                     AllowCancel = true,
                     SizeToContent = true
                 };
 
-                TaskDialogButton answer = TaskDialog.ShowDialog(owner?.Handle ?? Handle, page);
+                var answer = TaskDialog.ShowDialog(owner?.Handle ?? Handle, page);
                 messageBoxResult = answer == TaskDialogButton.Yes;
 
                 // Dismissing the dialog is not an answer, so it must not be remembered as one
@@ -599,16 +515,16 @@ public sealed partial class FormPull : GitExtensionsDialog
 
             if ((bool)messageBoxResult)
             {
-                UICommands.StashPop(owner);
+                UiCommands.StashPop(owner);
             }
         }
 
-        bool executeBeforeScripts()
+        bool ExecuteBeforeScripts()
         {
             // Request to pull/merge in addition to the fetch
             if (!Fetch.Checked)
             {
-                bool success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePull, this);
+                var success = ScriptsRunner.RunEventScripts(ScriptEvent.BeforePull, this);
                 if (!success)
                 {
                     return false;
@@ -618,7 +534,7 @@ public sealed partial class FormPull : GitExtensionsDialog
             return ScriptsRunner.RunEventScripts(ScriptEvent.BeforeFetch, this);
         }
 
-        void executeAfterScripts()
+        void ExecuteAfterScripts()
         {
             ScriptsRunner.RunEventScripts(ScriptEvent.AfterFetch, this);
 
@@ -648,10 +564,10 @@ public sealed partial class FormPull : GitExtensionsDialog
         if (Rebase.Checked && PullFromRemote.Checked && MergeCommitExists())
         {
             dialogResult = MessageBoxes.Show(this, _areYouSureYouWantToRebaseMerge.Text,
-                                              _areYouSureYouWantToRebaseMergeCaption.Text,
-                                              MessageBoxButtons.YesNoCancel,
-                                              MessageBoxIcon.Warning,
-                                              MessageBoxDefaultButton.Button2);
+                _areYouSureYouWantToRebaseMergeCaption.Text,
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
         }
         else
         {
@@ -666,7 +582,7 @@ public sealed partial class FormPull : GitExtensionsDialog
         if (!Fetch.Checked && AutoStash.Checked && !Module.IsBareRepository() &&
             Module.GitStatus(UntrackedFilesMode.No, IgnoreSubmodulesMode.All).Count > 0)
         {
-            UICommands.StashSave(owner, AppSettings.IncludeUntrackedFilesInAutoStash);
+            UiCommands.StashSave(owner, AppSettings.IncludeUntrackedFilesInAutoStash);
             return true;
         }
 
@@ -677,19 +593,22 @@ public sealed partial class FormPull : GitExtensionsDialog
     {
         if (Fetch.Checked)
         {
-            return new FormRemoteProcess(UICommands, Module.FetchCmd(source, curRemoteBranch, curLocalBranch, GetTagsArg(), Unshallow.Checked, Prune.Checked, PruneTags.Checked));
+            return new FormRemoteProcess(UiCommands,
+                Module.FetchCmd(source, curRemoteBranch, curLocalBranch, GetTagsArg(), Unshallow.Checked, Prune.Checked,
+                    PruneTags.Checked));
         }
 
         DebugHelpers.Assert(Merge.Checked || Rebase.Checked, "Merge.Checked || Rebase.Checked");
 
-        return new FormRemoteProcess(UICommands, Module.PullCmd(source, curRemoteBranch, Rebase.Checked, GetTagsArg(), Unshallow.Checked))
+        return new FormRemoteProcess(UiCommands,
+            Module.PullCmd(source, curRemoteBranch, Rebase.Checked, GetTagsArg(), Unshallow.Checked))
         {
             HandleOnExitCallback = HandlePullOnExit
         };
 
         bool? GetTagsArg()
         {
-            return AllTags.Checked ? true : NoTags.Checked ? false : (bool?)null;
+            return AllTags.Checked ? true : NoTags.Checked ? false : null;
         }
 
         bool HandlePullOnExit(ref bool isError, FormProcess form)
@@ -717,16 +636,15 @@ public sealed partial class FormPull : GitExtensionsDialog
                     DefaultButton = TaskDialogButton.No,
                     SizeToContent = true
                 };
-                TaskDialogButton result = TaskDialog.ShowDialog(form.Handle, page);
+                var result = TaskDialog.ShowDialog(form.Handle, page);
 
                 if (result == TaskDialogButton.Yes)
                 {
-                    string remote = _NO_TRANSLATE_Remotes.Text;
-                    string pruneCmd = "remote prune " + remote;
-                    using FormRemoteProcess formPrune = new(UICommands, pruneCmd)
+                    var remote = _NO_TRANSLATE_Remotes.Text;
+                    var pruneCmd = "remote prune " + remote;
+                    using FormRemoteProcess formPrune = new(UiCommands, pruneCmd)
                     {
-                        Remote = remote,
-                        Text = string.Format(_pruneFromCaption.Text, remote)
+                        Remote = remote, Text = string.Format(_pruneFromCaption.Text, remote)
                     };
                     formPrune.ShowDialog(form);
                 }
@@ -753,7 +671,8 @@ public sealed partial class FormPull : GitExtensionsDialog
             return true;
         }
 
-        Lazy<string> currentBranchRemote = new(() => Module.GetSetting(string.Format(SettingKeyString.BranchRemote, localBranch.Text)));
+        Lazy<string> currentBranchRemote = new(() =>
+            Module.GetSetting(string.Format(SettingKeyString.BranchRemote, localBranch.Text)));
 
         if (_branch == localBranch.Text)
         {
@@ -772,7 +691,7 @@ public sealed partial class FormPull : GitExtensionsDialog
         }
 
         if (string.IsNullOrEmpty(Branches.Text) && !string.IsNullOrEmpty(curLocalBranch)
-            && remote != currentBranchRemote.Value && !Fetch.Checked)
+                                                && remote != currentBranchRemote.Value && !Fetch.Checked)
         {
             TaskDialogPage page = new()
             {
@@ -781,18 +700,16 @@ public sealed partial class FormPull : GitExtensionsDialog
                 Heading = _noRemoteBranch.Text,
                 Buttons = { TaskDialogButton.Cancel },
                 Icon = TaskDialogIcon.Information,
-                Verification = new TaskDialogVerificationCheckBox
-                {
-                    Text = TranslatedStrings.DontShowAgain
-                },
+                Verification = new TaskDialogVerificationCheckBox { Text = TranslatedStrings.DontShowAgain },
                 AllowCancel = false,
                 SizeToContent = true
             };
 
-            TaskDialogCommandLinkButton btnPullFrom = new(string.Format(_noRemoteBranchButton.Text, remote + "/" + curLocalBranch));
+            TaskDialogCommandLinkButton btnPullFrom =
+                new(string.Format(_noRemoteBranchButton.Text, remote + "/" + curLocalBranch));
             page.Buttons.Add(btnPullFrom);
 
-            TaskDialogButton result = TaskDialog.ShowDialog(Handle, page);
+            var result = TaskDialog.ShowDialog(Handle, page);
 
             if (result == btnPullFrom)
             {
@@ -824,10 +741,11 @@ public sealed partial class FormPull : GitExtensionsDialog
                 SizeToContent = true
             };
 
-            TaskDialogCommandLinkButton btnPullFrom = new(string.Format(_noRemoteBranchForFetchButton.Text, remote + "/" + curLocalBranch));
+            TaskDialogCommandLinkButton btnPullFrom =
+                new(string.Format(_noRemoteBranchForFetchButton.Text, remote + "/" + curLocalBranch));
             page.Buttons.Add(btnPullFrom);
 
-            TaskDialogButton result = TaskDialog.ShowDialog(Handle, page);
+            var result = TaskDialog.ShowDialog(Handle, page);
             if (result == TaskDialogButton.Cancel)
             {
                 return false;
@@ -850,15 +768,13 @@ public sealed partial class FormPull : GitExtensionsDialog
 
     private string CalculateRemoteBranchName()
     {
-        string remoteBranchName = CalculateRemoteBranchNameBasedOnBranchesText();
+        var remoteBranchName = CalculateRemoteBranchNameBasedOnBranchesText();
         if (string.IsNullOrEmpty(remoteBranchName))
         {
             return remoteBranchName;
         }
-        else
-        {
-            return _NO_TRANSLATE_Remotes.Text + "/" + remoteBranchName;
-        }
+
+        return _NO_TRANSLATE_Remotes.Text + "/" + remoteBranchName;
     }
 
     private string CalculateRemoteBranchNameBasedOnBranchesText()
@@ -868,14 +784,10 @@ public sealed partial class FormPull : GitExtensionsDialog
             return Branches.Text;
         }
 
-        string remoteBranchName = Module.GetSetting(string.Format("branch.{0}.merge", _branch));
+        var remoteBranchName = Module.GetSetting(string.Format("branch.{0}.merge", _branch));
         if (!string.IsNullOrEmpty(remoteBranchName))
         {
-            GitArgumentBuilder args = new("name-rev")
-            {
-                "--name-only",
-                remoteBranchName.QuoteNE()
-            };
+            GitArgumentBuilder args = new("name-rev") { "--name-only", remoteBranchName.QuoteNe() };
             remoteBranchName = Module.GitExecutable.GetOutput(args).Trim();
         }
 
@@ -890,16 +802,16 @@ public sealed partial class FormPull : GitExtensionsDialog
         }
 
         HashSet<string> files = new(new PathEqualityComparer());
-        foreach (string remote in GetSelectedRemotes())
+        foreach (var remote in GetSelectedRemotes())
         {
-            string sshKeyFile = Module.GetPuttyKeyFileForRemote(remote);
+            var sshKeyFile = Module.GetPuttyKeyFileForRemote(remote);
             if (!string.IsNullOrEmpty(sshKeyFile))
             {
                 files.Add(sshKeyFile);
             }
         }
 
-        foreach (string sshKeyFile in files)
+        foreach (var sshKeyFile in files)
         {
             PuttyHelpers.StartPageantIfConfigured(() => sshKeyFile);
         }
@@ -915,9 +827,9 @@ public sealed partial class FormPull : GitExtensionsDialog
 
             if (IsPullAll())
             {
-                foreach (ConfigFileRemote remote in (IEnumerable<ConfigFileRemote>)_NO_TRANSLATE_Remotes.DataSource!)
+                foreach (var remote in (IEnumerable<ConfigFileRemote>)_NO_TRANSLATE_Remotes.DataSource!)
                 {
-                    if (!string.IsNullOrWhiteSpace(remote.Name) && remote.Name != AllRemotes)
+                    if (!string.IsNullOrWhiteSpace(remote.Name) && remote.Name != _allRemotes)
                     {
                         yield return remote.Name;
                     }
@@ -939,7 +851,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
     private void UpdateFormTitleAndButton()
     {
-        string format = Fetch.Checked
+        var format = Fetch.Checked
             ? _formTitleFetch.Text
             : _formTitlePull.Text;
 
@@ -950,7 +862,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
     private void StashClick(object sender, EventArgs e)
     {
-        UICommands.StartStashDialog(this);
+        UiCommands.StartStashDialog(this);
     }
 
     private void PullFromRemoteCheckedChanged(object sender, EventArgs e)
@@ -973,7 +885,7 @@ public sealed partial class FormPull : GitExtensionsDialog
 
     private bool IsPullAll()
     {
-        return _NO_TRANSLATE_Remotes.Text.Equals(AllRemotes, StringComparison.InvariantCultureIgnoreCase);
+        return _NO_TRANSLATE_Remotes.Text.Equals(_allRemotes, StringComparison.InvariantCultureIgnoreCase);
     }
 
     private void PullFromUrlCheckedChanged(object sender, EventArgs e)
@@ -996,8 +908,9 @@ public sealed partial class FormPull : GitExtensionsDialog
         Merge.Enabled = true;
         Rebase.Enabled = true;
 
-        IList<Repository> repositoryHistory = ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Remotes.LoadRecentHistoryAsync);
-        string prevUrl = comboBoxPullSource.Text;
+        var repositoryHistory =
+            ThreadHelper.JoinableTaskFactory.Run(RepositoryHistoryManager.Remotes.LoadRecentHistoryAsync);
+        var prevUrl = comboBoxPullSource.Text;
         comboBoxPullSource.DataSource = repositoryHistory;
         comboBoxPullSource.DisplayMember = nameof(Repository.Path);
         comboBoxPullSource.Text = prevUrl;
@@ -1007,16 +920,16 @@ public sealed partial class FormPull : GitExtensionsDialog
     {
         if (IsPullAll())
         {
-            UICommands.StartRemotesDialog(this);
+            UiCommands.StartRemotesDialog(this);
         }
         else
         {
-            string selectedRemote = _NO_TRANSLATE_Remotes.Text;
-            UICommands.StartRemotesDialog(this, selectedRemote);
+            var selectedRemote = _NO_TRANSLATE_Remotes.Text;
+            UiCommands.StartRemotesDialog(this, selectedRemote);
         }
 
         _bInternalUpdate = true;
-        string origText = _NO_TRANSLATE_Remotes.Text;
+        var origText = _NO_TRANSLATE_Remotes.Text;
         BindRemotesDropDown(origText);
         _bInternalUpdate = false;
     }
@@ -1140,29 +1053,179 @@ public sealed partial class FormPull : GitExtensionsDialog
         AllTags.Checked = AllTags.Checked || PruneTags.Checked;
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly FormPull _form;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(FormPull form)
+    internal readonly struct TestAccessor(FormPull form)
+    {
+        public string Title
         {
-            _form = form;
+            get => form.Text;
         }
 
-        public string Title => _form.Text;
-        public string FetchTitleText => _form._formTitleFetch.Text;
-        public string PullTitleText => _form._formTitlePull.Text;
-        public RadioButton Merge => _form.Merge;
-        public RadioButton Rebase => _form.Rebase;
-        public RadioButton Fetch => _form.Fetch;
-        public CheckBox AutoStash => _form.AutoStash;
-        public CheckBox Prune => _form.Prune;
-        public CheckBox PruneTags => _form.PruneTags;
-        public ComboBox Remotes => _form._NO_TRANSLATE_Remotes;
-        public TextBox LocalBranch => _form.localBranch;
+        public string FetchTitleText
+        {
+            get => form._formTitleFetch.Text;
+        }
 
-        public void UpdateSettingsDuringPull() => _form.UpdateSettingsDuringPull();
+        public string PullTitleText
+        {
+            get => form._formTitlePull.Text;
+        }
+
+        public RadioButton Merge
+        {
+            get => form.Merge;
+        }
+
+        public RadioButton Rebase
+        {
+            get => form.Rebase;
+        }
+
+        public RadioButton Fetch
+        {
+            get => form.Fetch;
+        }
+
+        public CheckBox AutoStash
+        {
+            get => form.AutoStash;
+        }
+
+        public CheckBox Prune
+        {
+            get => form.Prune;
+        }
+
+        public CheckBox PruneTags
+        {
+            get => form.PruneTags;
+        }
+
+        public ComboBox Remotes
+        {
+            get => form._NO_TRANSLATE_Remotes;
+        }
+
+        public TextBox LocalBranch
+        {
+            get => form.localBranch;
+        }
+
+        public void UpdateSettingsDuringPull()
+        {
+            form.UpdateSettingsDuringPull();
+        }
     }
+
+    #region Mnemonics
+
+    // Available: IJKQVXYZ
+    // A Fetch all tags
+    // B Browse...
+    // C Stash changes
+    // D Prune remote branches and tags
+    // E Rebase
+    // F Do not merge, only fetch
+    // G Manage remotes
+    // H Auto stash
+    // L Local branch
+    // M Merge
+    // N Fetch no tag
+    // O Remote branch
+    // P Prune remote branches
+    // R Remote
+    // S Solve conflicts
+    // T Follow tagopt
+    // U URL
+    // W Download full history
+
+    #endregion
+
+    #region Translation
+
+    private readonly TranslationString _areYouSureYouWantToRebaseMerge =
+        new("The current commit is a merge." + Environment.NewLine +
+            "Are you sure you want to rebase this merge?");
+
+    private readonly TranslationString _areYouSureYouWantToRebaseMergeCaption =
+        new("Rebase merge commit?");
+
+    private readonly TranslationString _allMergeConflictSolvedQuestion =
+        new("Are all merge conflicts solved? Do you want to commit?");
+
+    private readonly TranslationString _allMergeConflictSolvedQuestionCaption =
+        new("Conflicts solved");
+
+    private readonly TranslationString _applyStashedItemsAgain =
+        new("Apply stashed items to working directory again?");
+
+    private readonly TranslationString _applyStashedItemsAgainCaption =
+        new("Auto stash");
+
+    private readonly TranslationString _fetchAllBranchesCanOnlyWithFetch =
+        new("You can only fetch all remote branches (*) without merge or rebase." +
+            Environment.NewLine + "If you want to fetch all remote branches, choose fetch." +
+            Environment.NewLine +
+            "If you want to fetch and merge a branch, choose a specific branch.");
+
+    private readonly TranslationString _selectRemoteRepository =
+        new("Please select a remote repository");
+
+    private readonly TranslationString _selectSourceDirectory =
+        new("Please select a source directory");
+
+    private readonly TranslationString _questionInitSubmodules =
+        new("The pulled has submodules configured." + Environment.NewLine +
+            "Do you want to initialize the submodules?" + Environment.NewLine +
+            "This will initialize and update all submodules recursive.");
+
+    private readonly TranslationString _questionInitSubmodulesCaption =
+        new("Submodules");
+
+    private readonly TranslationString _notOnBranch = new("You cannot \"pull\" when git head detached." +
+                                                          Environment.NewLine + Environment.NewLine +
+                                                          "Do you want to continue?");
+
+    private readonly TranslationString _noRemoteBranch = new("You didn't specify a remote branch");
+
+    private readonly TranslationString _noRemoteBranchMainInstruction = new(
+        "You asked to pull from the remote '{0}'," + Environment.NewLine +
+        "but did not specify a remote branch." + Environment.NewLine +
+        "Because this is not the default configured remote for your local branch," + Environment.NewLine +
+        "you must specify a remote branch.");
+
+    private readonly TranslationString _noRemoteBranchForFetchMainInstruction = new(
+        "You asked to fetch from the remote '{0}'," + Environment.NewLine +
+        "but did not specify a remote branch." + Environment.NewLine +
+        "Because this is not the current branch, you must specify a remote branch.");
+
+    private readonly TranslationString _noRemoteBranchButton = new("Pull from {0}");
+    private readonly TranslationString _noRemoteBranchForFetchButton = new("Fetch from {0}");
+    private readonly TranslationString _noRemoteBranchCaption = new("Remote branch not specified");
+
+    private readonly TranslationString _pruneBranchesCaption = new("Pull was rejected");
+    private readonly TranslationString _pruneBranchesMainInstruction = new("Remote branch no longer exist");
+
+    private readonly TranslationString _pruneBranchesBranch =
+        new("Do you want to delete all stale remote-tracking branches?");
+
+    private readonly TranslationString _pruneFromCaption = new("Prune remote branches from {0}");
+
+    private readonly TranslationString _hoverShowImageLabelText =
+        new("Hover to see scenario when fast forward is possible.");
+
+    private readonly TranslationString _formTitlePull = new("Pull ({0})");
+    private readonly TranslationString _formTitleFetch = new("Fetch ({0})");
+    private readonly TranslationString _buttonPull = new("&Pull");
+    private readonly TranslationString _buttonFetch = new("&Fetch");
+
+    private readonly TranslationString _pullFetchPruneAllConfirmation =
+        new(
+            "Warning! The fetch with prune will remove all the remote-tracking references which no longer exist on remotes. Do you want to proceed?");
+
+    #endregion
 }

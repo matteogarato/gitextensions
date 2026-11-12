@@ -2,21 +2,15 @@
 using System.Text.Json.Nodes;
 using CommonTestUtils;
 using GitExtensions.Extensibility.BuildServerIntegration;
-using GitExtensions.Extensibility.Git;
-using JenkinsIntegration;
-using Xunit;
+using GitExtensions.Plugins.JenkinsIntegration;
 
 namespace JenkinsIntegrationTests;
+
 public class JenkinsAdapterTests : IDisposable
 {
-    private readonly JenkinsAdapter _adapter;
+    private readonly JenkinsAdapter _adapter = new();
 
-    public JenkinsAdapterTests()
-    {
-        _adapter = new JenkinsAdapter();
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _adapter.Dispose();
     }
@@ -24,9 +18,9 @@ public class JenkinsAdapterTests : IDisposable
     [Fact]
     public void CreateBuildInfo_should_parse_successful_freestyle_build()
     {
-        JsonNode json = LoadMockJson("JenkinsResult_freestyle_success.json");
+        var json = LoadMockJson("JenkinsResult_freestyle_success.json");
 
-        BuildInfo? result = _adapter.CreateBuildInfo(json);
+        var result = _adapter.CreateBuildInfo(json);
 
         result.Should().NotBeNull();
         result!.Id.Should().Be("42");
@@ -40,9 +34,9 @@ public class JenkinsAdapterTests : IDisposable
     [Fact]
     public void CreateBuildInfo_should_parse_failed_build()
     {
-        JsonNode json = LoadMockJson("JenkinsResult_freestyle_failure.json");
+        var json = LoadMockJson("JenkinsResult_freestyle_failure.json");
 
-        BuildInfo? result = _adapter.CreateBuildInfo(json);
+        var result = _adapter.CreateBuildInfo(json);
 
         result.Should().NotBeNull();
         result!.Id.Should().Be("43");
@@ -55,9 +49,9 @@ public class JenkinsAdapterTests : IDisposable
     [Fact]
     public void CreateBuildInfo_should_parse_running_build()
     {
-        JsonNode json = LoadMockJson("JenkinsResult_freestyle_running.json");
+        var json = LoadMockJson("JenkinsResult_freestyle_running.json");
 
-        BuildInfo? result = _adapter.CreateBuildInfo(json);
+        var result = _adapter.CreateBuildInfo(json);
 
         result.Should().NotBeNull();
         result!.Status.Should().Be(BuildStatus.InProgress);
@@ -67,9 +61,9 @@ public class JenkinsAdapterTests : IDisposable
     [Fact]
     public void CreateBuildInfo_should_parse_build_with_test_results()
     {
-        JsonNode json = LoadMockJson("JenkinsResult_with_tests.json");
+        var json = LoadMockJson("JenkinsResult_with_tests.json");
 
-        BuildInfo? result = _adapter.CreateBuildInfo(json);
+        var result = _adapter.CreateBuildInfo(json);
 
         result.Should().NotBeNull();
         result!.Status.Should().Be(BuildStatus.Unstable);
@@ -81,9 +75,9 @@ public class JenkinsAdapterTests : IDisposable
     [Fact]
     public void CreateBuildInfo_should_parse_build_with_multiple_branches()
     {
-        JsonNode json = LoadMockJson("JenkinsResult_with_branches.json");
+        var json = LoadMockJson("JenkinsResult_with_branches.json");
 
-        BuildInfo? result = _adapter.CreateBuildInfo(json);
+        var result = _adapter.CreateBuildInfo(json);
 
         result.Should().NotBeNull();
         result!.CommitHashList.Should().HaveCount(1);
@@ -93,9 +87,9 @@ public class JenkinsAdapterTests : IDisposable
     [Fact]
     public void CreateBuildInfo_should_set_start_date_from_timestamp()
     {
-        JsonNode json = LoadMockJson("JenkinsResult_freestyle_success.json");
+        var json = LoadMockJson("JenkinsResult_freestyle_success.json");
 
-        BuildInfo? result = _adapter.CreateBuildInfo(json);
+        var result = _adapter.CreateBuildInfo(json);
 
         result.Should().NotBeNull();
         result!.StartDate.Year.Should().Be(2019);
@@ -103,7 +97,7 @@ public class JenkinsAdapterTests : IDisposable
 
     private static JsonNode LoadMockJson(string filename)
     {
-        string json = EmbeddedResourceLoader.Load(
+        var json = EmbeddedResourceLoader.Load(
             Assembly.GetExecutingAssembly(),
             $"JenkinsIntegrationTests.MockData.{filename}");
         return JsonNode.Parse(json)!;

@@ -7,6 +7,7 @@ using System.Text;
 using GitUI.Properties;
 
 namespace GitUITests;
+
 public class ResourcesTests
 {
     [Fact]
@@ -14,7 +15,7 @@ public class ResourcesTests
     {
         // arrange
         // Note: do not dispose it, as it's a global resource used by others.
-        ResourceSet? resourceSet = Images.ResourceManager.GetResourceSet(CultureInfo.InvariantCulture, createIfNotExists: true, tryParents: false);
+        var resourceSet = Images.ResourceManager.GetResourceSet(CultureInfo.InvariantCulture, true, false);
 
         // act & assert
         foreach (DictionaryEntry resourceEntry in resourceSet!)
@@ -27,9 +28,10 @@ public class ResourcesTests
             using MemoryStream ms = new();
             bitmap.Save(ms, bitmap.RawFormat);
 
-            IEnumerable<string> pngSectionsList = GetPngSectionTypesList(ms.ToArray());
+            var pngSectionsList = GetPngSectionTypesList(ms.ToArray());
 
-            pngSectionsList.Should().NotContain("pHYs", $"Images PNG resource '{resourceEntry.Key}' should not contain the 'pHYs' section. Use http://entropymine.com/jason/tweakpng/ tool to remove it.");
+            pngSectionsList.Should().NotContain("pHYs",
+                $"Images PNG resource '{resourceEntry.Key}' should not contain the 'pHYs' section. Use http://entropymine.com/jason/tweakpng/ tool to remove it.");
         }
     }
 
@@ -37,10 +39,11 @@ public class ResourcesTests
     public void ShouldCorrectlyIdentifyPngSections()
     {
         // arrange
-        byte[] pngBytes = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAANSURBVBhXY2A4/P8/AAVLAsKqu7MNAAAAAElFTkSuQmCC");
+        var pngBytes = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAANSURBVBhXY2A4/P8/AAVLAsKqu7MNAAAAAElFTkSuQmCC");
 
         // act
-        IEnumerable<string> sections = GetPngSectionTypesList(pngBytes);
+        var sections = GetPngSectionTypesList(pngBytes);
 
         // assert
         sections.Should().Equal("IHDR", "sRGB", "gAMA", "pHYs", "IDAT", "IEND");
@@ -48,14 +51,14 @@ public class ResourcesTests
 
     private static IEnumerable<string> GetPngSectionTypesList(byte[] pngBytes)
     {
-        Span<byte> cursor = pngBytes.AsSpan();
+        var cursor = pngBytes.AsSpan();
 
         // PNG format is very simple - HEADER + N * SECTION
         // Read more info on format here: https://en.wikipedia.org/wiki/Portable_Network_Graphics#File_format
 
         // Verify header
         ReadOnlySpan<byte> header = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        if (!header.SequenceEqual(cursor[0..header.Length]))
+        if (!header.SequenceEqual(cursor[..header.Length]))
         {
             throw new ArgumentException("PNG does not contain a valid header");
         }
@@ -68,11 +71,11 @@ public class ResourcesTests
         // Iterate sections
         while (cursor.Length > 0)
         {
-            string type = Encoding.UTF8.GetString(cursor.Slice(4, 4));
+            var type = Encoding.UTF8.GetString(cursor.Slice(4, 4));
             sectionTypes.Add(type);
 
-            int payloadSize = BinaryPrimitives.ReadInt32BigEndian(cursor);
-            int sectionSize = (4 * 3) + payloadSize;
+            var payloadSize = BinaryPrimitives.ReadInt32BigEndian(cursor);
+            var sectionSize = (4 * 3) + payloadSize;
 
             cursor = cursor[sectionSize..];
         }

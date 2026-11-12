@@ -1,23 +1,25 @@
-﻿using System.Collections;
-using System.Text;
+﻿using System.Text;
 using GitExtensions.Extensibility;
 using GitUI.NBugReports;
 
 namespace GitUITests.NBugReports;
+
 public sealed class BugReportInvokerTests
 {
     [Theory]
     [MemberData(nameof(TestExceptions.TestCases), MemberType = typeof(TestExceptions))]
     public void Append(Exception exception, string expectedRootError, string expectedText)
     {
-        StringBuilder text = exception.GetExceptionInfo();
-        string rootError = BugReportInvoker.GetRootError(exception);
+        var text = exception.GetExceptionInfo();
+        var rootError = BugReportInvoker.GetRootError(exception);
         rootError.Should().Be(expectedRootError);
         text.ToString().Should().Be(expectedText);
     }
 
     [Theory]
-    [InlineData("Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found.", "vcruntime140_cor3.dll")]
+    [InlineData(
+        "Unable to load DLL 'vcruntime140_cor3.dll' or one of its dependencies: The specified module could not be found.",
+        "vcruntime140_cor3.dll")]
     [InlineData("Unable to load DLL 'user32.dll': File not found.", "user32.dll")]
     [InlineData("Unable to load DLL 'my.custom.dll' for some reason", "my.custom.dll")]
     [InlineData("No quotes in this message", "No quotes in this message")] // fallback case
@@ -28,16 +30,16 @@ public sealed class BugReportInvokerTests
         // - Extracts DLL name between single quotes from DllNotFoundException message
         // - Falls back to using the entire message if no quotes found
 
-        string result = ExtractDllNameFromMessage(message);
+        var result = ExtractDllNameFromMessage(message);
         result.Should().Be(expectedDllName);
 
         static string ExtractDllNameFromMessage(string message)
         {
-            string fileName = message;
-            int startIndex = fileName.IndexOf('\'');
+            var fileName = message;
+            var startIndex = fileName.IndexOf('\'');
             if (startIndex >= 0)
             {
-                int endIndex = fileName.IndexOf('\'', startIndex + 1);
+                var endIndex = fileName.IndexOf('\'', startIndex + 1);
                 if (endIndex > startIndex)
                 {
                     fileName = fileName.Substring(startIndex + 1, endIndex - startIndex - 1);
@@ -64,47 +66,38 @@ public class TestExceptions
     {
         get
         {
-            yield return new object[]
-            {
-                new Exception(_messageOuter),
-                _messageOuter,
-                ""
-            };
+            yield return new object[] { new Exception(_messageOuter), _messageOuter, "" };
 
             yield return new object[]
             {
-                new Exception(_messageOuter, new Exception(_messageMiddle)),
-                _messageMiddle,
-                ""
+                new Exception(_messageOuter, new Exception(_messageMiddle)), _messageMiddle, ""
             };
 
             yield return new object[]
             {
                 new Exception(_messageOuter, new Exception(_messageMiddle, new Exception(_messageInner))),
-                _messageInner,
-                ""
+                _messageInner, ""
             };
 
             yield return new object[]
             {
                 new UserExternalOperationException(
                     _context,
-                    new ExternalOperationException(_command, _arguments, _directory, _exitCode, new Exception(_messageOuter, new Exception(_messageInner)))),
-                _messageInner,
-                $"{_context}{Environment.NewLine}"
-                + $"Exit code: {_exitCode}{Environment.NewLine}"
-                + $"Command: {_command}{Environment.NewLine}"
-                + $"Arguments: {_arguments}{Environment.NewLine}"
-                + $"Working directory: {_directory}{Environment.NewLine}"
+                    new ExternalOperationException(_command, _arguments, _directory, _exitCode,
+                        new Exception(_messageOuter, new Exception(_messageInner)))),
+                _messageInner, $"{_context}{Environment.NewLine}"
+                               + $"Exit code: {_exitCode}{Environment.NewLine}"
+                               + $"Command: {_command}{Environment.NewLine}"
+                               + $"Arguments: {_arguments}{Environment.NewLine}"
+                               + $"Working directory: {_directory}{Environment.NewLine}"
             };
 
             yield return new object[]
             {
                 new UserExternalOperationException(
-                    context: null!,
+                    null!,
                     new ExternalOperationException(null, null, null, null, new Exception(_messageInner))),
-                _messageInner,
-                ""
+                _messageInner, ""
             };
         }
     }

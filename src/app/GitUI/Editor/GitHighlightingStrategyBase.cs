@@ -1,17 +1,16 @@
 ﻿using GitExtensions.Extensibility.Git;
 using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.HighlightingStrategy;
+using ICSharpCode.TextEditor.Document.LineManager;
 
 namespace GitUI.Editor;
 
 internal abstract class GitHighlightingStrategyBase : IHighlightingStrategy
 {
-    protected static HighlightColor ColorNormal { get; } = new(nameof(SystemColors.WindowText), bold: false, italic: false);
-
-    private static HighlightColor ColorComment { get; } = new(Color.DarkGreen, bold: false, italic: false);
-
-    private readonly DefaultHighlightingStrategy _defaultHighlightingStrategy = HighlightingManager.Manager.DefaultHighlighting;
-
     private readonly char _commentChar;
+
+    private readonly DefaultHighlightingStrategy _defaultHighlightingStrategy =
+        HighlightingManager.Manager.DefaultHighlighting;
 
     protected GitHighlightingStrategyBase(string name, IGitModule module)
     {
@@ -33,9 +32,13 @@ internal abstract class GitHighlightingStrategyBase : IHighlightingStrategy
         // That would work well in practice.
 
         const string defaultValue = "#";
-        string commentCharSetting = module.GetEffectiveSetting("core.commentchar", defaultValue);
+        var commentCharSetting = module.GetEffectiveSetting("core.commentchar", defaultValue);
         _commentChar = commentCharSetting.Length == 1 ? commentCharSetting[0] : defaultValue[0];
     }
+
+    protected static HighlightColor ColorNormal { get; } = new(nameof(SystemColors.WindowText), false, false);
+
+    private static HighlightColor ColorComment { get; } = new(Color.DarkGreen, false, false);
 
     protected abstract void MarkTokens(IDocument document, IList<LineSegment> lines);
 
@@ -43,7 +46,7 @@ internal abstract class GitHighlightingStrategyBase : IHighlightingStrategy
     {
         if (IsComment(document, line))
         {
-            line.Words = [new(document, line, 0, line.Length, ColorComment, hasDefaultColor: false)];
+            line.Words = [new TextWord(document, line, 0, line.Length, ColorComment, false)];
             return true;
         }
 
@@ -52,25 +55,28 @@ internal abstract class GitHighlightingStrategyBase : IHighlightingStrategy
 
     #region IHighlightingStrategy
 
-    public string Name { get; }
+    string IHighlightingStrategy.Name { get; }
 
-    public string[] Extensions => [];
+    string[] IHighlightingStrategy.Extensions
+    {
+        get => [];
+    }
 
-    public Dictionary<string, string> Properties { get; } = [];
+    Dictionary<string, string> IHighlightingStrategy.Properties { get; } = [];
 
-    public HighlightColor GetColorFor(string name)
+    HighlightColor IHighlightingStrategy.GetColorFor(string name)
     {
         return _defaultHighlightingStrategy.GetColorFor(name);
     }
 
-    public void MarkTokens(IDocument document)
+    void IHighlightingStrategy.MarkTokens(IDocument document)
     {
         MarkTokens(document, document.LineSegmentCollection);
     }
 
-    public void MarkTokens(IDocument document, List<LineSegment> lines)
+    void IHighlightingStrategy.MarkTokens(IDocument document, List<LineSegment> lines)
     {
-        MarkTokens(document, (IList<LineSegment>)lines);
+        MarkTokens(document, lines);
     }
 
     #endregion
@@ -79,9 +85,9 @@ internal abstract class GitHighlightingStrategyBase : IHighlightingStrategy
 
     protected bool IsComment(IDocument document, LineSegment line)
     {
-        for (int i = 0; i < line.Length; i++)
+        for (var i = 0; i < line.Length; i++)
         {
-            char c = document.GetCharAt(line.Offset + i);
+            var c = document.GetCharAt(line.Offset + i);
 
             if (char.IsWhiteSpace(c))
             {
@@ -96,9 +102,9 @@ internal abstract class GitHighlightingStrategyBase : IHighlightingStrategy
 
     protected static bool IsEmptyOrWhiteSpace(IDocument document, LineSegment line)
     {
-        for (int i = 0; i < line.Length; i++)
+        for (var i = 0; i < line.Length; i++)
         {
-            char c = document.GetCharAt(line.Offset + i);
+            var c = document.GetCharAt(line.Offset + i);
 
             if (!char.IsWhiteSpace(c))
             {

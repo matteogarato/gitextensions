@@ -4,7 +4,7 @@ internal class FileSystemUtility
 {
     public static string GetTemporaryPath()
     {
-        string tempPath = Path.GetTempPath();
+        var tempPath = Path.GetTempPath();
 
         // workaround macOS symlinking its temp folder
         if (tempPath.StartsWith("/var"))

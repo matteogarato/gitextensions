@@ -5,7 +5,6 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using GitCommands;
 using GitCommands.Config;
 using GitCommands.Remotes;
 using GitCommands.Settings;
@@ -28,22 +27,21 @@ namespace GitUI.BuildServerIntegration;
 
 public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
 {
-    private static readonly TimeSpan ShortPollInterval = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan LongPollInterval = TimeSpan.FromSeconds(120);
-    private readonly CancellationTokenSequence _launchCancellation = new();
+    private static readonly TimeSpan _shortPollInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _longPollInterval = TimeSpan.FromSeconds(120);
     private readonly Lock _buildServerCredentialsLock = new();
-    private readonly RevisionGridControl _revisionGrid;
-    private readonly RevisionDataGridView _revisionGridView;
-    private readonly IRevisionGridInfo _revisionGridInfo;
+    private readonly CancellationTokenSequence _launchCancellation = new();
     private readonly Func<IGitModule> _module;
-    private readonly IRepoNameExtractor _repoNameExtractor;
-    private IDisposable? _buildStatusCancellationToken;
-    private IBuildServerAdapter? _buildServerAdapter;
     private readonly Lock _observerLock = new();
+    private readonly IRepoNameExtractor _repoNameExtractor;
+    private readonly RevisionGridControl _revisionGrid;
+    private readonly IRevisionGridInfo _revisionGridInfo;
+    private readonly RevisionDataGridView _revisionGridView;
+    private IBuildServerAdapter? _buildServerAdapter;
+    private IDisposable? _buildStatusCancellationToken;
 
-    internal BuildStatusColumnProvider ColumnProvider { get; }
-
-    public BuildServerWatcher(RevisionGridControl revisionGrid, RevisionDataGridView revisionGridView, IRevisionGridInfo revisionGridInfo, Func<IGitModule> module)
+    public BuildServerWatcher(RevisionGridControl revisionGrid, RevisionDataGridView revisionGridView,
+        IRevisionGridInfo revisionGridInfo, Func<IGitModule> module)
     {
         _revisionGrid = revisionGrid;
         _revisionGridView = revisionGridView;
@@ -54,15 +52,17 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         ColumnProvider = new BuildStatusColumnProvider(revisionGrid, revisionGridView, _module);
     }
 
-    public async Task LaunchBuildServerInfoFetchOperationAsync()
+    internal BuildStatusColumnProvider ColumnProvider { get; }
+
+    async Task IBuildServerWatcher.LaunchBuildServerInfoFetchOperationAsync()
     {
         await TaskScheduler.Default;
 
         CancelBuildStatusFetchOperation();
 
-        CancellationToken launchToken = _launchCancellation.Next();
+        var launchToken = _launchCancellation.Next();
 
-        IBuildServerAdapter? buildServerAdapter = await GetBuildServerAdapterAsync().ConfigureAwait(false);
+        var buildServerAdapter = await GetBuildServerAdapterAsync().ConfigureAwait(false);
 
         await _revisionGridView.SwitchToMainThreadAsync(launchToken);
 
@@ -73,8 +73,8 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         // ensure the column visibility and width reflect the user's display preferences
         if (buildServerAdapter is not null)
         {
-            bool showIcon = AppSettings.ShowBuildStatusIconColumn;
-            bool showText = AppSettings.ShowBuildStatusTextColumn;
+            var showIcon = AppSettings.ShowBuildStatusIconColumn;
+            var showText = AppSettings.ShowBuildStatusTextColumn;
             ColumnProvider.Column.Visible = showIcon || showText;
 
             if (showIcon && !showText)
@@ -90,53 +90,53 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
             return;
         }
 
-        NewThreadScheduler scheduler = NewThreadScheduler.Default;
+        var scheduler = NewThreadScheduler.Default;
 
         // Run this first as it (may) force start queries
-        IObservable<BuildInfo> runningBuildsObservable = buildServerAdapter.GetRunningBuilds(scheduler);
+        var runningBuildsObservable = buildServerAdapter.GetRunningBuilds(scheduler);
 
-        IObservable<BuildInfo> fullDayObservable = buildServerAdapter.GetFinishedBuildsSince(scheduler, DateTime.Today - TimeSpan.FromDays(3));
-        IObservable<BuildInfo> fullObservable = buildServerAdapter.GetFinishedBuildsSince(scheduler);
+        var fullDayObservable =
+            buildServerAdapter.GetFinishedBuildsSince(scheduler, DateTime.Today - TimeSpan.FromDays(3));
+        var fullObservable = buildServerAdapter.GetFinishedBuildsSince(scheduler);
 
-        bool anyRunningBuilds = false;
-        IObservable<BuildInfo> delayObservable = Observable.Defer(() => Observable.Empty<BuildInfo>()
-                                                               .DelaySubscription(anyRunningBuilds ? ShortPollInterval : LongPollInterval));
+        var anyRunningBuilds = false;
+        var delayObservable = Observable.Defer(() => Observable.Empty<BuildInfo>()
+            .DelaySubscription(anyRunningBuilds ? _shortPollInterval : _longPollInterval));
 
-        bool shouldLookForNewlyFinishedBuilds = false;
-        DateTime nowFrozen = DateTime.Now;
+        var shouldLookForNewlyFinishedBuilds = false;
+        var nowFrozen = DateTime.Now;
 
         // All finished builds have already been retrieved,
         // so looking for new finished builds make sense only if running builds have been found previously
-        IObservable<BuildInfo> fromNowObservable = Observable.If(() => shouldLookForNewlyFinishedBuilds,
+        var fromNowObservable = Observable.If(() => shouldLookForNewlyFinishedBuilds,
             buildServerAdapter.GetFinishedBuildsSince(scheduler, nowFrozen)
-                        .Finally(() => shouldLookForNewlyFinishedBuilds = false));
+                .Finally(() => shouldLookForNewlyFinishedBuilds = false));
 
         CancelBuildStatusFetchOperation();
         lock (_observerLock)
         {
             _buildStatusCancellationToken = new CompositeDisposable
-                {
-                    fullDayObservable.OnErrorResumeNext(fullObservable)
-                                     .OnErrorResumeNext(Observable.Empty<BuildInfo>()
-                                                                  .DelaySubscription(LongPollInterval)
-                                                                  .OnErrorResumeNext(fromNowObservable)
-                                                                  .Retry()
-                                                                  .Repeat())
-                                     .ObserveOn(MainThreadScheduler.Instance)
-                                     .Subscribe(UpdateAndReportExceptions),
-
-                    runningBuildsObservable.Do(buildInfo =>
-                                                {
-                                                    anyRunningBuilds = true;
-                                                    shouldLookForNewlyFinishedBuilds = true;
-                                                })
-                                           .OnErrorResumeNext(delayObservable)
-                                           .Retry()
-                                           .Finally(() => anyRunningBuilds = false)
-                                           .Repeat()
-                                           .ObserveOn(MainThreadScheduler.Instance)
-                                           .Subscribe(UpdateAndReportExceptions)
-                };
+            {
+                fullDayObservable.OnErrorResumeNext(fullObservable)
+                    .OnErrorResumeNext(Observable.Empty<BuildInfo>()
+                        .DelaySubscription(_longPollInterval)
+                        .OnErrorResumeNext(fromNowObservable)
+                        .Retry()
+                        .Repeat())
+                    .ObserveOn(MainThreadScheduler.Instance)
+                    .Subscribe(UpdateAndReportExceptions),
+                runningBuildsObservable.Do(buildInfo =>
+                    {
+                        anyRunningBuilds = true;
+                        shouldLookForNewlyFinishedBuilds = true;
+                    })
+                    .OnErrorResumeNext(delayObservable)
+                    .Retry()
+                    .Finally(() => anyRunningBuilds = false)
+                    .Repeat()
+                    .ObserveOn(MainThreadScheduler.Instance)
+                    .Subscribe(UpdateAndReportExceptions)
+            };
         }
 
         await _revisionGridView.SwitchToMainThreadAsync(launchToken);
@@ -149,53 +149,57 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         }
     }
 
-    public void CancelBuildStatusFetchOperation()
+    void IBuildServerWatcher.CancelBuildStatusFetchOperation()
     {
-        IDisposable? cancellationToken = Interlocked.Exchange(ref _buildStatusCancellationToken, null);
+        var cancellationToken = Interlocked.Exchange(ref _buildStatusCancellationToken, null);
 
         cancellationToken?.Dispose();
     }
 
-    public IBuildServerCredentials? GetBuildServerCredentials(IBuildServerAdapter buildServerAdapter, bool useStoredCredentialsIfExisting)
+    IBuildServerCredentials? IBuildServerWatcher.GetBuildServerCredentials(IBuildServerAdapter buildServerAdapter,
+        bool useStoredCredentialsIfExisting)
     {
         lock (_buildServerCredentialsLock)
         {
-            IBuildServerCredentials? buildServerCredentials = new BuildServerCredentials { BuildServerCredentialsType = BuildServerCredentialsType.Guest };
-            bool foundInConfig = false;
+            IBuildServerCredentials? buildServerCredentials =
+                new BuildServerCredentials { BuildServerCredentialsType = BuildServerCredentialsType.Guest };
+            var foundInConfig = false;
 
-            const string CredentialsConfigName = "Credentials";
-            const string UseGuestAccessKey = "UseGuestAccess";
-            const string BuildServerCredentialsTypeKey = "BuildServerCredentialsType";
-            const string UsernameKey = "Username";
-            const string PasswordKey = "Password";
-            const string BearerTokenKey = "BearerToken";
-            using (IsolatedStorageFileStream stream = GetBuildServerOptionsIsolatedStorageStream(buildServerAdapter, FileAccess.Read, FileShare.Read))
+            const string credentialsConfigName = "Credentials";
+            const string useGuestAccessKey = "UseGuestAccess";
+            const string buildServerCredentialsTypeKey = "BuildServerCredentialsType";
+            const string usernameKey = "Username";
+            const string passwordKey = "Password";
+            const string bearerTokenKey = "BearerToken";
+            using (var stream =
+                   GetBuildServerOptionsIsolatedStorageStream(buildServerAdapter, FileAccess.Read, FileShare.Read))
             {
                 if (stream.Position < stream.Length)
                 {
-                    byte[] protectedData = new byte[stream.Length];
+                    var protectedData = new byte[stream.Length];
 
                     stream.ReadExactly(protectedData, 0, (int)stream.Length);
                     try
                     {
-                        byte[] unprotectedData = ProtectedData.Unprotect(protectedData, null,
+                        var unprotectedData = ProtectedData.Unprotect(protectedData, null,
                             DataProtectionScope.CurrentUser);
                         using MemoryStream memoryStream = new(unprotectedData);
-                        ConfigFile credentialsConfig = new(fileName: "");
+                        ConfigFile credentialsConfig = new("");
 
                         using (StreamReader textReader = new(memoryStream, Encoding.UTF8))
                         {
                             credentialsConfig.LoadFromString(textReader.ReadToEnd());
                         }
 
-                        IConfigSection? section = credentialsConfig.FindConfigSection(CredentialsConfigName);
+                        var section = credentialsConfig.FindConfigSection(credentialsConfigName);
 
                         if (section is not null)
                         {
-                            string? buildServerCredentialsType = section.GetValue(BuildServerCredentialsTypeKey);
+                            var buildServerCredentialsType = section.GetValue(buildServerCredentialsTypeKey);
                             if (!string.IsNullOrWhiteSpace(buildServerCredentialsType))
                             {
-                                if (!Enum.TryParse(buildServerCredentialsType, ignoreCase: true, out BuildServerCredentialsType credentialsType))
+                                if (!Enum.TryParse(buildServerCredentialsType, ignoreCase: true,
+                                        out BuildServerCredentialsType credentialsType))
                                 {
                                     credentialsType = BuildServerCredentialsType.Guest;
                                 }
@@ -205,14 +209,14 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
                             else
                             {
                                 buildServerCredentials.BuildServerCredentialsType =
-                                    section.GetValueAsBool(UseGuestAccessKey, true)
+                                    section.GetValueAsBool(useGuestAccessKey, true)
                                         ? BuildServerCredentialsType.Guest
                                         : BuildServerCredentialsType.UsernameAndPassword;
                             }
 
-                            buildServerCredentials.Username = section.GetValue(UsernameKey);
-                            buildServerCredentials.Password = section.GetValue(PasswordKey);
-                            buildServerCredentials.BearerToken = section.GetValue(BearerTokenKey);
+                            buildServerCredentials.Username = section.GetValue(usernameKey);
+                            buildServerCredentials.Password = section.GetValue(passwordKey);
+                            buildServerCredentials.BearerToken = section.GetValue(bearerTokenKey);
                             foundInConfig = true;
 
                             if (useStoredCredentialsIfExisting)
@@ -235,27 +239,32 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
 
             if (!useStoredCredentialsIfExisting || !foundInConfig)
             {
-                buildServerCredentials = ThreadHelper.JoinableTaskFactory.Run(() => ShowBuildServerCredentialsFormAsync(buildServerAdapter.UniqueKey, buildServerCredentials));
+                buildServerCredentials = ThreadHelper.JoinableTaskFactory.Run(() =>
+                    ShowBuildServerCredentialsFormAsync(buildServerAdapter.UniqueKey, buildServerCredentials));
 
                 if (buildServerCredentials is not null)
                 {
-                    ConfigFile credentialsConfig = new(fileName: "");
+                    ConfigFile credentialsConfig = new("");
 
-                    IConfigSection section = credentialsConfig.FindOrCreateConfigSection(CredentialsConfigName);
+                    var section = credentialsConfig.FindOrCreateConfigSection(credentialsConfigName);
 
-                    section.SetValue(BuildServerCredentialsTypeKey, buildServerCredentials.BuildServerCredentialsType.ToString());
-                    section.SetValue(UsernameKey, buildServerCredentials.Username);
-                    section.SetValue(PasswordKey, buildServerCredentials.Password);
-                    section.SetValue(BearerTokenKey, buildServerCredentials.BearerToken);
+                    section.SetValue(buildServerCredentialsTypeKey,
+                        buildServerCredentials.BuildServerCredentialsType.ToString());
+                    section.SetValue(usernameKey, buildServerCredentials.Username);
+                    section.SetValue(passwordKey, buildServerCredentials.Password);
+                    section.SetValue(bearerTokenKey, buildServerCredentials.BearerToken);
 
-                    using IsolatedStorageFileStream stream = GetBuildServerOptionsIsolatedStorageStream(buildServerAdapter, FileAccess.Write, FileShare.None);
+                    using var stream =
+                        GetBuildServerOptionsIsolatedStorageStream(buildServerAdapter, FileAccess.Write,
+                            FileShare.None);
                     using MemoryStream memoryStream = new();
                     using (StreamWriter textWriter = new(memoryStream, Encoding.UTF8))
                     {
                         textWriter.Write(credentialsConfig.GetAsString());
                     }
 
-                    byte[] protectedData = ProtectedData.Protect(memoryStream.ToArray(), null, DataProtectionScope.CurrentUser);
+                    var protectedData =
+                        ProtectedData.Protect(memoryStream.ToArray(), null, DataProtectionScope.CurrentUser);
                     stream.Write(protectedData, 0, protectedData.Length);
 
                     return buildServerCredentials;
@@ -266,9 +275,9 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         }
     }
 
-    public string ReplaceVariables(string projectNames)
+    string IBuildServerWatcher.ReplaceVariables(string projectNames)
     {
-        (string repoProject, string repoName) = _repoNameExtractor.Get();
+        (var repoProject, var repoName) = _repoNameExtractor.Get();
 
         if (!string.IsNullOrWhiteSpace(repoProject))
         {
@@ -283,14 +292,23 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         return projectNames;
     }
 
-    private async Task<IBuildServerCredentials?> ShowBuildServerCredentialsFormAsync(string buildServerUniqueKey, IBuildServerCredentials buildServerCredentials)
+    void IDisposable.Dispose()
+    {
+        CancelBuildStatusFetchOperation();
+
+        _buildServerAdapter?.Dispose();
+        _launchCancellation.Dispose();
+    }
+
+    private async Task<IBuildServerCredentials?> ShowBuildServerCredentialsFormAsync(string buildServerUniqueKey,
+        IBuildServerCredentials buildServerCredentials)
     {
         await _revisionGrid.SwitchToMainThreadAsync();
 
         using FormBuildServerCredentials form = new(buildServerUniqueKey);
         form.BuildServerCredentials = buildServerCredentials;
 
-        DialogResult result = await form.ShowDialogAsync(_revisionGrid);
+        var result = await form.ShowDialogAsync(_revisionGrid);
         if (result == DialogResult.OK)
         {
             return buildServerCredentials;
@@ -309,16 +327,16 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
             }
         }
 
-        foreach (ObjectId commitHash in buildInfo.CommitHashList)
+        foreach (var commitHash in buildInfo.CommitHashList)
         {
-            int? index = _revisionGridView.TryGetRevisionIndex(commitHash);
+            var index = _revisionGridView.TryGetRevisionIndex(commitHash);
 
             if (!index.HasValue)
             {
                 continue;
             }
 
-            GitRevision? revision = _revisionGridView.GetRevision(index.Value);
+            var revision = _revisionGridView.GetRevision(index.Value);
 
             if (revision is null)
             {
@@ -344,9 +362,9 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
     {
         await TaskScheduler.Default;
 
-        SettingsSource effectiveSettings = _module().GetEffectiveSettings();
+        var effectiveSettings = _module().GetEffectiveSettings();
 
-        string? buildServerName = BuildServerSettings.ServerName[effectiveSettings];
+        var buildServerName = BuildServerSettings.ServerName[effectiveSettings];
 
         if (!string.IsNullOrEmpty(buildServerName))
         {
@@ -376,31 +394,33 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         // When explicitly configured, let the matching detector populate settings from remotes
         TryPopulateSettingsForBuildServer(buildServerName, BuildServerSettings.GetSettingsSource(effectiveSettings));
 
-        IEnumerable<Lazy<IBuildServerAdapter, IBuildServerTypeMetadata>> exports = ManagedExtensibility.GetExports<IBuildServerAdapter, IBuildServerTypeMetadata>();
-        Lazy<IBuildServerAdapter, IBuildServerTypeMetadata>? export = exports.SingleOrDefault(x => x.Metadata.BuildServerType == buildServerName);
+        var exports =
+            ManagedExtensibility.GetExports<IBuildServerAdapter, IBuildServerTypeMetadata>();
+        var export =
+            exports.SingleOrDefault(x => x.Metadata.BuildServerType == buildServerName);
 
         if (export is not null)
         {
             try
             {
-                string? canBeLoaded = export.Metadata.CanBeLoaded;
+                var canBeLoaded = export.Metadata.CanBeLoaded;
                 if (!string.IsNullOrEmpty(canBeLoaded))
                 {
                     Debug.Write(export.Metadata.BuildServerType + " adapter could not be loaded: " + canBeLoaded);
                     return null;
                 }
 
-                IBuildServerAdapter buildServerAdapter = export.Value;
+                var buildServerAdapter = export.Value;
 
                 buildServerAdapter.Initialize(this, BuildServerSettings.GetSettingsSource(effectiveSettings),
                     () =>
                     {
                         // To run the `StartSettingsDialog()` in the UI Thread
                         ThreadHelper.JoinableTaskFactory.Run(async () =>
-                            {
-                                await _revisionGrid.SwitchToMainThreadAsync();
-                                _revisionGrid.UICommands.StartSettingsDialog(typeof(BuildServerIntegrationSettingsPage));
-                            });
+                        {
+                            await _revisionGrid.SwitchToMainThreadAsync();
+                            _revisionGrid.UiCommands.StartSettingsDialog(typeof(BuildServerIntegrationSettingsPage));
+                        });
                     },
                     objectId => _revisionGridInfo.GetRevision(objectId) is not null);
                 return buildServerAdapter;
@@ -417,24 +437,25 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
     }
 
     /// <summary>
-    ///  Attempts to detect the build server type from the repository's remote URLs
-    ///  by querying registered <see cref="IBuildServerAutoDetector"/> exports.
-    ///  When detected, writes adapter-specific settings to <paramref name="settingsSource"/>
-    ///  (if not already set) so the adapter can use them without re-parsing.
-    ///  Respects <see cref="AppSettings.PrioritizedBuildServerRemoteNames"/> for remote ordering,
-    ///  so that forks resolve to the upstream project's CI rather than the fork's.
+    ///     Attempts to detect the build server type from the repository's remote URLs
+    ///     by querying registered <see cref="IBuildServerAutoDetector" /> exports.
+    ///     When detected, writes adapter-specific settings to <paramref name="settingsSource" />
+    ///     (if not already set) so the adapter can use them without re-parsing.
+    ///     Respects <see cref="AppSettings.PrioritizedBuildServerRemoteNames" /> for remote ordering,
+    ///     so that forks resolve to the upstream project's CI rather than the fork's.
     /// </summary>
-    private string? TryAutoDetectBuildServerType(GitExtensions.Extensibility.Settings.SettingsSource? settingsSource = null)
+    private string? TryAutoDetectBuildServerType(SettingsSource? settingsSource = null)
     {
         try
         {
-            List<string> remoteUrls = GetOrderedRemoteUrls();
+            var remoteUrls = GetOrderedRemoteUrls();
             if (remoteUrls.Count == 0)
             {
                 return null;
             }
 
-            foreach (Lazy<IBuildServerAutoDetector> export in ManagedExtensibility.GetExports<IBuildServerAutoDetector>())
+            foreach (var export in
+                     ManagedExtensibility.GetExports<IBuildServerAutoDetector>())
             {
                 if (export.Value.TryDetect(remoteUrls, settingsSource))
                 {
@@ -451,20 +472,21 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
     }
 
     /// <summary>
-    ///  For an explicitly configured build server, runs the matching auto-detector
-    ///  to populate adapter-specific settings from remote URLs.
+    ///     For an explicitly configured build server, runs the matching auto-detector
+    ///     to populate adapter-specific settings from remote URLs.
     /// </summary>
-    private void TryPopulateSettingsForBuildServer(string buildServerName, GitExtensions.Extensibility.Settings.SettingsSource settingsSource)
+    private void TryPopulateSettingsForBuildServer(string buildServerName, SettingsSource settingsSource)
     {
         try
         {
-            List<string> remoteUrls = GetOrderedRemoteUrls();
+            var remoteUrls = GetOrderedRemoteUrls();
             if (remoteUrls.Count == 0)
             {
                 return;
             }
 
-            foreach (Lazy<IBuildServerAutoDetector> export in ManagedExtensibility.GetExports<IBuildServerAutoDetector>())
+            foreach (var export in
+                     ManagedExtensibility.GetExports<IBuildServerAutoDetector>())
             {
                 if (export.Value.BuildServerType == buildServerName)
                 {
@@ -480,28 +502,29 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
     }
 
     /// <summary>
-    ///  Collects remote URLs from the current module, ordered by
-    ///  <see cref="AppSettings.PrioritizedBuildServerRemoteNames"/>.
+    ///     Collects remote URLs from the current module, ordered by
+    ///     <see cref="AppSettings.PrioritizedBuildServerRemoteNames" />.
     /// </summary>
     private List<string> GetOrderedRemoteUrls()
     {
-        IGitModule module = _module();
-        IReadOnlyList<string> remoteNames = module.GetRemoteNames();
+        var module = _module();
+        var remoteNames = module.GetRemoteNames();
 
-        string[] prioritizedNames = AppSettings.PrioritizedBuildServerRemoteNames
+        var prioritizedNames = AppSettings.PrioritizedBuildServerRemoteNames
             .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         IEnumerable<string> orderedRemotes = remoteNames
             .OrderBy(r =>
             {
-                int index = Array.FindIndex(prioritizedNames, n => string.Equals(n, r, StringComparison.OrdinalIgnoreCase));
+                var index = Array.FindIndex(prioritizedNames,
+                    n => string.Equals(n, r, StringComparison.OrdinalIgnoreCase));
                 return index >= 0 ? index : prioritizedNames.Length;
             });
 
         List<string> remoteUrls = [];
-        foreach (string remoteName in orderedRemotes)
+        foreach (var remoteName in orderedRemotes)
         {
-            string remoteUrl = module.GetSetting(string.Format(SettingKeyString.RemoteUrl, remoteName));
+            var remoteUrl = module.GetSetting(string.Format(SettingKeyString.RemoteUrl, remoteName));
             if (!string.IsNullOrWhiteSpace(remoteUrl))
             {
                 remoteUrls.Add(remoteUrl);
@@ -511,17 +534,11 @@ public sealed class BuildServerWatcher : IBuildServerWatcher, IDisposable
         return remoteUrls;
     }
 
-    public void Dispose()
+    private static IsolatedStorageFileStream GetBuildServerOptionsIsolatedStorageStream(
+        IBuildServerAdapter buildServerAdapter, FileAccess fileAccess, FileShare fileShare)
     {
-        CancelBuildStatusFetchOperation();
-
-        _buildServerAdapter?.Dispose();
-        _launchCancellation.Dispose();
-    }
-
-    private static IsolatedStorageFileStream GetBuildServerOptionsIsolatedStorageStream(IBuildServerAdapter buildServerAdapter, FileAccess fileAccess, FileShare fileShare)
-    {
-        string fileName = string.Format("BuildServer-{0}.options", Convert.ToBase64String(Encoding.UTF8.GetBytes(buildServerAdapter.UniqueKey)));
+        var fileName = string.Format("BuildServer-{0}.options",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes(buildServerAdapter.UniqueKey)));
         return new IsolatedStorageFileStream(fileName, FileMode.OpenOrCreate, fileAccess, fileShare);
     }
 

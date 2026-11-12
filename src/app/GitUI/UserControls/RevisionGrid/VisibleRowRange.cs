@@ -17,14 +17,48 @@ internal readonly struct VisibleRowRange : IEnumerable<int>, IEquatable<VisibleR
         Count = count;
     }
 
-    public bool Contains(int index) => index >= FromIndex && index < FromIndex + Count;
+    public bool Contains(int index)
+    {
+        return index >= FromIndex && index < FromIndex + Count;
+    }
 
-    public IEnumerator<int> GetEnumerator() => Enumerable.Range(FromIndex, Count).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    public bool Equals(VisibleRowRange other) => FromIndex == other.FromIndex && Count == other.Count;
-    public override bool Equals(object? obj) => obj is VisibleRowRange range && Equals(range);
-    public override int GetHashCode() => unchecked((FromIndex * 397) ^ Count);
-    public override string ToString() => $"[{FromIndex}, {FromIndex + Count - 1}] {Count} row{(Count == 1 ? "" : "s")}";
-    public static bool operator ==(VisibleRowRange left, VisibleRowRange right) => left.Equals(right);
-    public static bool operator !=(VisibleRowRange left, VisibleRowRange right) => !left.Equals(right);
+    IEnumerator<int> IEnumerable<int>.GetEnumerator()
+    {
+        return Enumerable.Range(FromIndex, Count).GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    bool IEquatable<VisibleRowRange>.Equals(VisibleRowRange other)
+    {
+        return FromIndex == other.FromIndex && Count == other.Count;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is VisibleRowRange range && Equals(range);
+    }
+
+    public override int GetHashCode()
+    {
+        return unchecked((FromIndex * 397) ^ Count);
+    }
+
+    public override string ToString()
+    {
+        return $"[{FromIndex}, {FromIndex + Count - 1}] {Count} row{(Count == 1 ? "" : "s")}";
+    }
+
+    public static bool operator ==(VisibleRowRange left, VisibleRowRange right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(VisibleRowRange left, VisibleRowRange right)
+    {
+        return !left.Equals(right);
+    }
 }

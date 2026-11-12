@@ -7,14 +7,15 @@ using GitExtensions.Extensibility.Git;
 using NSubstitute;
 
 namespace GitCommandsTests;
+
 public class CommitTemplateManagerTests
 {
+    private readonly FileBase _file = null!;
+    private readonly IFileSystem _fileSystem = null!;
+    private readonly IFullPathResolver _fullPathResolver = null!;
+    private readonly CommitTemplateManager _manager = null!;
+    private readonly IGitModule _module = null!;
     private readonly string _workingDir = @"c:\dev\repo";
-    private IGitModule _module = null!;
-    private FileBase _file = null!;
-    private IFileSystem _fileSystem = null!;
-    private IFullPathResolver _fullPathResolver = null!;
-    private CommitTemplateManager _manager = null!;
 
     public CommitTemplateManagerTests()
     {
@@ -54,7 +55,7 @@ public class CommitTemplateManagerTests
     public void LoadGitCommitTemplate_should_load_file_content()
     {
         const string relativePath = "./template.txt";
-        string fullPath = Path.GetFullPath(Path.Combine(_workingDir, relativePath));
+        var fullPath = Path.GetFullPath(Path.Combine(_workingDir, relativePath));
 
         _module.WorkingDir.Returns(_workingDir);
         _fullPathResolver.Resolve(relativePath).Returns(fullPath);
@@ -62,7 +63,7 @@ public class CommitTemplateManagerTests
         _file.Exists(fullPath).Returns(true);
         _file.ReadAllText(fullPath).Returns("line1");
 
-        string? content = _manager.LoadGitCommitTemplate();
+        var content = _manager.LoadGitCommitTemplate();
 
         content.Should().NotBeEmpty();
     }
@@ -71,7 +72,7 @@ public class CommitTemplateManagerTests
     public void Register_should_not_add_duplicates()
     {
         const string templateName = "template1";
-        int count = _manager.RegisteredTemplates.Count();
+        var count = _manager.RegisteredTemplates.Count();
         _manager.Register(templateName, () => "text1", null);
         _manager.Register(templateName, () => "text2", null);
         _manager.RegisteredTemplates.Should().HaveCount(count + 1);
@@ -82,8 +83,8 @@ public class CommitTemplateManagerTests
     {
         _manager.Register("template1", () => "text1", null);
         _manager.Register("template2", () => "text2", null);
-        int i = _manager.RegisteredTemplates.Count() + 1;
-        foreach (CommitTemplateItem managerRegisteredTemplate in _manager.RegisteredTemplates)
+        var i = _manager.RegisteredTemplates.Count() + 1;
+        foreach (var managerRegisteredTemplate in _manager.RegisteredTemplates)
         {
             _manager.Unregister(managerRegisteredTemplate.Name);
             _manager.Register($"template{i}", () => "text", null);
@@ -95,7 +96,7 @@ public class CommitTemplateManagerTests
     public void RegisteredTemplates_should_be_immutable()
     {
         _manager.Register("template1", () => "text1", null);
-        int expectedCount = _manager.RegisteredTemplates.Count();
+        var expectedCount = _manager.RegisteredTemplates.Count();
         expectedCount.Should().BeGreaterThan(0);
         ((IList)_manager.RegisteredTemplates).Clear();
         _manager.RegisteredTemplates.Should().HaveCount(expectedCount);
@@ -104,7 +105,7 @@ public class CommitTemplateManagerTests
     [Fact]
     public void RegisteredTemplates_should_be_store_IsRegex()
     {
-        int count = _manager.RegisteredTemplates.Count();
+        var count = _manager.RegisteredTemplates.Count();
         _manager.Register("regexTest", () => "text1", icon: null, isRegex: true);
         _manager.RegisteredTemplates.ElementAt(count).IsRegex.Should().BeTrue();
     }
@@ -112,7 +113,7 @@ public class CommitTemplateManagerTests
     [Fact]
     public void RegisteredTemplates_default_IsRegex_should_be_False()
     {
-        int count = _manager.RegisteredTemplates.Count();
+        var count = _manager.RegisteredTemplates.Count();
         _manager.Register("regexTest2", () => "text1", icon: null);
         _manager.RegisteredTemplates.ElementAt(count).IsRegex.Should().BeFalse();
     }
@@ -130,7 +131,7 @@ public class CommitTemplateManagerTests
             helper.Module.SetSetting("commit.template", "template.txt");
             helper.CreateRepoFile("template.txt", content);
 
-            string? body = manager.LoadGitCommitTemplate();
+            var body = manager.LoadGitCommitTemplate();
 
             body.Should().Be(content);
         }

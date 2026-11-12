@@ -1,33 +1,26 @@
 ﻿using System.Net;
 using System.Text.Json;
 using GitExtensions.Plugins.GitlabIntegration.ApiClient.Models;
-using Microsoft;
 
 namespace GitExtensions.Plugins.GitlabIntegration.ApiClient;
 
-public abstract class GitlabApiClientBase : IDisposable
+public abstract class GitlabApiClientBase(string instanceUrl, string apiToken) : IDisposable
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _httpClient = InitClient(instanceUrl, apiToken);
 
-    protected GitlabApiClientBase(string instanceUrl, string apiToken)
+    public string InstanceUrl { get; } = instanceUrl;
+
+    void IDisposable.Dispose()
     {
-        InstanceUrl = instanceUrl;
-        _httpClient = InitClient(instanceUrl, apiToken);
+        _httpClient.Dispose();
+        GC.SuppressFinalize(this);
     }
-
-    public string InstanceUrl { get; }
 
     private static HttpClient InitClient(string instanceUrl, string apiToken)
     {
-        HttpClient? client = new()
-        {
-            BaseAddress = new Uri(instanceUrl, UriKind.RelativeOrAbsolute)
-        };
+        HttpClient? client = new() { BaseAddress = new Uri(instanceUrl, UriKind.RelativeOrAbsolute) };
         client.DefaultRequestHeaders.Add("PRIVATE-TOKEN", apiToken);
 
         return client;
@@ -35,7 +28,7 @@ public abstract class GitlabApiClientBase : IDisposable
 
     private async Task<HttpResponseMessage> HttpGetAsync(Uri url, CancellationToken cancellationToken)
     {
-        HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
+        var response = await _httpClient.GetAsync(url, cancellationToken);
         switch (response.StatusCode)
         {
             case HttpStatusCode.Unauthorized:
@@ -49,9 +42,9 @@ public abstract class GitlabApiClientBase : IDisposable
 
     private static int? GetIntHeader(HttpResponseMessage response, string key)
     {
-        if (response.Headers.TryGetValues(key, out IEnumerable<string>? values))
+        if (response.Headers.TryGetValues(key, out var values))
         {
-            if (int.TryParse(values.First(), out int result))
+            if (int.TryParse(values.First(), out var result))
             {
                 return result;
             }
@@ -62,12 +55,12 @@ public abstract class GitlabApiClientBase : IDisposable
 
     protected async Task<PagedResponse<TItem>> LoadListAsync<TItem>(Uri url, CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await HttpGetAsync(url, cancellationToken);
+        using var response = await HttpGetAsync(url, cancellationToken);
         Validates.NotNull(response);
 
-        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        IEnumerable<TItem>? list = JsonSerializer.Deserialize<IEnumerable<TItem>>(json, _jsonOptions);
+        var list = JsonSerializer.Deserialize<IEnumerable<TItem>>(json, _jsonOptions);
 
         PagedResponse<TItem> result = new()
         {
@@ -84,19 +77,13 @@ public abstract class GitlabApiClientBase : IDisposable
 
     protected async Task<TItem?> LoadItemAsync<TItem>(Uri url)
     {
-        using HttpResponseMessage response = await HttpGetAsync(url, CancellationToken.None);
+        using var response = await HttpGetAsync(url, CancellationToken.None);
         Validates.NotNull(response);
 
-        string json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync();
 
-        TItem? item = JsonSerializer.Deserialize<TItem>(json, _jsonOptions);
+        var item = JsonSerializer.Deserialize<TItem>(json, _jsonOptions);
 
         return item;
-    }
-
-    public void Dispose()
-    {
-        _httpClient.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

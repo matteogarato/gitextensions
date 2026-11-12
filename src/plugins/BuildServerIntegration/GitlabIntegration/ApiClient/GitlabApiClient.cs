@@ -6,25 +6,22 @@ namespace GitExtensions.Plugins.GitlabIntegration.ApiClient;
 
 public interface IGitlabApiClient : IDisposable
 {
-    Task<PagedResponse<GitlabPipeline>> GetPipelinesAsync(DateTime? sinceDate, bool running, int pageNumber, CancellationToken cancellationToken);
     string InstanceUrl { get; }
+
+    Task<PagedResponse<GitlabPipeline>> GetPipelinesAsync(DateTime? sinceDate, bool running, int pageNumber,
+        CancellationToken cancellationToken);
 }
 
-public class GitlabApiClient : GitlabApiClientBase, IGitlabApiClient
+public class GitlabApiClient(string instanceUrl, string apiToken, int projectId = 0)
+    : GitlabApiClientBase(instanceUrl, apiToken), IGitlabApiClient
 {
     private const int _pageSize = 100;
-    private readonly int _projectId;
 
-    public GitlabApiClient(string instanceUrl, string apiToken, int projectId = 0)
-        : base(instanceUrl, apiToken)
+    async Task<PagedResponse<GitlabPipeline>> IGitlabApiClient.GetPipelinesAsync(DateTime? sinceDate, bool running,
+        int pageNumber, CancellationToken cancellationToken)
     {
-        _projectId = projectId;
-    }
-
-    public async Task<PagedResponse<GitlabPipeline>> GetPipelinesAsync(DateTime? sinceDate, bool running, int pageNumber, CancellationToken cancellationToken)
-    {
-        UriBuilder pipelinesUriBuilder = new($"{InstanceUrl}/api/v4/projects/{_projectId}/pipelines");
-        NameValueCollection query = HttpUtility.ParseQueryString(pipelinesUriBuilder.Query);
+        UriBuilder pipelinesUriBuilder = new($"{InstanceUrl}/api/v4/projects/{projectId}/pipelines");
+        var query = HttpUtility.ParseQueryString(pipelinesUriBuilder.Query);
 
         if (sinceDate is not null)
         {
@@ -50,7 +47,8 @@ public class GitlabApiClient : GitlabApiClientBase, IGitlabApiClient
 
     public async Task<GitlabProject?> GetProjectAsync(string projectNamespace, string projectName)
     {
-        UriBuilder projectUriBuilder = new($"{InstanceUrl}/api/v4/projects/{Uri.EscapeDataString($"{projectNamespace}/{projectName}")}");
+        UriBuilder projectUriBuilder =
+            new($"{InstanceUrl}/api/v4/projects/{Uri.EscapeDataString($"{projectNamespace}/{projectName}")}");
 
         return await LoadItemAsync<GitlabProject?>(projectUriBuilder.Uri);
     }

@@ -18,6 +18,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyInformationalVersion("33.33.33")]
 
 // Disable CLS compliance. See https://github.com/gitextensions/gitextensions/issues/4710
-[assembly: CLSCompliant(isCompliant: false)]
+[assembly: CLSCompliant(false)]
 
 [assembly: ComVisible(false)]

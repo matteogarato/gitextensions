@@ -19,12 +19,12 @@ public interface IGitPlugin
 
     IEnumerable<ISetting> GetSettings();
 
-    void Register(IGitUICommands gitUiCommands);
+    void Register(IGitUiCommands gitUiCommands);
 
-    void Unregister(IGitUICommands gitUiCommands);
+    void Unregister(IGitUiCommands gitUiCommands);
 
     /// <summary>
-    /// Runs the plugin and returns whether the RevisionGrid should be refreshed.
+    ///     Runs the plugin and returns whether the RevisionGrid should be refreshed.
     /// </summary>
-    bool Execute(GitUIEventArgs args);
+    bool Execute(GitUiEventArgs args);
 }

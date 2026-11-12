@@ -1,4 +1,4 @@
-namespace JenkinsIntegration.Settings;
+namespace GitExtensions.Plugins.JenkinsIntegration.Settings;
 
 partial class JenkinsSettingsUserControl
 {

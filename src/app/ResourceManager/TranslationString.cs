@@ -6,7 +6,7 @@ namespace ResourceManager;
 [DebuggerDisplay("{" + nameof(Text) + "}")]
 public class TranslationString
 {
-    /// <summary>Creates a new <see cref="TranslationString"/> with the specified <paramref name="text"/>.</summary>
+    /// <summary>Creates a new <see cref="TranslationString" /> with the specified <paramref name="text" />.</summary>
     public TranslationString(string text)
     {
         Text = text;
@@ -17,7 +17,7 @@ public class TranslationString
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
     public string Text { get; private set; }
 
-    /// <summary>Returns <see cref="Text"/> value.</summary>
+    /// <summary>Returns <see cref="Text" /> value.</summary>
     public override string ToString()
     {
         return Text;

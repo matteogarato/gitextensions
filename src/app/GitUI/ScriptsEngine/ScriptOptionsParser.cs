@@ -4,82 +4,53 @@ using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI.UserControls.RevisionGrid;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.ScriptsEngine;
 
 public sealed partial class ScriptOptionsParser
 {
     /// <summary>
-    /// Name of the option which requires the full commit message.
+    ///     Name of the option which requires the full commit message.
     /// </summary>
-    private const string currentMessage = "cMessage";
+    private const string _currentMessage = "cMessage";
 
-    private const string head = "HEAD";
+    private const string _head = "HEAD";
+
+    /// <summary>
+    ///     Gets the list of available script options.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Options = new[]
+    {
+        "sHashes", "sTag", "sBranch", "sLocalBranch", "sRemoteBranch", "sRemoteBranchName", "sRemote", "sRemoteUrl",
+        "sRemotePathFromUrl", "sHash", "sMessage", "sSubject", "sAuthor", "sCommitter", "sAuthorDate",
+        "sCommitDate", _head, "cTag", "cBranch", "cLocalBranch", "cRemoteBranch", "cRemoteBranchName", "cHash",
+        _currentMessage, "cSubject", "cAuthor", "cCommitter", "cAuthorDate", "cCommitDate", "cDefaultRemote",
+        "cDefaultRemoteUrl", "cDefaultRemotePathFromUrl", "RepoName", "WorkingDir"
+    };
 
     [GeneratedRegex(@"(?<!\\)""", RegexOptions.ExplicitCapture)]
     private static partial Regex QuoteRegex { get; }
 
     /// <summary>
-    /// Gets the list of available script options.
-    /// </summary>
-    public static readonly IReadOnlyList<string> Options = new[]
-    {
-        "sHashes",
-        "sTag",
-        "sBranch",
-        "sLocalBranch",
-        "sRemoteBranch",
-        "sRemoteBranchName",
-        "sRemote",
-        "sRemoteUrl",
-        "sRemotePathFromUrl",
-        "sHash",
-        "sMessage",
-        "sSubject",
-        "sAuthor",
-        "sCommitter",
-        "sAuthorDate",
-        "sCommitDate",
-        head,
-        "cTag",
-        "cBranch",
-        "cLocalBranch",
-        "cRemoteBranch",
-        "cRemoteBranchName",
-        "cHash",
-        currentMessage,
-        "cSubject",
-        "cAuthor",
-        "cCommitter",
-        "cAuthorDate",
-        "cCommitDate",
-        "cDefaultRemote",
-        "cDefaultRemoteUrl",
-        "cDefaultRemotePathFromUrl",
-        "RepoName",
-        "WorkingDir"
-    };
-
-    /// <summary>
-    ///  Checks whether <paramref name="arguments"/> contains the supplied <paramref name="option"/>.
+    ///     Checks whether <paramref name="arguments" /> contains the supplied <paramref name="option" />.
     /// </summary>
     /// <param name="arguments">The script argument.</param>
     /// <param name="option">The option.</param>
-    /// <returns><see langword="true"/> if the argument contains the option; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the argument contains the option; otherwise <see langword="false" />.</returns>
     public static bool Contains(string arguments, string option)
     {
         arguments = arguments ?? throw new ArgumentNullException(nameof(arguments));
         option = option ?? throw new ArgumentNullException(nameof(option));
 
-        return arguments.Contains(CreateOption(option, quoted: false));
+        return arguments.Contains(CreateOption(option, false));
     }
 
     /// <summary>
-    ///  Checks whether <paramref name="option"/> starts with "s".
+    ///     Checks whether <paramref name="option" /> starts with "s".
     /// </summary>
     /// <param name="option">The option.</param>
-    /// <returns><see langword="true"/> if the options starts with "s"; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true" /> if the options starts with "s"; otherwise <see langword="false" />.</returns>
     public static bool DependsOnSelectedRevision(string option)
     {
         option = option ?? throw new ArgumentNullException(nameof(option));
@@ -87,7 +58,8 @@ public sealed partial class ScriptOptionsParser
         return option.StartsWith('s');
     }
 
-    public static (string? arguments, bool abort) Parse(string? arguments, IGitUICommands uiCommands, IWin32Window owner, IScriptOptionsProvider scriptOptionsProvider)
+    public static (string? arguments, bool abort) Parse(string? arguments, IGitUiCommands uiCommands,
+        IWin32Window owner, IScriptOptionsProvider scriptOptionsProvider)
     {
         if (string.IsNullOrWhiteSpace(arguments))
         {
@@ -108,21 +80,22 @@ public sealed partial class ScriptOptionsParser
         List<IGitRef> selectedTags = [];
         List<IGitRef> currentLocalBranches = [];
         List<IGitRef> currentRemoteBranches = [];
-        string currentRemote = "";
+        var currentRemote = "";
         List<IGitRef> currentBranches = [];
         List<IGitRef> currentTags = [];
 
-        foreach (string option in GetOptions(Options, scriptOptionsProvider))
+        foreach (var option in GetOptions(Options, scriptOptionsProvider))
         {
             if (!Contains(arguments, option))
             {
                 continue;
             }
 
-            if (currentRevision is null && (option.StartsWith('c') || option == head))
+            if (currentRevision is null && (option.StartsWith('c') || option == _head))
             {
-                currentRevision = GetCurrentRevision(uiCommands.Module, currentTags, currentLocalBranches, currentRemoteBranches, currentBranches,
-                    loadBody: Contains(arguments, currentMessage));
+                currentRevision = GetCurrentRevision(uiCommands.Module, currentTags, currentLocalBranches,
+                    currentRemoteBranches, currentBranches,
+                    Contains(arguments, _currentMessage));
                 if (currentRevision is null)
                 {
                     return (arguments: null, abort: true);
@@ -130,7 +103,8 @@ public sealed partial class ScriptOptionsParser
 
                 if (currentLocalBranches.Count == 1)
                 {
-                    currentRemote = uiCommands.Module.GetSetting(string.Format(SettingKeyString.BranchRemote, currentLocalBranches[0].Name));
+                    currentRemote = uiCommands.Module.GetSetting(string.Format(SettingKeyString.BranchRemote,
+                        currentLocalBranches[0].Name));
                 }
                 else
                 {
@@ -145,14 +119,18 @@ public sealed partial class ScriptOptionsParser
             else if (selectedRevision is null && uiCommands.BrowseRepo is not null && DependsOnSelectedRevision(option))
             {
                 allSelectedRevisions = uiCommands.BrowseRepo.GetSelectedRevisions();
-                selectedRevision = CalculateSelectedRevision(uiCommands, selectedRemoteBranches, selectedRemotes, selectedLocalBranches, selectedBranches, selectedTags);
+                selectedRevision = CalculateSelectedRevision(uiCommands, selectedRemoteBranches, selectedRemotes,
+                    selectedLocalBranches, selectedBranches, selectedTags);
                 if (selectedRevision is null)
                 {
                     return (arguments: null, abort: true);
                 }
             }
 
-            arguments = ParseScriptArguments(arguments, option, owner, scriptOptionsProvider, uiCommands, allSelectedRevisions, selectedTags, selectedBranches, selectedLocalBranches, selectedRemoteBranches, selectedRemotes, selectedRevision!, currentTags, currentBranches, currentLocalBranches, currentRemoteBranches, currentRevision!, currentRemote);
+            arguments = ParseScriptArguments(arguments, option, owner, scriptOptionsProvider, uiCommands,
+                allSelectedRevisions, selectedTags, selectedBranches, selectedLocalBranches, selectedRemoteBranches,
+                selectedRemotes, selectedRevision!, currentTags, currentBranches, currentLocalBranches,
+                currentRemoteBranches, currentRevision!, currentRemote);
             if (arguments is null)
             {
                 return (arguments: null, abort: true);
@@ -161,11 +139,14 @@ public sealed partial class ScriptOptionsParser
 
         return (arguments, abort: false);
 
-        static IEnumerable<string> GetOptions(IReadOnlyList<string> options, IScriptOptionsProvider scriptOptionsProvider)
-            => options.Union(scriptOptionsProvider.Options);
+        static IEnumerable<string> GetOptions(IReadOnlyList<string> options,
+            IScriptOptionsProvider scriptOptionsProvider)
+        {
+            return options.Union(scriptOptionsProvider.Options);
+        }
     }
 
-    private static string AskToSpecify(IEnumerable<IGitRef> options, IGitUICommands uiCommands, IWin32Window owner)
+    private static string AskToSpecify(IEnumerable<IGitRef> options, IGitUiCommands uiCommands, IWin32Window owner)
     {
         List<IGitRef> items = [.. options];
         if (items.Count == 0)
@@ -180,7 +161,7 @@ public sealed partial class ScriptOptionsParser
         return f.SelectedRef?.Name ?? "";
     }
 
-    private static string AskToSpecify(IEnumerable<string> options, IGitUICommands uiCommands, IWin32Window owner)
+    private static string AskToSpecify(IEnumerable<string> options, IGitUiCommands uiCommands, IWin32Window owner)
     {
         using FormQuickStringSelector f = new();
         f.Location = uiCommands.BrowseRepo?.GetQuickItemSelectorLocation() ?? new Point();
@@ -189,17 +170,18 @@ public sealed partial class ScriptOptionsParser
         return f.SelectedString ?? "";
     }
 
-    private static GitRevision? CalculateSelectedRevision(IGitUICommands uiCommands, List<IGitRef> selectedRemoteBranches,
+    private static GitRevision? CalculateSelectedRevision(IGitUiCommands uiCommands,
+        List<IGitRef> selectedRemoteBranches,
         List<string> selectedRemotes, List<IGitRef> selectedLocalBranches,
         List<IGitRef> selectedBranches, List<IGitRef> selectedTags)
     {
-        GitRevision? selectedRevision = uiCommands.BrowseRepo?.GetLatestSelectedRevision();
+        var selectedRevision = uiCommands.BrowseRepo?.GetLatestSelectedRevision();
         if (selectedRevision is null)
         {
             return null;
         }
 
-        foreach (IGitRef head in selectedRevision.Refs)
+        foreach (var head in selectedRevision.Refs)
         {
             if (head.IsTag)
             {
@@ -233,7 +215,7 @@ public sealed partial class ScriptOptionsParser
             return string.Empty;
         }
 
-        string result = "{" + option.Trim() + "}";
+        var result = "{" + option.Trim() + "}";
 
         if (quoted)
         {
@@ -252,7 +234,7 @@ public sealed partial class ScriptOptionsParser
         currentRevision = module.GetRevision(shortFormat: !loadBody, loadRefs: true);
         refs = currentRevision?.Refs ?? [];
 
-        foreach (IGitRef gitRef in refs)
+        foreach (var gitRef in refs)
         {
             if (gitRef.IsTag)
             {
@@ -277,7 +259,7 @@ public sealed partial class ScriptOptionsParser
 
     private static string GetRemotePath(string url)
     {
-        if (Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) ||
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             Uri.TryCreate("ssh://" + url.Replace(":", "/"), UriKind.Absolute, out uri))
         {
             return uri.LocalPath.SubstringUntilLast('.');
@@ -287,7 +269,8 @@ public sealed partial class ScriptOptionsParser
     }
 
     private static string? ParseScriptArguments(string arguments, string option, IWin32Window owner,
-        IScriptOptionsProvider scriptOptionsProvider, IGitUICommands uiCommands, IReadOnlyList<GitRevision> allSelectedRevisions,
+        IScriptOptionsProvider scriptOptionsProvider, IGitUiCommands uiCommands,
+        IReadOnlyList<GitRevision> allSelectedRevisions,
         in IList<IGitRef> selectedTags, in IList<IGitRef> selectedBranches, in IList<IGitRef> selectedLocalBranches,
         in IList<IGitRef> selectedRemoteBranches, in IList<string> selectedRemotes, GitRevision selectedRevision,
         in IList<IGitRef> currentTags, in IList<IGitRef> currentBranches, in IList<IGitRef> currentLocalBranches,
@@ -380,8 +363,8 @@ public sealed partial class ScriptOptionsParser
                 newString = SelectOneRef(currentTags);
                 break;
 
-            case head:
-                newString = uiCommands.Module.GetSelectedBranch(emptyIfDetached: true);
+            case _head:
+                newString = uiCommands.Module.GetSelectedBranch(true);
                 if (string.IsNullOrEmpty(newString))
                 {
                     newString = currentRevision.Guid;
@@ -471,7 +454,8 @@ public sealed partial class ScriptOptionsParser
                 break;
 
             case "RepoName":
-                newString = uiCommands.GetRequiredService<IRepositoryDescriptionProvider>().Get(uiCommands.Module.WorkingDir);
+                newString = uiCommands.GetRequiredService<IRepositoryDescriptionProvider>()
+                    .Get(uiCommands.Module.WorkingDir);
                 break;
 
             case "WorkingDir":
@@ -494,22 +478,31 @@ public sealed partial class ScriptOptionsParser
 
         return ReplaceOption(option, arguments, [.. newStrings]);
 
-        static string? EscapeLinefeeds(string? multiLine) => multiLine?.Replace("\n", "\\n");
+        static string? EscapeLinefeeds(string? multiLine)
+        {
+            return multiLine?.Replace("\n", "\\n");
+        }
 
-        string SelectOneRef(IList<IGitRef> refs) => SelectOne(refs, uiCommands, owner);
+        string SelectOneRef(IList<IGitRef> refs)
+        {
+            return SelectOne(refs, uiCommands, owner);
+        }
 
-        string SelectOneString(IList<string> strings) => SelectOne(strings, uiCommands, owner);
+        string SelectOneString(IList<string> strings)
+        {
+            return SelectOne(strings, uiCommands, owner);
+        }
     }
 
     internal static string ReplaceOption(string option, string arguments, string[] newStrings)
     {
         return arguments
-            .Replace(CreateOption(option, quoted: true), string.Join(' ', newStrings.Select(value => Quote(value))))
-            .Replace(CreateOption(option, quoted: false), string.Join(' ', newStrings));
+            .Replace(CreateOption(option, true), string.Join(' ', newStrings.Select(value => Quote(value))))
+            .Replace(CreateOption(option, false), string.Join(' ', newStrings));
 
         static string Quote(string newString)
         {
-            string newStringQuoted = QuoteRegex.Replace(newString, "\\\"");
+            var newStringQuoted = QuoteRegex.Replace(newString, "\\\"");
             newStringQuoted = '"' + newStringQuoted;
             if (newStringQuoted.EndsWith('\\'))
             {
@@ -521,7 +514,7 @@ public sealed partial class ScriptOptionsParser
         }
     }
 
-    private static string SelectOne(IList<IGitRef> refs, IGitUICommands uiCommands, IWin32Window owner)
+    private static string SelectOne(IList<IGitRef> refs, IGitUiCommands uiCommands, IWin32Window owner)
     {
         return refs.Count switch
         {
@@ -531,7 +524,7 @@ public sealed partial class ScriptOptionsParser
         };
     }
 
-    private static string SelectOne(IList<string> strings, IGitUICommands uiCommands, IWin32Window owner)
+    private static string SelectOne(IList<string> strings, IGitUiCommands uiCommands, IWin32Window owner)
     {
         return strings.Count switch
         {
@@ -548,7 +541,7 @@ public sealed partial class ScriptOptionsParser
             return string.Empty;
         }
 
-        int firstSlashIndex = remoteBranchName.IndexOf('/');
+        var firstSlashIndex = remoteBranchName.IndexOf('/');
         if (firstSlashIndex >= 0)
         {
             return remoteBranchName[(firstSlashIndex + 1)..];
@@ -557,24 +550,42 @@ public sealed partial class ScriptOptionsParser
         return remoteBranchName;
     }
 
-    internal static TestAccessor GetTestAccessor() => new();
+    internal static TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor();
+    }
 
     internal readonly struct TestAccessor
     {
         public string CreateOption(string option, bool quoted)
-            => ScriptOptionsParser.CreateOption(option, quoted);
+        {
+            return ScriptOptionsParser.CreateOption(option, quoted);
+        }
 
         public GitRevision? GetCurrentRevision(IGitModule module, List<IGitRef> currentTags,
-            List<IGitRef> currentLocalBranches, List<IGitRef> currentRemoteBranches, List<IGitRef> currentBranches, bool loadBody)
-            => ScriptOptionsParser.GetCurrentRevision(module, currentTags, currentLocalBranches, currentRemoteBranches, currentBranches, loadBody);
+            List<IGitRef> currentLocalBranches, List<IGitRef> currentRemoteBranches, List<IGitRef> currentBranches,
+            bool loadBody)
+        {
+            return ScriptOptionsParser.GetCurrentRevision(module, currentTags, currentLocalBranches,
+                currentRemoteBranches, currentBranches, loadBody);
+        }
 
-        public string? ParseScriptArguments(string arguments, string option, IWin32Window owner, IScriptOptionsProvider scriptOptionsProvider,
-            IGitUICommands uiCommands, IReadOnlyList<GitRevision> allSelectedRevisions, List<IGitRef> selectedTags, List<IGitRef> selectedBranches,
-            List<IGitRef> selectedLocalBranches, List<IGitRef> selectedRemoteBranches, List<string> selectedRemotes, GitRevision selectedRevision,
-            List<IGitRef> currentTags, List<IGitRef> currentBranches, List<IGitRef> currentLocalBranches, List<IGitRef> currentRemoteBranches,
+        public string? ParseScriptArguments(string arguments, string option, IWin32Window owner,
+            IScriptOptionsProvider scriptOptionsProvider,
+            IGitUiCommands uiCommands, IReadOnlyList<GitRevision> allSelectedRevisions, List<IGitRef> selectedTags,
+            List<IGitRef> selectedBranches,
+            List<IGitRef> selectedLocalBranches, List<IGitRef> selectedRemoteBranches, List<string> selectedRemotes,
+            GitRevision selectedRevision,
+            List<IGitRef> currentTags, List<IGitRef> currentBranches, List<IGitRef> currentLocalBranches,
+            List<IGitRef> currentRemoteBranches,
             GitRevision currentRevision, string currentRemote)
-            => ScriptOptionsParser.ParseScriptArguments(arguments, option, owner, scriptOptionsProvider, uiCommands, allSelectedRevisions,
-                selectedTags, selectedBranches, selectedLocalBranches, selectedRemoteBranches, selectedRemotes, selectedRevision,
-                currentTags, currentBranches, currentLocalBranches, currentRemoteBranches, currentRevision, currentRemote);
+        {
+            return ScriptOptionsParser.ParseScriptArguments(arguments, option, owner, scriptOptionsProvider, uiCommands,
+                allSelectedRevisions,
+                selectedTags, selectedBranches, selectedLocalBranches, selectedRemoteBranches, selectedRemotes,
+                selectedRevision,
+                currentTags, currentBranches, currentLocalBranches, currentRemoteBranches, currentRevision,
+                currentRemote);
+        }
     }
 }

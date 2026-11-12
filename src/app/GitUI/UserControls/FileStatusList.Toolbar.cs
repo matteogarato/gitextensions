@@ -1,24 +1,28 @@
 ﻿using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Properties;
-using GitUIPluginInterfaces;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusList
 {
-    private readonly Image _treeImage = Images.FileTree;
     private readonly Image _flatListImage = Images.DocumentTree.AdaptLightness();
+    private readonly Image _treeImage = Images.FileTree;
 
     private string? _findUsingOptionsPrefix;
 
     // order in AppSettings.FileStatusFindInFilesGitGrepTypeIndex
-    private ToolStripMenuItem[] FindUsingMenuItems => field ??= [tsmiFindUsingDialog, tsmiFindUsingInputBox, tsmiFindUsingBoth];
+    private ToolStripMenuItem[] FindUsingMenuItems
+    {
+        get => field ??= [tsmiFindUsingDialog, tsmiFindUsingInputBox, tsmiFindUsingBoth];
+    }
 
     private void ApplyGroupBy()
     {
-        bool flatList = btnAsTree.Image == _flatListImage;
+        var flatList = btnAsTree.Image == _flatListImage;
         DiffListSortService.Instance.DiffListSorting =
             btnByPath.Checked ? flatList ? DiffListSortType.FilePathFlat : DiffListSortType.FilePath
             : btnByExtension.Checked ? flatList ? DiffListSortType.FileExtensionFlat : DiffListSortType.FileExtension
@@ -34,7 +38,7 @@ partial class FileStatusList
 
     private void CollapseGroups_Click(object sender, EventArgs e)
     {
-        bool collapsed = false;
+        var collapsed = false;
 
         if (_showDiffGroups)
         {
@@ -43,7 +47,7 @@ partial class FileStatusList
                 collapsed |= CollapseGroupByGroups(diffGroup.Nodes);
                 if (diffGroup.IsExpanded)
                 {
-                    diffGroup.Collapse(ignoreChildren: true);
+                    diffGroup.Collapse(true);
                     collapsed = true;
                 }
             }
@@ -55,7 +59,7 @@ partial class FileStatusList
 
         if (collapsed)
         {
-            TreeNode? focusedNode = FileStatusListView.FocusedNode;
+            var focusedNode = FileStatusListView.FocusedNode;
             while (focusedNode?.Parent is not null)
             {
                 focusedNode = focusedNode.Parent;
@@ -72,13 +76,13 @@ partial class FileStatusList
 
         static bool CollapseGroupByGroups(TreeNodeCollection nodes)
         {
-            bool collapsed = false;
+            var collapsed = false;
 
             foreach (TreeNode group in nodes)
             {
                 if (group.IsExpanded && group.Tag is GroupKey)
                 {
-                    group.Collapse(ignoreChildren: true);
+                    group.Collapse(true);
                     collapsed = true;
                 }
             }
@@ -90,18 +94,18 @@ partial class FileStatusList
     private void DenseTree_Click(object sender, EventArgs e)
     {
         AppSettings.FileStatusMergeSingleItemWithFolder.Value = tsmiDenseTree.Checked;
-        UpdateFileStatusListView(GitItemStatusesWithDescription, updateCausedByFilter: true);
+        UpdateFileStatusListView(GitItemStatusesWithDescription, true);
     }
 
     private void EditGitIgnore_Click(object sender, EventArgs e)
     {
-        UICommands.StartEditGitIgnoreDialog(this, localExcludes: false);
+        UiCommands.StartEditGitIgnoreDialog(this, false);
         RequestRefresh();
     }
 
     private void EditLocallyIgnoredFiles_Click(object sender, EventArgs e)
     {
-        UICommands.StartEditGitIgnoreDialog(this, localExcludes: true);
+        UiCommands.StartEditGitIgnoreDialog(this, true);
         RequestRefresh();
     }
 
@@ -112,12 +116,13 @@ partial class FileStatusList
 
     private void FindInFilesGitGrep_ButtonClick(object sender, EventArgs e)
     {
-        bool usingInputBox = !tsmiFindUsingDialog.Checked;
-        bool usingDialog = !tsmiFindUsingInputBox.Checked;
-        bool isVisible = (!usingInputBox || cboFindInCommitFilesGitGrep.Visible) && (!usingDialog || _formFindInCommitFilesGitGrep?.Visible is true);
-        bool setVisible = sender != btnFindInFilesGitGrep || !isVisible;
+        var usingInputBox = !tsmiFindUsingDialog.Checked;
+        var usingDialog = !tsmiFindUsingInputBox.Checked;
+        var isVisible = (!usingInputBox || cboFindInCommitFilesGitGrep.Visible) &&
+                        (!usingDialog || _formFindInCommitFilesGitGrep?.Visible is true);
+        var setVisible = sender != btnFindInFilesGitGrep || !isVisible;
 
-        bool inputBoxVisible = setVisible && usingInputBox;
+        var inputBoxVisible = setVisible && usingInputBox;
         AppSettings.ShowFindInCommitFilesGitGrep.Value = inputBoxVisible;
         SetFindInCommitFilesGitGrepVisibility(inputBoxVisible);
         if (!inputBoxVisible)
@@ -127,7 +132,7 @@ partial class FileStatusList
 
         if (setVisible && usingDialog)
         {
-            ShowFindInCommitFileGitGrepDialog(text: "");
+            ShowFindInCommitFileGitGrepDialog("");
         }
         else
         {
@@ -160,7 +165,7 @@ partial class FileStatusList
             AppSettings.FileStatusFindInFilesGitGrepTypeIndex.Value = Array.IndexOf(FindUsingMenuItems, item);
         }
 
-        foreach (ToolStripMenuItem menuItem in FindUsingMenuItems)
+        foreach (var menuItem in FindUsingMenuItems)
         {
             menuItem.Checked = sender == menuItem;
         }
@@ -223,11 +228,12 @@ partial class FileStatusList
     private void ShowDiffForAllParents_Click(object sender, EventArgs e)
     {
         AppSettings.ShowDiffForAllParents = tsmiShowDiffForAllParents.Checked;
-        CancellationToken cancellationToken = _reloadSequence.Next();
+        var cancellationToken = _reloadSequence.Next();
         FileStatusListLoading();
         ThreadHelper.FileAndForget(async () =>
         {
-            IReadOnlyList<FileStatusWithDescription> gitItemStatusesWithDescription = _diffCalculator.Calculate(prevList: GitItemStatusesWithDescription, refreshDiff: true, refreshGrep: false, cancellationToken);
+            var gitItemStatusesWithDescription =
+                _diffCalculator.Calculate(GitItemStatusesWithDescription, true, false, cancellationToken);
 
             await this.SwitchToMainThreadAsync(cancellationToken);
             UpdateFileStatusListView(gitItemStatusesWithDescription, cancellationToken: cancellationToken);
@@ -237,7 +243,7 @@ partial class FileStatusList
     private void ShowGroupNodesInFlatList_Click(object sender, EventArgs e)
     {
         AppSettings.FileStatusShowGroupNodesInFlatList.Value = tsmiShowGroupNodesInFlatList.Checked;
-        UpdateFileStatusListView(GitItemStatusesWithDescription, updateCausedByFilter: true);
+        UpdateFileStatusListView(GitItemStatusesWithDescription, true);
     }
 
     private void ShowIgnoredFiles_Click(object sender, EventArgs e)
@@ -257,16 +263,17 @@ partial class FileStatusList
 
     private void UpdateToolbar()
     {
-        bool hasGroups = CanUseFindInCommitFilesGitGrep || (FileStatusListView.Nodes.Count > 0 && FileStatusListView.Nodes[0].Tag is GitRevision);
+        var hasGroups = CanUseFindInCommitFilesGitGrep ||
+                        (FileStatusListView.Nodes.Count > 0 && FileStatusListView.Nodes[0].Tag is GitRevision);
         btnCollapseGroups.Visible = hasGroups;
         sepRefresh.Visible = hasGroups && btnRefresh.Visible;
         sepAsTree.Visible = hasGroups || btnRefresh.Visible;
 
-        DiffListSortType sortType = DiffListSortService.Instance.DiffListSorting;
+        var sortType = DiffListSortService.Instance.DiffListSorting;
         btnByPath.Checked = sortType is DiffListSortType.FilePath or DiffListSortType.FilePathFlat;
         btnByExtension.Checked = sortType is DiffListSortType.FileExtension or DiffListSortType.FileExtensionFlat;
         btnByStatus.Checked = sortType is DiffListSortType.FileStatus or DiffListSortType.FileStatusFlat;
-        bool flatList = sortType.ToString().EndsWith("Flat");
+        var flatList = sortType.ToString().EndsWith("Flat");
         btnAsTree.Image = flatList ? _flatListImage : _treeImage;
         tsmiGroupByFilePathTree.Checked = sortType == DiffListSortType.FilePath;
         tsmiGroupByFilePathFlat.Checked = sortType == DiffListSortType.FilePathFlat;
@@ -280,35 +287,38 @@ partial class FileStatusList
         tsmiShowGroupNodesInFlatList.Checked = AppSettings.FileStatusShowGroupNodesInFlatList.Value;
         tsmiShowGroupNodesInFlatList.Enabled = _groupBy is not null && flatList;
 
-        bool filterByDiffStatus = HasDiffABGroups();
+        var filterByDiffStatus = HasDiffAbGroups();
         btnUnequalChange.Visible = filterByDiffStatus;
         btnOnlyB.Visible = filterByDiffStatus;
         btnOnlyA.Visible = filterByDiffStatus;
         btnSameChange.Visible = filterByDiffStatus;
         sepFilter.Visible = filterByDiffStatus;
 
-        bool findInFilesGitGrepVisible = CanUseFindInCommitFilesGitGrep;
+        var findInFilesGitGrepVisible = CanUseFindInCommitFilesGitGrep;
         btnFindInFilesGitGrep.Visible = findInFilesGitGrepVisible;
         sepOptions.Visible = findInFilesGitGrepVisible;
 
-        for (int itemIndex = 0; itemIndex < FindUsingMenuItems.Length; ++itemIndex)
+        for (var itemIndex = 0; itemIndex < FindUsingMenuItems.Length; ++itemIndex)
         {
-            FindUsingMenuItems[itemIndex].Checked = AppSettings.FileStatusFindInFilesGitGrepTypeIndex.Value == itemIndex;
+            FindUsingMenuItems[itemIndex].Checked =
+                AppSettings.FileStatusFindInFilesGitGrepTypeIndex.Value == itemIndex;
         }
 
         if (tsmiToolbar.DropDown.Items.Count == 0)
         {
-            for (int itemIndex = 0; itemIndex < Toolbar.Items.Count; ++itemIndex)
+            for (var itemIndex = 0; itemIndex < Toolbar.Items.Count; ++itemIndex)
             {
-                ToolStripItem toolbarItem = Toolbar.Items[itemIndex];
-                string settingsKey = $"{nameof(FileStatusList)}.{nameof(Toolbar)}.Visibility.{toolbarItem.Name}";
+                var toolbarItem = Toolbar.Items[itemIndex];
+                var settingsKey = $"{nameof(FileStatusList)}.{nameof(Toolbar)}.Visibility.{toolbarItem.Name}";
                 ToolStripMenuItem menuItem = new()
                 {
                     CheckOnClick = true,
-                    Checked = AppSettings.GetBool(settingsKey, defaultValue: true),
+                    Checked = AppSettings.GetBool(settingsKey, true),
                     Enabled = toolbarItem != btnSettings,
                     Image = toolbarItem.Image,
-                    Text = toolbarItem is ToolStripSeparator ? $"Separator '{Toolbar.Items[itemIndex + 1].ToolTipText}'" : toolbarItem.ToolTipText,
+                    Text = toolbarItem is ToolStripSeparator
+                        ? $"Separator '{Toolbar.Items[itemIndex + 1].ToolTipText}'"
+                        : toolbarItem.ToolTipText
                 };
                 menuItem.Click += (s, e) =>
                 {
@@ -320,9 +330,9 @@ partial class FileStatusList
             }
         }
 
-        for (int itemIndex = 0; itemIndex < Toolbar.Items.Count; ++itemIndex)
+        for (var itemIndex = 0; itemIndex < Toolbar.Items.Count; ++itemIndex)
         {
-            ToolStripMenuItem menuItem = (ToolStripMenuItem)tsmiToolbar.DropDown.Items[itemIndex];
+            var menuItem = (ToolStripMenuItem)tsmiToolbar.DropDown.Items[itemIndex];
             if (!menuItem.Checked)
             {
                 Toolbar.Items[itemIndex].Visible = false;
@@ -331,9 +341,9 @@ partial class FileStatusList
 
         return;
 
-        bool HasDiffABGroups()
+        bool HasDiffAbGroups()
         {
-            foreach (FileStatusWithDescription diffGroup in GitItemStatusesWithDescription)
+            foreach (var diffGroup in GitItemStatusesWithDescription)
             {
                 if (diffGroup.IconName is nameof(Images.DiffB) or nameof(Images.DiffA))
                 {
@@ -347,10 +357,10 @@ partial class FileStatusList
 
     private void UpdateToolbar(IReadOnlyList<GitRevision> revisions)
     {
-        bool withArtificial = revisions.Any(revision => revision.IsArtificial);
+        var withArtificial = revisions.Any(revision => revision.IsArtificial);
         btnRefresh.Enabled = withArtificial;
 
-        bool isWorktree = withArtificial && revisions.Any(revision => revision.ObjectId == ObjectId.WorkTreeId);
+        var isWorktree = withArtificial && revisions.Any(revision => revision.ObjectId == ObjectId.WorkTreeId);
         tsmiShowSkipWorktreeFiles.Enabled = isWorktree;
         tsmiShowUntrackedFiles.Enabled = isWorktree;
     }

@@ -9,11 +9,12 @@ public class GitBranchOutputCommandParser
             yield break;
         }
 
-        foreach (string line in commandOutput.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line) && line.Length > 2))
+        foreach (var line in commandOutput.Split('\n')
+                     .Where(line => !string.IsNullOrWhiteSpace(line) && line.Length > 2))
         {
             // Removing first 2 chars: 1st is '*' for current branch or '+' for a worktree branch followed by a space
             // Symbolic refs are listed like "  origin/HEAD -> origin/master" (see also below), just use the branch name.
-            string branchName = line[2..].Trim(' ', '\r').Split(' ')[0];
+            var branchName = line[2..].Trim(' ', '\r').Split(' ')[0];
 
             if (branchName.StartsWith('(') || branchName.Length == 0)
             {
@@ -23,7 +24,7 @@ public class GitBranchOutputCommandParser
             if (isRemote)
             {
                 // Remote HEAD, included from e.g. GitLab as a symbolic link
-                string[] remotes = branchName.Split('/');
+                var remotes = branchName.Split('/');
                 if (remotes.Length == 2 && remotes[1] == "HEAD")
                 {
                     continue;

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI.Theming;
-using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.HighlightingStrategy;
 
 namespace GitUI.Theming;
 
@@ -22,23 +22,26 @@ public static class ThemeModule
 
     private static void UpdateEditorSettings()
     {
-        DefaultHighlightingStrategy strategy = HighlightingManager.Manager.DefaultHighlighting;
+        var strategy = HighlightingManager.Manager.DefaultHighlighting;
         strategy.SetColorFor("Default",
-            new HighlightColor(SystemColors.WindowText, AppColor.EditorBackground.GetThemeColor(), bold: false, italic: false, adaptable: false));
+            new HighlightColor(SystemColors.WindowText, AppColor.EditorBackground.GetThemeColor(), false, false,
+                false));
         strategy.SetColorFor("Selection",
-            new HighlightColor(SystemColors.WindowText, AppColor.Selection.GetThemeColor(), bold: false, italic: false, adaptable: false));
+            new HighlightColor(SystemColors.WindowText, AppColor.Selection.GetThemeColor(), false, false, false));
         strategy.SetColorFor("LineNumbers",
-            new HighlightColor(SystemColors.GrayText, AppColor.LineNumberBackground.GetThemeColor(), bold: false, italic: false, adaptable: false));
+            new HighlightColor(SystemColors.GrayText, AppColor.LineNumberBackground.GetThemeColor(), false, false,
+                false));
         strategy.SetColorFor("LineNumberSelected",
-            new HighlightColor(SystemColors.WindowText, AppColor.LineNumberBackground.GetThemeColor(), bold: true, italic: false, adaptable: false));
+            new HighlightColor(SystemColors.WindowText, AppColor.LineNumberBackground.GetThemeColor(), true, false,
+                false));
         if (Application.IsDarkModeEnabled)
         {
             strategy.SetColorFor("EOLMarkers",
-                new HighlightColor(nameof(SystemColors.ControlDarkDark), bold: false, italic: false));
+                new HighlightColor(nameof(SystemColors.ControlDarkDark), false, false));
             strategy.SetColorFor("SpaceMarkers",
-                new HighlightColor(nameof(SystemColors.ControlDarkDark), bold: false, italic: false));
+                new HighlightColor(nameof(SystemColors.ControlDarkDark), false, false));
             strategy.SetColorFor("TabMarkers",
-                new HighlightColor(nameof(SystemColors.ControlDarkDark), bold: false, italic: false));
+                new HighlightColor(nameof(SystemColors.ControlDarkDark), false, false));
         }
     }
 
@@ -53,11 +56,11 @@ public static class ThemeModule
         {
             // Not good, ColorHelper needs actual InvariantTheme to correctly transform colors.
             MessageBoxes.ShowError(null, $"Failed to load invariant theme: {ex.Message}"
-                    + $"{Environment.NewLine}{Environment.NewLine}See also https://github.com/gitextensions/gitextensions/wiki/Dark-Mode");
+                                         + $"{Environment.NewLine}{Environment.NewLine}See also https://github.com/gitextensions/gitextensions/wiki/Dark-Mode");
             return ThemeSettings.Default;
         }
 
-        ThemeId themeId = AppSettings.ThemeId;
+        var themeId = AppSettings.ThemeId;
         if (string.IsNullOrEmpty(themeId.Name))
         {
             // Migrate from default invariant/light to Windows default color mode
@@ -65,7 +68,7 @@ public static class ThemeModule
             AppSettings.ThemeId = themeId;
         }
 
-        bool systemVisualStyle = AppSettings.UseSystemVisualStyle;
+        var systemVisualStyle = AppSettings.UseSystemVisualStyle;
         if (themeId == ThemeId.WindowsAppColorModeId)
         {
             // fix systemVisualStyle for WindowsAppColorModeId mode (always for DefaultLight)
@@ -74,7 +77,7 @@ public static class ThemeModule
             systemVisualStyle = themeId == ThemeId.DefaultLight;
         }
 
-        string[] variations = AppSettings.ThemeVariations;
+        var variations = AppSettings.ThemeVariations;
         if (themeId == ThemeId.DefaultLight)
         {
             // default/invariant/light theme
@@ -88,9 +91,11 @@ public static class ThemeModule
         }
         catch (ThemeException ex)
         {
-            Trace.WriteLine($"Failed to load {(themeId.IsBuiltin ? "preinstalled" : "user-defined")} theme {themeId.Name}: {ex}");
-            MessageBoxes.ShowError(null, $"Failed to load {(themeId.IsBuiltin ? "preinstalled" : "user-defined")} theme {themeId.Name}: {ex.Message}"
-                    + $"{Environment.NewLine}{Environment.NewLine}See also https://github.com/gitextensions/gitextensions/wiki/Dark-Mode");
+            Trace.WriteLine(
+                $"Failed to load {(themeId.IsBuiltin ? "preinstalled" : "user-defined")} theme {themeId.Name}: {ex}");
+            MessageBoxes.ShowError(null,
+                $"Failed to load {(themeId.IsBuiltin ? "preinstalled" : "user-defined")} theme {themeId.Name}: {ex.Message}"
+                + $"{Environment.NewLine}{Environment.NewLine}See also https://github.com/gitextensions/gitextensions/wiki/Dark-Mode");
             AppSettings.ThemeId = ThemeId.DefaultLight;
             return CreateFallbackSettings(invariantTheme, variations);
         }
@@ -98,12 +103,16 @@ public static class ThemeModule
         return new ThemeSettings(theme, invariantTheme, variations, systemVisualStyle);
     }
 
-    private static ThemeSettings CreateFallbackSettings(Theme invariantTheme, string[] variations) =>
-        new(Theme.CreateDefaultTheme(variations), invariantTheme, variations, useSystemVisualStyle: true);
+    private static ThemeSettings CreateFallbackSettings(Theme invariantTheme, string[] variations)
+    {
+        return new ThemeSettings(Theme.CreateDefaultTheme(variations), invariantTheme, variations, true);
+    }
 
     internal static class TestAccessor
     {
-        public static void ReloadThemeSettings(IThemeRepository repository) =>
+        public static void ReloadThemeSettings(IThemeRepository repository)
+        {
             Settings = LoadThemeSettings(repository);
+        }
     }
 }

@@ -3,8 +3,8 @@
 public sealed class StaticImageAvatarProvider : IAvatarProvider
 {
     private readonly Image _image;
-    private readonly Lock _sizeCacheLock = new();
     private readonly Dictionary<int, Image> _sizeCache = [];
+    private readonly Lock _sizeCacheLock = new();
 
     public StaticImageAvatarProvider(Image image)
     {
@@ -12,10 +12,13 @@ public sealed class StaticImageAvatarProvider : IAvatarProvider
         _sizeCache.Add(_image.Height, image);
     }
 
-    public bool PerformsIo => false;
+    bool IAvatarProvider.PerformsIo
+    {
+        get => false;
+    }
 
     /// <inheritdoc />
-    public Task<Image?> GetAvatarAsync(string email, string? name, int imageSize)
+    Task<Image?> IAvatarProvider.GetAvatarAsync(string email, string? name, int imageSize)
     {
         return Task.FromResult<Image?>(GetCachedResizedImage(imageSize));
     }
@@ -24,7 +27,7 @@ public sealed class StaticImageAvatarProvider : IAvatarProvider
     {
         lock (_sizeCacheLock)
         {
-            if (_sizeCache.TryGetValue(imageSize, out Image? image))
+            if (_sizeCache.TryGetValue(imageSize, out var image))
             {
                 return image;
             }

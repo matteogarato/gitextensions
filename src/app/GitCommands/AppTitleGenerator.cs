@@ -1,41 +1,38 @@
-﻿using GitCommands.UserRepositoryHistory;
+﻿using GitCommands.Settings;
+using GitCommands.UserRepositoryHistory;
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommands;
 
 /// <summary>
-/// Provides the ability to generate application title.
+///     Provides the ability to generate application title.
 /// </summary>
 public interface IAppTitleGenerator
 {
     /// <summary>
-    /// Generates main window title according to given repository.
+    ///     Generates main window title according to given repository.
     /// </summary>
     /// <param name="workingDir">Path to repository.</param>
     /// <param name="isValidWorkingDir">Indicates whether the given path contains a valid repository.</param>
     /// <param name="branchName">Current branch name.</param>
-    /// <param name="defaultBranchName">Default branch name if <paramref name="branchName"/> is null (but not empty).</param>
+    /// <param name="defaultBranchName">Default branch name if <paramref name="branchName" /> is null (but not empty).</param>
     /// <param name="pathName">Current pathfilter.</param>
-    string Generate(string? workingDir = null, bool isValidWorkingDir = false, string? branchName = null, string defaultBranchName = "", string? pathName = null);
+    string Generate(string? workingDir = null, bool isValidWorkingDir = false, string? branchName = null,
+        string defaultBranchName = "", string? pathName = null);
 }
 
 /// <summary>
-/// Generates application title.
+///     Generates application title.
 /// </summary>
-public sealed class AppTitleGenerator : IAppTitleGenerator
+public sealed class AppTitleGenerator(IRepositoryDescriptionProvider descriptionProvider) : IAppTitleGenerator
 {
-    private readonly IRepositoryDescriptionProvider _descriptionProvider;
 #if DEBUG
     private static string? _extraInfo;
 #endif
 
-    public AppTitleGenerator(IRepositoryDescriptionProvider descriptionProvider)
-    {
-        _descriptionProvider = descriptionProvider;
-    }
-
     /// <inheritdoc />
-    public string Generate(string? workingDir = null, bool isValidWorkingDir = false, string? branchName = null, string defaultBranchName = "", string? pathName = null)
+    string IAppTitleGenerator.Generate(string? workingDir = null, bool isValidWorkingDir = false,
+        string? branchName = null, string defaultBranchName = "", string? pathName = null)
     {
         if (string.IsNullOrWhiteSpace(workingDir) || !isValidWorkingDir)
         {
@@ -50,7 +47,7 @@ public sealed class AppTitleGenerator : IAppTitleGenerator
         // Pathname normally have quotes already
         pathName = GetFileName(pathName);
 
-        string description = _descriptionProvider.Get(workingDir);
+        var description = descriptionProvider.Get(workingDir);
 
 #if DEBUG
         return $"{pathName}{description} ({branchName}) - {AppSettings.ApplicationName}{_extraInfo}";
@@ -65,7 +62,7 @@ public sealed class AppTitleGenerator : IAppTitleGenerator
                 return null;
             }
 
-            string filePart = Path.GetFileName(path.Trim('"')).QuoteNE();
+            var filePart = Path.GetFileName(path.Trim('"')).QuoteNe();
             if (string.IsNullOrWhiteSpace(filePart))
             {
                 // No file, just quote the pathFilter
@@ -81,7 +78,7 @@ public sealed class AppTitleGenerator : IAppTitleGenerator
     public static void Initialise(string sha, string buildBranch)
     {
 #if DEBUG
-        if (ObjectId.TryParse(sha, out ObjectId objectId))
+        if (ObjectId.TryParse(sha, out var objectId))
         {
             _extraInfo = $" {objectId.ToShortString()}";
             if (!string.IsNullOrWhiteSpace(buildBranch))

@@ -1,6 +1,7 @@
 ﻿using GitExtUtils.GitUI;
 
 namespace GitExtUtilsTests;
+
 public class ControlTagExtensionTests
 {
     [StaFact]
@@ -20,22 +21,16 @@ public class ControlTagExtensionTests
     [StaFact]
     public void When_tag_field_is_occupied_GetTag_returns_default()
     {
-        using Control control = new()
-        {
-            Tag = new object()
-        };
+        using Control control = new() { Tag = new object() };
 
         control.HasTag<int>().Should().BeFalse();
-        control.GetTag<int>().Should().Be(default(int));
+        control.GetTag<int>().Should().Be(default);
     }
 
     [StaFact]
     public void When_tag_field_is_occupied_SetTag_replaces_existing_tag()
     {
-        using Control control = new()
-        {
-            Tag = new object()
-        };
+        using Control control = new() { Tag = new object() };
 
         control.SetTag(1);
 
@@ -51,7 +46,7 @@ public class ControlTagExtensionTests
         control.SetTag("key", 2f);
 
         control.HasTag<int>("key").Should().BeFalse();
-        control.GetTag<int>("key").Should().Be(default(int));
+        control.GetTag<int>("key").Should().Be(default);
 
         control.HasTag<float>("key").Should().BeTrue();
         control.GetTag<float>("key").Should().Be(2f);

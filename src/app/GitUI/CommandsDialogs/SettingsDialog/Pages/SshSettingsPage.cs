@@ -1,4 +1,5 @@
-﻿using GitCommands;
+﻿using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using GitExtUtils.GitUI.Theming;
 using Microsoft.Win32;
@@ -28,7 +29,7 @@ public partial class SshSettingsPage : SettingsPageWithHeader
         PageantPath.Text = AppSettings.Pageant;
         AutostartPageant.Checked = AppSettings.AutoStartPageant;
 
-        string sshPath = AppSettings.SshPath;
+        var sshPath = AppSettings.SshPath;
         if (string.IsNullOrEmpty(sshPath))
         {
             OpenSSH.Checked = true;
@@ -95,15 +96,15 @@ public partial class SshSettingsPage : SettingsPageWithHeader
 
     private static IEnumerable<string> GetPuttyLocations()
     {
-        string? envVariable = Environment.GetEnvironmentVariable("GITEXT_PUTTY");
+        var envVariable = Environment.GetEnvironmentVariable("GITEXT_PUTTY");
         if (!string.IsNullOrEmpty(envVariable))
         {
             yield return envVariable;
         }
 
-        string? programFiles = Environment.GetEnvironmentVariable("ProgramFiles");
-        string? programFilesX86 = (IntPtr.Size == 8
-            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")))
+        var programFiles = Environment.GetEnvironmentVariable("ProgramFiles");
+        var programFilesX86 = IntPtr.Size == 8
+                              || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432"))
             ? Environment.GetEnvironmentVariable("ProgramFiles(x86)")
             : null;
 
@@ -127,8 +128,8 @@ public partial class SshSettingsPage : SettingsPageWithHeader
 
         // Old(?) uninstaller
         yield return CommonLogic.GetRegistryValue(Registry.LocalMachine,
-                                                    "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\PuTTY_is1",
-                                                    "InstallLocation");
+            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\PuTTY_is1",
+            "InstallLocation");
     }
 
     public bool AutoFindPuttyPaths()
@@ -211,8 +212,8 @@ public partial class SshSettingsPage : SettingsPageWithHeader
     private void PuttyBrowse_Click(object sender, EventArgs e)
     {
         PlinkPath.Text = CommonLogic.SelectFile(".",
-                                    "Plink (plink.exe)|plink.exe|TortoiseGitPLink (tortoisegitplink.exe)|tortoisegitplink.exe|TortoisePlink.exe (tortoiseplink.exe)|tortoiseplink.exe",
-                                    PlinkPath.Text);
+            "Plink (plink.exe)|plink.exe|TortoiseGitPLink (tortoisegitplink.exe)|tortoisegitplink.exe|TortoisePlink.exe (tortoiseplink.exe)|tortoiseplink.exe",
+            PlinkPath.Text);
     }
 
     private void PuttygenBrowse_Click(object sender, EventArgs e)

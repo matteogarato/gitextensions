@@ -9,7 +9,7 @@ public partial class EnvironmentInfo : UserControl
         if (LicenseManager.UsageMode == LicenseUsageMode.Designtime || GitModuleForm.IsUnitTestActive)
         {
             UserEnvironmentInformation.Initialise(
-            "9999999999999999999999999999999999abcdef", true);
+                "9999999999999999999999999999999999abcdef", true);
         }
 
         InitializeComponent();

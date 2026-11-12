@@ -1,9 +1,9 @@
-﻿namespace System;
+﻿namespace GitUI.Interops;
 
 internal static partial class NativeMethods
 {
     [Flags]
-    public enum DTT : int
+    public enum Dtt
     {
         TextColor = 1,
         BorderColor = 1 << 1,
@@ -13,7 +13,7 @@ internal static partial class NativeMethods
         BorderSize = 1 << 5,
         FontProp = 1 << 6,
         ColorProp = 1 << 7,
-        StateID = 1 << 8,
+        StateId = 1 << 8,
         CalcRect = 1 << 9,
         ApplyOverlay = 1 << 10,
         GlowSize = 1 << 11,

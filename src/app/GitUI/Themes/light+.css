@@ -3,5 +3,10 @@
 @import url("invariant.css");
 
 /* Application colors */
-.PanelBackground { color: #f3f3f3; }
-.LineNumberBackground { color: #ebebeb; }
+.PanelBackground {
+    color: #f3f3f3;
+}
+
+.LineNumberBackground {
+    color: #ebebeb;
+}

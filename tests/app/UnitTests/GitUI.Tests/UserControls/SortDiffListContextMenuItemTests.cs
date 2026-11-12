@@ -7,8 +7,8 @@ namespace GitUITests.UserControls;
 [Culture("en-US")]
 public class SortDiffListContextMenuItemTests : IDisposable
 {
-    private SortDiffListContextMenuItem _itemUnderTest = null!;
-    private IDiffListSortService _testingSortService = null!;
+    private readonly SortDiffListContextMenuItem _itemUnderTest = null!;
+    private readonly IDiffListSortService _testingSortService = null!;
 
     public SortDiffListContextMenuItemTests()
     {
@@ -17,7 +17,7 @@ public class SortDiffListContextMenuItemTests : IDisposable
         _itemUnderTest = new SortDiffListContextMenuItem(_testingSortService);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _itemUnderTest.Dispose();
     }
@@ -28,12 +28,18 @@ public class SortDiffListContextMenuItemTests : IDisposable
         _itemUnderTest.HasDropDownItems.Should().BeTrue();
         _itemUnderTest.DropDownItems.Count.Should().Be(6);
 
-        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[0], "File &path - tree", DiffListSortType.FilePath);
-        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[1], "&File path - flat", DiffListSortType.FilePathFlat);
-        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[2], "File &extension - tree", DiffListSortType.FileExtension);
-        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[3], "File e&xtension - flat", DiffListSortType.FileExtensionFlat);
-        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[4], "File &status - tree", DiffListSortType.FileStatus);
-        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[5], "File s&tatus - flat", DiffListSortType.FileStatusFlat);
+        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[0], "File &path - tree",
+            DiffListSortType.FilePath);
+        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[1], "&File path - flat",
+            DiffListSortType.FilePathFlat);
+        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[2], "File &extension - tree",
+            DiffListSortType.FileExtension);
+        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[3], "File e&xtension - flat",
+            DiffListSortType.FileExtensionFlat);
+        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[4], "File &status - tree",
+            DiffListSortType.FileStatus);
+        AssertMenuItemTextAndLinkedSortType(_itemUnderTest.DropDownItems[5], "File s&tatus - flat",
+            DiffListSortType.FileStatusFlat);
     }
 
     [Theory]
@@ -56,7 +62,7 @@ public class SortDiffListContextMenuItemTests : IDisposable
     [Fact]
     public void Clicking_an_item_sets_sort_in_service()
     {
-        foreach (ToolStripMenuItem item in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>())
+        foreach (var item in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>())
         {
             item.PerformClick();
             _testingSortService.Received(1).DiffListSorting = (DiffListSortType)item.Tag!;
@@ -65,16 +71,19 @@ public class SortDiffListContextMenuItemTests : IDisposable
 
     private void AssertOnlyCheckedItemIs(DiffListSortType sortType)
     {
-        ToolStripMenuItem matchingSubItem = _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>().Single(i => i!.Tag!.Equals(sortType));
+        var matchingSubItem =
+            _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>().Single(i => i!.Tag!.Equals(sortType));
         matchingSubItem.Checked.Should().BeTrue();
 
-        foreach (ToolStripMenuItem otherItem in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>().Except(new[] { matchingSubItem }))
+        foreach (var otherItem in _itemUnderTest.DropDownItems.Cast<ToolStripMenuItem>()
+                     .Except(new[] { matchingSubItem }))
         {
             otherItem.Checked.Should().BeFalse();
         }
     }
 
-    private static void AssertMenuItemTextAndLinkedSortType(ToolStripItem menuItem, string expectedText, DiffListSortType expectedSortType)
+    private static void AssertMenuItemTextAndLinkedSortType(ToolStripItem menuItem, string expectedText,
+        DiffListSortType expectedSortType)
     {
         menuItem.Text.Should().Be(expectedText);
         menuItem.Tag.Should().Be(expectedSortType);

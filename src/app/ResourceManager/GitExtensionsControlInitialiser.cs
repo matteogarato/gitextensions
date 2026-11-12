@@ -1,6 +1,6 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
-using GitUI;
+using GitExtUtils.GitUI;
 
 namespace ResourceManager;
 
@@ -37,7 +37,7 @@ internal sealed class GitExtensionsControlInitialiser
     }
 
     /// <summary>
-    /// Indicates whether code is running as part of an IDE designer, such as the WinForms designer.
+    ///     Indicates whether code is running as part of an IDE designer, such as the WinForms designer.
     /// </summary>
     public bool IsDesignMode
     {
@@ -45,8 +45,9 @@ internal sealed class GitExtensionsControlInitialiser
         {
             if (_isDesignMode is null)
             {
-                string processName = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? string.Empty);
-                _isDesignMode = processName.Contains("devenv", StringComparison.OrdinalIgnoreCase) || processName.Contains("designtoolsserver", StringComparison.OrdinalIgnoreCase);
+                var processName = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? string.Empty);
+                _isDesignMode = processName.Contains("devenv", StringComparison.OrdinalIgnoreCase) ||
+                                processName.Contains("designtoolsserver", StringComparison.OrdinalIgnoreCase);
             }
 
             return _isDesignMode.Value;
@@ -75,7 +76,8 @@ internal sealed class GitExtensionsControlInitialiser
     {
         if (!_initialiseCompleteCalled)
         {
-            throw new Exception($"{control?.GetType().Name} must call {nameof(InitializeComplete)} in its constructor, ideally as the final statement.");
+            throw new Exception(
+                $"{control?.GetType().Name} must call {nameof(InitializeComplete)} in its constructor, ideally as the final statement.");
         }
     }
 }

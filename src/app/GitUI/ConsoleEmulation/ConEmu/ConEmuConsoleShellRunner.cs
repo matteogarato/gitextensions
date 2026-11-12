@@ -1,37 +1,39 @@
 using System.Globalization;
-using ConEmu.WinForms;
-using GitCommands;
-using GitUI.ConsoleEmulation;
+using ConEmuWinForms;
+using GitCommands.Settings;
+using GitExtUtils.GitUI;
 using GitUI.Shells;
-using Microsoft;
 
 namespace GitUI.ConsoleEmulation.ConEmu;
 
 /// <summary>
-///  Wraps <see cref="ConEmuControl"/> for the repository browser's terminal tab.
+///     Wraps <see cref="ConEmuControl" /> for the repository browser's terminal tab.
 /// </summary>
-internal sealed class ConEmuConsoleShellRunner(IShellProvider shellProvider, ConsoleEmulatorSettings settings) : IConsoleShellRunner
+internal sealed class ConEmuConsoleShellRunner(IShellProvider shellProvider, ConsoleEmulatorSettings settings)
+    : IConsoleShellRunner
 {
-    private readonly ConEmuControl _conEmu = new()
+    private readonly ConEmuControl _conEmu = new() { Dock = DockStyle.Fill, IsStatusbarVisible = false };
+
+    Control IConsoleShellRunner.Control
     {
-        Dock = DockStyle.Fill,
-        IsStatusbarVisible = false
-    };
+        get => _conEmu;
+    }
 
-    public Control Control => _conEmu;
+    bool IConsoleShellRunner.IsShellRunning
+    {
+        get => _conEmu.IsConsoleEmulatorOpen;
+    }
 
-    public bool IsShellRunning => _conEmu.IsConsoleEmulatorOpen;
-
-    public void ChangeWorkingDirectory(string path)
+    void IConsoleShellRunner.ChangeWorkingDirectory(string path)
     {
         if (_conEmu.RunningSession is not { } session || string.IsNullOrWhiteSpace(path))
         {
             return;
         }
 
-        string? shellType = AppSettings.ConEmuTerminal.Value;
-        IShellDescriptor shell = shellProvider.GetShell(shellType);
-        string command = shell.GetChangeDirCommand(path);
+        var shellType = AppSettings.ConEmuTerminal.Value;
+        var shell = shellProvider.GetShell(shellType);
+        var command = shell.GetChangeDirCommand(path);
         if (string.IsNullOrWhiteSpace(command))
         {
             // Submitting the line without a command to run would execute whatever the user has typed so far
@@ -59,15 +61,18 @@ internal sealed class ConEmuConsoleShellRunner(IShellProvider shellProvider, Con
         // thread pool work item. Fire and forget would therefore allow the Enter above to be executed
         // first, leaving the command in the prompt to be executed later together with whatever the
         // user types next.
-        void WriteInput(string text) => ThreadHelper.JoinableTaskFactory.Run(() => session.WriteInputTextAsync(text));
+        void WriteInput(string text)
+        {
+            ThreadHelper.JoinableTaskFactory.Run(() => session.WriteInputTextAsync(text));
+        }
     }
 
-    public void FocusTerminal()
+    void IConsoleShellRunner.FocusTerminal()
     {
         _conEmu.Focus();
     }
 
-    public void StartShell(string workDir)
+    void IConsoleShellRunner.StartShell(string workDir)
     {
         if (_conEmu.IsConsoleEmulatorOpen)
         {
@@ -77,16 +82,15 @@ internal sealed class ConEmuConsoleShellRunner(IShellProvider shellProvider, Con
 
         ConEmuStartInfo startInfo = new()
         {
-            StartupDirectory = workDir,
-            WhenConsoleProcessExits = WhenConsoleProcessExits.CloseConsoleEmulator
+            StartupDirectory = workDir, WhenConsoleProcessExits = WhenConsoleProcessExits.CloseConsoleEmulator
         };
 
-        string? shellType = AppSettings.ConEmuTerminal.Value;
+        var shellType = AppSettings.ConEmuTerminal.Value;
         startInfo.ConsoleProcessCommandLine = shellProvider.GetShellCommandLine(shellType);
 
         if (!string.IsNullOrEmpty(AppSettings.GitCommandValue))
         {
-            string? dirGit = Path.GetDirectoryName(AppSettings.GitCommandValue);
+            var dirGit = Path.GetDirectoryName(AppSettings.GitCommandValue);
             if (!string.IsNullOrEmpty(dirGit))
             {
                 startInfo.SetEnv("PATH", $"{dirGit};%PATH%");
@@ -107,7 +111,8 @@ internal sealed class ConEmuConsoleShellRunner(IShellProvider shellProvider, Con
         catch (InvalidOperationException)
         {
 #if DEBUG
-            MessageBoxes.ShowError(_conEmu, "ConEmu appears to be missing. Please perform a full rebuild and try again.");
+            MessageBoxes.ShowError(_conEmu,
+                "ConEmu appears to be missing. Please perform a full rebuild and try again.");
 #else
             throw;
 #endif

@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
@@ -11,90 +11,72 @@ using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
 using GitUI.UserControls.RevisionGrid.Columns;
 using GitUI.UserControls.RevisionGrid.Graph;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid;
 
 public sealed partial class RevisionDataGridView : DataGridView
 {
-    private enum RedrawMode
-    {
-        NoRedrawNeeded,
-        RedrawOnly,
-        RedrawWithClear,
-    }
+    private const int _backgroundThreadUpdatePeriod = 25;
 
-    private const int BackgroundThreadUpdatePeriod = 25;
-    private const int MouseWheelDeltaTimeout = 1500; // Mouse wheel idle time in milliseconds after which unconsumed wheel delta will be dropped.
-    private const int RowCountUpdateCoolDown = 300;
+    private const int
+        _mouseWheelDeltaTimeout =
+            1500; // Mouse wheel idle time in milliseconds after which unconsumed wheel delta will be dropped.
+
+    private const int _rowCountUpdateCoolDown = 300;
 
     private static readonly AccessibleDataGridViewTextBoxCell _accessibleDataGridViewTextBoxCell = new();
-
-    private readonly SolidBrush _rowBackgroundBrush;
     private readonly SolidBrush _alternatingRowBackgroundBrush;
     private readonly SolidBrush _authoredHighlightBrush;
+    private readonly List<ColumnProvider> _columnProviders = [];
     private readonly SolidBrush _inactiveSelectionHighlightBrush;
+    private readonly Color _nonRelativeNonSelectedBodyColor;
+    private readonly Color _nonRelativeNonSelectedSubjectColor;
+    private readonly Color _nonRelativeSelectedBodyColor;
+    private readonly Color _nonRelativeSelectedSubjectColor;
+    private readonly Color _relativeNonSelectedSubjectColor;
+    private readonly Color _relativeSelectedBodyColor;
+
+    private readonly SolidBrush _rowBackgroundBrush;
 
     private readonly BackgroundUpdater _rowCountUpdater;
-    private readonly BackgroundUpdater _visibleRowRangeUpdater;
-    private readonly List<ColumnProvider> _columnProviders = [];
     private readonly TaskManager _taskManager = ThreadHelper.CreateTaskManager();
     private readonly CancellationTokenSequence _updateVisibleRowRangeSequence = new();
+    private readonly BackgroundUpdater _visibleRowRangeUpdater;
 
-    internal RevisionGraph _revisionGraph = new();
-
-    // Set while loading the revisions and data grid, see also ToBeSelectedObjectIds.
-    private Lazy<IList<int>> _toBeSelectedGraphIndexesCache;
-    private int _loadedToBeSelectedRevisionsCount = 0;
+    internal RevisionGraph RevisionGraph = new();
 
     private int _backgroundScrollTo;
-    private long _lastMouseWheelTickCount; // Timestamp of the last vertical scroll via mouse wheel.
-    private int _mouseWheelDeltaRemainder; // Corresponds to unconsumed scroll distance while scrolling via mouse wheel, see OnMouseWheel().
-    private int _rowHeight; // Height of elements in the cache. Is equal to the control's row height.
-
-    private VisibleRowRange _visibleRowRange;
-
-    private Font _normalFont;
     private Font _boldFont;
+
+    private CellStyle? _cellStyle;
+    private bool _highlightAuthoredRevisions;
+    private bool _isFocused;
+    private bool _isSelected;
+    private long _lastMouseWheelTickCount; // Timestamp of the last vertical scroll via mouse wheel.
+    private int _loadedToBeSelectedRevisionsCount;
     private Font _monospaceFont;
 
-    private bool _revisionGraphDrawNonRelativesTextGray;
-    private bool _highlightAuthoredRevisions;
-    private bool _revisionGraphDrawAlternateBackColor;
-    private Color _relativeNonSelectedSubjectColor;
-    private Color _nonRelativeNonSelectedSubjectColor;
-    private Color _nonRelativeSelectedSubjectColor;
-    private Color _nonRelativeNonSelectedBodyColor;
-    private Color _relativeSelectedBodyColor;
-    private Color _nonRelativeSelectedBodyColor;
+    private int
+        _mouseWheelDeltaRemainder; // Corresponds to unconsumed scroll distance while scrolling via mouse wheel, see OnMouseWheel().
+
+    private Font _normalFont;
 
     /// <summary>
-    /// Force refresh the gridview, set when revision graph is changed while loading revisions.
+    ///     Force refresh the gridview, set when revision graph is changed while loading revisions.
     /// </summary>
     private RedrawMode _redrawMode;
 
-    /// <summary>
-    /// Indicates whether 'interesting' rows in the data grid is currently being loaded.
-    ///
-    /// The property is set to true when all revisions have been read (including
-    /// artificial commits that are inserted before HEAD) and the data grid rows for
-    /// selected revisions have been loaded.
-    ///
-    /// Revisions are handled directly when git-log delivers them.
-    /// All revisions are always saved.
-    ///
-    /// GridRows are loaded when needed, starting when revisions are loaded.
-    /// If the top revision is selected then only the first rows need to be loaded.
-    /// If one of the bottom rows are selected, all rows must be loaded.
-    /// (https://github.com/gitextensions/gitextensions/wiki/Revision-Graph#revisiongraphrow describes this some.)
-    /// So all grid rows are not forced to be loaded.
-    /// The code now forces loading more rows to be able to select them.
-    ///
-    /// This property is intended to be used by tests.
-    /// </summary>
-    public bool IsDataLoadComplete { get; private set; } = true;
+    private GitRevision? _revision;
+    private bool _revisionGraphDrawAlternateBackColor;
 
-    public bool UpdatingVisibleRows { get; private set; }
+    private bool _revisionGraphDrawNonRelativesTextGray;
+    private int _rowHeight; // Height of elements in the cache. Is equal to the control's row height.
+
+    // Set while loading the revisions and data grid, see also ToBeSelectedObjectIds.
+    private Lazy<IList<int>> _toBeSelectedGraphIndexesCache;
+
+    private VisibleRowRange _visibleRowRange;
 
     // _toBeSelectedGraphIndexesCache is init in Clear()
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -103,14 +85,16 @@ public sealed partial class RevisionDataGridView : DataGridView
     {
         InitFonts();
 
-        _rowCountUpdater = new BackgroundUpdater(_taskManager, UpdateRowCountAsync, RowCountUpdateCoolDown);
-        _visibleRowRangeUpdater = new BackgroundUpdater(_taskManager, UpdateVisibleRowRangeInternalAsync, BackgroundThreadUpdatePeriod);
+        _rowCountUpdater = new BackgroundUpdater(_taskManager, UpdateRowCountAsync, _rowCountUpdateCoolDown);
+        _visibleRowRangeUpdater = new BackgroundUpdater(_taskManager, UpdateVisibleRowRangeInternalAsync,
+            _backgroundThreadUpdatePeriod);
 
         InitializeComponent();
         DoubleBuffered = true;
 
         _rowBackgroundBrush = new SolidBrush(AppColor.PanelBackground.GetThemeColor());
-        _alternatingRowBackgroundBrush = new SolidBrush(_rowBackgroundBrush.Color.MakeDarkerBy(Application.IsDarkModeEnabled ? -0.018 : 0.025));
+        _alternatingRowBackgroundBrush =
+            new SolidBrush(_rowBackgroundBrush.Color.MakeDarkerBy(Application.IsDarkModeEnabled ? -0.018 : 0.025));
         _authoredHighlightBrush = new SolidBrush(AppColor.AuthoredHighlight.GetThemeColor());
         _inactiveSelectionHighlightBrush = new SolidBrush(AppColor.InactiveSelectionHighlight.GetThemeColor());
 
@@ -160,7 +144,7 @@ public sealed partial class RevisionDataGridView : DataGridView
         {
             if (Columns[e.ColumnIndex].Tag is ColumnProvider provider)
             {
-                GitRevision? revision = GetRevision(e.RowIndex);
+                var revision = GetRevision(e.RowIndex);
                 if (revision is not null)
                 {
                     provider.OnCellFormatting(e, revision);
@@ -203,11 +187,74 @@ public sealed partial class RevisionDataGridView : DataGridView
 
         void InvalidateSelectedRows()
         {
-            for (int index = 0; index < SelectedRows.Count; ++index)
+            for (var index = 0; index < SelectedRows.Count; ++index)
             {
                 InvalidateRow(SelectedRows[index].Index);
             }
         }
+    }
+
+    /// <summary>
+    ///     Indicates whether 'interesting' rows in the data grid is currently being loaded.
+    ///     The property is set to true when all revisions have been read (including
+    ///     artificial commits that are inserted before HEAD) and the data grid rows for
+    ///     selected revisions have been loaded.
+    ///     Revisions are handled directly when git-log delivers them.
+    ///     All revisions are always saved.
+    ///     GridRows are loaded when needed, starting when revisions are loaded.
+    ///     If the top revision is selected then only the first rows need to be loaded.
+    ///     If one of the bottom rows are selected, all rows must be loaded.
+    ///     (https://github.com/gitextensions/gitextensions/wiki/Revision-Graph#revisiongraphrow describes this some.)
+    ///     So all grid rows are not forced to be loaded.
+    ///     The code now forces loading more rows to be able to select them.
+    ///     This property is intended to be used by tests.
+    /// </summary>
+    public bool IsDataLoadComplete { get; private set; } = true;
+
+    public bool UpdatingVisibleRows { get; private set; }
+
+    internal AuthorRevisionHighlighting? AuthorHighlighting { get; set; }
+
+    // Contains the object Id's that will be selected as soon as all of them have been loaded.
+    // The object Id's are in the order in which they were originally selected.
+    public IReadOnlyList<ObjectId> ToBeSelectedObjectIds { get; set; } = [];
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public IReadOnlyList<ObjectId>? SelectedObjectIds
+    {
+        get
+        {
+            if (SelectedRows.Count == 0)
+            {
+                return null;
+            }
+
+            var data = new ObjectId[SelectedRows.Count];
+
+            for (var i = 0; i < SelectedRows.Count; i++)
+            {
+                var row = RevisionGraph.GetNodeForRow(SelectedRows[i].Index);
+
+                if (row?.GitRevision is not null)
+                {
+                    // NOTE returned collection has reverse order of SelectedRows
+                    data[SelectedRows.Count - 1 - i] = row.GitRevision.ObjectId;
+                }
+            }
+
+            return data;
+        }
+    }
+
+    internal FrozenDictionary<string, Color> RemoteColors { get; set; }
+
+    /// <summary>
+    ///     Returns if any of the to-be-selected was found in the loaded revisions but are not yet selected.
+    /// </summary>
+    public bool PendingToBeSelected
+    {
+        get => _loadedToBeSelectedRevisionsCount > 0;
     }
 
     internal void CancelBackgroundTasks()
@@ -228,41 +275,6 @@ public sealed partial class RevisionDataGridView : DataGridView
         base.Dispose(disposing);
     }
 
-    internal AuthorRevisionHighlighting? AuthorHighlighting { get; set; }
-
-    // Contains the object Id's that will be selected as soon as all of them have been loaded.
-    // The object Id's are in the order in which they were originally selected.
-    public IReadOnlyList<ObjectId> ToBeSelectedObjectIds { get; set; } = [];
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    [Browsable(false)]
-    public IReadOnlyList<ObjectId>? SelectedObjectIds
-    {
-        get
-        {
-            if (SelectedRows.Count == 0)
-            {
-                return null;
-            }
-
-            ObjectId[] data = new ObjectId[SelectedRows.Count];
-
-            for (int i = 0; i < SelectedRows.Count; i++)
-            {
-                RevisionGraphRevision? row = _revisionGraph.GetNodeForRow(SelectedRows[i].Index);
-
-                if (row?.GitRevision is not null)
-                {
-                    // NOTE returned collection has reverse order of SelectedRows
-                    data[SelectedRows.Count - 1 - i] = row.GitRevision.ObjectId;
-                }
-            }
-
-            return data;
-        }
-    }
-
-    internal FrozenDictionary<string, Color> RemoteColors { get; set; }
-
     internal void AddColumn(ColumnProvider columnProvider)
     {
         _columnProviders.Add(columnProvider);
@@ -274,7 +286,8 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     private Color GetForeground(bool isSelected, bool isFocused, bool isNonRelativeGray)
-        => (isNonRelativeGray, isSelectedAndFocused: isSelected && isFocused) switch
+    {
+        return (isNonRelativeGray, isSelectedAndFocused: isSelected && isFocused) switch
         {
             // Unselected revisions of the currently checked out branch and all revisions reachable from HEAD
             (isNonRelativeGray: false, isSelectedAndFocused: false) => SystemColors.ControlText,
@@ -288,9 +301,11 @@ public sealed partial class RevisionDataGridView : DataGridView
             // (isNonRelativeGray: true, isSelected: true)
             _ => _nonRelativeSelectedSubjectColor
         };
+    }
 
     private Color GetCommitBodyForeground(bool isSelected, bool isNonRelativeGray)
-        => (isNonRelativeGray, isSelected) switch
+    {
+        return (isNonRelativeGray, isSelected) switch
         {
             // Unselected revisions of the currently checked out branch and all revisions reachable from HEAD
             (isNonRelativeGray: false, isSelected: false) => SystemColors.GrayText,
@@ -304,6 +319,7 @@ public sealed partial class RevisionDataGridView : DataGridView
             // (isNonRelativeGray: true, isSelected: true)
             _ => _nonRelativeSelectedBodyColor
         };
+    }
 
     private Brush GetBackground(bool isSelected, bool isFocused, int rowIndex, GitRevision? revision)
     {
@@ -312,7 +328,8 @@ public sealed partial class RevisionDataGridView : DataGridView
             return isFocused ? SystemBrushes.Highlight : _inactiveSelectionHighlightBrush;
         }
 
-        if (_highlightAuthoredRevisions && revision?.IsArtificial is false && AuthorHighlighting?.IsHighlighted(revision) is true)
+        if (_highlightAuthoredRevisions && revision?.IsArtificial is false &&
+            AuthorHighlighting?.IsHighlighted(revision) is true)
         {
             return _authoredHighlightBrush;
         }
@@ -325,11 +342,6 @@ public sealed partial class RevisionDataGridView : DataGridView
         return _rowBackgroundBrush;
     }
 
-    private CellStyle? _cellStyle = null;
-    private GitRevision? _revision = null;
-    private bool _isSelected = false;
-    private bool _isFocused = false;
-
     private void OnCellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
     {
         DebugHelpers.Assert(_rowHeight != 0, "_rowHeight != 0");
@@ -341,8 +353,8 @@ public sealed partial class RevisionDataGridView : DataGridView
             return;
         }
 
-        GitRevision? revision = GetRevision(e.RowIndex);
-        bool isSelected = e.State.HasFlag(DataGridViewElementStates.Selected);
+        var revision = GetRevision(e.RowIndex);
+        var isSelected = e.State.HasFlag(DataGridViewElementStates.Selected);
         if (revision != _revision || _isSelected != isSelected || _isFocused != Focused)
         {
             _revision = revision;
@@ -355,11 +367,12 @@ public sealed partial class RevisionDataGridView : DataGridView
                 return;
             }
 
-            Brush backBrush = GetBackground(_isSelected, _isFocused, e.RowIndex, _revision);
-            bool isNonRelativeGray = _revisionGraphDrawNonRelativesTextGray && !RowIsRelative(e.RowIndex);
-            Color foreColor = GetForeground(_isSelected, _isFocused, isNonRelativeGray);
-            Color commitBodyForeColor = GetCommitBodyForeground(_isSelected, isNonRelativeGray);
-            _cellStyle = new(backBrush, foreColor, commitBodyForeColor, _normalFont, _boldFont, _monospaceFont, RemoteColors);
+            var backBrush = GetBackground(_isSelected, _isFocused, e.RowIndex, _revision);
+            var isNonRelativeGray = _revisionGraphDrawNonRelativesTextGray && !RowIsRelative(e.RowIndex);
+            var foreColor = GetForeground(_isSelected, _isFocused, isNonRelativeGray);
+            var commitBodyForeColor = GetCommitBodyForeground(_isSelected, isNonRelativeGray);
+            _cellStyle = new CellStyle(backBrush, foreColor, commitBodyForeColor, _normalFont, _boldFont,
+                _monospaceFont, RemoteColors);
         }
 
         if (_cellStyle is null)
@@ -379,15 +392,15 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     /// <summary>
-    /// Add revisions from the git log to the graph, including segments to parents.
-    /// Update visible rows if needed.
+    ///     Add revisions from the git log to the graph, including segments to parents.
+    ///     Update visible rows if needed.
     /// </summary>
     /// <param name="revisions">The revisions to add.</param>
     public void AddRange(IEnumerable<GitRevision> revisions)
     {
-        foreach (GitRevision revision in revisions)
+        foreach (var revision in revisions)
         {
-            if (_revisionGraph.Add(revision))
+            if (RevisionGraph.Add(revision))
             {
                 _redrawMode = RedrawMode.RedrawWithClear;
             }
@@ -402,7 +415,7 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     /// <summary>
-    /// Insert workTree and index revisions to the graph, offset existing revisions.
+    ///     Insert workTree and index revisions to the graph, offset existing revisions.
     /// </summary>
     /// <param name="workTreeRev">The workTree revision to add.</param>
     /// <param name="indexRev">The index revision to add.</param>
@@ -420,7 +433,7 @@ public sealed partial class RevisionDataGridView : DataGridView
         }
 
         // Insert at matching parent.
-        if (_revisionGraph.Insert(workTreeRev, indexRev, parents))
+        if (RevisionGraph.Insert(workTreeRev, indexRev, parents))
         {
             _redrawMode = RedrawMode.RedrawWithClear;
         }
@@ -445,15 +458,15 @@ public sealed partial class RevisionDataGridView : DataGridView
         _updateVisibleRowRangeSequence.CancelCurrent();
         _backgroundScrollTo = -1;
         _redrawMode = RedrawMode.NoRedrawNeeded;
-        _visibleRowRange = new VisibleRowRange(fromIndex: 0, count: 0);
+        _visibleRowRange = new VisibleRowRange(0, 0);
 
         // Set rowcount to 0 first, to ensure it is not possible to select or redraw, since we are about to delete the data
         SetRowCount(0);
-        _revisionGraph.Clear();
+        RevisionGraph.Clear();
         ClearToBeSelected();
 
         // The graphdata is stored in one of the columnproviders, clear this last
-        foreach (ColumnProvider columnProvider in _columnProviders)
+        foreach (var columnProvider in _columnProviders)
         {
             columnProvider.Clear();
         }
@@ -466,7 +479,7 @@ public sealed partial class RevisionDataGridView : DataGridView
         _revisionGraphDrawAlternateBackColor = AppSettings.RevisionGraphDrawAlternateBackColor;
 
         // Redraw
-        Invalidate(invalidateChildren: true);
+        Invalidate(true);
     }
 
     public void ClearToBeSelected()
@@ -478,8 +491,8 @@ public sealed partial class RevisionDataGridView : DataGridView
 
     public void EnsureRowVisible(int row)
     {
-        int countVisible = DisplayedRowCount(includePartialRow: false);
-        int firstVisible = FirstDisplayedScrollingRowIndex;
+        var countVisible = DisplayedRowCount(false);
+        var firstVisible = FirstDisplayedScrollingRowIndex;
         if (row >= 0 && (row < firstVisible || firstVisible + countVisible <= row))
         {
             FirstDisplayedScrollingRowIndex = row;
@@ -487,13 +500,8 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     /// <summary>
-    /// Returns if any of the to-be-selected was found in the loaded revisions but are not yet selected.
-    /// </summary>
-    public bool PendingToBeSelected => _loadedToBeSelectedRevisionsCount > 0;
-
-    /// <summary>
-    /// Set the first objectid in the parent list that is found in loaded revisions
-    /// as the to-be-selected objectid in the grid.
+    ///     Set the first objectid in the parent list that is found in loaded revisions
+    ///     as the to-be-selected objectid in the grid.
     /// </summary>
     /// <param name="parents">List with parents to the objectid initially intended to be selected.</param>
     public void SetToBeSelectedFromParents(IEnumerable<ObjectId>? parents)
@@ -503,11 +511,11 @@ public sealed partial class RevisionDataGridView : DataGridView
             return;
         }
 
-        foreach (ObjectId parentId in parents)
+        foreach (var parentId in parents)
         {
-            if (_revisionGraph.TryGetRowIndex(parentId, out int _))
+            if (RevisionGraph.TryGetRowIndex(parentId, out _))
             {
-                ToBeSelectedObjectIds = new ObjectId[] { parentId };
+                ToBeSelectedObjectIds = new[] { parentId };
                 _loadedToBeSelectedRevisionsCount = ToBeSelectedObjectIds.Count;
                 break;
             }
@@ -522,8 +530,8 @@ public sealed partial class RevisionDataGridView : DataGridView
             _loadedToBeSelectedRevisionsCount = ToBeSelectedObjectIds.Count;
         }
 
-        _revisionGraph.LoadingCompleted();
-        if (_revisionGraph.Count == 0)
+        RevisionGraph.LoadingCompleted();
+        if (RevisionGraph.Count == 0)
         {
             MarkAsDataLoadingComplete();
             return;
@@ -544,7 +552,7 @@ public sealed partial class RevisionDataGridView : DataGridView
             int rowCount;
 
             // Wait for the periodic background thread to load the first selected grid row, stop if aborted
-            int firstGraphIndex = _toBeSelectedGraphIndexesCache.Value[0];
+            var firstGraphIndex = _toBeSelectedGraphIndexesCache.Value[0];
             do
             {
                 rowCount = RowCount;
@@ -558,9 +566,8 @@ public sealed partial class RevisionDataGridView : DataGridView
                 EnsureRowVisible(rowCount - 1);
 
                 // Wait for background thread to load grid rows
-                await Task.Delay(BackgroundThreadUpdatePeriod);
-            }
-            while (_loadedToBeSelectedRevisionsCount > 0);
+                await Task.Delay(_backgroundThreadUpdatePeriod);
+            } while (_loadedToBeSelectedRevisionsCount > 0);
 
             // Scroll to first selected only if selection is not changed
             if (firstGraphIndex >= 0 && firstGraphIndex < rowCount && Rows[firstGraphIndex].Selected)
@@ -578,7 +585,7 @@ public sealed partial class RevisionDataGridView : DataGridView
             // As fallback, select the first shown real commit or the first row (which exists here)
             if (SelectedRows.Count == 0)
             {
-                int index = GetFallbackRowIndexToSelect();
+                var index = GetFallbackRowIndexToSelect();
                 Rows[index].Selected = true;
                 CurrentCell = Rows[index].Cells[1];
                 EnsureRowVisible(index);
@@ -589,9 +596,9 @@ public sealed partial class RevisionDataGridView : DataGridView
 
         int GetFallbackRowIndexToSelect()
         {
-            for (int index = 0; index < _revisionGraph.Count; ++index)
+            for (var index = 0; index < RevisionGraph.Count; ++index)
             {
-                if (_revisionGraph.GetNodeForRow(index)?.GitRevision?.IsArtificial is false)
+                if (RevisionGraph.GetNodeForRow(index)?.GitRevision?.IsArtificial is false)
                 {
                     return index;
                 }
@@ -614,21 +621,24 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     /// <summary>
-    /// Checks whether the given hash is present in the graph.
+    ///     Checks whether the given hash is present in the graph.
     /// </summary>
     /// <param name="objectId">The hash to find.</param>
-    /// <returns><see langword="true"/>, if the given hash if found; otherwise <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="objectId"/> is <see langword="null"/>.</exception>
-    public bool Contains(ObjectId objectId) => _revisionGraph.Contains(objectId);
+    /// <returns><see langword="true" />, if the given hash if found; otherwise <see langword="false" />.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="objectId" /> is <see langword="null" />.</exception>
+    public bool Contains(ObjectId objectId)
+    {
+        return RevisionGraph.Contains(objectId);
+    }
 
     public bool RowIsRelative(int rowIndex)
     {
-        return _revisionGraph.IsRowRelative(rowIndex);
+        return RevisionGraph.IsRowRelative(rowIndex);
     }
 
     public GitRevision? GetRevision(int rowIndex)
     {
-        return _revisionGraph.GetNodeForRow(rowIndex)?.GitRevision;
+        return RevisionGraph.GetNodeForRow(rowIndex)?.GitRevision;
     }
 
     private void SetRowCount(int count)
@@ -669,7 +679,7 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     /// <summary>
-    /// Reset the calculated indices.
+    ///     Reset the calculated indices.
     /// </summary>
     private void ResetGraphIndices()
     {
@@ -681,9 +691,9 @@ public sealed partial class RevisionDataGridView : DataGridView
         IList<int> CalculateGraphIndices()
         {
             List<int> toBeSelectedGraphIndexes = [];
-            foreach (ObjectId objectId in ToBeSelectedObjectIds)
+            foreach (var objectId in ToBeSelectedObjectIds)
             {
-                if (_revisionGraph.TryGetRowIndex(objectId, out int rowIndexToBeSelected))
+                if (RevisionGraph.TryGetRowIndex(objectId, out var rowIndexToBeSelected))
                 {
                     toBeSelectedGraphIndexes.Add(rowIndexToBeSelected);
                 }
@@ -710,8 +720,8 @@ public sealed partial class RevisionDataGridView : DataGridView
 
         // If updating selection, clear is required first
         ClearSelection();
-        bool first = true;
-        foreach (int index in _toBeSelectedGraphIndexesCache.Value)
+        var first = true;
+        foreach (var index in _toBeSelectedGraphIndexesCache.Value)
         {
             Rows[index].Selected = true;
 
@@ -728,7 +738,7 @@ public sealed partial class RevisionDataGridView : DataGridView
 
     private void SetRowCountAndSelectRowsIfReady()
     {
-        int rowCount = _revisionGraph.Count;
+        var rowCount = RevisionGraph.Count;
         if (RowCount < rowCount)
         {
             SetRowCount(rowCount);
@@ -762,7 +772,7 @@ public sealed partial class RevisionDataGridView : DataGridView
             _backgroundScrollTo = -1;
 
             // The graph cache must be cleared at once
-            foreach (ColumnProvider columnProvider in _columnProviders)
+            foreach (var columnProvider in _columnProviders)
             {
                 columnProvider.Clear();
             }
@@ -780,13 +790,14 @@ public sealed partial class RevisionDataGridView : DataGridView
             return;
         }
 
-        CancellationToken cancellationToken = _updateVisibleRowRangeSequence.Next();
+        var cancellationToken = _updateVisibleRowRangeSequence.Next();
 
-        int fromIndex = Math.Max(0, FirstDisplayedScrollingRowIndex);
-        int visibleRowCount = DisplayedRowCount(includePartialRow: true);
-        visibleRowCount = Math.Min(_revisionGraph.Count - fromIndex, visibleRowCount);
+        var fromIndex = Math.Max(0, FirstDisplayedScrollingRowIndex);
+        var visibleRowCount = DisplayedRowCount(true);
+        visibleRowCount = Math.Min(RevisionGraph.Count - fromIndex, visibleRowCount);
 
-        if (_redrawMode == RedrawMode.NoRedrawNeeded && _visibleRowRange.FromIndex == fromIndex && _visibleRowRange.Count == visibleRowCount)
+        if (_redrawMode == RedrawMode.NoRedrawNeeded && _visibleRowRange.FromIndex == fromIndex &&
+            _visibleRowRange.Count == visibleRowCount)
         {
             return;
         }
@@ -803,7 +814,7 @@ public sealed partial class RevisionDataGridView : DataGridView
         try
         {
             // Preload the next page, too, in order to avoid delayed display of the graph when scrolling down
-            int newBackgroundScrollTo = fromIndex + (2 * visibleRowCount) - 1;
+            var newBackgroundScrollTo = fromIndex + (2 * visibleRowCount) - 1;
 
             // We always want to set _backgroundScrollTo. Because we want the backgroundthread to stop working when we scroll up
             _backgroundScrollTo = newBackgroundScrollTo;
@@ -811,24 +822,24 @@ public sealed partial class RevisionDataGridView : DataGridView
             int curCount;
             do
             {
-                curCount = _revisionGraph.GetCachedCount();
-                _revisionGraph.CacheTo(currentRowIndex: curCount, lastToCacheRowIndex: newBackgroundScrollTo, cancellationToken);
+                curCount = RevisionGraph.GetCachedCount();
+                RevisionGraph.CacheTo(curCount, newBackgroundScrollTo, cancellationToken);
 
                 // Take changes to _backgroundScrollTo and IsDataLoadComplete by another thread into account
                 if (IsDataLoadComplete)
                 {
-                    _backgroundScrollTo = Math.Min(_backgroundScrollTo, _revisionGraph.Count - 1);
+                    _backgroundScrollTo = Math.Min(_backgroundScrollTo, RevisionGraph.Count - 1);
                 }
-            }
-            while (curCount <= _backgroundScrollTo);
+            } while (curCount <= _backgroundScrollTo);
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            await revisionGraphColumnProvider.RenderGraphToCacheAsync(visibleRowRange, newBackgroundScrollTo, _rowHeight, cancellationToken);
+            await revisionGraphColumnProvider.RenderGraphToCacheAsync(visibleRowRange, newBackgroundScrollTo,
+                _rowHeight, cancellationToken);
         }
         catch (Exception exception)
         {
-            _visibleRowRange = new VisibleRowRange(fromIndex: 0, count: 0);
+            _visibleRowRange = new VisibleRowRange(0, 0);
             Trace.WriteLineIf(exception is not OperationCanceledException, exception);
         }
     }
@@ -838,7 +849,7 @@ public sealed partial class RevisionDataGridView : DataGridView
         InitFonts();
         UpdateRowHeight();
 
-        foreach (ColumnProvider columnProvider in _columnProviders)
+        foreach (var columnProvider in _columnProviders)
         {
             columnProvider.ApplySettings();
         }
@@ -855,9 +866,9 @@ public sealed partial class RevisionDataGridView : DataGridView
     }
 
     /// <summary>
-    ///  Schedules a graph re-render without clearing the display cache, keeping the currently
-    ///  cached display visible during re-rendering. Use this for lightweight state changes such
-    ///  as hover highlighting, where the stale cache can be shown while the new render is computed.
+    ///     Schedules a graph re-render without clearing the display cache, keeping the currently
+    ///     cached display visible during re-rendering. Use this for lightweight state changes such
+    ///     as hover highlighting, where the stale cache can be shown while the new render is computed.
     /// </summary>
     public void RequestRedrawWithoutClear()
     {
@@ -872,7 +883,7 @@ public sealed partial class RevisionDataGridView : DataGridView
     private void UpdateRowHeight()
     {
         // TODO allow custom grid row spacing
-        using Graphics g = Graphics.FromHwnd(Handle);
+        using var g = Graphics.FromHwnd(Handle);
         _rowHeight = (int)g.MeasureString("By", _normalFont).Height + DpiUtil.Scale(9);
         //// + AppSettings.GridRowSpacing
         RowTemplate.Height = _rowHeight;
@@ -880,12 +891,12 @@ public sealed partial class RevisionDataGridView : DataGridView
 
     public GitRevision? GetRevision(ObjectId objectId)
     {
-        return _revisionGraph.TryGetNode(objectId, out RevisionGraphRevision? node) ? node.GitRevision : null;
+        return RevisionGraph.TryGetNode(objectId, out var node) ? node.GitRevision : null;
     }
 
     public int? TryGetRevisionIndex(ObjectId objectId)
     {
-        return !objectId.IsZero && _revisionGraph.TryGetRowIndex(objectId, out int index) ? index : null;
+        return !objectId.IsZero && RevisionGraph.TryGetRowIndex(objectId, out var index) ? index : null;
     }
 
     public IReadOnlyList<ObjectId> GetRevisionChildren(ObjectId objectId)
@@ -893,7 +904,7 @@ public sealed partial class RevisionDataGridView : DataGridView
         // We do not need a lock here since we load the data from the first commit and walk through all
         // parents. Children are always loaded, since we start at the newest commit.
         // With lock, loading the commit info slows down terribly.
-        if (_revisionGraph.TryGetNode(objectId, out RevisionGraphRevision? node))
+        if (RevisionGraph.TryGetNode(objectId, out var node))
         {
             List<ObjectId> children = [.. node.Children.Select(d => d.GitRevision!.ObjectId)];
             children.Reverse();
@@ -926,7 +937,7 @@ public sealed partial class RevisionDataGridView : DataGridView
 
                 break;
             case Keys.Control | Keys.C:
-                IReadOnlyList<ObjectId>? selectedObjectIds = SelectedObjectIds;
+                var selectedObjectIds = SelectedObjectIds;
                 if (selectedObjectIds?.Count is > 0)
                 {
                     ClipboardUtil.TrySetText(string.Join(Environment.NewLine, selectedObjectIds));
@@ -941,7 +952,7 @@ public sealed partial class RevisionDataGridView : DataGridView
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        HitTestInfo hit = HitTest(e.X, e.Y);
+        var hit = HitTest(e.X, e.Y);
 
         if (hit.Type == DataGridViewHitTestType.None)
         {
@@ -967,7 +978,7 @@ public sealed partial class RevisionDataGridView : DataGridView
 
     protected override void OnMouseWheel(MouseEventArgs e)
     {
-        int maxRowIndex = RowCount - 1;
+        var maxRowIndex = RowCount - 1;
         if (maxRowIndex < 0)
         {
             return;
@@ -975,8 +986,8 @@ public sealed partial class RevisionDataGridView : DataGridView
 
         if (ModifierKeys.HasFlag(Keys.Shift))
         {
-            int currentIndex = HorizontalScrollingOffset;
-            int scrollLines = DpiUtil.Scale(32);
+            var currentIndex = HorizontalScrollingOffset;
+            var scrollLines = DpiUtil.Scale(32);
 
             HorizontalScrollingOffset = e.Delta switch
             {
@@ -994,19 +1005,19 @@ public sealed partial class RevisionDataGridView : DataGridView
             //   for scrolling one row is never reached on the first wheel rotation.
             // - When using a precision scrolling device, the unconsumed delta will offset the first scroll,
             //   which makes the user experience a subtle "lag" or "leap" at beginning of a scroll.
-            long currentTickCount = Environment.TickCount64;
-            if (currentTickCount - _lastMouseWheelTickCount > MouseWheelDeltaTimeout)
+            var currentTickCount = Environment.TickCount64;
+            if (currentTickCount - _lastMouseWheelTickCount > _mouseWheelDeltaTimeout)
             {
                 _mouseWheelDeltaRemainder = 0;
             }
 
             _lastMouseWheelTickCount = currentTickCount;
 
-            int visibleCompleteRowsCount = _rowHeight > 0 ? Height / _rowHeight : 0;
+            var visibleCompleteRowsCount = _rowHeight > 0 ? Height / _rowHeight : 0;
 
             // The wheel might be configured to scroll more than one row at once.
             // Respect this by scaling MouseEventArgs.Delta accordingly.
-            int scrollLines = SystemInformation.MouseWheelScrollLines;
+            var scrollLines = SystemInformation.MouseWheelScrollLines;
 
             // Value of -1 indicates the "One screen at a time" mouse option.
             if (scrollLines == -1)
@@ -1023,13 +1034,13 @@ public sealed partial class RevisionDataGridView : DataGridView
             // Consume the total wheel delta in multiples of SystemInformation.MouseWheelScrollDelta, which
             // is the wheel delta threshold for scrolling one row, and save the remainder for consumption
             // during the next MouseWheel event.
-            int totalWheelDelta = (scrollLines * e.Delta) + _mouseWheelDeltaRemainder;
-            int wheelDeltaPerRow = SystemInformation.MouseWheelScrollDelta;
+            var totalWheelDelta = (scrollLines * e.Delta) + _mouseWheelDeltaRemainder;
+            var wheelDeltaPerRow = SystemInformation.MouseWheelScrollDelta;
             _mouseWheelDeltaRemainder = totalWheelDelta % wheelDeltaPerRow;
-            int rowDelta = -(totalWheelDelta - _mouseWheelDeltaRemainder) / wheelDeltaPerRow;
+            var rowDelta = -(totalWheelDelta - _mouseWheelDeltaRemainder) / wheelDeltaPerRow;
             if (rowDelta != 0)
             {
-                int toRowIndex = Math.Clamp(FirstDisplayedScrollingRowIndex + rowDelta, 0, maxRowIndex);
+                var toRowIndex = Math.Clamp(FirstDisplayedScrollingRowIndex + rowDelta, 0, maxRowIndex);
 
                 // Drop unconsumed wheel delta when reaching the upper or lower bound of the grid
                 // to prevent the grid being stuck there for a moment.
@@ -1059,5 +1070,12 @@ public sealed partial class RevisionDataGridView : DataGridView
         _normalFont = AppSettings.Font;
         _boldFont = new Font(_normalFont, FontStyle.Bold);
         _monospaceFont = AppSettings.MonospaceFont;
+    }
+
+    private enum RedrawMode
+    {
+        NoRedrawNeeded,
+        RedrawOnly,
+        RedrawWithClear
     }
 }

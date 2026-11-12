@@ -1,14 +1,14 @@
 ﻿using System.Reflection;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ControlUtil
 {
-    private static readonly MethodInfo SetStyleMethod = typeof(TabControl)
+    private static readonly MethodInfo _setStyleMethod = typeof(TabControl)
         .GetMethod("SetStyle", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     /// <summary>
-    /// Enumerates all descendant controls.
+    ///     Enumerates all descendant controls.
     /// </summary>
     public static IEnumerable<Control> FindDescendants(this Control control)
     {
@@ -21,7 +21,7 @@ public static class ControlUtil
 
         while (queue.Count != 0)
         {
-            Control c = queue.Dequeue();
+            var c = queue.Dequeue();
 
             yield return c;
 
@@ -33,31 +33,31 @@ public static class ControlUtil
     }
 
     /// <summary>
-    /// Enumerates all descendant controls of type <typeparamref name="T"/> in breadth-first order.
+    ///     Enumerates all descendant controls of type <typeparamref name="T" /> in breadth-first order.
     /// </summary>
     public static IEnumerable<T> FindDescendantsOfType<T>(this Control control)
     {
-        return FindDescendants(control).OfType<T>();
+        return control.FindDescendants().OfType<T>();
     }
 
     /// <summary>
-    /// Finds the first descendent of <paramref name="control"/> that has type
-    /// <typeparamref name="T"/> and satisfies <paramref name="predicate"/>.
+    ///     Finds the first descendent of <paramref name="control" /> that has type
+    ///     <typeparamref name="T" /> and satisfies <paramref name="predicate" />.
     /// </summary>
     public static T? FindDescendantOfType<T>(this Control control, Func<T, bool> predicate)
     {
-        return FindDescendants(control).OfType<T>().Where(predicate).FirstOrDefault();
+        return control.FindDescendants().OfType<T>().Where(predicate).FirstOrDefault();
     }
 
     /// <summary>
-    /// Enumerates all ancestor controls.
+    ///     Enumerates all ancestor controls.
     /// </summary>
     /// <remarks>
-    /// The returned sequence does not include <paramref name="control"/>.
+    ///     The returned sequence does not include <paramref name="control" />.
     /// </remarks>
     public static IEnumerable<Control> FindAncestors(this Control control)
     {
-        Control? parent = control.Parent;
+        var parent = control.Parent;
 
         while (parent is not null)
         {
@@ -67,8 +67,10 @@ public static class ControlUtil
     }
 
     /// <summary>
-    /// Calls protected method <see cref="Control.SetStyle"/>.
+    ///     Calls protected method <see cref="Control.SetStyle" />.
     /// </summary>
-    public static void SetStyle(this Control control, ControlStyles styles, bool value) =>
-        SetStyleMethod.Invoke(control, [styles, value]);
+    public static void SetStyle(this Control control, ControlStyles styles, bool value)
+    {
+        _setStyleMethod.Invoke(control, [styles, value]);
+    }
 }

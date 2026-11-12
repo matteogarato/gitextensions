@@ -1,6 +1,7 @@
-﻿using GitUI;
+﻿using GitExtUtils.GitUI;
 
 namespace GitUITests;
+
 public sealed class ControlUtilTests
 {
     private static Control CreateTestHierarchy()
@@ -12,10 +13,7 @@ public sealed class ControlUtilTests
         TextBox child2 = new() { Controls = { grandchild1, grandchild2 } };
         Control child3 = new();
 
-        Control root = new()
-        {
-            Controls = { child1, child2, child3 }
-        };
+        Control root = new() { Controls = { child1, child2, child3 } };
 
         return root;
     }
@@ -23,7 +21,7 @@ public sealed class ControlUtilTests
     [Fact]
     public void FindDescendants()
     {
-        using Control root = CreateTestHierarchy();
+        using var root = CreateTestHierarchy();
 
         // child1, child2, child3, grandchild1, grandchild2
         root.FindDescendants().Count().Should().Be(5);
@@ -33,7 +31,7 @@ public sealed class ControlUtilTests
     [Fact]
     public void FindDescendantsOfType()
     {
-        using Control root = CreateTestHierarchy();
+        using var root = CreateTestHierarchy();
 
         root.FindDescendantsOfType<TextBox>().Count().Should().Be(1);
         root.FindDescendantsOfType<Button>().Count().Should().Be(1);
@@ -43,13 +41,13 @@ public sealed class ControlUtilTests
     [Fact]
     public void FindDescendantsOfTypeWithPredicate()
     {
-        using Control root = CreateTestHierarchy();
+        using var root = CreateTestHierarchy();
 
-        Button? foundButton = root.FindDescendantOfType<Button>(t => t.Text == "Click me");
+        var foundButton = root.FindDescendantOfType<Button>(t => t.Text == "Click me");
         foundButton.Should().NotBeNull();
         foundButton!.Text.Should().Be("Click me");
 
-        Button? notFoundButton = root.FindDescendantOfType<Button>(t => t.Text == "Non-existent");
+        var notFoundButton = root.FindDescendantOfType<Button>(t => t.Text == "Non-existent");
         notFoundButton.Should().BeNull();
     }
 }

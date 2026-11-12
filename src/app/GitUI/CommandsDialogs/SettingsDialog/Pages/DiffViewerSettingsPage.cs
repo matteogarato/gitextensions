@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using GitUI.UserControls.RevisionGrid;
 using ResourceManager;
@@ -67,7 +67,9 @@ public partial class DiffViewerSettingsPage : SettingsPageWithHeader
     }
 
     private void chkUseGitColoring_CheckedChanged(object sender, EventArgs e)
-        => chkUseGEThemeGitColoring.Enabled = chkUseGitColoring.Checked;
+    {
+        chkUseGEThemeGitColoring.Enabled = chkUseGitColoring.Checked;
+    }
 
     private void btnSaveCurrentViewSettingsAsDefault_Click(object sender, EventArgs e)
     {

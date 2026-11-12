@@ -1,24 +1,24 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 
-namespace GitUI;
+namespace GitUI.Editor;
 
 internal partial class FormFindInCommitFilesGitGrep : GitExtensionsDialog
 {
-    private bool _hasLoaded = false;
-
     /// <summary>
-    ///  Action to search for files in the commit using git grep.
+    ///     Action to search for files in the commit using git grep.
     /// </summary>
     public Action<string> FilesGitGrepLocator = null!;
 
     /// <summary>
-    /// Action to toggle the visibility of the "find in commit files" filter control.
+    ///     Action to toggle the visibility of the "find in commit files" filter control.
     /// </summary>
     public Action<bool> FindInCommitFilesGitGrepToggle = null!;
 
-    public FormFindInCommitFilesGitGrep(IGitUICommands commands)
-        : base(commands, enablePositionRestore: false)
+    private bool _hasLoaded;
+
+    public FormFindInCommitFilesGitGrep(IGitUiCommands commands)
+        : base(commands, false)
     {
         InitializeComponent();
         InitializeComplete();
@@ -41,19 +41,19 @@ internal partial class FormFindInCommitFilesGitGrep : GitExtensionsDialog
     }
 
     /// <summary>
-    /// Set the search items in the search combobox dropdown,
-    /// without changing the current search text.
+    ///     Set the search items in the search combobox dropdown,
+    ///     without changing the current search text.
     /// </summary>
     /// <param name="items">items to change</param>
     public void SetSearchItems(ComboBox.ObjectCollection items)
     {
         cboFindInCommitFilesGitGrep.BeginUpdate();
-        string search = cboFindInCommitFilesGitGrep.Text;
-        int selectionStart = cboFindInCommitFilesGitGrep.SelectionStart;
-        int selectionLength = cboFindInCommitFilesGitGrep.SelectionLength;
+        var search = cboFindInCommitFilesGitGrep.Text;
+        var selectionStart = cboFindInCommitFilesGitGrep.SelectionStart;
+        var selectionLength = cboFindInCommitFilesGitGrep.SelectionLength;
 
         cboFindInCommitFilesGitGrep.Items.Clear();
-        foreach (object item in items)
+        foreach (var item in items)
         {
             cboFindInCommitFilesGitGrep.Items.Add(item);
         }
@@ -81,7 +81,7 @@ internal partial class FormFindInCommitFilesGitGrep : GitExtensionsDialog
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -115,7 +115,9 @@ internal partial class FormFindInCommitFilesGitGrep : GitExtensionsDialog
     }
 
     private void Search()
-        => FilesGitGrepLocator?.Invoke(GitGrepExpressionText!);
+    {
+        FilesGitGrepLocator?.Invoke(GitGrepExpressionText!);
+    }
 
     private void btnSearch_Click(object sender, EventArgs e)
     {

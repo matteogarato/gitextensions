@@ -1,6 +1,7 @@
 ﻿using GitExtensions.Extensibility;
 
-namespace GitExtUtilsTests;
+namespace GitExtensions.ExtensibilityTests;
+
 public sealed class ArgumentBuilderTests
 {
     [Fact]
@@ -55,8 +56,8 @@ public sealed class ArgumentBuilderTests
         builder.Add("test");
         builder.GetTestAccessor().Arguments.Length.Should().Be(4);
 
-        string args = "Lorem ipsum dolor sit amet, solet soleat option mel no.";
-        int expectedLength = args.Length;
+        var args = "Lorem ipsum dolor sit amet, solet soleat option mel no.";
+        var expectedLength = args.Length;
         builder.AddRange(args.LazySplit(' '));
         builder.GetTestAccessor().Arguments.Length.Should().Be(expectedLength + /* 'test ' */5);
     }

@@ -1,21 +1,23 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Layout;
 using Avalonia.Media;
 using GitExtensions.Extensibility.Git;
+using GitUI.Compat;
+using Color = Avalonia.Media.Color;
 
-using ResourceManager;
-
-namespace GitUI;
+namespace GitUI.UserControls;
 
 /// <summary>
-///  Path-related actions offered by the changed-file list context menu.
+///     Path-related actions offered by the changed-file list context menu.
 /// </summary>
 public enum FileListAction
 {
     CopyPath,
     CopyFullPath,
     Open,
-    ShowInFolder,
+    ShowInFolder
 }
 
 // TODO(avalonia-port): grouping, filtering, staging interactions, and the full context menus
@@ -26,14 +28,14 @@ public partial class FileStatusList : GitExtensionsControl
     {
         InitializeComponent();
 
-        btnFileHistory.Content = GitUI.TranslatedStrings.FileHistory;
-        btnBlameFile.Content = GitUI.TranslatedStrings.BlameFile;
+        btnFileHistory.Content = TranslatedStrings.FileHistory;
+        btnBlameFile.Content = TranslatedStrings.BlameFile;
         btnFileHistory.Click += (_, _) => FileHistoryRequested?.Invoke(this, EventArgs.Empty);
         btnBlameFile.Click += (_, _) => BlameRequested?.Invoke(this, EventArgs.Empty);
-        MenuItem copyPath = new() { Header = GitUI.TranslatedStrings.CopyPathMenu };
-        MenuItem copyFullPath = new() { Header = GitUI.TranslatedStrings.CopyFullPathMenu };
-        MenuItem openFile = new() { Header = GitUI.TranslatedStrings.OpenFileMenu };
-        MenuItem showInFolder = new() { Header = GitUI.TranslatedStrings.ShowInFolderMenu };
+        MenuItem copyPath = new() { Header = TranslatedStrings.CopyPathMenu };
+        MenuItem copyFullPath = new() { Header = TranslatedStrings.CopyFullPathMenu };
+        MenuItem openFile = new() { Header = TranslatedStrings.OpenFileMenu };
+        MenuItem showInFolder = new() { Header = TranslatedStrings.ShowInFolderMenu };
         copyPath.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.CopyPath);
         copyFullPath.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.CopyFullPath);
         openFile.Click += (_, _) => PathActionRequested?.Invoke(this, FileListAction.Open);
@@ -41,13 +43,13 @@ public partial class FileStatusList : GitExtensionsControl
         ContextMenu menu = new() { ItemsSource = new[] { copyPath, copyFullPath, openFile, showInFolder } };
         menu.Opening += (_, _) =>
         {
-            foreach (MenuItem item in new[] { copyPath, copyFullPath, openFile, showInFolder })
+            foreach (var item in new[] { copyPath, copyFullPath, openFile, showInFolder })
             {
                 item.IsEnabled = SelectedItem is not null;
             }
         };
         lstFiles.ContextMenu = menu;
-        lstFiles.ItemTemplate = new FuncDataTemplate<GitItemStatus?>(CreateFileRow, supportsRecycling: false);
+        lstFiles.ItemTemplate = new FuncDataTemplate<GitItemStatus?>(CreateFileRow);
         lstFiles.SelectionChanged += (_, _) =>
         {
             UpdateActionState();
@@ -59,32 +61,35 @@ public partial class FileStatusList : GitExtensionsControl
     }
 
     /// <summary>
-    ///  Occurs when the selected file changes (named like the WinForms event).
+    ///     Gets the selected file status item, or <see langword="null" />.
+    /// </summary>
+    public GitItemStatus? SelectedItem
+    {
+        get => lstFiles.SelectedItem as GitItemStatus;
+    }
+
+    /// <summary>
+    ///     Occurs when the selected file changes (named like the WinForms event).
     /// </summary>
     public event EventHandler? SelectedIndexChanged;
 
     /// <summary>
-    ///  Occurs when the file history action is requested for the selected file.
+    ///     Occurs when the file history action is requested for the selected file.
     /// </summary>
     public event EventHandler? FileHistoryRequested;
 
     /// <summary>
-    ///  Occurs when the blame action is requested for the selected file.
+    ///     Occurs when the blame action is requested for the selected file.
     /// </summary>
     public event EventHandler? BlameRequested;
 
     /// <summary>
-    ///  Occurs when a path-related context menu action is requested for the selected file.
+    ///     Occurs when a path-related context menu action is requested for the selected file.
     /// </summary>
     public event EventHandler<FileListAction>? PathActionRequested;
 
     /// <summary>
-    ///  Gets the selected file status item, or <see langword="null"/>.
-    /// </summary>
-    public GitItemStatus? SelectedItem => lstFiles.SelectedItem as GitItemStatus;
-
-    /// <summary>
-    ///  Shows the given diff items.
+    ///     Shows the given diff items.
     /// </summary>
     public void SetDiffs(IReadOnlyList<GitItemStatus> items)
     {
@@ -109,7 +114,7 @@ public partial class FileStatusList : GitExtensionsControl
 
     private void UpdateActionState()
     {
-        bool hasSelectedFile = SelectedItem is not null;
+        var hasSelectedFile = SelectedItem is not null;
         btnFileHistory.IsEnabled = hasSelectedFile;
         btnBlameFile.IsEnabled = hasSelectedFile;
     }
@@ -122,17 +127,17 @@ public partial class FileStatusList : GitExtensionsControl
             return new Panel();
         }
 
-        (string marker, Avalonia.Media.Color color) = item switch
+        (var marker, var color) = item switch
         {
             { IsNew: true } => ("A", Colors.SeaGreen),
             { IsDeleted: true } => ("D", Colors.IndianRed),
             { IsRenamed: true } => ("R", Colors.SteelBlue),
-            _ => ("M", Colors.Goldenrod),
+            _ => ("M", Colors.Goldenrod)
         };
 
         return new StackPanel
         {
-            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Orientation = Orientation.Horizontal,
             Children =
             {
                 new TextBlock
@@ -141,14 +146,10 @@ public partial class FileStatusList : GitExtensionsControl
                     Foreground = new SolidColorBrush(color),
                     FontWeight = FontWeight.Bold,
                     Width = 18,
-                    Margin = new Avalonia.Thickness(4, 0, 0, 0),
+                    Margin = new Thickness(4, 0, 0, 0)
                 },
-                new TextBlock
-                {
-                    Text = item.Name,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                },
-            },
+                new TextBlock { Text = item.Name, TextTrimming = TextTrimming.CharacterEllipsis }
+            }
         };
     }
 }

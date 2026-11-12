@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using ResourceManager;
 using ResourceManager.CommitDataRenders;
 
@@ -8,23 +7,23 @@ namespace ResourceManagerTests.CommitDataRenders;
 
 public class CommitDataHeaderRendererIntegrationTests : IDisposable
 {
+    private readonly CommitData _data = null!;
     private readonly CultureInfo _previousCulture = CultureInfo.CurrentCulture;
-    private readonly CultureInfo _previousUICulture = CultureInfo.CurrentUICulture;
-    private CommitData _data = null!;
-    private CommitDataHeaderRenderer _rendererTabs = null!;
-    private CommitDataHeaderRenderer _rendererSpaces = null!;
+    private readonly CultureInfo _previousUiCulture = CultureInfo.CurrentUICulture;
+    private readonly CommitDataHeaderRenderer _rendererSpaces = null!;
+    private readonly CommitDataHeaderRenderer _rendererTabs = null!;
 
     public CommitDataHeaderRendererIntegrationTests()
     {
-        CultureInfo testCulture = CultureInfo.GetCultureInfo("en-US");
+        var testCulture = CultureInfo.GetCultureInfo("en-US");
         CultureInfo.CurrentCulture = testCulture;
         CultureInfo.CurrentUICulture = testCulture;
 
-        ObjectId commitId = ObjectId.Random();
-        ObjectId parentId1 = ObjectId.Random();
-        ObjectId parentId2 = ObjectId.Random();
-        DateTime authorTime = DateTime.UtcNow.AddDays(-3);
-        DateTime commitTime = DateTime.UtcNow.AddDays(-2);
+        var commitId = ObjectId.Random();
+        var parentId1 = ObjectId.Random();
+        var parentId2 = ObjectId.Random();
+        var authorTime = DateTime.UtcNow.AddDays(-3);
+        var commitTime = DateTime.UtcNow.AddDays(-2);
 
         _data = new CommitData(
             commitId,
@@ -41,33 +40,42 @@ public class CommitDataHeaderRendererIntegrationTests : IDisposable
             }
         };
 
-        _rendererTabs = new CommitDataHeaderRenderer(new TabbedHeaderLabelFormatter(), new DateFormatter(), new TabbedHeaderRenderStyleProvider(), new LinkFactory());
-        _rendererSpaces = new CommitDataHeaderRenderer(new MonospacedHeaderLabelFormatter(), new DateFormatter(), new MonospacedHeaderRenderStyleProvider(), new LinkFactory());
+        _rendererTabs = new CommitDataHeaderRenderer(new TabbedHeaderLabelFormatter(), new DateFormatter(),
+            new TabbedHeaderRenderStyleProvider(), new LinkFactory());
+        _rendererSpaces = new CommitDataHeaderRenderer(new MonospacedHeaderLabelFormatter(), new DateFormatter(),
+            new MonospacedHeaderRenderStyleProvider(), new LinkFactory());
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         CultureInfo.CurrentCulture = _previousCulture;
-        CultureInfo.CurrentUICulture = _previousUICulture;
+        CultureInfo.CurrentUICulture = _previousUiCulture;
     }
 
     [Fact]
     public void Render_with_tabs_and_links()
     {
-        string expectedHeader = "Author:		<a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
-                                "Author date:	3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" + Environment.NewLine +
-                             "Committer:	<a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Commit date:	2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" + Environment.NewLine +
-                             "Commit hash:	" + _data.ObjectId + Environment.NewLine +
-                             "Children:	" +
-                               "<a href='gitext://gotocommit/" + _data.ChildIds![0] + "'>" + _data.ChildIds![0].ToShortString() + "</a> " +
-                               "<a href='gitext://gotocommit/" + _data.ChildIds![1] + "'>" + _data.ChildIds![1].ToShortString() + "</a> " +
-                               "<a href='gitext://gotocommit/" + _data.ChildIds![2] + "'>" + _data.ChildIds![2].ToShortString() + "</a>" + Environment.NewLine +
-                             "Parents:		" +
-                               "<a href='gitext://gotocommit/" + _data.ParentIds![0] + "'>" + _data.ParentIds![0].ToShortString() + "</a> " +
-                               "<a href='gitext://gotocommit/" + _data.ParentIds![1] + "'>" + _data.ParentIds![1].ToShortString() + "</a>";
+        var expectedHeader =
+            "Author:		<a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Author date:	3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" +
+            Environment.NewLine +
+            "Committer:	<a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Commit date:	2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" +
+            Environment.NewLine +
+            "Commit hash:	" + _data.ObjectId + Environment.NewLine +
+            "Children:	" +
+            "<a href='gitext://gotocommit/" + _data.ChildIds![0] + "'>" + _data.ChildIds![0].ToShortString() + "</a> " +
+            "<a href='gitext://gotocommit/" + _data.ChildIds![1] + "'>" + _data.ChildIds![1].ToShortString() + "</a> " +
+            "<a href='gitext://gotocommit/" + _data.ChildIds![2] + "'>" + _data.ChildIds![2].ToShortString() + "</a>" +
+            Environment.NewLine +
+            "Parents:		" +
+            "<a href='gitext://gotocommit/" + _data.ParentIds![0] + "'>" + _data.ParentIds![0].ToShortString() +
+            "</a> " +
+            "<a href='gitext://gotocommit/" + _data.ParentIds![1] + "'>" + _data.ParentIds![1].ToShortString() + "</a>";
 
-        string result = _rendererTabs.Render(_data, true);
+        var result = _rendererTabs.Render(_data, true);
 
         result.Should().Be(expectedHeader);
     }
@@ -75,20 +83,25 @@ public class CommitDataHeaderRendererIntegrationTests : IDisposable
     [Fact]
     public void Render_with_tabs_no_links()
     {
-        string expectedHeader = "Author:		<a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Author date:	3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" + Environment.NewLine +
-                             "Committer:	<a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Commit date:	2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" + Environment.NewLine +
-                             "Commit hash:	" + _data.ObjectId + Environment.NewLine +
-                             "Children:	" +
-                               _data.ChildIds![0].ToShortString() + " " +
-                               _data.ChildIds![1].ToShortString() + " " +
-                               _data.ChildIds![2].ToShortString() + Environment.NewLine +
-                             "Parents:		" +
-                               _data.ParentIds![0].ToShortString() + " " +
-                               _data.ParentIds![1].ToShortString();
+        var expectedHeader =
+            "Author:		<a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Author date:	3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" +
+            Environment.NewLine +
+            "Committer:	<a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Commit date:	2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" +
+            Environment.NewLine +
+            "Commit hash:	" + _data.ObjectId + Environment.NewLine +
+            "Children:	" +
+            _data.ChildIds![0].ToShortString() + " " +
+            _data.ChildIds![1].ToShortString() + " " +
+            _data.ChildIds![2].ToShortString() + Environment.NewLine +
+            "Parents:		" +
+            _data.ParentIds![0].ToShortString() + " " +
+            _data.ParentIds![1].ToShortString();
 
-        string result = _rendererTabs.Render(_data, false);
+        var result = _rendererTabs.Render(_data, false);
 
         result.Should().Be(expectedHeader);
     }
@@ -96,20 +109,27 @@ public class CommitDataHeaderRendererIntegrationTests : IDisposable
     [Fact]
     public void Render_with_spaces_with_links()
     {
-        string expectedHeader = "Author:      <a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Author date: 3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" + Environment.NewLine +
-                             "Committer:   <a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Commit date: 2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" + Environment.NewLine +
-                             "Commit hash: " + _data.ObjectId + Environment.NewLine +
-                             "Children:    " +
-                               "<a href='gitext://gotocommit/" + _data.ChildIds![0] + "'>" + _data.ChildIds![0].ToShortString() + "</a> " +
-                               "<a href='gitext://gotocommit/" + _data.ChildIds![1] + "'>" + _data.ChildIds![1].ToShortString() + "</a> " +
-                               "<a href='gitext://gotocommit/" + _data.ChildIds![2] + "'>" + _data.ChildIds![2].ToShortString() + "</a>" + Environment.NewLine +
-                             "Parents:     " +
-                               "<a href='gitext://gotocommit/" + _data.ParentIds![0] + "'>" + _data.ParentIds![0].ToShortString() + "</a> " +
-                               "<a href='gitext://gotocommit/" + _data.ParentIds![1] + "'>" + _data.ParentIds![1].ToShortString() + "</a>";
+        var expectedHeader =
+            "Author:      <a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Author date: 3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" +
+            Environment.NewLine +
+            "Committer:   <a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Commit date: 2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" +
+            Environment.NewLine +
+            "Commit hash: " + _data.ObjectId + Environment.NewLine +
+            "Children:    " +
+            "<a href='gitext://gotocommit/" + _data.ChildIds![0] + "'>" + _data.ChildIds![0].ToShortString() + "</a> " +
+            "<a href='gitext://gotocommit/" + _data.ChildIds![1] + "'>" + _data.ChildIds![1].ToShortString() + "</a> " +
+            "<a href='gitext://gotocommit/" + _data.ChildIds![2] + "'>" + _data.ChildIds![2].ToShortString() + "</a>" +
+            Environment.NewLine +
+            "Parents:     " +
+            "<a href='gitext://gotocommit/" + _data.ParentIds![0] + "'>" + _data.ParentIds![0].ToShortString() +
+            "</a> " +
+            "<a href='gitext://gotocommit/" + _data.ParentIds![1] + "'>" + _data.ParentIds![1].ToShortString() + "</a>";
 
-        string result = _rendererSpaces.Render(_data, true);
+        var result = _rendererSpaces.Render(_data, true);
 
         result.Should().Be(expectedHeader);
     }
@@ -117,20 +137,25 @@ public class CommitDataHeaderRendererIntegrationTests : IDisposable
     [Fact]
     public void Render_with_spaces_no_links()
     {
-        string expectedHeader = "Author:      <a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Author date: 3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" + Environment.NewLine +
-                             "Committer:   <a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" + Environment.NewLine +
-                             "Commit date: 2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" + Environment.NewLine +
-                             "Commit hash: " + _data.ObjectId + Environment.NewLine +
-                             "Children:    " +
-                               _data.ChildIds![0].ToShortString() + " " +
-                               _data.ChildIds![1].ToShortString() + " " +
-                               _data.ChildIds![2].ToShortString() + Environment.NewLine +
-                             "Parents:     " +
-                               _data.ParentIds![0].ToShortString() + " " +
-                               _data.ParentIds![1].ToShortString();
+        var expectedHeader =
+            "Author:      <a href='mailto:John.Doe@test.com'>John Doe (Acme Inc) &lt;John.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Author date: 3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" +
+            Environment.NewLine +
+            "Committer:   <a href='mailto:Jane.Doe@test.com'>Jane Doe &lt;Jane.Doe@test.com&gt;</a>" +
+            Environment.NewLine +
+            "Commit date: 2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" +
+            Environment.NewLine +
+            "Commit hash: " + _data.ObjectId + Environment.NewLine +
+            "Children:    " +
+            _data.ChildIds![0].ToShortString() + " " +
+            _data.ChildIds![1].ToShortString() + " " +
+            _data.ChildIds![2].ToShortString() + Environment.NewLine +
+            "Parents:     " +
+            _data.ParentIds![0].ToShortString() + " " +
+            _data.ParentIds![1].ToShortString();
 
-        string result = _rendererSpaces.Render(_data, false);
+        var result = _rendererSpaces.Render(_data, false);
 
         result.Should().Be(expectedHeader);
     }
@@ -138,13 +163,15 @@ public class CommitDataHeaderRendererIntegrationTests : IDisposable
     [Fact]
     public void RenderPlain_with_tabs()
     {
-        string expectedHeader = "Author:		John Doe (Acme Inc) <John.Doe@test.com>" + Environment.NewLine +
-                             "Author date:	3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" + Environment.NewLine +
+        var expectedHeader = "Author:		John Doe (Acme Inc) <John.Doe@test.com>" + Environment.NewLine +
+                             "Author date:	3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) +
+                             ")" + Environment.NewLine +
                              "Committer:	Jane Doe <Jane.Doe@test.com>" + Environment.NewLine +
-                             "Commit date:	2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" + Environment.NewLine +
+                             "Commit date:	2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) +
+                             ")" + Environment.NewLine +
                              "Commit hash:	" + _data.ObjectId;
 
-        string result = _rendererTabs.RenderPlain(_data);
+        var result = _rendererTabs.RenderPlain(_data);
 
         result.Should().Be(expectedHeader);
     }
@@ -152,13 +179,15 @@ public class CommitDataHeaderRendererIntegrationTests : IDisposable
     [Fact]
     public void RenderPlain_with_spaces()
     {
-        string expectedHeader = "Author:      John Doe (Acme Inc) <John.Doe@test.com>" + Environment.NewLine +
-                             "Author date: 3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) + ")" + Environment.NewLine +
+        var expectedHeader = "Author:      John Doe (Acme Inc) <John.Doe@test.com>" + Environment.NewLine +
+                             "Author date: 3 days ago (" + LocalizationHelpers.GetFullDateString(_data.AuthorDate) +
+                             ")" + Environment.NewLine +
                              "Committer:   Jane Doe <Jane.Doe@test.com>" + Environment.NewLine +
-                             "Commit date: 2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) + ")" + Environment.NewLine +
+                             "Commit date: 2 days ago (" + LocalizationHelpers.GetFullDateString(_data.CommitDate) +
+                             ")" + Environment.NewLine +
                              "Commit hash: " + _data.ObjectId;
 
-        string result = _rendererSpaces.RenderPlain(_data);
+        var result = _rendererSpaces.RenderPlain(_data);
 
         result.Should().Be(expectedHeader);
     }

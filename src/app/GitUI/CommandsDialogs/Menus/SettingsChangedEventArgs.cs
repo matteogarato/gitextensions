@@ -1,15 +1,10 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 
 namespace GitUI.CommandsDialogs.Menus;
 
-public class SettingsChangedEventArgs : EventArgs
+public class SettingsChangedEventArgs(string oldTranslation, CommitInfoPosition oldCommitInfoPosition)
+    : EventArgs
 {
-    public SettingsChangedEventArgs(string oldTranslation, CommitInfoPosition oldCommitInfoPosition)
-    {
-        OldTranslation = oldTranslation;
-        OldCommitInfoPosition = oldCommitInfoPosition;
-    }
-
-    public CommitInfoPosition OldCommitInfoPosition { get; }
-    public string OldTranslation { get; }
+    public CommitInfoPosition OldCommitInfoPosition { get; } = oldCommitInfoPosition;
+    public string OldTranslation { get; } = oldTranslation;
 }

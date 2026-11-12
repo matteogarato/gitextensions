@@ -4,35 +4,43 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 
 namespace GitCommandsTests.Settings;
+
 public sealed class BuildServerSettingsTests : IDisposable
 {
-    private GitModuleTestHelper _testHelper = null!;
-    private DistributedSettings _userRoaming = null!;
-    private DistributedSettings _repoDistributed = null!;
-    private DistributedSettings _repoLocal = null!;
-    private DistributedSettings _effective = null!;
-    private string _userRoamingConfigFilePath = null!;
-    private string _repoDistributedConfigFilePath = null!;
-    private string _repoLocalConfigFilePath = null!;
+    private readonly DistributedSettings _effective = null!;
+    private readonly DistributedSettings _repoDistributed = null!;
+    private readonly string _repoDistributedConfigFilePath = null!;
+    private readonly DistributedSettings _repoLocal = null!;
+    private readonly string _repoLocalConfigFilePath = null!;
+    private readonly GitModuleTestHelper _testHelper = null!;
+    private readonly DistributedSettings _userRoaming = null!;
+    private readonly string _userRoamingConfigFilePath = null!;
 
     public BuildServerSettingsTests()
     {
         _testHelper = new GitModuleTestHelper();
 
-        string content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.level3_roaming_GitExtensions.settings.xml");
-        _userRoamingConfigFilePath = _testHelper.CreateFile(_testHelper.TemporaryPath + "/RoamingProfile", "GitExtensions.settings", content);
-        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.level2_repodist_GitExtensions.settings.xml");
+        var content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.level3_roaming_GitExtensions.settings.xml");
+        _userRoamingConfigFilePath = _testHelper.CreateFile(_testHelper.TemporaryPath + "/RoamingProfile",
+            "GitExtensions.settings", content);
+        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.level2_repodist_GitExtensions.settings.xml");
         _repoDistributedConfigFilePath = _testHelper.CreateRepoFile("GitExtensions.settings", content);
-        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(), $"{GetType().Namespace}.MockData.level1_repogit_GitExtensions.settings.xml");
+        content = EmbeddedResourceLoader.Load(Assembly.GetExecutingAssembly(),
+            $"{GetType().Namespace}.MockData.level1_repogit_GitExtensions.settings.xml");
         _repoLocalConfigFilePath = _testHelper.CreateRepoFile(".git", "GitExtensions.settings", content);
 
-        _userRoaming = new DistributedSettings(lowerPriority: null, new GitExtSettingsCache(_userRoamingConfigFilePath), SettingLevel.Global);
-        _repoDistributed = new DistributedSettings(lowerPriority: _userRoaming, new GitExtSettingsCache(_repoDistributedConfigFilePath), SettingLevel.Distributed);
-        _repoLocal = new DistributedSettings(lowerPriority: _repoDistributed, new GitExtSettingsCache(_repoLocalConfigFilePath), SettingLevel.Local);
-        _effective = new DistributedSettings(lowerPriority: _repoLocal, new GitExtSettingsCache(settingsFilePath: null!), SettingLevel.Effective);
+        _userRoaming = new DistributedSettings(null, new GitExtSettingsCache(_userRoamingConfigFilePath),
+            SettingLevel.Global);
+        _repoDistributed = new DistributedSettings(_userRoaming,
+            new GitExtSettingsCache(_repoDistributedConfigFilePath), SettingLevel.Distributed);
+        _repoLocal = new DistributedSettings(_repoDistributed, new GitExtSettingsCache(_repoLocalConfigFilePath),
+            SettingLevel.Local);
+        _effective = new DistributedSettings(_repoLocal, new GitExtSettingsCache(null!), SettingLevel.Effective);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _userRoaming.SettingsCache.Dispose();
         _repoDistributed.SettingsCache.Dispose();
@@ -45,14 +53,16 @@ public sealed class BuildServerSettingsTests : IDisposable
     public void UserRoaming_settings_should_return_expected()
     {
         // Explicitly set
-        BuildServerSettings.ServerName[_userRoaming].Should().Be("Azure DevOps and Team Foundation Server (since TFS2015)");
+        BuildServerSettings.ServerName[_userRoaming].Should()
+            .Be("Azure DevOps and Team Foundation Server (since TFS2015)");
         BuildServerSettings.IntegrationEnabled[_userRoaming].Should().BeTrue();
         BuildServerSettings.ShowBuildResultPage[_userRoaming].Should().BeNull();
 
         // Explicitly set
-        SettingsSource settingsSource = BuildServerSettings.GetSettingsSource(_userRoaming);
+        var settingsSource = BuildServerSettings.GetSettingsSource(_userRoaming);
         settingsSource.Should().BeOfType<SettingsPath>();
-        ((SettingsPath)settingsSource).PathFor("").Should().Be("BuildServer.Azure DevOps and Team Foundation Server (since TFS2015).");
+        ((SettingsPath)settingsSource).PathFor("").Should()
+            .Be("BuildServer.Azure DevOps and Team Foundation Server (since TFS2015).");
     }
 
     [Fact]
@@ -66,7 +76,7 @@ public sealed class BuildServerSettingsTests : IDisposable
         BuildServerSettings.ShowBuildResultPage[_repoLocal].Should().BeFalse();
 
         // No explicit settings, inheriting from the repo local
-        SettingsSource settingsSource = BuildServerSettings.GetSettingsSource(_repoLocal);
+        var settingsSource = BuildServerSettings.GetSettingsSource(_repoLocal);
         settingsSource.Should().BeOfType<SettingsPath>();
         ((SettingsPath)settingsSource).PathFor("").Should().Be("BuildServer.AppVeyor.");
     }
@@ -83,7 +93,7 @@ public sealed class BuildServerSettingsTests : IDisposable
         // No explicit settings, inheriting from the repo distributed
         BuildServerSettings.ShowBuildResultPage[source].Should().BeFalse();
 
-        SettingsSource settingsSource = BuildServerSettings.GetSettingsSource(source);
+        var settingsSource = BuildServerSettings.GetSettingsSource(source);
         settingsSource.Should().BeOfType<SettingsPath>();
         ((SettingsPath)settingsSource).PathFor("").Should().Be("BuildServer.AppVeyor.");
     }

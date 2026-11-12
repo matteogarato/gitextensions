@@ -11,36 +11,36 @@ internal sealed class DashboardTheme
     static DashboardTheme()
     {
         // Palette URL: http://paletton.com/#uid=13I0u0k7UUa3cZA5wXlaiQ5cFL3
-        Light = new DashboardTheme(searchBackColor: Color.FromArgb(248, 248, 255),
-                                   startBackColor: Color.FromArgb(219, 235, 248),
-                                   contributeBackColor: Color.FromArgb(230, 241, 250),
-                                   headerBackColor: Color.FromArgb(172, 208, 239),
-                                   logoBackColor: Color.FromArgb(19, 122, 212),
-                                   primaryText: Color.FromArgb(30, 30, 30),
-                                   secondaryText: Color.FromArgb(100, 127, 210),
-                                   accentedText: Color.DarkGoldenrod,
-                                   primaryHeadingText: Color.FromArgb(24, 29, 35),
-                                   secondaryHeadingText: Color.DimGray,
-                                   backgroundImage: Images.DashboardBackgroundBlue);
+        Light = new DashboardTheme(Color.FromArgb(248, 248, 255),
+            Color.FromArgb(219, 235, 248),
+            Color.FromArgb(230, 241, 250),
+            Color.FromArgb(172, 208, 239),
+            Color.FromArgb(19, 122, 212),
+            Color.FromArgb(30, 30, 30),
+            Color.FromArgb(100, 127, 210),
+            Color.DarkGoldenrod,
+            Color.FromArgb(24, 29, 35),
+            Color.DimGray,
+            Images.DashboardBackgroundBlue);
 
-        Dark = new DashboardTheme(searchBackColor: SystemColors.Control,
-                                  startBackColor: SystemColors.Control,
-                                  contributeBackColor: SystemColors.ControlLight,
-                                  headerBackColor: SystemColors.ControlDark,
-                                  logoBackColor: SystemColors.ControlDarkDark,
-                                  primaryText: SystemColors.WindowText,
-                                  secondaryText: Color.LightSkyBlue,
-                                  accentedText: Color.Goldenrod.AdaptBackColor(),
-                                  primaryHeadingText: SystemColors.ControlText,
-                                  secondaryHeadingText: SystemColors.GrayText,
-                                  backgroundImage: Images.DashboardBackgroundGrey);
+        Dark = new DashboardTheme(SystemColors.Control,
+            SystemColors.Control,
+            SystemColors.ControlLight,
+            SystemColors.ControlDark,
+            SystemColors.ControlDarkDark,
+            SystemColors.WindowText,
+            Color.LightSkyBlue,
+            Color.Goldenrod.AdaptBackColor(),
+            SystemColors.ControlText,
+            SystemColors.GrayText,
+            Images.DashboardBackgroundGrey);
     }
 
     private DashboardTheme(Color searchBackColor, Color startBackColor, Color contributeBackColor,
-                             Color headerBackColor, Color logoBackColor,
-                             Color primaryText, Color secondaryText, Color accentedText,
-                             Color primaryHeadingText, Color secondaryHeadingText,
-                             Image backgroundImage)
+        Color headerBackColor, Color logoBackColor,
+        Color primaryText, Color secondaryText, Color accentedText,
+        Color primaryHeadingText, Color secondaryHeadingText,
+        Image backgroundImage)
     {
         SearchBackColor = searchBackColor;
         StartBackColor = startBackColor;

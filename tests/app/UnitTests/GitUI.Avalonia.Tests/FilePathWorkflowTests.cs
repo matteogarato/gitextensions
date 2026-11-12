@@ -1,15 +1,14 @@
-using AwesomeAssertions;
 using GitExtensions.Extensibility.Git;
 using GitUI.CommandsDialogs;
 
-namespace GitUI.Avalonia.Tests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class FilePathWorkflowTests
 {
     [Fact]
     public void FormatPaths_should_return_relative_paths_one_per_line()
     {
-        FilePathWorkflow.FormatPaths([new GitItemStatus(name: "a/b.cs"), new GitItemStatus(name: "c.txt")], "/repo", fullPath: false)
+        FilePathWorkflow.FormatPaths([new GitItemStatus("a/b.cs"), new GitItemStatus("c.txt")], "/repo", false)
             .Should().Be("a/b.cs" + Environment.NewLine + "c.txt");
     }
 

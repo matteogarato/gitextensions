@@ -7,15 +7,15 @@ public static class StreamExtensions
     [MustUseReturnValue]
     public static IEnumerable<ReadOnlyMemory<byte>> SplitLogOutput(this Stream stream, int initialBufferSize = 4096)
     {
-        byte[] buffer = new byte[initialBufferSize];
+        var buffer = new byte[initialBufferSize];
 
-        int yieldFromIndex = 0;
-        int writeToIndex = 0;
+        var yieldFromIndex = 0;
+        var writeToIndex = 0;
 
         while (true)
         {
             // Fill the buffer with data
-            int bytesRead = stream.Read(buffer, writeToIndex, buffer.Length - writeToIndex);
+            var bytesRead = stream.Read(buffer, writeToIndex, buffer.Length - writeToIndex);
 
             if (bytesRead == 0)
             {
@@ -28,15 +28,15 @@ public static class StreamExtensions
                 yield break;
             }
 
-            int dataUntilIndex = writeToIndex + bytesRead;
+            var dataUntilIndex = writeToIndex + bytesRead;
 
-            int searchFromIndex = writeToIndex;
+            var searchFromIndex = writeToIndex;
             writeToIndex += bytesRead;
-            int searchBeforeIndex = writeToIndex;
+            var searchBeforeIndex = writeToIndex;
 
             while (searchFromIndex < searchBeforeIndex)
             {
-                int nullIndex = Array.IndexOf<byte>(buffer, 0, searchFromIndex, searchBeforeIndex - searchFromIndex);
+                var nullIndex = Array.IndexOf<byte>(buffer, 0, searchFromIndex, searchBeforeIndex - searchFromIndex);
 
                 if (nullIndex == -1)
                 {
@@ -47,7 +47,7 @@ public static class StreamExtensions
                         if (yieldFromIndex != 0)
                         {
                             // Shift unprocessed to the beginning
-                            int unprocessedByteCount = buffer.Length - yieldFromIndex;
+                            var unprocessedByteCount = buffer.Length - yieldFromIndex;
                             Array.Copy(buffer, yieldFromIndex, buffer, 0, unprocessedByteCount);
 
                             // Restart loop
@@ -59,7 +59,7 @@ public static class StreamExtensions
                             // The buffer is full, with no nulls, so allocate a larger buffer
 
                             // Allocate new buffer with twice the size and copy
-                            byte[] newBuffer = new byte[buffer.Length * 2];
+                            var newBuffer = new byte[buffer.Length * 2];
                             Array.Copy(buffer, newBuffer, buffer.Length);
 
                             // Restart loop (yieldFromIndex is unchanged)

@@ -14,18 +14,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
-    <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="xunit.v3.extensibility.core" />
-    <PackageReference Include="xunit.v3.assert" />
+    <PackageReference Include="LibGit2Sharp"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common"/>
+    <PackageReference Include="AwesomeAssertions"/>
+    <PackageReference Include="xunit.v3.extensibility.core"/>
+    <PackageReference Include="xunit.v3.assert"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\app\GitCommands\GitCommands.csproj" />
-    <ProjectReference Include="..\..\src\app\GitExtUtils\GitExtUtils.csproj" />
-    <ProjectReference Include="..\..\src\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj" />
-    <PackageReference Include="JetBrains.Annotations" />
+    <ProjectReference Include="..\..\src\app\GitCommands\GitCommands.csproj"/>
+    <ProjectReference Include="..\..\src\app\GitExtUtils\GitExtUtils.csproj"/>
+    <ProjectReference Include="..\..\src\plugins\GitUIPluginInterfaces\GitUIPluginInterfaces.csproj"/>
+    <PackageReference Include="JetBrains.Annotations"/>
   </ItemGroup>
 
 </Project>

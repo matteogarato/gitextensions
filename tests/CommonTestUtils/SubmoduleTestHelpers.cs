@@ -5,16 +5,17 @@ namespace CommonTestUtils;
 
 public class SubmoduleTestHelpers
 {
-    public static async Task<SubmoduleInfoResult> UpdateSubmoduleStructureAndWaitForResultAsync(ISubmoduleStatusProvider provider, IGitModule module, bool updateStatus = true)
+    public static async Task<SubmoduleInfoResult> UpdateSubmoduleStructureAndWaitForResultAsync(
+        ISubmoduleStatusProvider provider, IGitModule module, bool updateStatus = true)
     {
         SubmoduleInfoResult? result = null;
         provider.StatusUpdated += ProviderStatusUpdated;
         try
         {
             await provider.UpdateSubmodulesStructureAsync(
-                    workingDirectory: module.WorkingDir,
-                    noBranchText: string.Empty,
-                    updateStatus: updateStatus);
+                module.WorkingDir,
+                string.Empty,
+                updateStatus);
 
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
         }
@@ -31,22 +32,23 @@ public class SubmoduleTestHelpers
         }
     }
 
-    public static async Task UpdateSubmoduleStatusAndWaitForResultAsync(ISubmoduleStatusProvider provider, IGitModule module, IReadOnlyList<GitItemStatus> gitStatus, bool forceUpdate = true)
+    public static async Task UpdateSubmoduleStatusAndWaitForResultAsync(ISubmoduleStatusProvider provider,
+        IGitModule module, IReadOnlyList<GitItemStatus> gitStatus, bool forceUpdate = true)
     {
-        provider.StatusUpdated += Provider_StatusUpdated;
+        provider.StatusUpdated += ProviderStatusUpdated;
 
         await provider.UpdateSubmodulesStatusAsync(
-                workingDirectory: module.WorkingDir,
-                gitStatus: gitStatus,
-                forceUpdate: forceUpdate);
+            module.WorkingDir,
+            gitStatus,
+            forceUpdate);
 
         await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-        provider.StatusUpdated -= Provider_StatusUpdated;
+        provider.StatusUpdated -= ProviderStatusUpdated;
 
         return;
 
-        static void Provider_StatusUpdated(object? sender, SubmoduleStatusEventArgs e)
+        static void ProviderStatusUpdated(object? sender, SubmoduleStatusEventArgs e)
         {
         }
     }

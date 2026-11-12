@@ -1,12 +1,16 @@
 ﻿using System.Runtime.CompilerServices;
-using GitCommands;
 using GitExtensions.Extensibility.Git;
 using GitUI.UserControls.RevisionGrid.Graph;
-using GitUIPluginInterfaces;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.UserControls.RevisionGrid;
+
 public class RevisionGraphTests
 {
+    private const string _graphWithMultiLaneCrossings =
+        "0:C,1,2,3,4,5,6,7,8,9,A,B 1:R 2:R 3:R 4:C 5:C 6:C 7:R 8:C 9:R A:C B:R C:D D:E E:F F:G G:H,K,R H:I,R I:J,R J:R K:R R";
+
+    private const int _lookAhead = 20 * 2;
     private RevisionGraph _revisionGraph = null!;
 
     public RevisionGraphTests()
@@ -15,13 +19,67 @@ public class RevisionGraphTests
         AppSettings.StraightenGraphDiagonals.Value = false;
     }
 
-    private void Setup(bool mergeGraphLanesHavingCommonParent, bool finishLoading = false, IEnumerable<GitRevision>? revisions = null)
+    private static IEnumerable<GitRevision> Revisions
+    {
+        get
+        {
+            /* Visualization of commit graph:
+             *     Commit1
+             *        |
+             *     Commit2
+             *    /       \
+             * Commit3     |
+             *   |         |
+             *   |       Commit4
+             *    \       /
+             *     Commit5
+             *        |
+             *     Commit6
+             *        |
+             *       ...
+             *        |
+             *     Commit(6 + LookAhead)
+             */
+            GitRevision commit1 = new(ObjectId.Random());
+
+            GitRevision commit2 = new(ObjectId.Random());
+            commit1.ParentIds = new[] { commit2.ObjectId };
+
+            GitRevision commit3 = new(ObjectId.Random());
+            GitRevision commit4 = new(ObjectId.Random());
+            commit2.ParentIds = new[] { commit3.ObjectId, commit4.ObjectId };
+
+            GitRevision commit5 = new(ObjectId.Random());
+            commit3.ParentIds = new[] { commit5.ObjectId };
+            commit4.ParentIds = new[] { commit5.ObjectId };
+
+            yield return commit1;
+            yield return commit2;
+            yield return commit3;
+            yield return commit4;
+
+            var prevCommit = commit5;
+            for (var i = 0; i < 1 + _lookAhead; ++i)
+            {
+                GitRevision currCommit = new(ObjectId.Random());
+                prevCommit.ParentIds = new[] { currCommit.ObjectId };
+                yield return prevCommit;
+                prevCommit = currCommit;
+            }
+
+            prevCommit.ParentIds = [];
+            yield return prevCommit;
+        }
+    }
+
+    private void Setup(bool mergeGraphLanesHavingCommonParent, bool finishLoading = false,
+        IEnumerable<GitRevision>? revisions = null)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
         _revisionGraph = new RevisionGraph();
 
-        foreach (GitRevision revision in revisions ?? Revisions)
+        foreach (var revision in revisions ?? Revisions)
         {
             // Mark the first revision as the current checkout
             if (_revisionGraph.Count == 0)
@@ -35,7 +93,7 @@ public class RevisionGraphTests
         if (finishLoading)
         {
             _revisionGraph.LoadingCompleted();
-            int lastRowIndex = _revisionGraph.Count - 1;
+            var lastRowIndex = _revisionGraph.Count - 1;
             _revisionGraph.CacheTo(lastRowIndex, lastRowIndex, TestContext.Current.CancellationToken);
         }
     }
@@ -43,7 +101,6 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public void ShouldBeAbleToCacheGraphTo(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
@@ -56,20 +113,19 @@ public class RevisionGraphTests
         _revisionGraph.CacheTo(400, 400, TestContext.Current.CancellationToken);
         _revisionGraph.GetCachedCount().Should().Be(mergeGraphLanesHavingCommonParent ? 6 : 0);
         _revisionGraph.LoadingCompleted();
-        _revisionGraph.GetCachedCount().Should().Be(mergeGraphLanesHavingCommonParent ? 6 + LookAhead : 0);
+        _revisionGraph.GetCachedCount().Should().Be(mergeGraphLanesHavingCommonParent ? 6 + _lookAhead : 0);
         _revisionGraph.CacheTo(400, 400, TestContext.Current.CancellationToken);
-        _revisionGraph.GetCachedCount().Should().Be(6 + LookAhead);
+        _revisionGraph.GetCachedCount().Should().Be(6 + _lookAhead);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public void ShouldBeAbleToClear(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
 
-        _revisionGraph.Count.Should().Be(6 + LookAhead);
+        _revisionGraph.Count.Should().Be(6 + _lookAhead);
         _revisionGraph.Clear();
         _revisionGraph.Count.Should().Be(0);
     }
@@ -77,7 +133,6 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public void ShouldBeAbleToHighlightBranch(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
@@ -95,7 +150,6 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public void ShouldBeAbleToGetLaneCount(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
@@ -117,7 +171,6 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public void ShouldReorderInTopoOrder(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
@@ -128,8 +181,8 @@ public class RevisionGraphTests
         GitRevision commit1 = new(ObjectId.Random());
 
         GitRevision commit2 = new(ObjectId.Random());
-        commit1.ParentIds = new ObjectId[] { commit2.ObjectId };
-        commit2.ParentIds = new ObjectId[] { _revisionGraph.GetNodeForRow(4)!.Objectid };
+        commit1.ParentIds = new[] { commit2.ObjectId };
+        commit2.ParentIds = new[] { _revisionGraph.GetNodeForRow(4)!.Objectid };
 
         _revisionGraph.Add(commit2); // This commit is now dangling
 
@@ -144,11 +197,12 @@ public class RevisionGraphTests
         // Add a new head
         GitRevision newHead = new(ObjectId.Random())
         {
-            ParentIds = new ObjectId[] { _revisionGraph.GetNodeForRow(0)!.Objectid }
+            ParentIds = new[] { _revisionGraph.GetNodeForRow(0)!.Objectid }
         };
         _revisionGraph.Add(newHead); // Add commit that has the current top node as parent.
 
-        _revisionGraph.CacheTo(_revisionGraph.Count, _revisionGraph.Count, TestContext.Current.CancellationToken); // Call to cache fix the order
+        _revisionGraph.CacheTo(_revisionGraph.Count, _revisionGraph.Count,
+            TestContext.Current.CancellationToken); // Call to cache fix the order
         _revisionGraph.GetTestAccessor().ValidateTopoOrder().Should().BeTrue();
     }
 
@@ -156,7 +210,7 @@ public class RevisionGraphTests
     [InlineData(false)]
     [InlineData(true)]
 
-     // https://github.com/gitextensions/gitextensions/issues/6193
+    // https://github.com/gitextensions/gitextensions/issues/6193
     public void CacheEmptyGraph(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
@@ -170,7 +224,7 @@ public class RevisionGraphTests
     [InlineData(false)]
     [InlineData(true)]
 
-     // https://github.com/gitextensions/gitextensions/issues/6210
+    // https://github.com/gitextensions/gitextensions/issues/6210
     public async Task DetachedSingleRevision(bool mergeGraphLanesHavingCommonParent)
     {
         Setup(mergeGraphLanesHavingCommonParent);
@@ -190,7 +244,7 @@ public class RevisionGraphTests
         GitRevision commit2 = new(ObjectId.Random());
 
         GitRevision commit3 = new(ObjectId.Random());
-        commit1.ParentIds = new ObjectId[] { commit3.ObjectId };
+        commit1.ParentIds = new[] { commit3.ObjectId };
 
         _revisionGraph.Add(commit1);
         _revisionGraph.Add(commit2);
@@ -207,12 +261,11 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task SegmentsAreStraightened(bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:4  6:5  7:5,6  8:7,2 ");
+        var revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:4  6:5  7:5,6  8:7,2 ");
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -220,12 +273,11 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task SegmentsWithCommitsAreStraightened(bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:2  6:5  7:4  8:4,7  9:8,6 ");
+        var revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:2  6:5  7:4  8:4,7  9:8,6 ");
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -233,12 +285,11 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task SegmentsWithOutgoingSecondaryMergesAreNotStraightened(bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:2  6:4,5  7:6  8:6,7  9:8,5 ");
+        var revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:2  6:4,5  7:6  8:6,7  9:8,5 ");
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -246,12 +297,11 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task SegmentsWithIncomingMergesAreStraightened(bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:2,4  6:4  7:4,6  8:7,5 ");
+        var revisionGraph = CreateGraph(" 1  2:1  3:1  4:1,3  5:2,4  6:4  7:4,6  8:7,5 ");
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -259,12 +309,11 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task SegmentsAreStraightenedAlthoughThisCausesWidthIncrease(bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  2:1  3:1  4:1  5:1,4  6:2  7:2,6  8:5  9:5,8,3,7 ");
+        var revisionGraph = CreateGraph(" 1  2:1  3:1  4:1  5:1,4  6:2  7:2,6  8:5  9:5,8,3,7 ");
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -272,12 +321,11 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task SegmentsWithOutgoingPrimaryMergesAreStraightened(bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  2:1  3:1  6:1  7:1,6  8:3,2  9:7  10:7,9,8 ");
+        var revisionGraph = CreateGraph(" 1  2:1  3:1  6:1  7:1,6  8:3,2  9:7  10:7,9,8 ");
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -285,12 +333,13 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
-    public async Task SegmentsAreNotStraightenedIfThisCausesAShiftForPrimarySegment(bool mergeGraphLanesHavingCommonParent)
+    public async Task SegmentsAreNotStraightenedIfThisCausesAShiftForPrimarySegment(
+        bool mergeGraphLanesHavingCommonParent)
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = mergeGraphLanesHavingCommonParent;
 
-        RevisionGraph revisionGraph = CreateGraph(" 1  a:1  b:1  2:1  3:1  4:1  5:4,1  6:3  7:5,6  8:7,2,6  c:8  d:8  e:8  9:8,e,d,c,b,a ");
+        var revisionGraph =
+            CreateGraph(" 1  a:1  b:1  2:1  3:1  4:1  5:4,1  6:3  7:5,6  8:7,2,6  c:8  d:8  e:8  9:8,e,d,c,b,a ");
 
         // Two segments cross at the 'X'. The one going '/' could be straightened,
         // but then it would shift the parent node causing an unwanted gap.
@@ -298,14 +347,12 @@ public class RevisionGraphTests
         await VerifyGraphLayoutAsync(revisionGraph);
     }
 
-    private const string graphWithMultiLaneCrossings = "0:C,1,2,3,4,5,6,7,8,9,A,B 1:R 2:R 3:R 4:C 5:C 6:C 7:R 8:C 9:R A:C B:R C:D D:E E:F F:G G:H,K,R H:I,R I:J,R J:R K:R R";
-
     [Fact]
     public async Task SegmentsAreNotStraightenedOverMultiLaneCrossings()
     {
         AppSettings.MergeGraphLanesHavingCommonParent.Value = true;
 
-        RevisionGraph revisionGraph = CreateGraphTopDown(graphWithMultiLaneCrossings);
+        var revisionGraph = CreateGraphTopDown(_graphWithMultiLaneCrossings);
 
         // No need to straighten the segments 7:R, 9:R, B:R at rows C to G because shared.
         await VerifyGraphLayoutAsync(revisionGraph);
@@ -314,18 +361,19 @@ public class RevisionGraphTests
     [Fact]
     public async Task SegmentsAreNotStraightenedOverMultiLaneCrossings_NoMergeGraphLanesHavingCommonParent()
     {
-        RevisionGraph revisionGraph = CreateGraphTopDown(graphWithMultiLaneCrossings);
+        var revisionGraph = CreateGraphTopDown(_graphWithMultiLaneCrossings);
 
         // Do not move the segments 7:R, 9:R, B:R at rows C to G.
         await VerifyGraphLayoutAsync(revisionGraph);
     }
 
     [Fact]
-    public async Task SegmentsAreNotStraightenedOverMultiLaneCrossings_NoMergeGraphLanesHavingCommonParent_StraightenGraphDiagonals()
+    public async Task
+        SegmentsAreNotStraightenedOverMultiLaneCrossings_NoMergeGraphLanesHavingCommonParent_StraightenGraphDiagonals()
     {
         AppSettings.StraightenGraphDiagonals.Value = true;
 
-        RevisionGraph revisionGraph = CreateGraphTopDown(graphWithMultiLaneCrossings);
+        var revisionGraph = CreateGraphTopDown(_graphWithMultiLaneCrossings);
 
         // Do not straighten the segments 7:R, 9:R, B:R at rows C to G but create diagonals.
         await VerifyGraphLayoutAsync(revisionGraph);
@@ -339,7 +387,7 @@ public class RevisionGraphTests
     {
         AppSettings.StraightenGraphDiagonals.Value = true;
 
-        RevisionGraph revisionGraph = CreateGraph(commitSpecs);
+        var revisionGraph = CreateGraph(commitSpecs);
 
         await VerifyGraphLayoutAsync(revisionGraph);
     }
@@ -399,20 +447,19 @@ public class RevisionGraphTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-
     public async Task MoveVisibleAndInvisibleLanesRight(bool moveFirstLane)
     {
         List<GitRevision> laneCommits = [];
-        Setup(mergeGraphLanesHavingCommonParent: false, finishLoading: true, GetRevisions().ToArray());
+        Setup(false, true, GetRevisions().ToArray());
 
-        for (int lane = 0; lane < laneCommits.Count; ++lane)
+        for (var lane = 0; lane < laneCommits.Count; ++lane)
         {
-            GitRevision moveLaneCommit = laneCommits[lane];
-            _revisionGraph.TryGetRowIndex(moveLaneCommit.ObjectId, out int lastLaneCommitIndex).Should().BeTrue();
-            RevisionGraphRevision? revisionGraphRevision = _revisionGraph.GetNodeForRow(lastLaneCommitIndex);
-            IRevisionGraphRow? revisionGraphRow = _revisionGraph.GetSegmentsForRow(lastLaneCommitIndex);
+            var moveLaneCommit = laneCommits[lane];
+            _revisionGraph.TryGetRowIndex(moveLaneCommit.ObjectId, out var lastLaneCommitIndex).Should().BeTrue();
+            var revisionGraphRevision = _revisionGraph.GetNodeForRow(lastLaneCommitIndex);
+            var revisionGraphRow = _revisionGraph.GetSegmentsForRow(lastLaneCommitIndex);
             revisionGraphRow.Should().NotBeNull();
-            int initialLaneCount = lane + 1;
+            var initialLaneCount = lane + 1;
             revisionGraphRow.GetLaneCount().Should().Be(initialLaneCount);
             revisionGraphRow.MoveLanesRight(moveFirstLane ? 0 : lane);
             revisionGraphRow.GetLaneCount().Should().Be(initialLaneCount + 1);
@@ -426,9 +473,10 @@ public class RevisionGraphTests
         {
             GitRevision baseCommit = new(ObjectId.Random()) { Subject = "B", ParentIds = [] };
 
-            for (int lane = 0; lane < RevisionGraph.MaxLanes + 10; ++lane)
+            for (var lane = 0; lane < RevisionGraph.MaxLanes + 10; ++lane)
             {
-                GitRevision laneCommit = new(ObjectId.Random()) { Subject = $"{lane % 10}", ParentIds = [baseCommit.ObjectId] };
+                GitRevision laneCommit =
+                    new(ObjectId.Random()) { Subject = $"{lane % 10}", ParentIds = [baseCommit.ObjectId] };
                 laneCommits.Add(laneCommit);
                 yield return laneCommit;
 
@@ -439,67 +487,11 @@ public class RevisionGraphTests
         }
     }
 
-    private const int LookAhead = 20 * 2;
-
-    private static IEnumerable<GitRevision> Revisions
-    {
-        get
-        {
-            /* Visualization of commit graph:
-             *     Commit1
-             *        |
-             *     Commit2
-             *    /       \
-             * Commit3     |
-             *   |         |
-             *   |       Commit4
-             *    \       /
-             *     Commit5
-             *        |
-             *     Commit6
-             *        |
-             *       ...
-             *        |
-             *     Commit(6 + LookAhead)
-             */
-            GitRevision commit1 = new(ObjectId.Random());
-
-            GitRevision commit2 = new(ObjectId.Random());
-            commit1.ParentIds = new ObjectId[] { commit2.ObjectId };
-
-            GitRevision commit3 = new(ObjectId.Random());
-            GitRevision commit4 = new(ObjectId.Random());
-            commit2.ParentIds = new ObjectId[] { commit3.ObjectId, commit4.ObjectId };
-
-            GitRevision commit5 = new(ObjectId.Random());
-            commit3.ParentIds = new ObjectId[] { commit5.ObjectId };
-            commit4.ParentIds = new ObjectId[] { commit5.ObjectId };
-
-            yield return commit1;
-            yield return commit2;
-            yield return commit3;
-            yield return commit4;
-
-            GitRevision prevCommit = commit5;
-            for (int i = 0; i < 1 + LookAhead; ++i)
-            {
-                GitRevision currCommit = new(ObjectId.Random());
-                prevCommit.ParentIds = new ObjectId[] { currCommit.ObjectId };
-                yield return prevCommit;
-                prevCommit = currCommit;
-            }
-
-            prevCommit.ParentIds = [];
-            yield return prevCommit;
-        }
-    }
-
     /// <summary>
-    /// Creates a revision graph from a text description that lists commits, space separated, from oldest to newest.
-    /// Each commit spec is {id}:{parent1 id},{parent2 id},...
-    /// or just {id} if it has no parent.
-    ///
-    /// E.g.: " 1   2:1   3:1   4:2,3 "
+    ///     Creates a revision graph from a text description that lists commits, space separated, from oldest to newest.
+    ///     Each commit spec is {id}:{parent1 id},{parent2 id},...
+    ///     or just {id} if it has no parent.
+    ///     E.g.: " 1   2:1   3:1   4:2,3 "
     /// </summary>
     private static RevisionGraph CreateGraph(string commitSpecs)
     {
@@ -507,21 +499,19 @@ public class RevisionGraphTests
         Dictionary<string, GitRevision> commitsById = [];
 
         // Parse and create commits
-        foreach (string spec in commitSpecs.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var spec in commitSpecs.Split(' ',
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            string[] parts = spec.Split(':');
-            string id = parts[0];
+            var parts = spec.Split(':');
+            var id = parts[0];
 
-            GitRevision commit = new(ObjectId.Random())
-            {
-                Subject = id
-            };
+            GitRevision commit = new(ObjectId.Random()) { Subject = id };
             commits.Add(commit);
             commitsById.Add(id, commit);
 
             if (parts.Length > 1)
             {
-                string[] parentIds = parts[1].Split(',');
+                var parentIds = parts[1].Split(',');
                 commit.ParentIds = parentIds.Select(id => commitsById[id].ObjectId).ToList();
             }
         }
@@ -530,14 +520,14 @@ public class RevisionGraphTests
         RevisionGraph graph = new();
         commits.Reverse();
 
-        foreach (GitRevision commit in commits)
+        foreach (var commit in commits)
         {
             graph.Add(commit);
         }
 
         graph.LoadingCompleted();
 
-        int lastRowIndex = graph.Count - 1;
+        var lastRowIndex = graph.Count - 1;
         graph.CacheTo(lastRowIndex, lastRowIndex, TestContext.Current.CancellationToken);
 
         return graph;
@@ -549,34 +539,34 @@ public class RevisionGraphTests
     }
 
     /// <summary>
-    /// Creates an ascii art representation of the <paramref name="revisionGraph"/> with the same layout
-    /// as the actual GE GUI.
+    ///     Creates an ascii art representation of the <paramref name="revisionGraph" /> with the same layout
+    ///     as the actual GE GUI.
     /// </summary>
     private static List<string> AsciiGraphFor(RevisionGraph revisionGraph)
     {
         List<string> graph = [];
 
-        int rowIndex = 0;
+        var rowIndex = 0;
         while (true)
         {
             // Create a line for commit
 
-            IRevisionGraphRow? row = revisionGraph.GetSegmentsForRow(rowIndex);
+            var row = revisionGraph.GetSegmentsForRow(rowIndex);
             char[] line = [.. Enumerable.Repeat(' ', (row!.GetLaneCount() * 2) + 1)];
 
             // Show '|' in lanes passing through
-            foreach (RevisionGraphSegment segment in row.Segments)
+            foreach (var segment in row.Segments)
             {
                 line[row.GetLaneForSegment(segment).Index * 2] = '|';
             }
 
             // Show '*' in lane of actual commit
-            string? subject = row!.Revision.GitRevision?.Subject;
+            var subject = row!.Revision.GitRevision?.Subject;
             line[row.GetCurrentRevisionLane() * 2] = subject?.Length is 1 ? subject[0] : '*';
 
             graph.Add(new string(line).TrimEnd());
 
-            IRevisionGraphRow? nextRow = revisionGraph.GetSegmentsForRow(rowIndex + 1);
+            var nextRow = revisionGraph.GetSegmentsForRow(rowIndex + 1);
             if (nextRow == null)
             {
                 break;
@@ -589,10 +579,10 @@ public class RevisionGraphTests
             // These drawing actions are done last, to appear on top
             List<Action> actions = [];
 
-            foreach (RevisionGraphSegment segment in row.Segments)
+            foreach (var segment in row.Segments)
             {
-                int fromPos = row.GetLaneForSegment(segment).Index * 2;
-                int toPos = nextRow.GetLaneForSegment(segment).Index * 2;
+                var fromPos = row.GetLaneForSegment(segment).Index * 2;
+                var toPos = nextRow.GetLaneForSegment(segment).Index * 2;
                 if (toPos == -2)
                 {
                     // Segment does not continue to next commit
@@ -641,7 +631,7 @@ public class RevisionGraphTests
                     // Segment shifts multiple lanes to the right
                     line[fromPos + 1] = '`';
                     line[toPos] = 'ˎ';
-                    for (int pos = fromPos + 2; pos < toPos; ++pos)
+                    for (var pos = fromPos + 2; pos < toPos; ++pos)
                     {
                         line[pos] = '-';
                     }
@@ -651,14 +641,14 @@ public class RevisionGraphTests
                     // Segment shifts multiple lanes to the left
                     line[fromPos - 1] = '´';
                     line[toPos] = ',';
-                    for (int pos = toPos + 1; pos < fromPos - 1; ++pos)
+                    for (var pos = toPos + 1; pos < fromPos - 1; ++pos)
                     {
                         line[pos] = '-';
                     }
                 }
             }
 
-            foreach (Action action in actions)
+            foreach (var action in actions)
             {
                 action();
             }
@@ -672,14 +662,15 @@ public class RevisionGraphTests
 
     private static async Task VerifyGraphLayoutAsync(RevisionGraph revisionGraph)
     {
-        string actualGraph = AsciiGraphFor(revisionGraph).Join("\n");
+        var actualGraph = AsciiGraphFor(revisionGraph).Join("\n");
         await Verify(actualGraph);
     }
 
-    private async Task VerifyGraphLayoutAsync(string commitSpecs, int testCaseIndex = 0, [CallerMemberName] string callerMemberName = null!)
+    private async Task VerifyGraphLayoutAsync(string commitSpecs, int testCaseIndex = 0,
+        [CallerMemberName] string callerMemberName = null!)
     {
-        RevisionGraph revisionGraph = CreateGraphTopDown(commitSpecs);
-        string actualGraph = AsciiGraphFor(revisionGraph).Join("\n");
+        var revisionGraph = CreateGraphTopDown(commitSpecs);
+        var actualGraph = AsciiGraphFor(revisionGraph).Join("\n");
         await Verify(actualGraph).UseFileName($"{callerMemberName}.{testCaseIndex}");
     }
 }

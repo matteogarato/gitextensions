@@ -1,9 +1,9 @@
 using System;
 
-namespace NetSpell.SpellChecker.Dictionary;
+namespace SpellChecker.Dictionary;
 
 /// <summary>
-/// The Word class represents a base word in the dictionary
+///     The Word class represents a base word in the dictionary
 /// </summary>
 public sealed class Word : IComparable<Word>
 {
@@ -119,18 +119,6 @@ public sealed class Word : IComparable<Word>
     }
 
     /// <summary>
-    ///     Sorts a collection of words by EditDistance
-    /// </summary>
-    /// <remarks>
-    ///     The compare sorts in desc order, largest EditDistance first
-    /// </remarks>
-    public int CompareTo(Word word)
-    {
-        int result = EditDistance.CompareTo(word.EditDistance);
-        return result; // * -1; // sorts desc order
-    }
-
-    /// <summary>
     ///     The affix keys that can be applied to this base word
     /// </summary>
     public string AffixKeys { get; set; } = "";
@@ -160,6 +148,18 @@ public sealed class Word : IComparable<Word>
     ///     The line height of this word
     /// </summary>
     internal int Height { get; set; }
+
+    /// <summary>
+    ///     Sorts a collection of words by EditDistance
+    /// </summary>
+    /// <remarks>
+    ///     The compare sorts in desc order, largest EditDistance first
+    /// </remarks>
+    int IComparable<Word>.CompareTo(Word word)
+    {
+        var result = EditDistance.CompareTo(word.EditDistance);
+        return result; // * -1; // sorts desc order
+    }
 
     /// <summary>
     ///     Converts the word object to a string

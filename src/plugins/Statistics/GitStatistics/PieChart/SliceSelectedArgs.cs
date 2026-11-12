@@ -1,21 +1,12 @@
 ﻿namespace GitExtensions.Plugins.GitStatistics.PieChart;
 
-public class SliceSelectedArgs : EventArgs
+public class SliceSelectedArgs(decimal value, string toolTip, object? tag) : EventArgs
 {
-    public object? Tag { get; }
-    public string ToolTip { get; }
-    public decimal Value { get; }
-
-    public SliceSelectedArgs(decimal value, string toolTip)
+    public SliceSelectedArgs(decimal value, string toolTip) : this(value, toolTip, null)
     {
-        Value = value;
-        ToolTip = toolTip;
     }
 
-    public SliceSelectedArgs(decimal value, string toolTip, object? tag)
-    {
-        Value = value;
-        ToolTip = toolTip;
-        Tag = tag;
-    }
+    public object? Tag { get; } = tag;
+    public string ToolTip { get; } = toolTip;
+    public decimal Value { get; } = value;
 }

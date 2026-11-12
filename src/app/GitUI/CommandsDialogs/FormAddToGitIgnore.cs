@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs;
@@ -10,14 +10,14 @@ namespace GitUI.CommandsDialogs;
 public sealed partial class FormAddToGitIgnore : GitModuleForm
 {
     private readonly TranslationString _addToLocalExcludeTitle = new("Add file(s) to .git/info/exclude");
+    private readonly IFullPathResolver _fullPathResolver;
+
+    private readonly AsyncLoader _ignoredFilesLoader = new();
+    private readonly bool _localExclude;
     private readonly TranslationString _matchingFilesString = new("{0} file(s) matched");
     private readonly TranslationString _updateStatusString = new("Updating ...");
 
-    private readonly AsyncLoader _ignoredFilesLoader = new();
-    private readonly IFullPathResolver _fullPathResolver;
-    private readonly bool _localExclude;
-
-    public FormAddToGitIgnore(IGitUICommands commands, bool localExclude, params string[] filePatterns)
+    public FormAddToGitIgnore(IGitUiCommands commands, bool localExclude, params string[] filePatterns)
         : base(commands)
     {
         _localExclude = localExclude;
@@ -46,10 +46,8 @@ public sealed partial class FormAddToGitIgnore : GitModuleForm
             {
                 return _fullPathResolver.Resolve(".gitignore");
             }
-            else
-            {
-                return Path.Join(Module.ResolveGitInternalPath("info"), "exclude");
-            }
+
+            return Path.Join(Module.ResolveGitInternalPath("info"), "exclude");
         }
     }
 
@@ -64,25 +62,26 @@ public sealed partial class FormAddToGitIgnore : GitModuleForm
 
         try
         {
-            string? fileName = ExcludeFile;
+            var fileName = ExcludeFile;
             Validates.NotNull(fileName);
             FileInfoExtensions.MakeFileTemporaryWritable(fileName, x =>
             {
                 StringBuilder gitIgnoreFileAddition = new();
 
-                if (File.Exists(fileName) && !File.ReadAllText(fileName, GitModule.SystemEncoding).EndsWith(Environment.NewLine))
+                if (File.Exists(fileName) &&
+                    !File.ReadAllText(fileName, GitModule.SystemEncoding).EndsWith(Environment.NewLine))
                 {
                     gitIgnoreFileAddition.Append(Environment.NewLine);
                 }
 
-                foreach (string pattern in patterns)
+                foreach (var pattern in patterns)
                 {
                     gitIgnoreFileAddition.Append(pattern);
                     gitIgnoreFileAddition.Append(Environment.NewLine);
                 }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(x)!);
-                using StreamWriter writer = new(x, append: true, GitModule.SystemEncoding);
+                using StreamWriter writer = new(x, true, GitModule.SystemEncoding);
                 writer.Write(gitIgnoreFileAddition);
             });
         }
@@ -97,7 +96,8 @@ public sealed partial class FormAddToGitIgnore : GitModuleForm
     private void UpdatePreviewPanel(IReadOnlyList<string> ignoredFiles)
     {
         _NO_TRANSLATE_Preview.DataSource = ignoredFiles;
-        _NO_TRANSLATE_filesWillBeIgnored.Text = string.Format(_matchingFilesString.Text, _NO_TRANSLATE_Preview.Items.Count);
+        _NO_TRANSLATE_filesWillBeIgnored.Text =
+            string.Format(_matchingFilesString.Text, _NO_TRANSLATE_Preview.Items.Count);
         _NO_TRANSLATE_Preview.Enabled = true;
         noMatchPanel.Visible = _NO_TRANSLATE_Preview.Items.Count == 0;
     }

@@ -1,11 +1,6 @@
 ﻿namespace GitUI;
 
-public sealed class GitUICommandsSourceEventArgs : EventArgs
+public sealed class GitUiCommandsSourceEventArgs(IGitUiCommandsSource gitUiCommandsSource) : EventArgs
 {
-    public GitUICommandsSourceEventArgs(IGitUICommandsSource gitUiCommandsSource)
-    {
-        GitUICommandsSource = gitUiCommandsSource;
-    }
-
-    public IGitUICommandsSource GitUICommandsSource { get; }
+    public IGitUiCommandsSource GitUiCommandsSource { get; } = gitUiCommandsSource;
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using ResourceManager;
@@ -8,25 +9,29 @@ namespace GitUI.CommandsDialogs;
 
 public partial class FormMailMap : GitModuleForm
 {
-    private readonly TranslationString _mailmapOnlyInWorkingDirSupported =
-        new(".mailmap is only supported when there is a working directory.");
-    private readonly TranslationString _mailmapOnlyInWorkingDirSupportedCaption =
-        new("No working directory");
-
     private readonly TranslationString _cannotAccessMailmap =
         new("Failed to save .mailmap." + Environment.NewLine + "Check if file is accessible.");
+
     private readonly TranslationString _cannotAccessMailmapCaption =
         new("Failed to save .mailmap");
 
+    private readonly IFullPathResolver _fullPathResolver;
+
+    private readonly TranslationString _mailmapOnlyInWorkingDirSupported =
+        new(".mailmap is only supported when there is a working directory.");
+
+    private readonly TranslationString _mailmapOnlyInWorkingDirSupportedCaption =
+        new("No working directory");
+
     private readonly TranslationString _saveFileQuestion =
         new("Save changes to .mailmap?");
+
     private readonly TranslationString _saveFileQuestionCaption =
         new("Save changes?");
 
     public string MailMapFile = string.Empty;
-    private readonly IFullPathResolver _fullPathResolver;
 
-    public FormMailMap(IGitUICommands commands)
+    public FormMailMap(IGitUiCommands commands)
         : base(commands)
     {
         InitializeComponent();
@@ -45,7 +50,7 @@ public partial class FormMailMap : GitModuleForm
     {
         try
         {
-            string? path = _fullPathResolver.Resolve(".mailmap");
+            var path = _fullPathResolver.Resolve(".mailmap");
             if (File.Exists(path))
             {
                 _NO_TRANSLATE_MailMapText.ViewFileAsync(path);
@@ -67,7 +72,7 @@ public partial class FormMailMap : GitModuleForm
     {
         try
         {
-            string? fileName = _fullPathResolver.Resolve(".mailmap");
+            var fileName = _fullPathResolver.Resolve(".mailmap");
 
             FileInfoExtensions
                 .MakeFileTemporaryWritable(
@@ -83,7 +88,7 @@ public partial class FormMailMap : GitModuleForm
                         File.WriteAllBytes(x, GitModule.SystemEncoding.GetBytes(MailMapFile));
                     });
 
-            UICommands.RepoChangedNotifier.Notify();
+            UiCommands.RepoChangedNotifier.Notify();
 
             return true;
         }
@@ -97,11 +102,12 @@ public partial class FormMailMap : GitModuleForm
 
     private void FormMailMapFormClosing(object sender, FormClosingEventArgs e)
     {
-        bool needToClose = false;
+        var needToClose = false;
 
         if (!IsFileUpToDate())
         {
-            switch (MessageBoxes.Show(this, _saveFileQuestion.Text, _saveFileQuestionCaption.Text, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
+            switch (MessageBoxes.Show(this, _saveFileQuestion.Text, _saveFileQuestionCaption.Text,
+                        MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
             {
                 case DialogResult.Yes:
                     if (SaveFile())
@@ -133,7 +139,8 @@ public partial class FormMailMap : GitModuleForm
             return;
         }
 
-        MessageBoxes.Show(this, _mailmapOnlyInWorkingDirSupported.Text, _mailmapOnlyInWorkingDirSupportedCaption.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBoxes.Show(this, _mailmapOnlyInWorkingDirSupported.Text, _mailmapOnlyInWorkingDirSupportedCaption.Text,
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
         Close();
     }
 

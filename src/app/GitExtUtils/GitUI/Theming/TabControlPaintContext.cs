@@ -2,27 +2,27 @@
 
 internal sealed class TabControlPaintContext
 {
-    private readonly Point _mouseCursor;
-    private readonly Graphics _graphics;
-    private readonly Rectangle _clipRectangle;
-    private readonly Color _parentBackColor;
-    private readonly int _selectedIndex;
-    private readonly int _tabCount;
-    private readonly Size _imageSize;
-    private readonly Font _font;
-    private readonly bool _enabled;
-    private readonly Image?[] _tabImages;
-    private readonly Rectangle[] _tabRects;
-    private readonly string[] _tabTexts;
-    private readonly Size _size;
-    private readonly bool _failed;
+    private const int _borderWidth = 1;
 
-    private static readonly int ImagePadding = DpiUtil.Scale(6);
+    private static readonly int _imagePadding = DpiUtil.Scale(6);
 
     // DPI 100% - 175%: 2; DPI 200%: 4
     // so that when leftmost tab is selected, its border matches the border of tab control
-    private static readonly int SelectedTabPadding = 2 * (int)Math.Floor(DpiUtil.ScaleX);
-    private const int BorderWidth = 1;
+    private static readonly int _selectedTabPadding = 2 * (int)Math.Floor(DpiUtil.ScaleX);
+    private readonly Rectangle _clipRectangle;
+    private readonly bool _enabled;
+    private readonly bool _failed;
+    private readonly Font _font;
+    private readonly Graphics _graphics;
+    private readonly Size _imageSize;
+    private readonly Point _mouseCursor;
+    private readonly Color _parentBackColor;
+    private readonly int _selectedIndex;
+    private readonly Size _size;
+    private readonly int _tabCount;
+    private readonly Image?[] _tabImages;
+    private readonly Rectangle[] _tabRects;
+    private readonly string[] _tabTexts;
 
     public TabControlPaintContext(TabControl tabs, PaintEventArgs e)
     {
@@ -82,7 +82,7 @@ internal sealed class TabControlPaintContext
             pageIndices = Enumerable.Range(0, _tabCount);
         }
 
-        foreach (int index in pageIndices)
+        foreach (var index in pageIndices)
         {
             RenderTabBackground(index);
             RenderTabImage(index);
@@ -92,9 +92,9 @@ internal sealed class TabControlPaintContext
 
     private void RenderTabBackground(int index)
     {
-        using Pen borderPen = CreateBorderPen();
-        Rectangle outerRect = GetOuterTabRect(index);
-        using (BrushScope backgroundBrush = CreateBackgroundBrusScope(index))
+        using var borderPen = CreateBorderPen();
+        var outerRect = GetOuterTabRect(index);
+        using (var backgroundBrush = CreateBackgroundBrusScope(index))
         {
             _graphics.FillRectangle(backgroundBrush.Brush, outerRect);
         }
@@ -118,28 +118,28 @@ internal sealed class TabControlPaintContext
 
     private void RenderTabImage(int index)
     {
-        Image? image = _tabImages[index];
+        var image = _tabImages[index];
         if (image is null)
         {
             return;
         }
 
-        Rectangle imgRect = GetTabImageRect(index);
+        var imgRect = GetTabImageRect(index);
         _graphics.DrawImage(image, imgRect);
     }
 
     private Rectangle GetTabImageRect(int index)
     {
-        Rectangle innerRect = _tabRects[index];
-        int imgHeight = _imageSize.Height;
+        var innerRect = _tabRects[index];
+        var imgHeight = _imageSize.Height;
         Rectangle imgRect = new(
-            new Point(innerRect.X + ImagePadding,
+            new Point(innerRect.X + _imagePadding,
                 innerRect.Y + ((innerRect.Height - imgHeight) / 2)),
             _imageSize);
 
         if (index == _selectedIndex)
         {
-            imgRect.Offset(0, -SelectedTabPadding);
+            imgRect.Offset(0, -_selectedTabPadding);
         }
 
         return imgRect;
@@ -147,13 +147,13 @@ internal sealed class TabControlPaintContext
 
     private static Image? GetTabImage(TabControl tabs, int index)
     {
-        ImageList.ImageCollection? images = tabs.ImageList?.Images;
+        var images = tabs.ImageList?.Images;
         if (images is null)
         {
             return null;
         }
 
-        TabPage page = tabs.TabPages[index];
+        var page = tabs.TabPages[index];
         if (!string.IsNullOrEmpty(page.ImageKey))
         {
             return images[page.ImageKey];
@@ -174,7 +174,7 @@ internal sealed class TabControlPaintContext
             return;
         }
 
-        Rectangle textRect = GetTabTextRect(index, hasImage);
+        var textRect = GetTabTextRect(index, hasImage);
 
         const TextFormatFlags format =
             TextFormatFlags.NoClipping |
@@ -182,7 +182,7 @@ internal sealed class TabControlPaintContext
             TextFormatFlags.VerticalCenter |
             TextFormatFlags.HorizontalCenter;
 
-        Color textColor = _enabled
+        var textColor = _enabled
             ? index == _selectedIndex
                 ? SystemColors.WindowText
                 : SystemColors.ControlText
@@ -193,11 +193,11 @@ internal sealed class TabControlPaintContext
 
     private Rectangle GetTabTextRect(int index, bool hasImage)
     {
-        Rectangle innerRect = _tabRects[index];
+        var innerRect = _tabRects[index];
         Rectangle textRect;
         if (hasImage)
         {
-            int deltaWidth = _imageSize.Width + ImagePadding;
+            var deltaWidth = _imageSize.Width + _imagePadding;
             textRect = new Rectangle(
                 innerRect.X + deltaWidth,
                 innerRect.Y,
@@ -211,7 +211,7 @@ internal sealed class TabControlPaintContext
 
         if (index == _selectedIndex)
         {
-            textRect.Offset(0, -SelectedTabPadding);
+            textRect.Offset(0, -_selectedTabPadding);
         }
 
         return textRect;
@@ -219,14 +219,14 @@ internal sealed class TabControlPaintContext
 
     private Rectangle GetOuterTabRect(int index)
     {
-        Rectangle innerRect = _tabRects[index];
+        var innerRect = _tabRects[index];
 
         if (index == _selectedIndex)
         {
             return Rectangle.FromLTRB(
-                innerRect.Left - SelectedTabPadding,
-                innerRect.Top - SelectedTabPadding,
-                innerRect.Right + SelectedTabPadding,
+                innerRect.Left - _selectedTabPadding,
+                innerRect.Top - _selectedTabPadding,
+                innerRect.Right + _selectedTabPadding,
                 innerRect.Bottom + 1); // +1 to overlap tabs bottom line
         }
 
@@ -244,8 +244,8 @@ internal sealed class TabControlPaintContext
             return;
         }
 
-        Rectangle tabRect = _tabRects[_selectedIndex];
-        Rectangle pageRect = Rectangle.FromLTRB(0, tabRect.Bottom, _size.Width - 1,
+        var tabRect = _tabRects[_selectedIndex];
+        var pageRect = Rectangle.FromLTRB(0, tabRect.Bottom, _size.Width - 1,
             _size.Height - 1);
 
         if (!_clipRectangle.IntersectsWith(pageRect))
@@ -253,18 +253,18 @@ internal sealed class TabControlPaintContext
             return;
         }
 
-        using (BrushScope backgroundBrush = CreateBackgroundBrusScope(_selectedIndex))
+        using (var backgroundBrush = CreateBackgroundBrusScope(_selectedIndex))
         {
             _graphics.FillRectangle(backgroundBrush.Brush, pageRect);
         }
 
-        using Pen borderPen = CreateBorderPen();
+        using var borderPen = CreateBorderPen();
         _graphics.DrawRectangle(borderPen, pageRect);
     }
 
     private static Color GetParentBackColor(TabControl tabs)
     {
-        Control? parent = tabs.Parent;
+        var parent = tabs.Parent;
         while (parent is not null)
         {
             if (parent.BackColor != Color.Transparent)
@@ -285,12 +285,15 @@ internal sealed class TabControlPaintContext
             return BrushScope.ForSystemBrush(SystemBrushes.Window);
         }
 
-        bool isHighlighted = _tabRects[index].Contains(_mouseCursor);
+        var isHighlighted = _tabRects[index].Contains(_mouseCursor);
         return isHighlighted
-            ? BrushScope.ForRegularBrush(new SolidBrush(ColorHelper.Lerp(SystemColors.Control, SystemColors.HotTrack, 64f / 255f)))
+            ? BrushScope.ForRegularBrush(
+                new SolidBrush(ColorHelper.Lerp(SystemColors.Control, SystemColors.HotTrack, 64f / 255f)))
             : BrushScope.ForSystemBrush(SystemBrushes.Control);
     }
 
-    private static Pen CreateBorderPen() =>
-        new(Color.LightGray.AdaptBackColor(), BorderWidth);
+    private static Pen CreateBorderPen()
+    {
+        return new Pen(Color.LightGray.AdaptBackColor(), _borderWidth);
+    }
 }

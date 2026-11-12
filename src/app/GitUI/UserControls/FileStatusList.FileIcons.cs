@@ -1,23 +1,26 @@
-using GitUI.UserControls;
+using GitExtUtils.GitUI;
 
-namespace GitUI;
+namespace GitUI.UserControls;
 
 partial class FileStatusList
 {
     private void LoadFileIcons(IEnumerable<TreeNode> nodes, CancellationToken cancellationToken)
     {
-        Dictionary<string, MissingIcon> missingIconsByExtension = FindMissingIcons(nodes);
-        if (missingIconsByExtension.Count > 0 && Module?.WorkingDir is string workingDir)
+        var missingIconsByExtension = FindMissingIcons(nodes);
+        if (missingIconsByExtension.Count > 0 && Module?.WorkingDir is { } workingDir)
         {
-            ThreadHelper.FileAndForget(() => LoadFileIconsAsync(missingIconsByExtension, fileName => _iconProvider.Get(workingDir, fileName), _imageListData.ImageList.ImageSize, FileStatusListView, cancellationToken));
+            ThreadHelper.FileAndForget(() => LoadFileIconsAsync(missingIconsByExtension,
+                fileName => _iconProvider.Get(workingDir, fileName), _imageListData.ImageList.ImageSize,
+                FileStatusListView, cancellationToken));
         }
 
         return;
 
-        static async Task LoadFileIconsAsync(Dictionary<string, MissingIcon> missingIconsByExtension, Func<string, Icon?> loadFileIcon, Size size, Control control, CancellationToken cancellationToken)
+        static async Task LoadFileIconsAsync(Dictionary<string, MissingIcon> missingIconsByExtension,
+            Func<string, Icon?> loadFileIcon, Size size, Control control, CancellationToken cancellationToken)
         {
-            List<Image> icons = new(capacity: missingIconsByExtension.Count);
-            foreach (KeyValuePair<string, MissingIcon> missingIcon in missingIconsByExtension)
+            List<Image> icons = new(missingIconsByExtension.Count);
+            foreach (var missingIcon in missingIconsByExtension)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -25,7 +28,7 @@ partial class FileStatusList
                 }
 
                 missingIcon.Value.RelativeImageIndex = icons.Count;
-                icons.Add(loadFileIcon(missingIcon.Value.ExampleFileName) is Icon icon
+                icons.Add(loadFileIcon(missingIcon.Value.ExampleFileName) is { } icon
                     ? Scale(icon.ToBitmap(), _imageListData.IconSize, size, offsetY: 0)
                     : _imageListData.DefaultFileImage);
             }
@@ -36,11 +39,12 @@ partial class FileStatusList
                 return;
             }
 
-            int imageIndexOffset = _imageListData.ImageList.Images.Count;
+            var imageIndexOffset = _imageListData.ImageList.Images.Count;
             _imageListData.ImageList.Images.AddRange([.. icons]);
-            foreach (KeyValuePair<string, MissingIcon> missingIcon in missingIconsByExtension)
+            foreach (var missingIcon in missingIconsByExtension)
             {
-                _imageListData.StateImageIndexMap[missingIcon.Key] = missingIcon.Value.RelativeImageIndex + imageIndexOffset;
+                _imageListData.StateImageIndexMap[missingIcon.Key] =
+                    missingIcon.Value.RelativeImageIndex + imageIndexOffset;
             }
 
             if (cancellationToken.IsCancellationRequested)
@@ -48,11 +52,11 @@ partial class FileStatusList
                 return;
             }
 
-            int delayCounter = 0;
-            foreach (KeyValuePair<string, MissingIcon> missingIcon in missingIconsByExtension)
+            var delayCounter = 0;
+            foreach (var missingIcon in missingIconsByExtension)
             {
-                int imageIndex = missingIcon.Value.RelativeImageIndex + imageIndexOffset;
-                foreach (TreeNode node in missingIcon.Value.Nodes)
+                var imageIndex = missingIcon.Value.RelativeImageIndex + imageIndexOffset;
+                foreach (var node in missingIcon.Value.Nodes)
                 {
                     node.ImageIndex = imageIndex;
                     node.SelectedImageIndex = imageIndex;
@@ -60,7 +64,7 @@ partial class FileStatusList
                     if (++delayCounter >= 100)
                     {
                         delayCounter = 0;
-                        await Task.Delay(millisecondsDelay: 1, cancellationToken);
+                        await Task.Delay(1, cancellationToken);
                     }
                 }
             }
@@ -72,15 +76,15 @@ partial class FileStatusList
         {
             Dictionary<string, MissingIcon> missingIconsByExtension = [];
 
-            int defaultFileImageIndex = _imageListData.StateImageIndexMap[nameof(ImageListData.DefaultFileImage)];
-            foreach (TreeNode node in nodes)
+            var defaultFileImageIndex = _imageListData.StateImageIndexMap[nameof(ImageListData.DefaultFileImage)];
+            foreach (var node in nodes)
             {
                 if (node.ImageIndex != defaultFileImageIndex)
                 {
                     continue;
                 }
 
-                TreeNode fileNode = node.Tag is GroupKey
+                var fileNode = node.Tag is GroupKey
                     ? node.Items().First(node => node.Nodes.Count == 0)
                     : node;
                 if (fileNode.Tag is not FileStatusItem fileStatusItem)
@@ -88,14 +92,14 @@ partial class FileStatusList
                     continue;
                 }
 
-                string fileName = fileStatusItem.Item.Name;
-                string extension = Path.GetExtension(fileName);
-                if (_imageListData.StateImageIndexMap.TryGetValue(extension, out int imageIndex))
+                var fileName = fileStatusItem.Item.Name;
+                var extension = Path.GetExtension(fileName);
+                if (_imageListData.StateImageIndexMap.TryGetValue(extension, out var imageIndex))
                 {
                     node.ImageIndex = imageIndex;
                     node.SelectedImageIndex = imageIndex;
                 }
-                else if (missingIconsByExtension.TryGetValue(extension, out MissingIcon? entry))
+                else if (missingIconsByExtension.TryGetValue(extension, out var entry))
                 {
                     entry.Nodes.Add(node);
                 }

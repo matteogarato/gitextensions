@@ -1,16 +1,15 @@
-using GitCommands;
-using Xunit;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace CommonTestUtils;
 
 /// <summary>
-///  Assembly fixture that sets up <see cref="AppSettings"/> once before the first test of an assembly
-///  and disposes them after the last one. Register it with
-///  <c>[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]</c> in each consuming test assembly.
+///     Assembly fixture that sets up <see cref="AppSettings" /> once before the first test of an assembly
+///     and disposes them after the last one. Register it with
+///     <c>[assembly: AssemblyFixture(typeof(TestAppSettingsFixture))]</c> in each consuming test assembly.
 /// </summary>
 public sealed class TestAppSettingsFixture : IDisposable
 {
-    private readonly Semaphore _semaphore = new(initialCount: 1, maximumCount: 1, "GitExtensionsTestAssemblySerializer");
+    private readonly Semaphore _semaphore = new(1, 1, "GitExtensionsTestAssemblySerializer");
 
     public TestAppSettingsFixture()
     {
@@ -21,7 +20,8 @@ public sealed class TestAppSettingsFixture : IDisposable
         // AppSettings.GetGitExtensionsDirectory() — points at the dotnet install directory instead of the test output,
         // so app-relative content such as the Themes folder cannot be found and theme loading throws (and, worse, pops
         // a modal error dialog that hangs the headless run). Pin the path to the test's own directory so it resolves.
-        AppSettings.GetTestAccessor().ApplicationExecutablePath = Path.Combine(AppContext.BaseDirectory, "GitExtensions.exe");
+        AppSettings.GetTestAccessor().ApplicationExecutablePath =
+            Path.Combine(AppContext.BaseDirectory, "GitExtensions.exe");
 
         File.Delete(AppSettings.SettingsContainer.SettingsCache.SettingsFilePath);
         AppSettings.SettingsContainer.SettingsCache.Load();
@@ -33,7 +33,7 @@ public sealed class TestAppSettingsFixture : IDisposable
         AppSettings.SettingsContainer.SettingsCache.Save();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         try
         {

@@ -1,10 +1,12 @@
-﻿namespace GitUI;
+﻿namespace GitExtUtils.GitUI;
 
 public static class Win32ApiUtil
 {
     /// <summary>
-    /// Convert <see cref="Message.LParam"/> to <see cref="Point"/>.
+    ///     Convert <see cref="Message.LParam" /> to <see cref="Point" />.
     /// </summary>
-    public static Point ToPoint(this IntPtr lparam) =>
-        new(unchecked((int)lparam.ToInt64()));
+    public static Point ToPoint(this IntPtr lparam)
+    {
+        return new Point(unchecked((int)lparam.ToInt64()));
+    }
 }

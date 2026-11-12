@@ -9,17 +9,12 @@ namespace CommonTestUtils.MEF;
 
 public static partial class ExportProviderCache
 {
-    private sealed class Scope
+    private sealed class Scope(string name)
     {
-        public readonly string Name;
+        public readonly string Name = name;
         public ExportProvider? CurrentExportProvider;
         public ComposableCatalog? ExpectedCatalog;
         public ExportProvider? ExpectedProviderForCatalog;
-
-        public Scope(string name)
-        {
-            Name = name;
-        }
 
         public void Clear()
         {

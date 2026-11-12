@@ -1,25 +1,27 @@
 using System.ComponentModel.Design;
 using System.Diagnostics;
+using System.IO.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
-using GitCommands;
 using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
 using GitUI.CommandsDialogs;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 public sealed class GitConfigWorkflowTests
 {
     [Fact]
     public void BuildGet_and_BuildSet_should_target_the_requested_level()
     {
-        GitConfigWorkflow.BuildGet(GitConfigScope.Global, "user.name").ToString().Should().Be("config --global --get user.name");
-        GitConfigWorkflow.BuildSet(GitConfigScope.Local, "user.name", "A B").ToString().Should().Be("config --local user.name \"A B\"");
-        GitConfigWorkflow.BuildSet(GitConfigScope.Local, "user.name", "").ToString().Should().Be("config --local --unset user.name");
+        GitConfigWorkflow.BuildGet(GitConfigScope.Global, "user.name").ToString().Should()
+            .Be("config --global --get user.name");
+        GitConfigWorkflow.BuildSet(GitConfigScope.Local, "user.name", "A B").ToString().Should()
+            .Be("config --local user.name \"A B\"");
+        GitConfigWorkflow.BuildSet(GitConfigScope.Local, "user.name", "").ToString().Should()
+            .Be("config --local --unset user.name");
     }
 
     [Fact]
@@ -43,13 +45,16 @@ public sealed class GitConfigWorkflowTests
 
         SettingsWindow dialog = new(repository.Module);
         dialog.Show();
-        StackPanel content = (StackPanel)dialog.Content!;
-        TabControl tabs = content.Children.OfType<TabControl>().Single();
+        var content = (StackPanel)dialog.Content!;
+        var tabs = content.Children.OfType<TabControl>().Single();
         ((IEnumerable<TabItem>)tabs.ItemsSource!).Should().HaveCount(2);
 
-        ComboBox scope = (ComboBox)((StackPanel)((ScrollViewer)((IEnumerable<TabItem>)tabs.ItemsSource!).Last().Content!).Content!).Children.OfType<ComboBox>().First();
+        var scope =
+            ((StackPanel)((ScrollViewer)((IEnumerable<TabItem>)tabs.ItemsSource!).Last().Content!).Content!).Children
+            .OfType<ComboBox>().First();
         scope.SelectedIndex = 1;
-        StackPanel gitPage = (StackPanel)((ScrollViewer)((IEnumerable<TabItem>)tabs.ItemsSource!).Last().Content!).Content!;
+        var gitPage =
+            (StackPanel)((ScrollViewer)((IEnumerable<TabItem>)tabs.ItemsSource!).Last().Content!).Content!;
         gitPage.Children.OfType<TextBox>().First().Text.Should().Be("Local Tester");
         dialog.Close();
     }
@@ -60,22 +65,24 @@ public sealed class GitConfigWorkflowTests
         Window owner = new();
         owner.Show();
 
-        PullOptionsWindow pull = new(["origin", "fork"], "fork", autoStash: true);
-        Task<PullOptions?> pullResult = pull.ShowDialog<PullOptions?>(owner);
-        StackPanel pullContent = (StackPanel)pull.Content!;
+        PullOptionsWindow pull = new(["origin", "fork"], "fork", true);
+        var pullResult = pull.ShowDialog<PullOptions?>(owner);
+        var pullContent = (StackPanel)pull.Content!;
         pullContent.Children.OfType<RadioButton>().Last().IsChecked = true;
-        pullContent.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        PullOptions? pullOptions = await pullResult;
+        pullContent.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First()
+            .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var pullOptions = await pullResult;
         pullOptions.Should().NotBeNull();
         pullOptions!.Remote.Should().Be("fork");
         pullOptions.Mode.Should().Be(PullMode.FetchOnly);
         pullOptions.AutoStash.Should().BeFalse();
 
-        PushOptionsWindow push = new(["origin"], "origin", "main", trackByDefault: true);
-        Task<PushOptions?> pushResult = push.ShowDialog<PushOptions?>(owner);
-        StackPanel pushContent = (StackPanel)push.Content!;
-        pushContent.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        PushOptions? pushOptions = await pushResult;
+        PushOptionsWindow push = new(["origin"], "origin", "main", true);
+        var pushResult = push.ShowDialog<PushOptions?>(owner);
+        var pushContent = (StackPanel)push.Content!;
+        pushContent.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First()
+            .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var pushOptions = await pushResult;
         pushOptions.Should().NotBeNull();
         pushOptions!.Scope.Should().Be(PushScope.CurrentBranch);
         pushOptions.TrackUpstream.Should().BeTrue();
@@ -83,34 +90,35 @@ public sealed class GitConfigWorkflowTests
 
     private sealed class RepositoryFixture : IDisposable
     {
-        private readonly ServiceContainer _services = new();
         private readonly string _directory = Path.Combine(Path.GetTempPath(), $"ge-config-{Guid.NewGuid():N}");
+        private readonly ServiceContainer _services = new();
 
         public RepositoryFixture()
         {
             Directory.CreateDirectory(_directory);
             GitExtUtils.ServiceContainerRegistry.RegisterServices(_services);
-            System.IO.Abstractions.FileSystem fileSystem = new();
-            _services.AddService<System.IO.Abstractions.IFileSystem>(fileSystem);
+            FileSystem fileSystem = new();
+            _services.AddService<IFileSystem>(fileSystem);
             _services.AddService<IGitDirectoryResolver>(new GitDirectoryResolver(fileSystem));
             GitCommands.ServiceContainerRegistry.RegisterServices(_services);
-            GitUI.ServiceContainerRegistry.RegisterServices(_services);
-            using Process process = Process.Start(new ProcessStartInfo("git", "init -q -b main") { WorkingDirectory = _directory })!;
+            ServiceContainerRegistry.RegisterServices(_services);
+            using var process =
+                Process.Start(new ProcessStartInfo("git", "init -q -b main") { WorkingDirectory = _directory })!;
             process.WaitForExit();
-            Module = new GitModule(_services.GetRequiredService<IGitExecutorProvider>(), _directory);
+            Module = new GitCommands.GitModule(_services.GetRequiredService<IGitExecutorProvider>(), _directory);
         }
 
-        public GitModule Module { get; }
+        public GitCommands.GitModule Module { get; }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             _services.Dispose();
-            foreach (string file in Directory.EnumerateFiles(_directory, "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(_directory, "*", SearchOption.AllDirectories))
             {
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(_directory, recursive: true);
+            Directory.Delete(_directory, true);
         }
     }
 }

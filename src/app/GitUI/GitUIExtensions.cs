@@ -2,8 +2,10 @@
 using System.Text.RegularExpressions;
 using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitUI.Editor;
 using GitUI.Editor.Diff;
 using GitUI.UserControls;
@@ -12,13 +14,13 @@ using ResourceManager;
 
 namespace GitUI;
 
-public static partial class GitUIExtensions
+public static partial class GitUiExtensions
 {
     [GeneratedRegex(@"\n\s*(@@|##)\s+(?<file>[^#:\n]+)", RegexOptions.ExplicitCapture)]
     private static partial Regex FileNameRegex { get; }
 
     /// <summary>
-    /// View the changes between the revisions, if possible as a diff.
+    ///     View the changes between the revisions, if possible as a diff.
     /// </summary>
     /// <param name="fileViewer">Current FileViewer.</param>
     /// <param name="item">The FileStatusItem to present changes for.</param>
@@ -39,7 +41,8 @@ public static partial class GitUIExtensions
         if (item?.Item.IsStatusOnly ?? false)
         {
             // Present error (e.g. parsing Git)
-            await fileViewer.ViewTextAsync(item.Item.Name, item.Item.ErrorMessage ?? "", cancellationToken: cancellationToken);
+            await fileViewer.ViewTextAsync(item.Item.Name, item.Item.ErrorMessage ?? "",
+                cancellationToken: cancellationToken);
             return;
         }
 
@@ -55,14 +58,15 @@ public static partial class GitUIExtensions
             return;
         }
 
-        ObjectId firstId = item.FirstRevision?.ObjectId ?? item.SecondRevision.FirstParentId;
+        var firstId = item.FirstRevision?.ObjectId ?? item.SecondRevision.FirstParentId;
 
         openWithDiffTool ??= OpenWithDiffTool;
 
-        if (forceFileView || (!item.Item.IsSubmodule && (item.Item.IsNew || firstId.IsZero || (!item.Item.IsDeleted && FileHelper.IsImage(item.Item.Name)))))
+        if (forceFileView || (!item.Item.IsSubmodule && (item.Item.IsNew || firstId.IsZero ||
+                                                         (!item.Item.IsDeleted && FileHelper.IsImage(item.Item.Name)))))
         {
             // View blob guid from revision, or file for worktree
-            await fileViewer.ViewGitItemAsync(item, line, openWithDiffTool, cancellationToken: cancellationToken);
+            await fileViewer.ViewGitItemAsync(item, line, openWithDiffTool, cancellationToken);
             return;
         }
 
@@ -70,140 +74,153 @@ public static partial class GitUIExtensions
         {
             // Git range-diff has cubic runtime complexity and can be slow and memory consuming,
             // give an indication of what is going on
-            string range = item.BaseA.IsZero || item.BaseB.IsZero
+            var range = item.BaseA.IsZero || item.BaseB.IsZero
                 ? $"{firstId}...{item.SecondRevision.ObjectId}"
                 : $"{item.BaseA}..{firstId} {item.BaseB}..{item.SecondRevision.ObjectId}";
-            await fileViewer.ViewTextAsync(fileName: null, $"git range-diff {range} -- {additionalCommandInfo}", cancellationToken: cancellationToken);
+            await fileViewer.ViewTextAsync(null, $"git range-diff {range} -- {additionalCommandInfo}",
+                cancellationToken: cancellationToken);
 
-            ExecutionResult result = await fileViewer.Module.GetRangeDiffAsync(
-                    firstId,
-                    item.SecondRevision.ObjectId,
-                    item.BaseA,
-                    item.BaseB,
-                    fileViewer.GetExtraDiffArguments(isRangeDiff: true),
-                    additionalCommandInfo,
-                    useGitColoring: true,
-                    commandConfiguration: RangeDiffHighlightService.GetGitCommandConfiguration(fileViewer.Module),
-                    cancellationToken);
+            var result = await fileViewer.Module.GetRangeDiffAsync(
+                firstId,
+                item.SecondRevision.ObjectId,
+                item.BaseA,
+                item.BaseB,
+                fileViewer.GetExtraDiffArguments(true),
+                additionalCommandInfo,
+                true,
+                RangeDiffHighlightService.GetGitCommandConfiguration(fileViewer.Module),
+                cancellationToken);
 
             if (!result.ExitedSuccessfully)
             {
-                string output = $"{result.StandardError}{Environment.NewLine}Git output (exit code: {result.ExitCodeDisplay}): {Environment.NewLine}{result.StandardOutput}";
-                await fileViewer.ViewTextAsync(item?.Item?.Name, text: output, cancellationToken: cancellationToken);
+                var output =
+                    $"{result.StandardError}{Environment.NewLine}Git output (exit code: {result.ExitCodeDisplay}): {Environment.NewLine}{result.StandardOutput}";
+                await fileViewer.ViewTextAsync(item?.Item?.Name, output, cancellationToken: cancellationToken);
                 return;
             }
 
             // Try set highlighting from first found filename
-            Match match = FileNameRegex.Match(result.StandardOutput);
-            string filename = match.Groups["file"].Success ? match.Groups["file"].Value : item.Item.Name;
+            var match = FileNameRegex.Match(result.StandardOutput);
+            var filename = match.Groups["file"].Success ? match.Groups["file"].Value : item.Item.Name;
 
-            await fileViewer.ViewRangeDiffAsync(filename, result.StandardOutput, cancellationToken: cancellationToken);
+            await fileViewer.ViewRangeDiffAsync(filename, result.StandardOutput, cancellationToken);
             return;
         }
 
         if (!string.IsNullOrWhiteSpace(item.Item.GrepString))
         {
-            IGitCommandConfiguration commandConfiguration = GrepHighlightService.GetGitCommandConfiguration(fileViewer.Module);
-            ExecutionResult result = await fileViewer.Module.GetGrepFileAsync(
-                    item.SecondRevision.ObjectId,
-                    item.Item.Name,
-                    fileViewer.GetExtraGrepArguments(),
-                    item.Item.GrepString,
-                    useGitColoring: true,
-                    showFunctionName: true,
-                    commandConfiguration: commandConfiguration,
-                    fileViewer.Encoding,
-                    cancellationToken);
+            var commandConfiguration =
+                GrepHighlightService.GetGitCommandConfiguration(fileViewer.Module);
+            var result = await fileViewer.Module.GetGrepFileAsync(
+                item.SecondRevision.ObjectId,
+                item.Item.Name,
+                fileViewer.GetExtraGrepArguments(),
+                item.Item.GrepString,
+                true,
+                true,
+                commandConfiguration,
+                fileViewer.Encoding,
+                cancellationToken);
 
             if (!result.ExitedSuccessfully)
             {
-                string output = $"{result.StandardError}{Environment.NewLine}Git command (exit code: {result.ExitCodeDisplay}): {result}{Environment.NewLine}";
-                await fileViewer.ViewTextAsync(item?.Item?.Name, text: output, cancellationToken: cancellationToken);
+                var output =
+                    $"{result.StandardError}{Environment.NewLine}Git command (exit code: {result.ExitCodeDisplay}): {result}{Environment.NewLine}";
+                await fileViewer.ViewTextAsync(item?.Item?.Name, output, cancellationToken: cancellationToken);
                 return;
             }
 
-            await fileViewer.ViewGrepAsync(item, text: result.StandardOutput, cancellationToken: cancellationToken);
+            await fileViewer.ViewGrepAsync(item, result.StandardOutput, cancellationToken);
             return;
         }
 
         if (firstId == ObjectId.CombinedDiffId)
         {
-            bool result = fileViewer.Module.GetCombinedDiffContent(item.SecondRevision.ObjectId, item.Item.Name,
+            var result = fileViewer.Module.GetCombinedDiffContent(item.SecondRevision.ObjectId, item.Item.Name,
                 fileViewer.GetExtraDiffArguments(isCombinedDiff: true),
                 fileViewer.Encoding,
-                out string diffOfConflict,
-                useGitColoring: fileViewer.PatchUseGitColoring,
-                commandConfiguration: CombinedDiffHighlightService.GetGitCommandConfiguration(fileViewer.Module, AppSettings.UseGitColoring.Value),
+                out var diffOfConflict,
+                fileViewer.PatchUseGitColoring,
+                CombinedDiffHighlightService.GetGitCommandConfiguration(fileViewer.Module,
+                    AppSettings.UseGitColoring.Value),
                 cancellationToken);
 
             if (!result)
             {
-                string output = $"Git command exit code: {result}{Environment.NewLine}{diffOfConflict}";
-                await fileViewer.ViewTextAsync(item?.Item?.Name, text: diffOfConflict, cancellationToken: cancellationToken);
+                var output = $"Git command exit code: {result}{Environment.NewLine}{diffOfConflict}";
+                await fileViewer.ViewTextAsync(item?.Item?.Name, diffOfConflict, cancellationToken: cancellationToken);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(diffOfConflict))
             {
-                await fileViewer.ViewTextAsync(item?.Item?.Name, text: TranslatedStrings.UninterestingDiffOmitted, cancellationToken: cancellationToken);
+                await fileViewer.ViewTextAsync(item?.Item?.Name, TranslatedStrings.UninterestingDiffOmitted,
+                    cancellationToken: cancellationToken);
                 return;
             }
 
-            await fileViewer.ViewCombinedDiffAsync(item, text: diffOfConflict, line: line, openWithDifftool: openWithDiffTool, cancellationToken: cancellationToken);
+            await fileViewer.ViewCombinedDiffAsync(item, diffOfConflict, line, openWithDiffTool, cancellationToken);
             return;
         }
 
         if (item.Item.IsSubmodule)
         {
-            GitSubmoduleStatus? status = item.Item.GetSubmoduleStatusAsync() is Task<GitSubmoduleStatus?> statusTask
+            var status = item.Item.GetSubmoduleStatusAsync() is { } statusTask
 
                 // Patch already evaluated, normal case for e.g. FileStatusList
                 ? await statusTask
-                : await SubmoduleHelpers.GetSubmoduleDiffChangesAsync(fileViewer.Module, item.Item.Name, item.Item.OldName, firstId, item.SecondRevision.ObjectId, cancellationToken);
+                : await SubmoduleHelpers.GetSubmoduleDiffChangesAsync(fileViewer.Module, item.Item.Name,
+                    item.Item.OldName, firstId, item.SecondRevision.ObjectId, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
-            string subText = status is null
+            var subText = status is null
                 ? $"Failed to get status for submodule \"{item.Item.Name}\""
-                : await Task.Run(() => SubmoduleResources.GetSubmoduleStatusText(fileViewer.Module, status), cancellationToken)
-                    .ConfigureAwait(continueOnCapturedContext: false);
+                : await Task.Run(() => SubmoduleResources.GetSubmoduleStatusText(fileViewer.Module, status),
+                        cancellationToken)
+                    .ConfigureAwait(false);
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await fileViewer.ViewPatchAsync(item, text: subText, line: line, openWithDifftool: openWithDiffTool, cancellationToken: cancellationToken);
+            await fileViewer.ViewPatchAsync(item, subText, line, openWithDiffTool, cancellationToken);
             return;
         }
 
-        if (AppSettings.DiffDisplayAppearance.Value == GitCommands.Settings.DiffDisplayAppearance.Difftastic && fileViewer.IsDifftasticEnabled.Value)
+        if (AppSettings.DiffDisplayAppearance.Value == DiffDisplayAppearance.Difftastic &&
+            fileViewer.IsDifftasticEnabled.Value)
         {
-            bool isTracked = item.Item.IsTracked || (!item.Item.TreeId.IsZero && !item.SecondRevision.ObjectId.IsZero);
-            (ArgumentString diffArgs, string extraCacheKey) = fileViewer.GetDifftasticArguments();
+            var isTracked = item.Item.IsTracked || (!item.Item.TreeId.IsZero && !item.SecondRevision.ObjectId.IsZero);
+            (var diffArgs, var extraCacheKey) = fileViewer.GetDifftasticArguments();
 
             // set file name as null to not change the restore lineno
-            await fileViewer.ViewTextAsync(fileName: null, $"git difftool {diffArgs} -- {item.Item.Name}", cancellationToken: cancellationToken);
+            await fileViewer.ViewTextAsync(null, $"git difftool {diffArgs} -- {item.Item.Name}",
+                cancellationToken: cancellationToken);
 
-            ExecutionResult result = await fileViewer.Module.GetSingleDifftoolAsync(firstId, item.SecondRevision.ObjectId, item.Item.Name, item.Item.OldName,
+            var result = await fileViewer.Module.GetSingleDifftoolAsync(firstId,
+                item.SecondRevision.ObjectId, item.Item.Name, item.Item.OldName,
                 diffArgs,
-                cacheResult: true,
+                true,
                 extraCacheKey,
                 isTracked,
-                useGitColoring: true,
+                true,
                 cancellationToken);
 
             if (!result.ExitedSuccessfully)
             {
-                string output = $"Git command exit code: {result.ExitCodeDisplay}{Environment.NewLine}{result.StandardError}";
-                await fileViewer.ViewTextAsync(item?.Item?.Name, text: output, cancellationToken: cancellationToken);
+                var output =
+                    $"Git command exit code: {result.ExitCodeDisplay}{Environment.NewLine}{result.StandardError}";
+                await fileViewer.ViewTextAsync(item?.Item?.Name, output, cancellationToken: cancellationToken);
                 return;
             }
 
-            await fileViewer.ViewDifftasticAsync(item.Item.Name, text: result.StandardOutput, cancellationToken: cancellationToken);
+            await fileViewer.ViewDifftasticAsync(item.Item.Name, result.StandardOutput, cancellationToken);
             return;
         }
 
         // diff of text file
-        string selectedPatch = (await GetSelectedPatchAsync(fileViewer, firstId, item.SecondRevision.ObjectId, item.Item, cancellationToken))
+        var selectedPatch =
+            await GetSelectedPatchAsync(fileViewer, firstId, item.SecondRevision.ObjectId, item.Item, cancellationToken)
             ?? defaultText;
 
-        await fileViewer.ViewPatchAsync(item, text: selectedPatch, line: line, openWithDifftool: openWithDiffTool, cancellationToken: cancellationToken);
+        await fileViewer.ViewPatchAsync(item, selectedPatch, line, openWithDiffTool, cancellationToken);
         return;
 
         void OpenWithDiffTool()
@@ -226,17 +243,18 @@ public static partial class GitUIExtensions
             Patch? patch;
             string? errorMessage;
 
-            IGitModule module = fileViewer.Module;
-            bool isSkipWorktree = file.IsSkipWorktree;
+            var module = fileViewer.Module;
+            var isSkipWorktree = file.IsSkipWorktree;
             if (isSkipWorktree)
             {
-                module.SkipWorktreeFiles([file], skipWorktree: false, out _);
+                module.SkipWorktreeFiles([file], false, out _);
             }
 
             try
             {
                 (patch, errorMessage) = await GetItemPatchAsync(module, file, firstId, selectedId,
-                    fileViewer.GetExtraDiffArguments(), fileViewer.PatchUseGitColoring, fileViewer.Encoding, cancellationToken);
+                    fileViewer.GetExtraDiffArguments(), fileViewer.PatchUseGitColoring, fileViewer.Encoding,
+                    cancellationToken);
             }
             finally
             {
@@ -245,7 +263,7 @@ public static partial class GitUIExtensions
                     try
                     {
                         file.IsSkipWorktree = false;
-                        module.SkipWorktreeFiles([file], skipWorktree: true, out _);
+                        module.SkipWorktreeFiles([file], true, out _);
                     }
                     finally
                     {
@@ -269,9 +287,10 @@ public static partial class GitUIExtensions
                 CancellationToken cancellationToken)
             {
                 // Files with tree guid should be presented with normal diff
-                bool isTracked = file.IsTracked || (!file.TreeId.IsZero && !secondId.IsZero);
+                var isTracked = file.IsTracked || (!file.TreeId.IsZero && !secondId.IsZero);
 
-                return await module.GetSingleDiffAsync(firstId, secondId, file.Name, file.OldName, diffArgs, encoding, true, isTracked,
+                return await module.GetSingleDiffAsync(firstId, secondId, file.Name, file.OldName, diffArgs, encoding,
+                    true, isTracked,
                     useGitColoring,
                     PatchHighlightService.GetGitCommandConfiguration(module, useGitColoring),
                     cancellationToken);
@@ -301,9 +320,7 @@ public static partial class GitUIExtensions
         {
             LoadingControl panel = new()
             {
-                Dock = DockStyle.Fill,
-                IsAnimating = true,
-                BackColor = SystemColors.AppWorkspace
+                Dock = DockStyle.Fill, IsAnimating = true, BackColor = SystemColors.AppWorkspace
             };
             control.Controls.Add(panel);
             panel.BringToFront();
@@ -312,7 +329,7 @@ public static partial class GitUIExtensions
 
     public static void UnMask(this Control control)
     {
-        LoadingControl? panel = FindMaskPanel(control);
+        var panel = FindMaskPanel(control);
         if (panel is not null)
         {
             control.Controls.Remove(panel);
@@ -336,7 +353,7 @@ public static partial class GitUIExtensions
         {
             yield return node;
 
-            foreach (TreeNode subNode in node.Nodes.AllNodes())
+            foreach (var subNode in node.Nodes.AllNodes())
             {
                 yield return subNode;
             }

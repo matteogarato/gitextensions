@@ -2,11 +2,12 @@
 using NSubstitute;
 
 namespace GitCommandsTests;
+
 public class EnvironmentPathsProviderTests
 {
-    private string _separator = null!;
-    private IEnvironmentAbstraction _environment = null!;
-    private IEnvironmentPathsProvider _provider = null!;
+    private readonly IEnvironmentAbstraction _environment = null!;
+    private readonly IEnvironmentPathsProvider _provider = null!;
+    private readonly string _separator = null!;
 
     public EnvironmentPathsProviderTests()
     {
@@ -19,10 +20,10 @@ public class EnvironmentPathsProviderTests
     [Fact]
     public void GetEnvironmentValidPaths()
     {
-        string pathVariable = string.Join(_separator, GetValidPaths().Concat(GetInvalidPaths()));
+        var pathVariable = string.Join(_separator, GetValidPaths().Concat(GetInvalidPaths()));
         _environment.GetEnvironmentVariable("PATH").Returns(_ => pathVariable);
 
-        IEnumerable<string> validPaths = _provider.GetEnvironmentValidPaths();
+        var validPaths = _provider.GetEnvironmentValidPaths();
 
         validPaths.ToArray().Should().Equal(GetValidPaths().ToArray());
     }
@@ -30,17 +31,17 @@ public class EnvironmentPathsProviderTests
     [Fact]
     public void GetEnvironmentValidPaths_quoted()
     {
-        IEnumerable<string> paths = GetValidPaths().Concat(GetInvalidPaths());
-        IEnumerable<string> quotedPaths = paths.Select(path => path.Quote());
-        string pathVariable = string.Join(_separator, quotedPaths);
+        var paths = GetValidPaths().Concat(GetInvalidPaths());
+        var quotedPaths = paths.Select(path => path.Quote());
+        var pathVariable = string.Join(_separator, quotedPaths);
         _environment.GetEnvironmentVariable("PATH").Returns(pathVariable);
 
-        IEnumerable<string> validPaths = _provider.GetEnvironmentValidPaths();
+        var validPaths = _provider.GetEnvironmentValidPaths();
 
         validPaths.ToArray().Should().Equal(GetValidPaths().ToArray());
     }
 
-    [Theory(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Theory(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     [InlineData("\\\\my-pc\\Work\\GitExtensions\\", true)]
     [InlineData("C:\\Work\\GitExtensions\\", true)]
     [InlineData("C:\\Work\\", true)]
@@ -61,10 +62,7 @@ public class EnvironmentPathsProviderTests
             yield return "\"c:\\word\t\\\"";
             yield return @".c:\Programs\";
         }
-        else
-        {
-            // I am not able to figure out any invalid (giving exception) path under mono
-        }
+        // I am not able to figure out any invalid (giving exception) path under mono
     }
 
     private static IEnumerable<string> GetValidPaths()

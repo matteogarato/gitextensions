@@ -6,68 +6,72 @@ namespace GitUITests.Avatars;
 
 public abstract class AvatarTestBase : IDisposable
 {
-    protected const int _size = 16;
+    protected const int Size = 16;
 
-    protected const string _email1 = "a@a.a";
-    protected const string _email2 = "b@b.b";
-    protected const string _email3 = "c@c.c";
-    protected const string _email4 = "d@d.d";
-    protected const string _emailMissing = "missing@avatar.com";
+    protected const string Email1 = "a@a.a";
+    protected const string Email2 = "b@b.b";
+    protected const string Email3 = "c@c.c";
+    protected const string Email4 = "d@d.d";
+    protected const string EmailMissing = "missing@avatar.com";
 
-    protected const string _name1 = "John Lennon";
-    protected const string _name2 = "Paul McCartney";
-    protected const string _name3 = "George Harrison";
-    protected const string _name4 = "Ringo Starr";
-    protected const string _nameMissing = "Fifth Beatle";
+    protected const string Name1 = "John Lennon";
+    protected const string Name2 = "Paul McCartney";
+    protected const string Name3 = "George Harrison";
+    protected const string Name4 = "Ringo Starr";
+    protected const string NameMissing = "Fifth Beatle";
+    protected IAvatarProvider Cache = null!;
 
-    protected Image _img1 = null!;
-    protected Image _img2 = null!;
-    protected Image _img3 = null!;
-    protected Image _img4 = null!;
-    protected Image _imgGenerated = null!;
+    protected Image Img1 = null!;
+    protected Image Img2 = null!;
+    protected Image Img3 = null!;
+    protected Image Img4 = null!;
+    protected Image ImgGenerated = null!;
 
-    protected IAvatarProvider _inner = null!;
-    protected IAvatarProvider _cache = null!;
-    protected IAvatarCacheCleaner _cacheCleaner => (_cache as IAvatarCacheCleaner)!;
+    protected IAvatarProvider Inner = null!;
 
     public AvatarTestBase()
     {
-        _img1 = new Bitmap(_size, _size);
-        _img2 = new Bitmap(_size, _size);
-        _img3 = new Bitmap(_size, _size);
-        _img4 = new Bitmap(_size, _size);
-        _imgGenerated = new Bitmap(_size, _size);
+        Img1 = new Bitmap(Size, Size);
+        Img2 = new Bitmap(Size, Size);
+        Img3 = new Bitmap(Size, Size);
+        Img4 = new Bitmap(Size, Size);
+        ImgGenerated = new Bitmap(Size, Size);
         InitializeAvatarProvider();
     }
 
-    public void Dispose()
+    protected IAvatarCacheCleaner CacheCleaner
     {
-        _img1.Dispose();
-        _img2.Dispose();
-        _img3.Dispose();
-        _img4.Dispose();
-        _imgGenerated.Dispose();
+        get => (Cache as IAvatarCacheCleaner)!;
+    }
+
+    void IDisposable.Dispose()
+    {
+        Img1.Dispose();
+        Img2.Dispose();
+        Img3.Dispose();
+        Img4.Dispose();
+        ImgGenerated.Dispose();
     }
 
     private void InitializeAvatarProvider()
     {
-        _inner = Substitute.For<IAvatarProvider>();
+        Inner = Substitute.For<IAvatarProvider>();
 
-        _inner.PerformsIo.Returns(true);
-        _inner.GetAvatarAsync(_email1, _name1, _size).Returns(Task.FromResult<Image?>(_img1));
-        _inner.GetAvatarAsync(_email2, _name2, _size).Returns(Task.FromResult<Image?>(_img2));
-        _inner.GetAvatarAsync(_email3, _name3, _size).Returns(Task.FromResult<Image?>(_img3));
-        _inner.GetAvatarAsync(_email4, _name4, _size).Returns(Task.FromResult<Image?>(_img4));
-        _inner.GetAvatarAsync(_emailMissing, _nameMissing, _size).Returns(Task.FromResult((Image?)null));
+        Inner.PerformsIo.Returns(true);
+        Inner.GetAvatarAsync(Email1, Name1, Size).Returns(Task.FromResult<Image?>(Img1));
+        Inner.GetAvatarAsync(Email2, Name2, Size).Returns(Task.FromResult<Image?>(Img2));
+        Inner.GetAvatarAsync(Email3, Name3, Size).Returns(Task.FromResult<Image?>(Img3));
+        Inner.GetAvatarAsync(Email4, Name4, Size).Returns(Task.FromResult<Image?>(Img4));
+        Inner.GetAvatarAsync(EmailMissing, NameMissing, Size).Returns(Task.FromResult((Image?)null));
     }
 
     protected async Task MissAsync(string email, string name, Image expected = null!)
     {
-        _inner.ClearReceivedCalls();
+        Inner.ClearReceivedCalls();
 
-        Image? actual = await _cache.GetAvatarAsync(email, name, _size);
+        var actual = await Cache.GetAvatarAsync(email, name, Size);
 
-        _ = _inner.Received(1).GetAvatarAsync(email, name, _size);
+        _ = Inner.Received(1).GetAvatarAsync(email, name, Size);
 
         if (expected is not null)
         {
@@ -77,11 +81,11 @@ public abstract class AvatarTestBase : IDisposable
 
     protected async Task HitAsync(string email, string name, Image expected = null!)
     {
-        _inner.ClearReceivedCalls();
+        Inner.ClearReceivedCalls();
 
-        Image? actual = await _cache.GetAvatarAsync(email, name, _size);
+        var actual = await Cache.GetAvatarAsync(email, name, Size);
 
-        _ = _inner.Received(0).GetAvatarAsync(email, name, _size);
+        _ = Inner.Received(0).GetAvatarAsync(email, name, Size);
 
         if (expected is not null)
         {
@@ -92,7 +96,7 @@ public abstract class AvatarTestBase : IDisposable
     protected Stream GetPngStream()
     {
         MemoryStream stream = new();
-        _img1.Save(stream, ImageFormat.Png);
+        Img1.Save(stream, ImageFormat.Png);
         stream.Position = 0;
         return stream;
     }

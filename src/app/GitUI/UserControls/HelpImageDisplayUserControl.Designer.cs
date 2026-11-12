@@ -1,4 +1,4 @@
-﻿namespace GitUI.Help;
+﻿namespace GitUI.UserControls;
 
 partial class HelpImageDisplayUserControl
 {

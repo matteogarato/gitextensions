@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using GitExtensions.Extensibility.Translations;
@@ -10,9 +9,9 @@ internal static class AvaloniaTranslationUtils
 {
     public static void AddTranslationItemsFromFields(string category, object host, ITranslation translation)
     {
-        foreach ((string name, object item) in TranslationUtils.GetObjFields(host, "$this"))
+        foreach (var (name, item) in TranslationUtils.GetObjFields(host, "$this"))
         {
-            string? text = GetText(item);
+            var text = GetText(item);
             if (text?.Any(char.IsLetter) is true)
             {
                 translation.AddTranslationItem(category, name, "Text", ToWinFormsMnemonics(text));
@@ -22,15 +21,15 @@ internal static class AvaloniaTranslationUtils
 
     public static void TranslateItemsFromFields(string category, object host, ITranslation translation)
     {
-        foreach ((string name, object item) in TranslationUtils.GetObjFields(host, "$this"))
+        foreach ((var name, var item) in TranslationUtils.GetObjFields(host, "$this"))
         {
-            string? text = GetText(item);
+            var text = GetText(item);
             if (text is null)
             {
                 continue;
             }
 
-            string? translatedText = translation.TranslateItem(category, name, "Text", () => text);
+            var translatedText = translation.TranslateItem(category, name, "Text", () => text);
             if (!string.IsNullOrEmpty(translatedText))
             {
                 SetText(item, ToAvaloniaMnemonics(translatedText));
@@ -40,9 +39,9 @@ internal static class AvaloniaTranslationUtils
 
     public static void NormalizeMnemonicsFromFields(object host)
     {
-        foreach ((string _, object item) in TranslationUtils.GetObjFields(host, "$this"))
+        foreach ((var _, var item) in TranslationUtils.GetObjFields(host, "$this"))
         {
-            if (GetText(item) is string text)
+            if (GetText(item) is { } text)
             {
                 SetText(item, ToAvaloniaMnemonics(text));
             }
@@ -51,8 +50,8 @@ internal static class AvaloniaTranslationUtils
 
     public static void NormalizeMenuMnemonics(ItemsControl menu)
     {
-        IEnumerable items = menu.ItemsSource as IEnumerable ?? menu.Items;
-        foreach (object? item in items)
+        var items = menu.ItemsSource ?? menu.Items;
+        foreach (var item in items)
         {
             if (item is MenuItem menuItem)
             {
@@ -69,8 +68,8 @@ internal static class AvaloniaTranslationUtils
                 menuItem.Header = ToAvaloniaMnemonics(header);
             }
 
-            IEnumerable items = menuItem.ItemsSource as IEnumerable ?? menuItem.Items;
-            foreach (object? item in items)
+            var items = menuItem.ItemsSource ?? menuItem.Items;
+            foreach (var item in items)
             {
                 if (item is MenuItem childMenuItem)
                 {
@@ -89,7 +88,7 @@ internal static class AvaloniaTranslationUtils
             HeaderedSelectingItemsControl { Header: string header } => header,
             HeaderedItemsControl { Header: string header } => header,
             ContentControl { Content: string content } => content,
-            _ => null,
+            _ => null
         };
     }
 

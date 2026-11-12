@@ -1,14 +1,15 @@
-﻿using GitCommands;
-using GitUI;
+﻿using GitCommands.Settings;
+using GitUI.UserControls;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitUITests.CommandsDialogs;
 
 public class PathFormatterTests : IDisposable
 {
-    private Bitmap _bitmap = null!;
-    private Graphics _graphics = null!;
-    private Font _font = null!;
-    private TruncatePathMethod _originalTruncatePathMethod;
+    private readonly Bitmap _bitmap = null!;
+    private readonly Font _font = null!;
+    private readonly Graphics _graphics = null!;
+    private readonly TruncatePathMethod _originalTruncatePathMethod;
 
     public PathFormatterTests()
     {
@@ -18,7 +19,7 @@ public class PathFormatterTests : IDisposable
         _originalTruncatePathMethod = AppSettings.TruncatePathMethod;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.TruncatePathMethod = _originalTruncatePathMethod;
         _graphics.Dispose();
@@ -29,13 +30,16 @@ public class PathFormatterTests : IDisposable
     [InlineData("name.ext", null, TruncatePathMethod.None, int.MaxValue, null, "name.ext", null)]
     [InlineData("path/name.ext", null, TruncatePathMethod.None, int.MaxValue, "path/", "name.ext", null)]
     [InlineData("name.ext", "old.ext", TruncatePathMethod.None, int.MaxValue, null, "name.ext", " (old.ext)")]
-    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.None, int.MaxValue, "path/", "name.ext", " (old/old.ext)")]
-    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, int.MaxValue, "path/", "name.ext", " (old/old.ext)")]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.None, int.MaxValue, "path/", "name.ext",
+        " (old/old.ext)")]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, int.MaxValue, "path/", "name.ext",
+        " (old/old.ext)")]
     [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, 1, null, "...", null)]
     [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.TrimStart, 18, null, "...", null)]
     [InlineData("name.ext", null, TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", null)]
     [InlineData("path/name.ext", null, TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", null)]
-    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext", " (old.ext)")]
+    [InlineData("path/name.ext", "old/old.ext", TruncatePathMethod.FileNameOnly, int.MaxValue, null, "name.ext",
+        " (old.ext)")]
     public void FormatTextForDrawing_returns_expected_for_method(
         string name,
         string? oldName,
@@ -48,7 +52,8 @@ public class PathFormatterTests : IDisposable
         AppSettings.TruncatePathMethod = truncatePathMethod;
         PathFormatter formatter = new(_graphics, _font);
 
-        formatter.FormatTextForDrawing(maxWidth, name, oldName).Should().Be((expectedPrefix, expectedText, expectedSuffix));
+        formatter.FormatTextForDrawing(maxWidth, name, oldName).Should()
+            .Be((expectedPrefix, expectedText, expectedSuffix));
     }
 
     [Fact]
@@ -59,9 +64,10 @@ public class PathFormatterTests : IDisposable
         const string oldName = "b";
         AppSettings.TruncatePathMethod = TruncatePathMethod.TrimStart;
         PathFormatter formatter = new(_graphics, _font);
-        int maxWidth = formatter.MeasureString(null, string.Empty, $" ({oldName})").Width;
+        var maxWidth = formatter.MeasureString(null, string.Empty, $" ({oldName})").Width;
 
-        formatter.FormatTextForDrawing(maxWidth, string.Empty, oldName).Should().Be((null, string.Empty, $" ({oldName})"));
+        formatter.FormatTextForDrawing(maxWidth, string.Empty, oldName).Should()
+            .Be((null, string.Empty, $" ({oldName})"));
     }
 
     [Fact]
@@ -72,7 +78,7 @@ public class PathFormatterTests : IDisposable
         AppSettings.TruncatePathMethod = TruncatePathMethod.TrimStart;
         PathFormatter formatter = new(_graphics, _font);
 
-        (string? prefix, string? text, string? suffix) = formatter.FormatTextForDrawing(maxWidth: 0, name: "path/file.ext", oldName: null);
+        (var prefix, var text, var suffix) = formatter.FormatTextForDrawing(0, "path/file.ext", null);
 
         prefix.Should().BeNull();
         text.Should().Be("...");
@@ -89,9 +95,10 @@ public class PathFormatterTests : IDisposable
         const string oldName = "very_long_old_name.ext";
         AppSettings.TruncatePathMethod = TruncatePathMethod.TrimStart;
 
-        for (int step = 0; step <= oldName.Length; step++)
+        for (var step = 0; step <= oldName.Length; step++)
         {
-            (string? prefix, string? text, string? suffix) = PathFormatter.TestAccessor.FormatString(name, oldName, step);
+            (var prefix, var text, var suffix) =
+                PathFormatter.TestAccessor.FormatString(name, oldName, step);
 
             // Name must stay fully intact while only the suffix is being consumed.
             prefix.Should().BeNull($"step={step}");
@@ -99,7 +106,8 @@ public class PathFormatterTests : IDisposable
         }
 
         // One step beyond the full oldName length: name must start shrinking.
-        (string? prefixAfter, string? textAfter, string? suffixAfter) = PathFormatter.TestAccessor.FormatString(name, oldName, oldName.Length + 1);
+        (var prefixAfter, var textAfter, var suffixAfter) =
+            PathFormatter.TestAccessor.FormatString(name, oldName, oldName.Length + 1);
 
         textAfter.Should().NotBe(name, "name must start shrinking once oldName is fully consumed");
         suffixAfter.Should().Be(" (...)", "with TrimStart the maximally-truncated oldName is still shown as '...'");
@@ -114,9 +122,9 @@ public class PathFormatterTests : IDisposable
         const string oldName = "oldpath/oldfile.ext";
         AppSettings.TruncatePathMethod = TruncatePathMethod.TrimStart;
         PathFormatter formatter = new(_graphics, _font);
-        int maxWidth = formatter.MeasureString("path/", "file.ext", $" ({oldName})").Width;
+        var maxWidth = formatter.MeasureString("path/", "file.ext", $" ({oldName})").Width;
 
-        (string? prefix, string? text, string? suffix) = formatter.FormatTextForDrawing(maxWidth, name, oldName);
+        (var prefix, var text, var suffix) = formatter.FormatTextForDrawing(maxWidth, name, oldName);
 
         prefix.Should().Be("path/");
         text.Should().Be("file.ext");
@@ -137,7 +145,8 @@ public class PathFormatterTests : IDisposable
     [InlineData("path/new.ext", "C:/oldPath/old.ext", "new.ext", " (old.ext)")]
     [InlineData("path/new.ext", "C:\\oldPath\\old.ext", "new.ext", " (old.ext)")]
     [InlineData("path/new.ext", "oldPath\\old.ext", "new.ext", " (old.ext)")]
-    public void Test_FormatTextForFileNameOnly(string? name, string? oldName, string expectedText, string? expectedSuffix)
+    public void Test_FormatTextForFileNameOnly(string? name, string? oldName, string expectedText,
+        string? expectedSuffix)
     {
         PathFormatter.FormatTextForFileNameOnly(name!, oldName).Should().Be((expectedText, expectedSuffix));
     }

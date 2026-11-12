@@ -6,14 +6,14 @@ namespace GitUI.UserControls;
 
 public class SortDiffListContextMenuItem : ToolStripMenuItem
 {
-    private readonly TranslationString _filePathSortText = new("File &path - tree");
-    private readonly TranslationString _filePathFlatSortText = new("&File path - flat");
-    private readonly TranslationString _fileExtensionSortText = new("File &extension - tree");
-    private readonly TranslationString _fileExtensionFlatSortText = new("File e&xtension - flat");
-    private readonly TranslationString _fileStatusSortText = new("File &status - tree");
-    private readonly TranslationString _fileStatusFlatSortText = new("File s&tatus - flat");
-    private readonly IDiffListSortService _sortService;
     private readonly ToolStripMenuItem[] _allItems;
+    private readonly TranslationString _fileExtensionFlatSortText = new("File e&xtension - flat");
+    private readonly TranslationString _fileExtensionSortText = new("File &extension - tree");
+    private readonly TranslationString _filePathFlatSortText = new("&File path - flat");
+    private readonly TranslationString _filePathSortText = new("File &path - tree");
+    private readonly TranslationString _fileStatusFlatSortText = new("File s&tatus - flat");
+    private readonly TranslationString _fileStatusSortText = new("File &status - tree");
+    private readonly IDiffListSortService _sortService;
 
     public SortDiffListContextMenuItem(IDiffListSortService sortService)
     {
@@ -23,42 +23,42 @@ public class SortDiffListContextMenuItem : ToolStripMenuItem
 
         _allItems =
         [
-            new ToolStripMenuItem()
+            new ToolStripMenuItem
             {
                 Text = _filePathSortText.Text,
                 ShowShortcutKeys = true,
                 Image = null,
                 Tag = DiffListSortType.FilePath
             },
-            new ToolStripMenuItem()
+            new ToolStripMenuItem
             {
                 Text = _filePathFlatSortText.Text,
                 ShowShortcutKeys = true,
                 Image = null,
                 Tag = DiffListSortType.FilePathFlat
             },
-            new ToolStripMenuItem()
+            new ToolStripMenuItem
             {
                 Text = _fileExtensionSortText.Text,
                 ShowShortcutKeys = true,
                 Image = null,
                 Tag = DiffListSortType.FileExtension
             },
-            new ToolStripMenuItem()
+            new ToolStripMenuItem
             {
                 Text = _fileExtensionFlatSortText.Text,
                 ShowShortcutKeys = true,
                 Image = null,
                 Tag = DiffListSortType.FileExtensionFlat
             },
-            new ToolStripMenuItem()
+            new ToolStripMenuItem
             {
                 Text = _fileStatusSortText.Text,
                 ShowShortcutKeys = true,
                 Image = null,
                 Tag = DiffListSortType.FileStatus
             },
-            new ToolStripMenuItem()
+            new ToolStripMenuItem
             {
                 Text = _fileStatusFlatSortText.Text,
                 ShowShortcutKeys = true,
@@ -67,7 +67,7 @@ public class SortDiffListContextMenuItem : ToolStripMenuItem
             }
         ];
 
-        foreach (ToolStripMenuItem item in AllItems())
+        foreach (var item in AllItems())
         {
             item.Click += Item_Click;
             DropDownItems.Add(item);
@@ -84,8 +84,8 @@ public class SortDiffListContextMenuItem : ToolStripMenuItem
 
     private void RequerySortingMethod()
     {
-        DiffListSortType currentSort = _sortService.DiffListSorting;
-        foreach (ToolStripMenuItem item in AllItems())
+        var currentSort = _sortService.DiffListSorting;
+        foreach (var item in AllItems())
         {
             item.Checked = currentSort.Equals(item.Tag);
         }
@@ -93,22 +93,21 @@ public class SortDiffListContextMenuItem : ToolStripMenuItem
 
     private void Item_Click(object? sender, EventArgs e)
     {
-        ToolStripMenuItem item = (ToolStripMenuItem)sender!;
-        DiffListSortType sortingType = (DiffListSortType)item.Tag!;
+        var item = (ToolStripMenuItem)sender!;
+        var sortingType = (DiffListSortType)item.Tag!;
         _sortService.DiffListSorting = sortingType;
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal TestAccessor GetTestAccessor()
     {
-        private readonly SortDiffListContextMenuItem _contextMenuItem;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(SortDiffListContextMenuItem menuitem)
+    internal readonly struct TestAccessor(SortDiffListContextMenuItem menuitem)
+    {
+        public readonly void RaiseDropDownOpening()
         {
-            _contextMenuItem = menuitem;
+            menuitem.RequerySortingMethod();
         }
-
-        public readonly void RaiseDropDownOpening() => _contextMenuItem.RequerySortingMethod();
     }
 }

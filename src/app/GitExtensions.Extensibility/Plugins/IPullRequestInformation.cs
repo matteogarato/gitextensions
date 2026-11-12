@@ -7,8 +7,6 @@ public interface IPullRequestInformation
     string Owner { get; }
     DateTime Created { get; }
 
-    Task<string> GetDiffDataAsync();
-
     IHostedRepository BaseRepo { get; }
     IHostedRepository HeadRepo { get; }
     string BaseSha { get; }
@@ -20,6 +18,8 @@ public interface IPullRequestInformation
     string Id { get; }
     string DetailedInfo { get; }
     string FetchBranch { get; }
+
+    Task<string> GetDiffDataAsync();
 
     void Close();
 

@@ -12,33 +12,36 @@ internal partial class CopyPathsToolStripMenuItem : ToolStripMenuItemEx
     {
         InitializeComponent();
 
-        copyFullPathsNativeToolStripMenuItem.Font = new(copyFullPathsNativeToolStripMenuItem.Font, FontStyle.Bold);
+        copyFullPathsNativeToolStripMenuItem.Font = new Font(copyFullPathsNativeToolStripMenuItem.Font, FontStyle.Bold);
     }
 
-    public CopyPathsToolStripMenuItem Initialize(Func<IGitUICommands> getUICommands, Func<IEnumerable<string?>> getSelectedFilePaths)
+    public CopyPathsToolStripMenuItem Initialize(Func<IGitUiCommands> getUiCommands,
+        Func<IEnumerable<string?>> getSelectedFilePaths)
     {
-        Initialize(getUICommands);
+        Initialize(getUiCommands);
         _getSelectedFilePaths = getSelectedFilePaths;
         return this;
     }
 
     private void CopyPathsToClipboard(string prefixDir, Func<string, string> convertPath)
     {
-        IEnumerable<string?> selectedFilePaths
+        var selectedFilePaths
             = (_getSelectedFilePaths ?? throw new InvalidOperationException("The menu is not initialized."))();
-        string filePaths = GetFilePaths(selectedFilePaths, prefixDir, convertPath);
+        var filePaths = GetFilePaths(selectedFilePaths, prefixDir, convertPath);
         if (!string.IsNullOrWhiteSpace(filePaths))
         {
             ClipboardUtil.TrySetText(filePaths);
         }
     }
 
-    private static string GetFilePaths(IEnumerable<string?> selectedFilePaths, string prefixDir, Func<string, string> convertPath)
+    private static string GetFilePaths(IEnumerable<string?> selectedFilePaths, string prefixDir,
+        Func<string, string> convertPath)
     {
         return selectedFilePaths
             .Where(path => path is not null)
             .Distinct()
-            .Select(path => prefixDir.Length == 0 && path!.Length == 0 ? "." : convertPath(Path.Combine(prefixDir, path!)))
+            .Select(path =>
+                prefixDir.Length == 0 && path!.Length == 0 ? "." : convertPath(Path.Combine(prefixDir, path!)))
             .Join(Environment.NewLine);
     }
 
@@ -62,11 +65,11 @@ internal partial class CopyPathsToolStripMenuItem : ToolStripMenuItemEx
 
     private void CopyRelativePathsNativeToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        CopyPathsToClipboard(prefixDir: "", PathUtil.ToNativePath);
+        CopyPathsToClipboard("", PathUtil.ToNativePath);
     }
 
     private void CopyRelativePathsPosixToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        CopyPathsToClipboard(prefixDir: "", PathUtil.ToPosixPath);
+        CopyPathsToClipboard("", PathUtil.ToPosixPath);
     }
 }

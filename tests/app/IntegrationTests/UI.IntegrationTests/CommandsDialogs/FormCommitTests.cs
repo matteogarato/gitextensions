@@ -1,6 +1,7 @@
 using System.ComponentModel.Design;
 using CommonTestUtils;
-using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
@@ -9,37 +10,41 @@ using GitUI.CommandsDialogs;
 using GitUI.Editor;
 using GitUI.ScriptsEngine;
 using GitUI.UserControls;
-using ICSharpCode.TextEditor;
+using ICSharpCode.TextEditor.Document;
 using NSubstitute;
-using Xunit;
 
-namespace GitExtensions.UITests.CommandsDialogs;
+namespace UITests.CommandsDialogs;
 
-public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTestsFixture>
+public class FormCommitTests : IDisposable, IClassFixture<FormCommitTestsFixture>
 {
+    // Created once for each test
+    private GitUiCommands _commands = null!;
+
     // Created once for the fixture
     private ReferenceRepository _referenceRepository = null!;
-
-    // Created once for each test
-    private GitUICommands _commands = null!;
 
     public FormCommitTests(FormCommitTestsFixture fixture)
     {
         InitializeTest();
     }
 
+    void IDisposable.Dispose()
+    {
+        DisposeTest();
+    }
+
     private void InitializeTest()
     {
         _referenceRepository = new ReferenceRepository();
 
-        ServiceContainer serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
+        var serviceContainer = GlobalServiceContainer.CreateDefaultMockServiceContainer();
         serviceContainer.RemoveService<IScriptsRunner>();
 
-        IScriptsRunner scriptsRunner = Substitute.For<IScriptsRunner>();
+        var scriptsRunner = Substitute.For<IScriptsRunner>();
         scriptsRunner.RunEventScripts(Arg.Any<ScriptEvent>(), Arg.Any<FormCommit>()).Returns(true);
         serviceContainer.AddService(scriptsRunner);
 
-        _commands = new GitUICommands(serviceContainer, _referenceRepository.Module);
+        _commands = new GitUiCommands(serviceContainer, _referenceRepository.Module);
     }
 
     private void DisposeTest()
@@ -52,7 +57,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(async form =>
         {
-            ToolStripStatusLabel commitAuthorStatus = form.GetTestAccessor().CommitAuthorStatusToolStripStatusLabel;
+            var commitAuthorStatus = form.GetTestAccessor().CommitAuthorStatusToolStripStatusLabel;
 
             await Task.Delay(1000);
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
@@ -66,7 +71,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(async form =>
         {
-            ToolStripStatusLabel commitAuthorStatus = form.GetTestAccessor().CommitAuthorStatusToolStripStatusLabel;
+            var commitAuthorStatus = form.GetTestAccessor().CommitAuthorStatusToolStripStatusLabel;
 
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
@@ -94,15 +99,15 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [WinFormsFact]
     public void Should_display_branch_and_no_remote_info_in_statusbar()
     {
-        string branchName = _referenceRepository.Module.GetCurrentBranchName();
+        var branchName = _referenceRepository.Module.GetCurrentBranchName();
 
         _referenceRepository.CheckoutBranch(branchName);
         RunFormTest(async form =>
         {
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            ToolStripStatusLabel currentBranchNameLabelStatus = form.GetTestAccessor().CurrentBranchNameLabelStatus;
-            ToolStripStatusLabel remoteNameLabelStatus = form.GetTestAccessor().RemoteNameLabelStatus;
+            var currentBranchNameLabelStatus = form.GetTestAccessor().CurrentBranchNameLabelStatus;
+            var remoteNameLabelStatus = form.GetTestAccessor().RemoteNameLabelStatus;
 
             currentBranchNameLabelStatus.Text.Should().Be($"{branchName} →");
             remoteNameLabelStatus.Text.Should().Be("(remote not configured)");
@@ -117,8 +122,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         {
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            ToolStripStatusLabel currentBranchNameLabelStatus = form.GetTestAccessor().CurrentBranchNameLabelStatus;
-            ToolStripStatusLabel remoteNameLabelStatus = form.GetTestAccessor().RemoteNameLabelStatus;
+            var currentBranchNameLabelStatus = form.GetTestAccessor().CurrentBranchNameLabelStatus;
+            var remoteNameLabelStatus = form.GetTestAccessor().RemoteNameLabelStatus;
 
             // For a yet unknown cause randomly, the wait in UITest.RunForm does not suffice.
             if (!string.IsNullOrEmpty(remoteNameLabelStatus.Text))
@@ -135,15 +140,15 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [WinFormsFact]
     public void Should_display_branch_and_remote_info_in_statusbar()
     {
-        string branchName = _referenceRepository.Module.GetCurrentBranchName();
+        var branchName = _referenceRepository.Module.GetCurrentBranchName();
 
         _referenceRepository.CreateRemoteForBranch(branchName);
         RunFormTest(async form =>
         {
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            ToolStripStatusLabel currentBranchNameLabelStatus = form.GetTestAccessor().CurrentBranchNameLabelStatus;
-            ToolStripStatusLabel remoteNameLabelStatus = form.GetTestAccessor().RemoteNameLabelStatus;
+            var currentBranchNameLabelStatus = form.GetTestAccessor().CurrentBranchNameLabelStatus;
+            var remoteNameLabelStatus = form.GetTestAccessor().RemoteNameLabelStatus;
 
             currentBranchNameLabelStatus.Text.Should().Be($"{branchName} →");
             remoteNameLabelStatus.Text.Should().Be($"origin/{branchName}");
@@ -153,7 +158,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [WinFormsFact]
     public void PreserveCommitMessageOnReopen()
     {
-        string generatedCommitMessage = Guid.NewGuid().ToString();
+        var generatedCommitMessage = Guid.NewGuid().ToString();
 
         RunFormTest(form =>
         {
@@ -172,12 +177,12 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [InlineData(CommitKind.Squash)]
     public void DoNotPreserveCommitMessageOnReopenFromSpecialCommit(CommitKind commitKind)
     {
-        string generatedCommitMessage = Guid.NewGuid().ToString();
+        var generatedCommitMessage = Guid.NewGuid().ToString();
 
         RunFormTest(
             form =>
             {
-                string prefix = commitKind.ToString().ToLowerInvariant();
+                var prefix = commitKind.ToString().ToLowerInvariant();
                 form.GetTestAccessor().Message.Text.Should().Be($"{prefix}! A commit message");
                 form.GetTestAccessor().Message.Text = generatedCommitMessage;
             },
@@ -192,8 +197,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [WinFormsFact]
     public void PreserveCommitMessageOnReopenFromAmendCommit()
     {
-        string? oldCommitMessage = _referenceRepository.Module.GetRevision().Body;
-        string newCommitMessageWithAmend = $"amend! {oldCommitMessage}\n\nNew commit message";
+        var oldCommitMessage = _referenceRepository.Module.GetRevision().Body;
+        var newCommitMessageWithAmend = $"amend! {oldCommitMessage}\n\nNew commit message";
 
         RunFormTest(
             form =>
@@ -217,7 +222,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
 
         RunFormTest(form =>
         {
-            ToolStripDropDownButton commitMessageToolStripMenuItem = form.GetTestAccessor().CommitMessageToolStripMenuItem;
+            var commitMessageToolStripMenuItem =
+                form.GetTestAccessor().CommitMessageToolStripMenuItem;
 
             // Verify the message appears correctly
             commitMessageToolStripMenuItem.ShowDropDown();
@@ -235,16 +241,20 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         const string lastCommitMessage = "last commit message";
         AppSettings.LastCommitMessage = lastCommitMessage;
 
-        _referenceRepository.CreateCommit("Only first line\n\nof a multi-line commit message\nmust be displayed in the menu");
-        _referenceRepository.CreateCommit("Too long commit message that should be shorten because first line of a commit message is only 50 chars long");
+        _referenceRepository.CreateCommit(
+            "Only first line\n\nof a multi-line commit message\nmust be displayed in the menu");
+        _referenceRepository.CreateCommit(
+            "Too long commit message that should be shorten because first line of a commit message is only 50 chars long");
         RunFormTest(form =>
         {
-            ToolStripDropDownButton commitMessageToolStripMenuItem = form.GetTestAccessor().CommitMessageToolStripMenuItem;
+            var commitMessageToolStripMenuItem =
+                form.GetTestAccessor().CommitMessageToolStripMenuItem;
 
             // Verify the message appears correctly
             commitMessageToolStripMenuItem.ShowDropDown();
             commitMessageToolStripMenuItem.DropDownItems[0].Text.Should().Be(lastCommitMessage);
-            commitMessageToolStripMenuItem.DropDownItems[1].Text.Should().Be("Too long commit message that should be shorten because first line of ...");
+            commitMessageToolStripMenuItem.DropDownItems[1].Text.Should()
+                .Be("Too long commit message that should be shorten because first line of ...");
             commitMessageToolStripMenuItem.DropDownItems[2].Text.Should().Be("Only first line");
         });
     }
@@ -268,7 +278,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         {
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            FormCommit.TestAccessor testform = form.GetTestAccessor();
+            var testform = form.GetTestAccessor();
 
             testform.UnstagedList.ClearSelected();
             testform.UnstagedList.SetFilter("file1");
@@ -277,7 +287,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
 
             testform.StageAllToolItem.PerformClick();
 
-            bool fileNotMatchedByFilterIsStillUnstaged = testform.UnstagedList.AllItems.Any(i => i.Item.Name == "file2.txt");
+            var fileNotMatchedByFilterIsStillUnstaged =
+                testform.UnstagedList.AllItems.Any(i => i.Item.Name == "file2.txt");
 
             testform.StagedList.AllItemsCount.Should().Be(2);
             testform.UnstagedList.AllItemsCount.Should().Be(1);
@@ -289,8 +300,9 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [WinFormsFact]
     public void Should_unstage_only_filtered_on_UnstageAll()
     {
-        _referenceRepository.CreateRepoFile("file1A-Привет.txt", "Test");   // escaped and not escaped in the same string
-        _referenceRepository.CreateRepoFile("file1B-두다.txt", "Test");      // escaped octal code points (Korean Hangul in this case)
+        _referenceRepository.CreateRepoFile("file1A-Привет.txt", "Test"); // escaped and not escaped in the same string
+        _referenceRepository.CreateRepoFile("file1B-두다.txt",
+            "Test"); // escaped octal code points (Korean Hangul in this case)
         _referenceRepository.CreateRepoFile("file2.txt", "Test");
 
         RunFormTest(async form =>
@@ -304,7 +316,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         {
             await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
 
-            FormCommit.TestAccessor testform = form.GetTestAccessor();
+            var testform = form.GetTestAccessor();
 
             testform.StagedList.AllItemsCount.Should().Be(0);
             testform.UnstagedList.AllItemsCount.Should().Be(3);
@@ -322,7 +334,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
 
             testform.UnstageAllToolItem.PerformClick();
 
-            bool fileNotMatchedByFilterIsStillStaged = testform.StagedList.AllItems.Any(i => i.Item.Name == "file2.txt");
+            var fileNotMatchedByFilterIsStillStaged =
+                testform.StagedList.AllItems.Any(i => i.Item.Name == "file2.txt");
 
             testform.UnstagedList.AllItemsCount.Should().Be(2);
             testform.StagedList.AllItemsCount.Should().Be(1);
@@ -330,7 +343,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         });
     }
 
-    [WinFormsTheory, MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
+    [WinFormsTheory]
+    [MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
     public void AddSelectionToCommitMessage_shall_be_ignored_unless_diff_is_focused(
         string message,
         int selectionStart,
@@ -342,12 +356,13 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         int expectedSelectionStart)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
-        TestAddSelectionToCommitMessage(focusSelectedDiff: false, CommitMessageTestData.SelectedText,
+        TestAddSelectionToCommitMessage(false, CommitMessageTestData.SelectedText,
             message, selectionStart, selectionLength,
-            expectedResult: false, expectedMessage: expectedMessage, expectedSelectionStart: expectedSelectionStart);
+            false, expectedMessage, expectedSelectionStart);
     }
 
-    [WinFormsTheory, MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
+    [WinFormsTheory]
+    [MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
     public void AddSelectionToCommitMessage_shall_be_ignored_if_no_difftext_is_selected(
         string message,
         int selectionStart,
@@ -359,12 +374,13 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         int expectedSelectionStart)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
-        TestAddSelectionToCommitMessage(focusSelectedDiff: true, selectedText: "",
+        TestAddSelectionToCommitMessage(true, "",
             message, selectionStart, selectionLength,
-            expectedResult: false, expectedMessage: expectedMessage, expectedSelectionStart: expectedSelectionStart);
+            false, expectedMessage, expectedSelectionStart);
     }
 
-    [WinFormsTheory, MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
+    [WinFormsTheory]
+    [MemberData(nameof(CommitMessageTestData.TestCases), MemberType = typeof(CommitMessageTestData))]
     public void AddSelectionToCommitMessage_shall_modify_the_commit_message(
         string message,
         int selectionStart,
@@ -372,9 +388,9 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         string expectedMessage,
         int expectedSelectionStart)
     {
-        TestAddSelectionToCommitMessage(focusSelectedDiff: true, CommitMessageTestData.SelectedText,
+        TestAddSelectionToCommitMessage(true, CommitMessageTestData.SelectedText,
             message, selectionStart, selectionLength,
-            expectedResult: true, expectedMessage, expectedSelectionStart);
+            true, expectedMessage, expectedSelectionStart);
     }
 
     [WinFormsFact]
@@ -386,7 +402,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
 
             form.GetTestAccessor().UnstagedList.ClearSelected();
 
-            ToolStripMenuItem editFileToolStripMenuItem = form.GetTestAccessor().EditFileToolStripMenuItem;
+            var editFileToolStripMenuItem = form.GetTestAccessor().EditFileToolStripMenuItem;
 
             // asserting by the virtue of not crashing
             editFileToolStripMenuItem.PerformClick();
@@ -398,7 +414,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor testForm = form.GetTestAccessor();
+            var testForm = form.GetTestAccessor();
 
             // check initial state
             testForm.Amend.Checked.Should().BeFalse();
@@ -440,18 +456,19 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
         AppSettings.CloseCommitDialogAfterLastCommit = false;
         AppSettings.CloseProcessDialog = true;
 
-        int defaultBackColor = SystemColors.ButtonFace.ToArgb();
-        int forceBackColor = OtherColors.AmendButtonForcedColor.ToArgb();
+        var defaultBackColor = SystemColors.ButtonFace.ToArgb();
+        var forceBackColor = OtherColors.AmendButtonForcedColor.ToArgb();
 
         const string originalCommitMessage = "commit to be amended by reset soft";
         const string amendedCommitMessage = "replacement commit";
 
-        ObjectId previousCommitId = _commands.Module.RevParse("HEAD");
-        string originalCommitHash = _referenceRepository.CreateCommit(originalCommitMessage, "original content", "theFile");
+        var previousCommitId = _commands.Module.RevParse("HEAD");
+        var originalCommitHash =
+            _referenceRepository.CreateCommit(originalCommitMessage, "original content", "theFile");
 
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor ta = form.GetTestAccessor();
+            var ta = form.GetTestAccessor();
 
             // initial state
             ta.Amend.Enabled.Should().BeTrue();
@@ -531,8 +548,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
                 // This seems not to affect the user experience, because
                 // - the rounding error is only +- 1 pixel
                 // - if the user does not change the geometry, the height will oscillate to a constant value
-                int height1 = bounds1.Height;
-                int height2 = bounds2.Height;
+                var height1 = bounds1.Height;
+                var height2 = bounds2.Height;
                 (height1 >= height2 - 1 && height1 <= height2 + 1).Should().BeTrue();
             });
     }
@@ -544,7 +561,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [InlineData(true, true)]
     public void Lists_must_not_select_an_item_when_a_click_gives_the_focus_back(bool byMouse, bool staged)
     {
-        bool expectedHasSelection = !byMouse;
+        var expectedHasSelection = !byMouse;
 
         // Modify tracked files rather than adding new ones, so that the list is filled no matter
         // how the settings of the dialog are left behind by another test.
@@ -554,7 +571,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
 
         RunFormTest(async form =>
         {
-            FormCommit.TestAccessor ta = form.GetTestAccessor();
+            var ta = form.GetTestAccessor();
 
             if (staged)
             {
@@ -563,7 +580,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
                 await AsyncTestHelper.JoinPendingOperationsAsync(AsyncTestHelper.UnexpectedTimeout);
             }
 
-            FileStatusList list = staged ? ta.StagedList : ta.UnstagedList;
+            var list = staged ? ta.StagedList : ta.UnstagedList;
             list.AllItemsCount.Should().BeGreaterThan(1, "the list must be able to scroll away from its first item");
 
             // The state a list is left in as soon as the other one has taken the selection over.
@@ -602,10 +619,10 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor testForm = form.GetTestAccessor();
+            var testForm = form.GetTestAccessor();
             testForm.SetMessageState(initialText, initialPosition);
             testForm.IncludeFeatureParentheses = false;
-            (string message, int selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
+            (var message, var selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
             message.Should().Be(expectedText);
             selectionStart.Should().Be(expectedPosition);
         });
@@ -619,10 +636,10 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor testForm = form.GetTestAccessor();
+            var testForm = form.GetTestAccessor();
             testForm.SetMessageState(initialText, initialPosition);
             testForm.IncludeFeatureParentheses = true;
-            (string message, int selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
+            (var message, var selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
             message.Should().Be(expectedText);
             selectionStart.Should().Be(expectedPosition);
         });
@@ -636,10 +653,10 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor testForm = form.GetTestAccessor();
+            var testForm = form.GetTestAccessor();
             testForm.SetMessageState(initialText, initialPosition);
             testForm.IncludeFeatureParentheses = false;
-            (string message, int selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
+            (var message, var selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
             message.Should().Be(expectedText);
             selectionStart.Should().Be(expectedPosition);
         });
@@ -650,15 +667,16 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [InlineData("fix: text", 3, "feat(): text", 5)]
     [InlineData("fix(scope): ", 0, "feat(scope): ", 13)]
     [InlineData("fix(scope): text", 14, "feat(scope): text", 15)]
-    public void ConventionalCommit_keyword_is_prefixed_when_already_typed_with_scope(string initialText, int initialPosition,
+    public void ConventionalCommit_keyword_is_prefixed_when_already_typed_with_scope(string initialText,
+        int initialPosition,
         string expectedText, int expectedPosition)
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor testForm = form.GetTestAccessor();
+            var testForm = form.GetTestAccessor();
             testForm.SetMessageState(initialText, initialPosition);
             testForm.IncludeFeatureParentheses = true;
-            (string message, int selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
+            (var message, var selectionStart) = testForm.PrefixOrReplaceKeyword("feat");
             message.Should().Be(expectedText);
             selectionStart.Should().Be(expectedPosition);
         });
@@ -667,7 +685,7 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     [WinFormsFact]
     public void MainSplitter_Remembers_Distance()
     {
-        bool splitterMoved = false;
+        var splitterMoved = false;
         RunGeometryMemoryTest(
             form =>
             {
@@ -694,9 +712,9 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor ta = form.GetTestAccessor();
+            var ta = form.GetTestAccessor();
 
-            FileViewerInternal selectedDiff = ta.SelectedDiff.GetTestAccessor().FileViewerInternal;
+            var selectedDiff = ta.SelectedDiff.GetTestAccessor().FileViewerInternal;
             selectedDiff.SetText(selectedText, openWithDifftool: null);
             selectedDiff.GetTestAccessor().TextEditor.ActiveTextAreaControl.SelectionManager.SetSelection(
                 new TextLocation(0, 0), new TextLocation(selectedText.Length, 0));
@@ -720,13 +738,13 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
     {
         RunFormTest(form =>
         {
-            FormCommit.TestAccessor ta = form.GetTestAccessor();
+            var ta = form.GetTestAccessor();
 
-            FileViewer.TestAccessor selectedDiff = ta.SelectedDiff.GetTestAccessor();
-            FileViewerInternal? selectedDiffInternal = selectedDiff.FileViewerInternal;
+            var selectedDiff = ta.SelectedDiff.GetTestAccessor();
+            var selectedDiffInternal = selectedDiff.FileViewerInternal;
 
             // Commit a file, rename it and introduce a slight content change
-            string contents = "this\nhas\nmany\nlines\nthis\nhas\nmany\nlines\nthis\nhas\nmany\nlines?\n";
+            var contents = "this\nhas\nmany\nlines\nthis\nhas\nmany\nlines\nthis\nhas\nmany\nlines?\n";
             _referenceRepository.CreateCommit("commit", contents, "original.txt");
             _referenceRepository.DeleteRepoFile("original.txt");
             contents = contents.Replace("?", "!");
@@ -739,7 +757,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
             ta.UnstagedList.Focus();
             ta.ExecuteCommand(RevisionDiffControl.Command.StageSelectedFile);
 
-            ta.StagedList.SelectedGitItem = ta.StagedList.AllItems.Single(i => i.Item.Name.Contains("original2.txt")).Item;
+            ta.StagedList.SelectedGitItem =
+                ta.StagedList.AllItems.Single(i => i.Item.Name.Contains("original2.txt")).Item;
 
             selectedDiffInternal.Focus();
             AsyncTestHelper.JoinPendingOperations();
@@ -747,7 +766,8 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
             selectedDiffInternal.GetTestAccessor().TextEditor.ActiveTextAreaControl.SelectionManager.SetSelection(
                 new TextLocation(2, 11), new TextLocation(5, 12));
 
-            int textLengthBeforeReset = selectedDiffInternal.GetTestAccessor().TextEditor.ActiveTextAreaControl.Document.TextLength;
+            var textLengthBeforeReset = selectedDiffInternal.GetTestAccessor().TextEditor.ActiveTextAreaControl.Document
+                .TextLength;
 
             selectedDiff.ResetSelectedLinesConfirmationDialog.Created += (s, e) =>
             {
@@ -759,21 +779,24 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
             ta.RescanChanges();
             AsyncTestHelper.JoinPendingOperations();
 
-            int textLengthAfterReset = selectedDiffInternal.GetTestAccessor().TextEditor.ActiveTextAreaControl.Document.TextLength;
+            var textLengthAfterReset = selectedDiffInternal.GetTestAccessor().TextEditor.ActiveTextAreaControl.Document
+                .TextLength;
 
             textLengthBeforeReset.Should().BeGreaterThan(0);
             textLengthAfterReset.Should().BeGreaterThan(0);
             textLengthAfterReset.Should().BeLessThan(textLengthBeforeReset);
-            FileStatusItem? stagedAndRenamed = ta.StagedList.AllItems.FirstOrDefault(i => i.Item.Name.Contains("original2.txt"));
+            var stagedAndRenamed =
+                ta.StagedList.AllItems.FirstOrDefault(i => i.Item.Name.Contains("original2.txt"));
             stagedAndRenamed.Should().NotBeNull();
             stagedAndRenamed!.Item.IsRenamed.Should().BeTrue();
         });
     }
 
-    private void RunGeometryMemoryTest(Func<FormCommit, Rectangle> boundsAccessor, Action<Rectangle, Rectangle> testDriver)
+    private void RunGeometryMemoryTest(Func<FormCommit, Rectangle> boundsAccessor,
+        Action<Rectangle, Rectangle> testDriver)
     {
-        Rectangle bounds1 = Rectangle.Empty;
-        Rectangle bounds2 = Rectangle.Empty;
+        var bounds1 = Rectangle.Empty;
+        var bounds2 = Rectangle.Empty;
         RunFormTest(form => bounds1 = boundsAccessor(form));
         RunFormTest(form => bounds2 = boundsAccessor(form));
         testDriver(bounds1, bounds2);
@@ -792,15 +815,18 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
 
     private void RunFormTest(Func<FormCommit, Task> testDriverAsync, CommitKind commitKind = CommitKind.Normal)
     {
-        UITest.RunForm(
-            showForm: () =>
+        UiTest.RunForm(
+            () =>
             {
                 (commitKind switch
                 {
                     CommitKind.Normal => _commands.StartCommitDialog(owner: null),
-                    CommitKind.Squash => _commands.StartSquashCommitDialog(owner: null, _referenceRepository.Module.GetRevision()),
-                    CommitKind.Fixup => _commands.StartFixupCommitDialog(owner: null, _referenceRepository.Module.GetRevision()),
-                    CommitKind.Amend => _commands.StartAmendCommitDialog(owner: null, _referenceRepository.Module.GetRevision()),
+                    CommitKind.Squash => _commands.StartSquashCommitDialog(owner: null,
+                        _referenceRepository.Module.GetRevision()),
+                    CommitKind.Fixup => _commands.StartFixupCommitDialog(owner: null,
+                        _referenceRepository.Module.GetRevision()),
+                    CommitKind.Amend => _commands.StartAmendCommitDialog(owner: null,
+                        _referenceRepository.Module.GetRevision()),
                     _ => throw new ArgumentException($"Unsupported commit kind: {commitKind}", nameof(commitKind))
                 }).Should().BeTrue();
 
@@ -809,27 +835,22 @@ public class FormCommitTests : System.IDisposable, IClassFixture<FormCommitTests
             },
             testDriverAsync);
     }
-
-    public void Dispose()
-    {
-        DisposeTest();
-    }
 }
 
 public class CommitMessageTestData
 {
     internal const string SelectedText = "selection";
-    private const string SelectedTextWithNewLine = SelectedText + "\n";
+    private const string _selectedTextWithNewLine = SelectedText + "\n";
 
     public static IEnumerable<object[]> TestCases
     {
         get
         {
-            yield return ["", 0, 0, SelectedTextWithNewLine, SelectedTextWithNewLine.Length];
-            yield return ["msg", 0, 0, SelectedTextWithNewLine + "msg", SelectedTextWithNewLine.Length];
-            yield return ["msg", 1, 0, "m" + SelectedTextWithNewLine + "sg", 1 + SelectedTextWithNewLine.Length];
-            yield return ["msg", 2, 0, "ms" + SelectedTextWithNewLine + "g", 2 + SelectedTextWithNewLine.Length];
-            yield return ["msg", 3, 0, "msg" + SelectedTextWithNewLine, 3 + SelectedTextWithNewLine.Length];
+            yield return ["", 0, 0, _selectedTextWithNewLine, _selectedTextWithNewLine.Length];
+            yield return ["msg", 0, 0, _selectedTextWithNewLine + "msg", _selectedTextWithNewLine.Length];
+            yield return ["msg", 1, 0, "m" + _selectedTextWithNewLine + "sg", 1 + _selectedTextWithNewLine.Length];
+            yield return ["msg", 2, 0, "ms" + _selectedTextWithNewLine + "g", 2 + _selectedTextWithNewLine.Length];
+            yield return ["msg", 3, 0, "msg" + _selectedTextWithNewLine, 3 + _selectedTextWithNewLine.Length];
             yield return ["msg", 0, 1, "" + SelectedText + "sg", SelectedText.Length];
             yield return ["msg", 1, 1, "m" + SelectedText + "g", 1 + SelectedText.Length];
             yield return ["msg", 2, 1, "ms" + SelectedText, 2 + SelectedText.Length];
@@ -837,11 +858,11 @@ public class CommitMessageTestData
     }
 }
 
-public sealed class FormCommitTestsFixture : System.IDisposable
+public sealed class FormCommitTestsFixture : IDisposable
 {
     // Track the original setting value
-    private bool _provideAutocompletion;
-    private bool _showAvailableDiffTools;
+    private readonly bool _provideAutocompletion;
+    private readonly bool _showAvailableDiffTools;
 
     public FormCommitTestsFixture()
     {
@@ -854,7 +875,7 @@ public sealed class FormCommitTestsFixture : System.IDisposable
         AppSettings.ShowAvailableDiffTools = false;
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         AppSettings.ProvideAutocompletion = _provideAutocompletion;
         AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;

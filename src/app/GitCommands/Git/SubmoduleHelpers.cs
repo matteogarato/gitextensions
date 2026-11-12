@@ -1,35 +1,41 @@
 ﻿using System.Text.RegularExpressions;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
-using Microsoft;
 
 namespace GitCommands.Git;
 
 public static partial class SubmoduleHelpers
 {
-    [GeneratedRegex(@"diff --git\s+""?[ab]/(?<filenamea>[^""]+)""?\s+""?[ba]/(?<filenameb>[^""]+)""?", RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"diff --git\s+""?[ab]/(?<filenamea>[^""]+)""?\s+""?[ba]/(?<filenameb>[^""]+)""?",
+        RegexOptions.ExplicitCapture)]
     private static partial Regex DiffCommandRegex { get; }
+
     [GeneratedRegex(@"diff --cc (?<filenamea>.+)", RegexOptions.ExplicitCapture)]
     private static partial Regex CombinedDiffCommandRegex { get; }
 
-    public static async Task<GitSubmoduleStatus?> GetSubmoduleDiffChangesAsync(IGitModule module, string? fileName, string? oldFileName, ObjectId firstId, ObjectId secondId, CancellationToken cancellationToken)
+    public static async Task<GitSubmoduleStatus?> GetSubmoduleDiffChangesAsync(IGitModule module, string? fileName,
+        string? oldFileName, ObjectId firstId, ObjectId secondId, CancellationToken cancellationToken)
     {
-        (Patch? patch, string? errorMessage) = await module.GetSingleDiffAsync(firstId, secondId, fileName, oldFileName, "", GitModule.SystemEncoding, cacheResult: true, isTracked: true, useGitColoring: false, commandConfiguration: null!, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var (patch, errorMessage) = await module.GetSingleDiffAsync(firstId, secondId, fileName, oldFileName, "",
+            GitModule.SystemEncoding, true, true, false, null!, cancellationToken).ConfigureAwait(false);
         return GetSubmoduleChanges(patch, errorMessage, module, fileName);
     }
 
-    public static async Task<GitSubmoduleStatus?> GetSubmoduleCurrentChangesAsync(IGitModule module, string? fileName, string? oldFileName, bool staged, bool noLocks = false)
+    public static async Task<GitSubmoduleStatus?> GetSubmoduleCurrentChangesAsync(IGitModule module, string? fileName,
+        string? oldFileName, bool staged, bool noLocks = false)
     {
-        Patch? patch = await module.GetCurrentChangesAsync(fileName, oldFileName, staged, extraDiffArguments: "", noLocks: noLocks).ConfigureAwait(false);
+        var patch = await module.GetCurrentChangesAsync(fileName, oldFileName, staged, "", noLocks: noLocks)
+            .ConfigureAwait(false);
         return GetSubmoduleChanges(patch, "", module, fileName);
     }
 
-    private static GitSubmoduleStatus? GetSubmoduleChanges(Patch? patch, string? errorMessage, IGitModule module, string? fileName)
+    private static GitSubmoduleStatus? GetSubmoduleChanges(Patch? patch, string? errorMessage, IGitModule module,
+        string? fileName)
     {
         if (!string.IsNullOrEmpty(errorMessage))
         {
             // (some) Git errors, propagate
-            return new GitSubmoduleStatus(errorMessage, null, false, default, default, null, null, null, GetSubmoduleStatus);
+            return new GitSubmoduleStatus(errorMessage, null, false, default, default, null, null, null,
+                GetSubmoduleStatus);
         }
 
         if (string.IsNullOrEmpty(patch?.Text))
@@ -38,16 +44,17 @@ public static partial class SubmoduleHelpers
             return null;
         }
 
-        IGitModule submodule = module.GetSubmodule(fileName);
+        var submodule = module.GetSubmodule(fileName);
         CommitDataManager commitDataManager = new(() => submodule);
         return ParseSubmoduleStatus(patch.Text, submodule, commitId => commitDataManager.GetCommitData(commitId));
     }
 
-    private static GitSubmoduleStatus ParseSubmoduleStatus(string text, IGitModule submodule, Func<string, CommitData?>? getCommitData)
+    private static GitSubmoduleStatus ParseSubmoduleStatus(string text, IGitModule submodule,
+        Func<string, CommitData?>? getCommitData)
     {
         string? name = null;
         string? oldName = null;
-        bool isDirty = false;
+        var isDirty = false;
         ObjectId commitId = default;
         ObjectId oldCommitId = default;
         int? addedCommits = null;
@@ -55,11 +62,11 @@ public static partial class SubmoduleHelpers
 
         using (StringReader reader = new(text))
         {
-            string? line = reader.ReadLine();
+            var line = reader.ReadLine();
 
             if (line is not null)
             {
-                Match match = DiffCommandRegex.Match(line);
+                var match = DiffCommandRegex.Match(line);
                 if (match.Groups.Count > 1)
                 {
                     name = match.Groups["filenamea"].Value;
@@ -88,16 +95,16 @@ public static partial class SubmoduleHelpers
                     continue;
                 }
 
-                char c = line[0];
+                var c = line[0];
                 const string commitStr = "commit ";
                 ReadOnlySpan<char> hash = "";
-                int pos = line.IndexOf(commitStr);
+                var pos = line.IndexOf(commitStr);
                 if (pos >= 0)
                 {
                     hash = line.AsSpan(pos + commitStr.Length);
                 }
 
-                bool endsWithDirty = hash.EndsWith("-dirty");
+                var endsWithDirty = hash.EndsWith("-dirty");
                 if (endsWithDirty)
                 {
                     hash = hash[..^"-dirty".Length];
@@ -139,7 +146,8 @@ public static partial class SubmoduleHelpers
             }
         }
 
-        GitSubmoduleStatus status = new(name, oldName, isDirty, commitId, oldCommitId, addedCommits, removedCommits, getCommitData, GetSubmoduleStatus);
+        GitSubmoduleStatus status = new(name, oldName, isDirty, commitId, oldCommitId, addedCommits, removedCommits,
+            getCommitData, GetSubmoduleStatus);
 
         // Force calculation of caches, could be separate
         _ = status.Status;
@@ -203,7 +211,10 @@ public static partial class SubmoduleHelpers
 
     internal readonly struct TestAccessor
     {
-        internal static GitSubmoduleStatus ParseSubmoduleStatus(string text, IGitModule submodule, Func<string, CommitData?> getCommitData)
-            => SubmoduleHelpers.ParseSubmoduleStatus(text, submodule, getCommitData);
+        internal static GitSubmoduleStatus ParseSubmoduleStatus(string text, IGitModule submodule,
+            Func<string, CommitData?> getCommitData)
+        {
+            return SubmoduleHelpers.ParseSubmoduleStatus(text, submodule, getCommitData);
+        }
     }
 }

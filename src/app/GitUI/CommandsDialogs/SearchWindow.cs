@@ -14,6 +14,11 @@ public partial class SearchWindow<T> : Form where T : class
         tableLayoutPanel1.Controls.Add(_searchControl, 0, 1);
     }
 
+    public T? SelectedItem
+    {
+        get => _searchControl.SelectedItem;
+    }
+
     private void OnChildSizeChanged(Size newSize)
     {
         tableLayoutPanel1.Width = newSize.Width;
@@ -21,6 +26,4 @@ public partial class SearchWindow<T> : Form where T : class
         tableLayoutPanel1.Height = newSize.Height + lblEnterFileName.Height;
         Height = tableLayoutPanel1.Height;
     }
-
-    public T? SelectedItem => _searchControl.SelectedItem;
 }

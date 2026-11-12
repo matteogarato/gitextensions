@@ -1,4 +1,4 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtensions.Extensibility.Translations;
 using GitUI.LeftPanel.Interfaces;
 using ResourceManager;
@@ -7,41 +7,43 @@ namespace GitUI.LeftPanel.ContextMenu;
 
 public class MenuItemsStrings : Translate
 {
+    internal readonly TranslationString CreateBranch = new("Create &branch...");
+    internal readonly TranslationString Merge = new("&Merge into current branch...");
+
+    internal readonly TranslationString Reset = new("Re&set current branch to here...");
     // the name of the members act as keys for the generated entries in the translation files (xlf)
 
-    /// <see cref="IGitRefActions"/>
+    /// <see cref="IGitRefActions" />
     internal TranslationString Checkout = null!;
-    internal TranslationString Rebase = null!;
-    internal readonly TranslationString Merge = new("&Merge into current branch...");
-    internal readonly TranslationString CreateBranch = new("Create &branch...");
-    internal readonly TranslationString Reset = new("Re&set current branch to here...");
 
-    /// <see cref="ICanRename"/>
-    internal TranslationString Rename = new("R&ename branch...");
-
-    /// <see cref="ICanDelete"/>
+    /// <see cref="ICanDelete" />
     internal TranslationString Delete = null!;
 
-    internal Dictionary<MenuItemKey, TranslationString> Tooltips { get; } = [];
+    internal TranslationString Rebase = null!;
+
+    /// <see cref="ICanRename" />
+    internal TranslationString Rename = new("R&ename branch...");
 
     public MenuItemsStrings()
     {
         Translator.Translate(this, AppSettings.CurrentTranslation);
     }
+
+    internal Dictionary<MenuItemKey, TranslationString> Tooltips { get; } = [];
 }
 
 public class BranchMenuItemsStrings : Translate
 {
     internal readonly TranslationString Checkout = new("Chec&kout branch...");
-    internal readonly TranslationString Rebase = new("&Rebase current branch on this branch...");
-    internal readonly TranslationString Delete = new("&Delete branch...");
 
     internal readonly TranslationString CheckoutTooltip = new("Checkout this branch");
-    internal readonly TranslationString MergeTooltip = new("Merge this branch into current branch");
     internal readonly TranslationString CreateTooltip = new("Create a local branch from this branch");
+    internal readonly TranslationString Delete = new("&Delete branch...");
+    internal readonly TranslationString MergeTooltip = new("Merge this branch into current branch");
+    internal readonly TranslationString Rebase = new("&Rebase current branch on this branch...");
     internal readonly TranslationString RebaseTooltip = new("Rebase current branch on this branch");
-    internal readonly TranslationString ResetTooltip = new("Reset current branch to here");
     internal readonly TranslationString RenameTooltip = new("Rename this branch");
+    internal readonly TranslationString ResetTooltip = new("Reset current branch to here");
 
     public BranchMenuItemsStrings()
     {

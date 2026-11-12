@@ -4,14 +4,14 @@ namespace GitExtensions.Plugins.DeleteUnusedBranches;
 
 public class DataGridViewCheckBoxHeaderCell : DataGridViewColumnHeaderCell
 {
+    private Point _cellLocation;
     private Point _checkBoxLocation;
     private Size _checkBoxSize;
-    private Point _cellLocation;
     private bool _checked;
 
     public bool Checked
     {
-        get { return _checked; }
+        get => _checked;
         set
         {
             if (_checked != value)
@@ -40,7 +40,7 @@ public class DataGridViewCheckBoxHeaderCell : DataGridViewColumnHeaderCell
             advancedBorderStyle, paintParts);
 
         Point p = new();
-        Size s = CheckBoxRenderer.GetGlyphSize(graphics, CheckBoxState.UncheckedNormal);
+        var s = CheckBoxRenderer.GetGlyphSize(graphics, CheckBoxState.UncheckedNormal);
         p.X = cellBounds.Location.X + (cellBounds.Width / 2) - (s.Width / 2);
         p.Y = cellBounds.Location.Y + (cellBounds.Height / 2) - (s.Height / 2);
         _cellLocation = cellBounds.Location;

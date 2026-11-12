@@ -1,6 +1,7 @@
-﻿using GitExtUtils.GitUI;
+﻿using System.Reflection;
+using NativeMethods = GitExtUtils.GitUI.Interops.NativeMethods;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ComboBoxExtensions
 {
@@ -11,7 +12,7 @@ public static class ComboBoxExtensions
     {
         ArgumentNullException.ThrowIfNull(comboBox);
 
-        int width = GetPreferredDropDownWidth(comboBox);
+        var width = GetPreferredDropDownWidth(comboBox);
 
         comboBox.Width = width;
 
@@ -22,13 +23,17 @@ public static class ComboBoxExtensions
     }
 
     /// <summary>
-    ///  Resizes the drop-down width of a <see cref="ComboBox"/> to fit within provided bounds.
+    ///     Resizes the drop-down width of a <see cref="ComboBox" /> to fit within provided bounds.
     /// </summary>
     /// <param name="comboBox">Target control</param>
-    /// <param name="minWidth">Minimum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMinWidth"/>.</param>
-    /// <param name="maxWidth">Maximum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMaxWidth"/>.</param>
-    /// <param name="dpiScaleBounds">Whether to apply Dpi scaling to <paramref name="minWidth"/> and <paramref name="maxWidth"/>. Defaults to <c>true</c>.</param>
-    public static void ResizeDropDownWidth(this ComboBox comboBox, int minWidth = BranchDropDownMinWidth, int maxWidth = BranchDropDownMaxWidth, bool dpiScaleBounds = true)
+    /// <param name="minWidth">Minimum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMinWidth" />.</param>
+    /// <param name="maxWidth">Maximum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMaxWidth" />.</param>
+    /// <param name="dpiScaleBounds">
+    ///     Whether to apply Dpi scaling to <paramref name="minWidth" /> and
+    ///     <paramref name="maxWidth" />. Defaults to <c>true</c>.
+    /// </param>
+    public static void ResizeDropDownWidth(this ComboBox comboBox, int minWidth = BranchDropDownMinWidth,
+        int maxWidth = BranchDropDownMaxWidth, bool dpiScaleBounds = true)
     {
         ArgumentNullException.ThrowIfNull(comboBox);
 
@@ -38,34 +43,38 @@ public static class ComboBoxExtensions
             maxWidth = DpiUtil.Scale(maxWidth);
         }
 
-        int calculatedWidth = GetPreferredDropDownWidth(comboBox);
+        var calculatedWidth = GetPreferredDropDownWidth(comboBox);
         comboBox.DropDownWidth = Math.Min(Math.Max(calculatedWidth, minWidth), maxWidth);
     }
 
     /// <summary>
-    ///  Resizes the drop-down width of a <see cref="ToolStripComboBox"/> to fit within provided bounds.
+    ///     Resizes the drop-down width of a <see cref="ToolStripComboBox" /> to fit within provided bounds.
     /// </summary>
     /// <param name="comboBox">Target control</param>
-    /// <param name="minWidth">Minimum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMinWidth"/>.</param>
-    /// <param name="maxWidth">Maximum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMaxWidth"/>.</param>
-    /// <param name="dpiScaleBounds">Whether to apply Dpi scaling to <paramref name="minWidth"/> and <paramref name="maxWidth"/>. Defaults to <c>true</c>.</param>
-    public static void ResizeDropDownWidth(this ToolStripComboBox comboBox, int minWidth = BranchDropDownMinWidth, int maxWidth = BranchDropDownMaxWidth, bool dpiScaleBounds = true)
+    /// <param name="minWidth">Minimum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMinWidth" />.</param>
+    /// <param name="maxWidth">Maximum drop-down width. Defaults to <see cref="ComboBoxExtensions.BranchDropDownMaxWidth" />.</param>
+    /// <param name="dpiScaleBounds">
+    ///     Whether to apply Dpi scaling to <paramref name="minWidth" /> and
+    ///     <paramref name="maxWidth" />. Defaults to <c>true</c>.
+    /// </param>
+    public static void ResizeDropDownWidth(this ToolStripComboBox comboBox, int minWidth = BranchDropDownMinWidth,
+        int maxWidth = BranchDropDownMaxWidth, bool dpiScaleBounds = true)
     {
         ArgumentNullException.ThrowIfNull(comboBox);
-        ResizeDropDownWidth((ComboBox)comboBox.Control, minWidth, maxWidth, dpiScaleBounds);
+        ((ComboBox)comboBox.Control).ResizeDropDownWidth(minWidth, maxWidth, dpiScaleBounds);
     }
 
     private static int GetPreferredDropDownWidth(ComboBox comboBox)
     {
-        int calculatedWidth = 0;
-        using Graphics graphics = comboBox.CreateGraphics();
+        var calculatedWidth = 0;
+        using var graphics = comboBox.CreateGraphics();
 
-        string displayMemberName = comboBox.DisplayMember;
-        Font font = comboBox.Font;
+        var displayMemberName = comboBox.DisplayMember;
+        var font = comboBox.Font;
 
-        foreach (object item in comboBox.Items)
+        foreach (var item in comboBox.Items)
         {
-            SizeF area = graphics.MeasureString(GetDisplayValue(displayMemberName, item), font);
+            var area = graphics.MeasureString(GetDisplayValue(displayMemberName, item), font);
             calculatedWidth = Math.Max((int)area.Width, calculatedWidth);
         }
 
@@ -79,7 +88,7 @@ public static class ComboBoxExtensions
             return item.ToString();
         }
 
-        System.Reflection.PropertyInfo? displayMemberProperty = item
+        var displayMemberProperty = item
             .GetType()
             .GetProperty(displayMemberName);
 
@@ -96,15 +105,16 @@ public static class ComboBoxExtensions
 
     private static unsafe int CalculateVerticalScrollBarWidth(ComboBox comboBox)
     {
-        NativeMethods.COMBOBOXINFO cboInfo = new() { cbSize = (uint)sizeof(NativeMethods.COMBOBOXINFO) };
+        NativeMethods.Comboboxinfo cboInfo = new() { cbSize = (uint)sizeof(NativeMethods.Comboboxinfo) };
 
-        if (NativeMethods.GetComboBoxInfo(comboBox.Handle, &cboInfo) != Interop.BOOL.TRUE)
+        if (Interops.User32.NativeMethods.GetComboBoxInfo(comboBox.Handle, &cboInfo) != Interop.BOOL.TRUE)
         {
             return 0;
         }
 
-        nint listStyle = NativeMethods.GetWindowLongPtrW(cboInfo.hwndList, NativeMethods.GWL.STYLE);
-        bool hasVerticalScrollBar = (listStyle & NativeMethods.WS_VSCROLL) == NativeMethods.WS_VSCROLL;
+        var listStyle =
+            Interops.User32.NativeMethods.GetWindowLongPtrW(cboInfo.hwndList, Interops.User32.NativeMethods.Gwl.Style);
+        var hasVerticalScrollBar = (listStyle & NativeMethods.WsVscroll) == NativeMethods.WsVscroll;
 
         return hasVerticalScrollBar
             ? SystemInformation.VerticalScrollBarWidth

@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.Composition;
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Plugins;
 using GitExtensions.Plugins.GitImpact.Properties;
@@ -19,7 +19,7 @@ public class GitImpactPlugin : GitPluginBase, IGitPluginForRepository
 
     #region IGitPlugin Members
 
-    public override bool Execute(GitUIEventArgs args)
+    public override bool Execute(GitUiEventArgs args)
     {
         if (string.IsNullOrEmpty(args.GitModule.WorkingDir))
         {

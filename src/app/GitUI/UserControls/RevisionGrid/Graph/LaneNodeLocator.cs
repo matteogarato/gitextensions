@@ -2,21 +2,16 @@
 
 internal interface ILaneNodeLocator
 {
-    (RevisionGraphRevision? revision, bool isAtNode, RevisionGraphRevision? singleChild) FindPrevNode(int rowIndex, int lane);
+    (RevisionGraphRevision? revision, bool isAtNode, RevisionGraphRevision? singleChild) FindPrevNode(int rowIndex,
+        int lane);
 }
 
-internal sealed class LaneNodeLocator : ILaneNodeLocator
+internal sealed class LaneNodeLocator(IRevisionGraphRowProvider revisionGraphRowProvider) : ILaneNodeLocator
 {
-    private readonly IRevisionGraphRowProvider _revisionGraphRowProvider;
-
     public static readonly (RevisionGraphRevision?, bool, RevisionGraphRevision?) NotFoundResult = (null, false, null);
 
-    public LaneNodeLocator(IRevisionGraphRowProvider revisionGraphRowProvider)
-    {
-        _revisionGraphRowProvider = revisionGraphRowProvider;
-    }
-
-    public (RevisionGraphRevision? revision, bool isAtNode, RevisionGraphRevision? singleChild) FindPrevNode(int rowIndex, int lane)
+    (RevisionGraphRevision? revision, bool isAtNode, RevisionGraphRevision? singleChild) ILaneNodeLocator.FindPrevNode(
+        int rowIndex, int lane)
     {
         if (rowIndex < 0 || lane < 0)
         {
@@ -25,7 +20,7 @@ internal sealed class LaneNodeLocator : ILaneNodeLocator
             return NotFoundResult;
         }
 
-        IRevisionGraphRow? row = _revisionGraphRowProvider.GetSegmentsForRow(rowIndex);
+        var row = revisionGraphRowProvider.GetSegmentsForRow(rowIndex);
         if (row is null)
         {
             return NotFoundResult;
@@ -36,17 +31,17 @@ internal sealed class LaneNodeLocator : ILaneNodeLocator
             return (row.Revision, isAtNode: true, singleChild: null);
         }
 
-        IEnumerable<RevisionGraphSegment> segmentsForLane = row.GetSegmentsForIndex(lane);
+        var segmentsForLane = row.GetSegmentsForIndex(lane);
         if (segmentsForLane.Any())
         {
-            RevisionGraphSegment firstSegment = segmentsForLane.First();
-            RevisionGraphRevision firstParent = firstSegment.Parent;
+            var firstSegment = segmentsForLane.First();
+            var firstParent = firstSegment.Parent;
 #if DEBUG
             if (segmentsForLane.Any(segment => segment.Parent != firstParent))
             {
                 throw new Exception(string.Format("All segments for a lane should have the same parent.\n"
                                                   + "Not fulfilled for rowIndex {0} lane {1} with {2} segments.",
-                                                  rowIndex, lane, segmentsForLane.Count()));
+                    rowIndex, lane, segmentsForLane.Count()));
             }
 #endif
             return (firstParent, isAtNode: false, firstSegment.Child);

@@ -4,13 +4,9 @@ using GitExtensions.Extensibility.Settings.UserControls;
 
 namespace GitUI.SettingControlBindings;
 
-internal sealed class CredentialsSettingControlBinding : SettingControlBinding<CredentialsSetting, CredentialsControl>
+internal sealed class CredentialsSettingControlBinding(CredentialsSetting setting, CredentialsControl? control)
+    : SettingControlBinding<CredentialsSetting, CredentialsControl>(setting, control)
 {
-    public CredentialsSettingControlBinding(CredentialsSetting setting, CredentialsControl? control)
-        : base(setting, control)
-    {
-    }
-
     public override CredentialsControl CreateControl()
     {
         Setting.CustomControl = new CredentialsControl();
@@ -21,7 +17,7 @@ internal sealed class CredentialsSettingControlBinding : SettingControlBinding<C
     {
         if (SettingLevelSupported(settings.SettingLevel))
         {
-            NetworkCredential credentials = Setting.GetValueOrDefault(settings);
+            var credentials = Setting.GetValueOrDefault(settings);
             control.UserName = credentials.UserName;
             control.Password = credentials.Password;
             control.Enabled = true;
@@ -50,7 +46,7 @@ internal sealed class CredentialsSettingControlBinding : SettingControlBinding<C
         return settingLevel switch
         {
             SettingLevel.Global or SettingLevel.Local or SettingLevel.Effective => true,
-            _ => false,
+            _ => false
         };
     }
 }

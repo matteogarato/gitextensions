@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitUI.Infrastructure.Telemetry;
@@ -11,68 +11,13 @@ namespace GitUI;
 
 // NOTE do not make this class abstract as it breaks the WinForms designer in VS
 
-/// <summary>Base <see cref="Form"/> that provides access to <see cref="GitModule"/> and <see cref="IGitUICommands"/>.</summary>
-public class GitModuleForm : GitExtensionsForm, IGitUICommandsSource, IGitModuleForm, IScriptOptionsForm
+/// <summary>Base <see cref="Form" /> that provides access to <see cref="GitModule" /> and <see cref="IGitUiCommands" />.</summary>
+public class GitModuleForm : GitExtensionsForm, IGitUiCommandsSource, IGitModuleForm, IScriptOptionsForm
 {
-    private bool _isReactivation;
     private IHotkeySettingsLoader? _hotkeySettingsLoader;
+    private bool _isReactivation;
     private IScriptsRunner? _scriptsRunner;
-    private IGitUICommands? _uiCommands;
-
-    /// <inheritdoc />
-    public event EventHandler<GitUICommandsChangedEventArgs>? UICommandsChanged;
-
-    /// <summary>
-    /// Indicates that the process is run by unit tests runner.
-    /// </summary>
-    internal static bool IsUnitTestActive { get; set; }
-
-    public IHotkeySettingsLoader HotkeySettingsReader
-    {
-        get => _hotkeySettingsLoader ?? throw new InvalidOperationException($"{GetType().FullName} was constructed incorrectly.");
-        private set => _hotkeySettingsLoader = value;
-    }
-
-    public IScriptsRunner ScriptsRunner
-    {
-        get => _scriptsRunner ?? throw new InvalidOperationException($"{GetType().FullName} was constructed incorrectly.");
-        private set => _scriptsRunner = value;
-    }
-
-    /// <inheritdoc />
-    [Browsable(false)]
-    public IGitUICommands UICommands
-    {
-        get
-        {
-            // If this exception is seen, it might be because the parameterless constructor was called.
-            // That constructor is only for use by the VS designer, and translation unit tests.
-            // Using it at run time is an error.
-            // If no IGitUICommands instance has been passed to the protected ctor on purpose,
-            // the properties UICommands and Module must not be accessed.
-            return _uiCommands
-                   ?? throw new InvalidOperationException(
-                       $"{nameof(UICommands)} is null. {GetType().FullName} was constructed incorrectly.");
-        }
-        protected set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-
-            IGitUICommands? oldCommands = _uiCommands;
-            _uiCommands = value;
-
-            _hotkeySettingsLoader = _uiCommands.GetRequiredService<IHotkeySettingsLoader>();
-            _scriptsRunner = _uiCommands.GetRequiredService<IScriptsRunner>();
-
-            OnUICommandsChanged(new GitUICommandsChangedEventArgs(oldCommands));
-        }
-    }
-
-    /// <summary>
-    ///  Gets the current instance of the git module.
-    /// </summary>
-    [Browsable(false)]
-    public IGitModule Module => UICommands.Module;
+    private IGitUiCommands? _uiCommands;
 
     [Obsolete("For VS designer and translation test only. Do not remove.")]
     protected GitModuleForm()
@@ -84,7 +29,7 @@ public class GitModuleForm : GitExtensionsForm, IGitUICommandsSource, IGitModule
         }
     }
 
-    protected GitModuleForm(IGitUICommands? commands, bool enablePositionRestore)
+    protected GitModuleForm(IGitUiCommands? commands, bool enablePositionRestore)
         : base(enablePositionRestore)
     {
         if (commands is null && _uiCommands is null)
@@ -94,34 +39,91 @@ public class GitModuleForm : GitExtensionsForm, IGitUICommandsSource, IGitModule
         }
         else
         {
-            UICommands = commands!;
+            UiCommands = commands!;
         }
 
         DiagnosticsClient.TrackPageView(GetType().FullName!);
     }
 
-    protected GitModuleForm([NotNull] IGitUICommands commands)
-        : this(commands, enablePositionRestore: true)
+    protected GitModuleForm([NotNull] IGitUiCommands commands)
+        : this(commands, true)
     {
     }
 
-    protected override bool ExecuteCommand(int command)
+    /// <summary>
+    ///     Indicates that the process is run by unit tests runner.
+    /// </summary>
+    internal static bool IsUnitTestActive { get; set; }
+
+    public IHotkeySettingsLoader HotkeySettingsReader
     {
-        return ExecuteScriptCommand()
-            || base.ExecuteCommand(command);
+        get => _hotkeySettingsLoader ??
+               throw new InvalidOperationException($"{GetType().FullName} was constructed incorrectly.");
+        private set => _hotkeySettingsLoader = value;
+    }
 
-        bool ExecuteScriptCommand()
+    public IScriptsRunner ScriptsRunner
+    {
+        get => _scriptsRunner ??
+               throw new InvalidOperationException($"{GetType().FullName} was constructed incorrectly.");
+        private set => _scriptsRunner = value;
+    }
+
+    /// <inheritdoc />
+    [Browsable(false)]
+    private IGitUiCommands UiCommands
+    {
+        get =>
+            // If this exception is seen, it might be because the parameterless constructor was called.
+            // That constructor is only for use by the VS designer, and translation unit tests.
+            // Using it at run time is an error.
+            // If no IGitUICommands instance has been passed to the protected ctor on purpose,
+            // the properties UICommands and Module must not be accessed.
+            _uiCommands
+            ?? throw new InvalidOperationException(
+                $"{nameof(UiCommands)} is null. {GetType().FullName} was constructed incorrectly.");
+        protected set
         {
-            IScriptsManager scriptsManager = UICommands.GetRequiredService<IScriptsManager>();
-            ScriptInfo? scriptInfo = scriptsManager.GetScript(command);
-            if (scriptInfo is null)
-            {
-                return false;
-            }
+            ArgumentNullException.ThrowIfNull(value);
 
-            _ = ScriptsRunner.RunScript(scriptInfo, owner: this, UICommands, GetScriptOptionsProvider());
-            return true;
+            var oldCommands = _uiCommands;
+            _uiCommands = value;
+
+            _hotkeySettingsLoader = _uiCommands.GetRequiredService<IHotkeySettingsLoader>();
+            _scriptsRunner = _uiCommands.GetRequiredService<IScriptsRunner>();
+
+            OnUICommandsChanged(new GitUiCommandsChangedEventArgs(oldCommands));
         }
+    }
+
+    /// <summary>
+    ///     Gets the current instance of the git module.
+    /// </summary>
+    [Browsable(false)]
+    public IGitModule Module
+    {
+        get => UiCommands.Module;
+    }
+
+    /// <inheritdoc />
+    [Browsable(false)]
+    IGitUiCommands IGitModuleForm.UiCommands
+    {
+        get => UiCommands;
+    }
+
+    /// <inheritdoc />
+    event EventHandler<GitUiCommandsChangedEventArgs>? IGitUiCommandsSource.UiCommandsChanged
+    {
+        add => UiCommandsChanged += value;
+        remove => UiCommandsChanged -= value;
+    }
+
+    /// <inheritdoc />
+    [Browsable(false)]
+    IGitUiCommands IGitUiCommandsSource.UiCommands
+    {
+        get => UiCommands;
     }
 
     public virtual IScriptOptionsProvider GetScriptOptionsProvider()
@@ -129,11 +131,33 @@ public class GitModuleForm : GitExtensionsForm, IGitUICommandsSource, IGitModule
         return ScriptOptionsProviderBase.Default;
     }
 
+    /// <inheritdoc />
+    private event EventHandler<GitUiCommandsChangedEventArgs>? UiCommandsChanged;
+
+    protected override bool ExecuteCommand(int command)
+    {
+        return ExecuteScriptCommand()
+               || base.ExecuteCommand(command);
+
+        bool ExecuteScriptCommand()
+        {
+            var scriptsManager = UiCommands.GetRequiredService<IScriptsManager>();
+            var scriptInfo = scriptsManager.GetScript(command);
+            if (scriptInfo is null)
+            {
+                return false;
+            }
+
+            _ = ScriptsRunner.RunScript(scriptInfo, this, UiCommands, GetScriptOptionsProvider());
+            return true;
+        }
+    }
+
     protected override void OnApplicationActivated()
     {
         base.OnApplicationActivated();
 
-        if (_isReactivation && _uiCommands is IGitUICommands uiCommands)
+        if (_isReactivation && _uiCommands is { } uiCommands)
         {
             uiCommands.Module.InvalidateGitSettings();
         }
@@ -143,14 +167,14 @@ public class GitModuleForm : GitExtensionsForm, IGitUICommandsSource, IGitModule
         }
     }
 
-    protected virtual void OnUICommandsChanged(GitUICommandsChangedEventArgs e)
+    protected virtual void OnUICommandsChanged(GitUiCommandsChangedEventArgs e)
     {
-        UICommandsChanged?.Invoke(this, e);
+        UiCommandsChanged?.Invoke(this, e);
     }
 
-    public override bool TryGetUICommands([NotNullWhen(returnValue: true)] out IGitUICommands? commands)
+    public override bool TryGetUICommands([NotNullWhen(true)] out IGitUiCommands? commands)
     {
-        commands = UICommands;
+        commands = UiCommands;
         return commands is not null;
     }
 }

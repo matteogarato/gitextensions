@@ -1,15 +1,15 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using ConEmu.WinForms;
-using GitCommands;
+using ConEmuWinForms;
+using GitCommands.Git;
 using GitCommands.Logging;
 using GitExtensions.Extensibility;
-using Microsoft;
+using GitExtUtils.GitUI;
 
 namespace GitUI.ConsoleEmulation.ConEmu;
 
 /// <summary>
-///  Embeds a ConEmu terminal in the output panel so command dialogs can host an interactive console.
+///     Embeds a ConEmu terminal in the output panel so command dialogs can host an interactive console.
 /// </summary>
 internal sealed class ConEmuConsoleCommandRunner : ContainerControl, IConsoleCommandRunner
 {
@@ -27,49 +27,46 @@ internal sealed class ConEmuConsoleCommandRunner : ContainerControl, IConsoleCom
         Validates.NotNull(_panel);
     }
 
-    private void InitializeComponent()
+    Control IConsoleCommandRunner.Control
     {
-        Controls.Add(_panel = new Panel { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None });
+        get => this;
     }
 
-    public Control Control => this;
-
-    public event EventHandler<ConsoleOutputEventArgs>? CommandOutputReceived;
-    public event EventHandler<ConsoleProcessExitEventArgs>? CommandProcessExited;
-    public event EventHandler? ConsoleHostTerminated;
-
-    private void WriteConsoleOutput(string text)
+    event EventHandler<ConsoleOutputEventArgs>? IConsoleCommandRunner.CommandOutputReceived
     {
-        Validates.NotNull(_terminal);
-        _terminal.RunningSession?.WriteOutputTextAsync(text);
+        add => CommandOutputReceived += value;
+        remove => CommandOutputReceived -= value;
     }
 
-    public void WriteCommandProcessInput(string text)
+    event EventHandler<ConsoleProcessExitEventArgs>? IConsoleCommandRunner.CommandProcessExited
+    {
+        add => CommandProcessExited += value;
+        remove => CommandProcessExited -= value;
+    }
+
+    event EventHandler? IConsoleCommandRunner.ConsoleHostTerminated
+    {
+        add => ConsoleHostTerminated += value;
+        remove => ConsoleHostTerminated -= value;
+    }
+
+    void IConsoleCommandRunner.WriteCommandProcessInput(string text)
     {
         Validates.NotNull(_terminal);
         this.InvokeAndForget(() => _terminal.RunningSession?.WriteInputTextAsync(text)!);
     }
 
-    public void KillCommandProcess()
+    void IConsoleCommandRunner.KillCommandProcess()
     {
         Validates.NotNull(_terminal);
         KillProcess(_terminal);
     }
 
-    private static void KillProcess(ConEmuControl terminal)
+    void IConsoleCommandRunner.ResetConsole()
     {
-        terminal.RunningSession?.SendControlCAsync();
-    }
+        var oldTerminal = _terminal;
 
-    public void ResetConsole()
-    {
-        ConEmuControl? oldTerminal = _terminal;
-
-        _terminal = new ConEmuControl
-        {
-            Dock = DockStyle.Fill,
-            IsStatusbarVisible = false
-        };
+        _terminal = new ConEmuControl { Dock = DockStyle.Fill, IsStatusbarVisible = false };
 
         if (oldTerminal is not null)
         {
@@ -81,26 +78,18 @@ internal sealed class ConEmuConsoleCommandRunner : ContainerControl, IConsoleCom
         _panel.Controls.Add(_terminal);
     }
 
-    protected override void Dispose(bool disposing)
+    void IConsoleCommandRunner.StartCommand(string command, string arguments, string workDir,
+        Dictionary<string, string> envVariables)
     {
-        if (disposing)
-        {
-            _terminal?.Dispose();
-        }
-
-        base.Dispose(disposing);
-    }
-
-    public void StartCommand(string command, string arguments, string workDir, Dictionary<string, string> envVariables)
-    {
-        ProcessOperation operation = CommandLog.LogProcessStart(command, arguments, workDir);
+        var operation = CommandLog.LogProcessStart(command, arguments, workDir);
 
         WriteConsoleOutput($"{command.Quote()} {arguments}{Environment.NewLine}");
 
         try
         {
-            string commandLine = new ArgumentBuilder { command.Quote(), arguments }.ToString();
-            ConsoleCommandLineOutputProcessor outputProcessor = new(commandLine.Length, args => CommandOutputReceived?.Invoke(this, args));
+            var commandLine = new ArgumentBuilder { command.Quote(), arguments }.ToString();
+            ConsoleCommandLineOutputProcessor outputProcessor =
+                new(commandLine.Length, args => CommandOutputReceived?.Invoke(this, args));
 
             ConEmuStartInfo startInfo = new()
             {
@@ -111,7 +100,7 @@ internal sealed class ConEmuConsoleCommandRunner : ContainerControl, IConsoleCom
                 StartupDirectory = workDir
             };
 
-            foreach ((string name, string value) in envVariables)
+            foreach ((var name, var value) in envVariables)
             {
                 startInfo.SetEnv(name, value);
             }
@@ -136,13 +125,46 @@ internal sealed class ConEmuConsoleCommandRunner : ContainerControl, IConsoleCom
 
             Validates.NotNull(_terminal);
             Validates.NotNull(_settings.Font);
-            _terminal.Start(startInfo, ThreadHelper.JoinableTaskFactory, _settings.Theme, _settings.Font.Name, _settings.Font.Size.ToString("F0", CultureInfo.InvariantCulture));
+            _terminal.Start(startInfo, ThreadHelper.JoinableTaskFactory, _settings.Theme, _settings.Font.Name,
+                _settings.Font.Size.ToString("F0", CultureInfo.InvariantCulture));
         }
         catch (Exception ex)
         {
             operation.LogProcessEnd(ex);
             throw;
         }
+    }
+
+    private void InitializeComponent()
+    {
+        Controls.Add(_panel = new Panel { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None });
+    }
+
+    private event EventHandler<ConsoleOutputEventArgs>? CommandOutputReceived;
+
+    private event EventHandler<ConsoleProcessExitEventArgs>? CommandProcessExited;
+
+    private event EventHandler? ConsoleHostTerminated;
+
+    private void WriteConsoleOutput(string text)
+    {
+        Validates.NotNull(_terminal);
+        _terminal.RunningSession?.WriteOutputTextAsync(text);
+    }
+
+    private static void KillProcess(ConEmuControl terminal)
+    {
+        terminal.RunningSession?.SendControlCAsync();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _terminal?.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }
 
@@ -152,15 +174,16 @@ public partial class ConsoleCommandLineOutputProcessor
     private int _commandLineCharsInOutput;
     private string? _lineChunk;
 
-    [GeneratedRegex(@"(?<=[\n\r])", RegexOptions.ExplicitCapture)]
-    private static partial Regex NewLineRegex { get; }
-
-    public ConsoleCommandLineOutputProcessor(int commandLineCharsInOutput, Action<ConsoleOutputEventArgs> fireDataReceived)
+    public ConsoleCommandLineOutputProcessor(int commandLineCharsInOutput,
+        Action<ConsoleOutputEventArgs> fireDataReceived)
     {
         _fireDataReceived = fireDataReceived;
         _commandLineCharsInOutput = commandLineCharsInOutput;
         _commandLineCharsInOutput += Environment.NewLine.Length; // for \n after the command line
     }
+
+    [GeneratedRegex(@"(?<=[\n\r])", RegexOptions.ExplicitCapture)]
+    private static partial Regex NewLineRegex { get; }
 
     private string? FilterOutConsoleCommandLine(string outputChunk)
     {
@@ -172,7 +195,7 @@ public partial class ConsoleCommandLineOutputProcessor
                 return null;
             }
 
-            string rest = outputChunk[_commandLineCharsInOutput..];
+            var rest = outputChunk[_commandLineCharsInOutput..];
             _commandLineCharsInOutput = 0;
             return rest;
         }
@@ -182,8 +205,8 @@ public partial class ConsoleCommandLineOutputProcessor
 
     public void AnsiStreamChunkReceived(object? sender, AnsiStreamChunkEventArgs args)
     {
-        string text = args.GetText(GitModule.SystemEncoding);
-        string? filtered = FilterOutConsoleCommandLine(text);
+        var text = args.GetText(GitModule.SystemEncoding);
+        var filtered = FilterOutConsoleCommandLine(text);
         if (filtered is not null)
         {
             SendAsLines(filtered);
@@ -198,22 +221,22 @@ public partial class ConsoleCommandLineOutputProcessor
             _lineChunk = null;
         }
 
-        string[] outputLines = NewLineRegex.Split(output);
-        int lineCount = outputLines.Length;
+        var outputLines = NewLineRegex.Split(output);
+        var lineCount = outputLines.Length;
         if (string.IsNullOrEmpty(outputLines[^1]))
         {
             lineCount--;
         }
 
-        for (int i = 0; i < lineCount; i++)
+        for (var i = 0; i < lineCount; i++)
         {
-            string outputLine = outputLines[i];
-            bool isTheLastLine = i == lineCount - 1;
+            var outputLine = outputLines[i];
+            var isTheLastLine = i == lineCount - 1;
             if (isTheLastLine)
             {
-                bool isLineCompleted = outputLine.Length > 0 &&
-                    ((outputLine[^1] == '\n') ||
-                    outputLine[^1] == '\r');
+                var isLineCompleted = outputLine.Length > 0 &&
+                                      (outputLine[^1] == '\n' ||
+                                       outputLine[^1] == '\r');
                 if (!isLineCompleted)
                 {
                     _lineChunk = outputLine;

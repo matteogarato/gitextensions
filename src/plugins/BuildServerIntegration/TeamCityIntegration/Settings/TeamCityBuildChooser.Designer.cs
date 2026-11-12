@@ -1,4 +1,4 @@
-﻿namespace TeamCityIntegration.Settings;
+﻿namespace GitExtensions.Plugins.TeamCityIntegration.Settings;
 
 partial class TeamCityBuildChooser
 {

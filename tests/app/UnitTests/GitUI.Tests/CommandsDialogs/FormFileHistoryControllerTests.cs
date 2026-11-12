@@ -2,9 +2,10 @@
 using GitUI.CommandsDialogs;
 
 namespace GitUITests.CommandsDialogs;
+
 public sealed class FormFileHistoryControllerTests
 {
-    private FormFileHistoryController _controller = null!;
+    private readonly FormFileHistoryController _controller = null!;
 
     public FormFileHistoryControllerTests()
     {
@@ -17,8 +18,8 @@ public sealed class FormFileHistoryControllerTests
     [InlineData(" ")]
     public void TryGetExactPathName_Should_return_null_on_not_existing_file(string path)
     {
-        string lowercasePath = path.ToLower();
-        bool isExistingOnFileSystem = _controller.TryGetExactPath(lowercasePath, out string? exactPath);
+        var lowercasePath = path.ToLower();
+        var isExistingOnFileSystem = _controller.TryGetExactPath(lowercasePath, out var exactPath);
 
         isExistingOnFileSystem.Should().BeFalse();
         exactPath.Should().BeNull();
@@ -27,10 +28,10 @@ public sealed class FormFileHistoryControllerTests
     [Fact]
     public void TryGetExactPathName_Should_handle_network_path()
     {
-        string path = @"\\" + Environment.MachineName.ToLower() + @"\c$\Windows\System32";
+        var path = @"\\" + Environment.MachineName.ToLower() + @"\c$\Windows\System32";
 
-        string lowercasePath = path.ToLower();
-        bool isExistingOnFileSystem = _controller.TryGetExactPath(lowercasePath, out string? exactPath);
+        var lowercasePath = path.ToLower();
+        var isExistingOnFileSystem = _controller.TryGetExactPath(lowercasePath, out var exactPath);
 
         isExistingOnFileSystem.Should().BeTrue();
 
@@ -42,16 +43,17 @@ public sealed class FormFileHistoryControllerTests
     [InlineData("FOLDER1\\file1.txt", true, false)]
     [InlineData("fOLDER1\\file1.txt", true, false)]
     [InlineData("Folder2\\file1.txt", false, false)]
-    public void TryGetExactPathName_should_check_if_path_matches_case(string relativePath, bool isResolved, bool doesMatch)
+    public void TryGetExactPathName_should_check_if_path_matches_case(string relativePath, bool isResolved,
+        bool doesMatch)
     {
         using GitModuleTestHelper repo = new();
 
         // Create a file
-        string notUsed = repo.CreateFile(Path.Combine(repo.TemporaryPath, "Folder1"), "file1.txt", "bla");
+        var notUsed = repo.CreateFile(Path.Combine(repo.TemporaryPath, "Folder1"), "file1.txt", "bla");
 
-        string expected = Path.Combine(repo.TemporaryPath, relativePath);
+        var expected = Path.Combine(repo.TemporaryPath, relativePath);
 
-        _controller.TryGetExactPath(expected, out string? exactPath).Should().Be(isResolved);
+        _controller.TryGetExactPath(expected, out var exactPath).Should().Be(isResolved);
         if (doesMatch)
         {
             exactPath.Should().Be(expected);

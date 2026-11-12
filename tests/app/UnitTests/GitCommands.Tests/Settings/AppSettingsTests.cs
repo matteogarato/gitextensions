@@ -6,12 +6,13 @@ using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
 using GitUIPluginInterfaces;
-using Microsoft;
+using AppSettings = GitCommands.Settings.AppSettings;
 
 namespace GitCommandsTests.Settings;
+
 public sealed class AppSettingsTests
 {
-    private const string SettingsFileContent = @"<?xml version=""1.0"" encoding=""utf-8""?><dictionary />";
+    private const string _settingsFileContent = @"<?xml version=""1.0"" encoding=""utf-8""?><dictionary />";
 
     [Theory]
     [InlineData(null, "https://git-extensions-documentation.readthedocs.org/en/main/")]
@@ -55,13 +56,13 @@ public sealed class AppSettingsTests
         }
 
         using TempFileCollection tempFiles = new();
-        string filePath = tempFiles.AddExtension(".settings");
-        tempFiles.AddFile(filePath + ".backup", keepFile: false);
+        var filePath = tempFiles.AddExtension(".settings");
+        tempFiles.AddFile(filePath + ".backup", false);
 
-        File.WriteAllText(filePath, SettingsFileContent);
+        File.WriteAllText(filePath, _settingsFileContent);
 
-        using GitExtSettingsCache cache = GitExtSettingsCache.Create(filePath);
-        DistributedSettings container = new(lowerPriority: null, cache, SettingLevel.Unknown);
+        using var cache = GitExtSettingsCache.Create(filePath);
+        DistributedSettings container = new(null, cache, SettingLevel.Unknown);
         object? storedValue = null;
 
         // Act
@@ -90,13 +91,13 @@ public sealed class AppSettingsTests
         }
 
         using TempFileCollection tempFiles = new();
-        string filePath = tempFiles.AddExtension(".settings");
-        tempFiles.AddFile(filePath + ".backup", keepFile: false);
+        var filePath = tempFiles.AddExtension(".settings");
+        tempFiles.AddFile(filePath + ".backup", false);
 
-        File.WriteAllText(filePath, SettingsFileContent);
+        File.WriteAllText(filePath, _settingsFileContent);
 
-        using GitExtSettingsCache cache = GitExtSettingsCache.Create(filePath);
-        DistributedSettings container = new(lowerPriority: null, cache, SettingLevel.Unknown);
+        using var cache = GitExtSettingsCache.Create(filePath);
+        DistributedSettings container = new(null, cache, SettingLevel.Unknown);
         object? storedValue = null;
 
         // Act
@@ -131,26 +132,26 @@ public sealed class AppSettingsTests
     }
 
     /// <summary>
-    ///  Verifies that ISetting property names (storage keys) remain stable across changes.
+    ///     Verifies that ISetting property names (storage keys) remain stable across changes.
     /// </summary>
     [Fact]
     public Task ISetting_properties_should_have_stable_storage_keys()
     {
         StringBuilder sb = new();
-        IOrderedEnumerable<PropertyInfo> properties = typeof(AppSettings)
+        var properties = typeof(AppSettings)
             .GetProperties(BindingFlags.Public | BindingFlags.Static)
             .Where(p => IsISettingType(p.PropertyType))
             .OrderBy(p => p.Name, StringComparer.Ordinal);
-        foreach (PropertyInfo property in properties)
+        foreach (var property in properties)
         {
-            object setting = property.GetValue(null)!;
-            string fullPath = (string)setting.GetType()
+            var setting = property.GetValue(null)!;
+            var fullPath = (string)setting.GetType()
                 .GetProperty(nameof(ISetting<int>.FullPath))!
                 .GetValue(setting)!;
             sb.AppendLine($"{property.Name} = {fullPath}");
         }
 
-        return Verifier.Verify(sb.ToString());
+        return Verify(sb.ToString());
 
         static bool IsISettingType(Type type)
         {
@@ -167,14 +168,14 @@ public sealed class AppSettingsTests
 
     public static IEnumerable<object[]> TestCases()
     {
-        foreach ((PropertyInfo property, object? defaultValue, bool isNullable, bool isISetting) in PropertyInfos())
+        foreach ((var property, var defaultValue, var isNullable, var isISetting) in PropertyInfos())
         {
             if (isNullable)
             {
-                yield return new object[] { property, null!, defaultValue!, isISetting };
+                yield return new[] { property, null!, defaultValue!, isISetting };
             }
 
-            Type? propertyType = property.PropertyType;
+            var propertyType = property.PropertyType;
             if (isISetting)
             {
                 propertyType = propertyType.GetProperty(nameof(ISetting<>.Value))?.PropertyType;
@@ -183,19 +184,20 @@ public sealed class AppSettingsTests
             propertyType = Nullable.GetUnderlyingType(propertyType!) ?? propertyType;
             Validates.NotNull(propertyType);
 
-            foreach (object value in Values())
+            foreach (var value in Values())
             {
-                Type valueType = Nullable.GetUnderlyingType(value.GetType()) ?? value.GetType();
+                var valueType = Nullable.GetUnderlyingType(value.GetType()) ?? value.GetType();
                 if (valueType == propertyType)
                 {
-                    yield return new object[] { property, value, defaultValue!, isISetting };
+                    yield return new[] { property, value, defaultValue!, isISetting };
                 }
             }
         }
 
-        static IEnumerable<(PropertyInfo property, object? defaultValue, bool isNullable, bool isISetting)> PropertyInfos()
+        static IEnumerable<(PropertyInfo property, object? defaultValue, bool isNullable, bool isISetting)>
+            PropertyInfos()
         {
-            Dictionary<string, PropertyInfo> properties = typeof(AppSettings).GetProperties()
+            var properties = typeof(AppSettings).GetProperties()
                 .ToDictionary(x => x.Name, x => x);
 
             const bool isISetting = true;
@@ -204,9 +206,12 @@ public sealed class AppSettingsTests
 
             yield return (properties[nameof(AppSettings.TelemetryEnabled)], null, true, false);
             yield return (properties[nameof(AppSettings.AutoNormaliseBranchName)], true, false, false);
-            yield return (properties[nameof(AppSettings.FileStatusFindInFilesGitGrepTypeIndex)], 1, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.FileStatusMergeSingleItemWithFolder)], false, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.FileStatusShowGroupNodesInFlatList)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.FileStatusFindInFilesGitGrepTypeIndex)], 1, isNotNullable,
+                isISetting);
+            yield return (properties[nameof(AppSettings.FileStatusMergeSingleItemWithFolder)], false, isNotNullable,
+                isISetting);
+            yield return (properties[nameof(AppSettings.FileStatusShowGroupNodesInFlatList)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.RememberAmendCommitState)], true, false, false);
             yield return (properties[nameof(AppSettings.StashKeepIndex)], false, false, false);
             yield return (properties[nameof(AppSettings.DontConfirmStashDrop)], false, false, false);
@@ -219,7 +224,8 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.EnsureCommitMessageSecondLineEmpty)], true, false, false);
             yield return (properties[nameof(AppSettings.LastCommitMessage)], string.Empty, true, false);
             yield return (properties[nameof(AppSettings.CommitDialogNumberOfPreviousMessages)], 6, false, false);
-            yield return (properties[nameof(AppSettings.CommitDialogSelectStagedOnEnterMessage)], true, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.CommitDialogSelectStagedOnEnterMessage)], true, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.CommitDialogShowOnlyMyMessages)], false, false, false);
             yield return (properties[nameof(AppSettings.ShowCommitAndPush)], true, false, false);
             yield return (properties[nameof(AppSettings.ShowResetWorkTreeChanges)], true, false, false);
@@ -243,11 +249,13 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.ShowGitStatusForArtificialCommits)], true, false, false);
             yield return (properties[nameof(AppSettings.RevisionSortOrder)], RevisionSortOrder.GitDefault, false, true);
             yield return (properties[nameof(AppSettings.CommitInfoShowContainedInBranchesLocal)], true, false, false);
-            yield return (properties[nameof(AppSettings.CheckForUncommittedChangesInCheckoutBranch)], true, false, false);
+            yield return (properties[nameof(AppSettings.CheckForUncommittedChangesInCheckoutBranch)], true, false,
+                false);
             yield return (properties[nameof(AppSettings.AlwaysShowCheckoutBranchDlg)], false, false, false);
             yield return (properties[nameof(AppSettings.CommitAndPushForcedWhenAmend)], false, false, false);
             yield return (properties[nameof(AppSettings.CommitInfoShowContainedInBranchesRemote)], false, false, false);
-            yield return (properties[nameof(AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal)], false, false, false);
+            yield return (properties[nameof(AppSettings.CommitInfoShowContainedInBranchesRemoteIfNoLocal)], false,
+                false, false);
             yield return (properties[nameof(AppSettings.CommitInfoShowContainedInTags)], true, false, false);
             yield return (properties[nameof(AppSettings.CommitInfoShowTagThisCommitDerivesFrom)], true, false, false);
             yield return (properties[nameof(AppSettings.AvatarImageCacheDays)], 13, false, false);
@@ -259,7 +267,8 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.EnableAutoScale)], true, false, false);
             yield return (properties[nameof(AppSettings.CloseCommitDialogAfterCommit)], true, false, false);
             yield return (properties[nameof(AppSettings.CloseCommitDialogAfterLastCommit)], true, false, false);
-            yield return (properties[nameof(AppSettings.RefreshArtificialCommitOnApplicationActivated)], false, false, false);
+            yield return (properties[nameof(AppSettings.RefreshArtificialCommitOnApplicationActivated)], false, false,
+                false);
             yield return (properties[nameof(AppSettings.StageInSuperprojectAfterCommit)], true, false, false);
             yield return (properties[nameof(AppSettings.FollowRenamesInFileHistory)], true, false, false);
             yield return (properties[nameof(AppSettings.FollowRenamesInFileHistoryExactOnly)], false, false, false);
@@ -279,8 +288,10 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.FormPullAction)], GitPullAction.Merge, false, false);
             yield return (properties[nameof(AppSettings.AutoStash)], false, false, false);
             yield return (properties[nameof(AppSettings.RebaseAutoStash)], false, false, false);
-            yield return (properties[nameof(AppSettings.CheckoutBranchAction)], LocalChangesAction.DontChange, false, false);
-            yield return (properties[nameof(AppSettings.CheckoutOtherBranchAfterReset)], true, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.CheckoutBranchAction)], LocalChangesAction.DontChange, false,
+                false);
+            yield return (properties[nameof(AppSettings.CheckoutOtherBranchAfterReset)], true, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.UseDefaultCheckoutBranchAction)], false, false, false);
             yield return (properties[nameof(AppSettings.DontShowHelpImages)], false, false, false);
             yield return (properties[nameof(AppSettings.AlwaysShowAdvOpt)], false, false, false);
@@ -292,12 +303,16 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.AutoPullOnPushRejectedAction)], null, true, false);
             yield return (properties[nameof(AppSettings.DontConfirmPushNewBranch)], false, isNotNullable, isISetting);
             yield return (properties[nameof(AppSettings.DontConfirmAddTrackingRef)], false, false, false);
-            yield return (properties[nameof(AppSettings.DontConfirmCommitAfterConflictsResolved)], false, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.DontConfirmSecondAbortConfirmation)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.DontConfirmCommitAfterConflictsResolved)], false, isNotNullable,
+                isISetting);
+            yield return (properties[nameof(AppSettings.DontConfirmSecondAbortConfirmation)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.DontConfirmRebase)], false, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.DontConfirmResolveConflicts)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.DontConfirmResolveConflicts)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.DontConfirmUndoLastCommit)], false, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.DontConfirmFetchAndPruneAll)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.DontConfirmFetchAndPruneAll)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.DontConfirmSwitchWorktree)], false, isNotNullable, isISetting);
             yield return (properties[nameof(AppSettings.IncludeUntrackedFilesInAutoStash)], false, false, false);
             yield return (properties[nameof(AppSettings.IncludeUntrackedFilesInManualStash)], false, false, false);
@@ -336,7 +351,8 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.RevisionGridQuickSearchTimeout)], 4000, false, false);
             yield return (properties[nameof(AppSettings.MaxRevisionGraphCommits)], 100000, false, false);
             yield return (properties[nameof(AppSettings.ShowDiffForAllParents)], true, false, false);
-            yield return (properties[nameof(AppSettings.ShowFindInCommitFilesGitGrep)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.ShowFindInCommitFilesGitGrep)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.ShowAvailableDiffTools)], true, isNotNullable, isNoISetting);
             yield return (properties[nameof(AppSettings.DiffVerticalRulerPosition)], 0, isNotNullable, isNoISetting);
             yield return (properties[nameof(AppSettings.GitGrepUserArguments)], "", isNotNullable, isISetting);
@@ -361,18 +377,22 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.RememberShowNonPrintingCharsPreference)], false, false, false);
             yield return (properties[nameof(AppSettings.ShowEntireFile)], false, false, true);
             yield return (properties[nameof(AppSettings.RememberShowEntireFilePreference)], false, false, false);
-            yield return (properties[nameof(AppSettings.DiffDisplayAppearance)], DiffDisplayAppearance.Patch, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.RememberDiffDisplayAppearance)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.DiffDisplayAppearance)], DiffDisplayAppearance.Patch,
+                isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.RememberDiffDisplayAppearance)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.RememberNumberOfContextLines)], false, false, false);
             yield return (properties[nameof(AppSettings.ShowSyntaxHighlightingInDiff)], true, false, true);
             yield return (properties[nameof(AppSettings.RememberShowSyntaxHighlightingInDiff)], true, false, false);
             yield return (properties[nameof(AppSettings.ShowRepoCurrentBranch)], true, false, false);
             yield return (properties[nameof(AppSettings.OwnScripts)], string.Empty, true, false);
             yield return (properties[nameof(AppSettings.RecursiveSubmodules)], 1, false, false);
-            yield return (properties[nameof(AppSettings.ShorteningRecentRepoPathStrategy)], ShorteningRecentRepoPathStrategy.None, false, false);
+            yield return (properties[nameof(AppSettings.ShorteningRecentRepoPathStrategy)],
+                ShorteningRecentRepoPathStrategy.None, false, false);
             yield return (properties[nameof(AppSettings.MaxTopRepositories)], 0, false, false);
             yield return (properties[nameof(AppSettings.RecentRepositoriesHistorySize)], 30, false, false);
-            yield return (properties[nameof(AppSettings.HideTopRepositoriesFromRecentList)], false, isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.HideTopRepositoriesFromRecentList)], false, isNotNullable,
+                isISetting);
             yield return (properties[nameof(AppSettings.RecentReposComboMinWidth)], 0, false, false);
             yield return (properties[nameof(AppSettings.SerializedHotkeys)], null, true, false);
             yield return (properties[nameof(AppSettings.SortTopRepos)], false, false, false);
@@ -419,8 +439,10 @@ public sealed class AppSettingsTests
             yield return (properties[nameof(AppSettings.AutomaticContinuousScroll)], false, false, false);
             yield return (properties[nameof(AppSettings.AutomaticContinuousScrollDelay)], 600, false, false);
             yield return (properties[nameof(AppSettings.IsEditorSettingsMigrated)], false, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.ShowProcessDialogPasswordInput)], false, isNotNullable, isISetting);
-            yield return (properties[nameof(AppSettings.UninformativeRepoNameRegex)], "app|(repo(sitory)?)", isNotNullable, isISetting);
+            yield return (properties[nameof(AppSettings.ShowProcessDialogPasswordInput)], false, isNotNullable,
+                isISetting);
+            yield return (properties[nameof(AppSettings.UninformativeRepoNameRegex)], "app|(repo(sitory)?)",
+                isNotNullable, isISetting);
         }
 
         static IEnumerable<object> Values()
@@ -487,12 +509,12 @@ public sealed class AppSettingsTests
                 typeof(GitRefsSortBy),
                 typeof(GitRefsSortOrder),
                 typeof(DiffListSortType),
-                typeof(RevisionSortOrder),
+                typeof(RevisionSortOrder)
             ];
 
-            foreach (Type enumType in enumTypes)
+            foreach (var enumType in enumTypes)
             {
-                foreach (object enumValue in Enum.GetValues(enumType))
+                foreach (var enumValue in Enum.GetValues(enumType))
                 {
                     yield return enumValue;
                 }

@@ -1,4 +1,3 @@
-using GitCommands;
 using GitExtensions.Extensibility.Git;
 
 namespace GitUI.CommandsDialogs;

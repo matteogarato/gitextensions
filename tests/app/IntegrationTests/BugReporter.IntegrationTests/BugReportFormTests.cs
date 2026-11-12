@@ -1,21 +1,24 @@
 ﻿using BugReporter;
 using BugReporter.Serialization;
-using CommonTestUtils;
-using Xunit;
 
-namespace GitExtensions.UITests.NBugReports;
+namespace BugReporterTests;
 
 public sealed class BugReportFormTests : IDisposable
 {
     private readonly BugReportForm _form = new();
 
+    void IDisposable.Dispose()
+    {
+        _form.Dispose();
+    }
+
     [WinFormsFact]
     public void Should_show_load_exception_info_correctly()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, @"MockData/SimpleException.txt");
-        string content = File.ReadAllText(path);
+        var path = Path.Combine(AppContext.BaseDirectory, @"MockData/SimpleException.txt");
+        var content = File.ReadAllText(path);
 
-        SerializableException exception = SerializableException.FromXmlString(content);
+        var exception = SerializableException.FromXmlString(content);
 
         RunFormTest(
             form =>
@@ -24,10 +27,10 @@ public sealed class BugReportFormTests : IDisposable
                 form.GetTestAccessor().ExceptionTextBox.Text.Should().Be(exception.Type);
                 form.GetTestAccessor().TargetSiteTextBox.Text.Should().Be(exception.TargetSite);
 
-                ListView listView = form.GetTestAccessor().ExceptionDetails.GetTestAccessor().ExceptionDetailsListView;
+                var listView = form.GetTestAccessor().ExceptionDetails.GetTestAccessor().ExceptionDetailsListView;
                 listView.Items.Count.Should().Be(10);
 
-                int index = 0;
+                var index = 0;
                 listView.Items[index].Text.Should().Be("Exception");
                 listView.Items[index].SubItems[1].Text.Should().Be(exception.Type);
                 index++;
@@ -46,7 +49,7 @@ public sealed class BugReportFormTests : IDisposable
                 listView.Items[index].Text.Should().Be("Stack Trace");
                 listView.Items[index].SubItems[1].Text.Should().Be(exception.StackTrace);
 
-                foreach (KeyValuePair<string, object> info in exception.ExtendedInformation!)
+                foreach (var info in exception.ExtendedInformation!)
                 {
                     index++;
                     listView.Items[index].Text.Should().Be(info.Key);
@@ -57,16 +60,12 @@ public sealed class BugReportFormTests : IDisposable
                 index.Should().Be(listView.Items.Count - 1);
             },
             exception,
-            exceptionInfo: "",
-            environmentInfo: "");
+            "",
+            "");
     }
 
-    public void Dispose()
-    {
-        _form.Dispose();
-    }
-
-    private void RunFormTest(Action<BugReportForm> testDriver, SerializableException exception, string exceptionInfo, string environmentInfo)
+    private void RunFormTest(Action<BugReportForm> testDriver, SerializableException exception, string exceptionInfo,
+        string environmentInfo)
     {
         RunFormTest(
             form =>
@@ -75,15 +74,17 @@ public sealed class BugReportFormTests : IDisposable
                 return Task.CompletedTask;
             },
             exception, exceptionInfo, environmentInfo,
-            expected: DialogResult.Cancel);
+            DialogResult.Cancel);
     }
 
-    private void RunFormTest(Func<BugReportForm, Task> testDriverAsync, SerializableException exception, string exceptionInfo, string environmentInfo, DialogResult expected)
+    private void RunFormTest(Func<BugReportForm, Task> testDriverAsync, SerializableException exception,
+        string exceptionInfo, string environmentInfo, DialogResult expected)
     {
         UITest.RunForm(
             () =>
             {
-                _form.ShowDialog(owner: null, exception, exceptionInfo, environmentInfo, canIgnore: true, showIgnore: false, focusDetails: false).Should().Be(expected);
+                _form.ShowDialog(null, exception, exceptionInfo, environmentInfo, true, false, false).Should()
+                    .Be(expected);
             },
             testDriverAsync);
     }

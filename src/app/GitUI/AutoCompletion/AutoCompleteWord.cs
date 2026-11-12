@@ -2,7 +2,6 @@
 
 public class AutoCompleteWord : IEquatable<AutoCompleteWord?>
 {
-    public string Word { get; }
     private readonly string _camelHumps;
 
     public AutoCompleteWord(string word)
@@ -11,12 +10,9 @@ public class AutoCompleteWord : IEquatable<AutoCompleteWord?>
         _camelHumps = string.Join("", Word.Where(char.IsUpper));
     }
 
-    public bool Matches(string typedWord)
-    {
-        return Word.StartsWith(typedWord, StringComparison.OrdinalIgnoreCase) || _camelHumps.StartsWith(typedWord, StringComparison.OrdinalIgnoreCase);
-    }
+    public string Word { get; }
 
-    public bool Equals(AutoCompleteWord? other)
+    bool IEquatable<AutoCompleteWord?>.Equals(AutoCompleteWord? other)
     {
         if (other is null)
         {
@@ -29,6 +25,12 @@ public class AutoCompleteWord : IEquatable<AutoCompleteWord?>
         }
 
         return string.Equals(Word, other.Word);
+    }
+
+    public bool Matches(string typedWord)
+    {
+        return Word.StartsWith(typedWord, StringComparison.OrdinalIgnoreCase) ||
+               _camelHumps.StartsWith(typedWord, StringComparison.OrdinalIgnoreCase);
     }
 
     public override bool Equals(object? obj)

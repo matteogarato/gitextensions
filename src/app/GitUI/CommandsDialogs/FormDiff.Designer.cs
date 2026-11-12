@@ -21,7 +21,7 @@ partial class FormDiff
         components = new System.ComponentModel.Container();
         mainLayoutPanel = new TableLayoutPanel();
         splitContainer1 = new SplitContainer();
-        DiffFiles = new GitUI.FileStatusList();
+        DiffFiles = new UserControls.FileStatusList();
         DiffText = new GitUI.Editor.FileViewer();
         settingsLayoutPanel = new TableLayoutPanel();
         btnSwap = new Button();
@@ -351,7 +351,7 @@ partial class FormDiff
 
     private TableLayoutPanel mainLayoutPanel;
     private SplitContainer splitContainer1;
-    private FileStatusList DiffFiles;
+    private UserControls.FileStatusList DiffFiles;
     private Editor.FileViewer DiffText;
     private TableLayoutPanel settingsLayoutPanel;
     private Label lblSecondCommit;

@@ -3,16 +3,16 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Text;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
-using Xunit;
 using Xunit.v3;
 
 namespace CommonTestUtils;
 
 /// <summary>
-///  Configures <see cref="ThreadHelper.JoinableTaskContext"/> around each test and joins pending operations afterwards.
-///  Apply it at assembly level. Tests that need the main thread must run on an STA thread (e.g. <c>[StaFact]</c>).
+///     Configures <see cref="ThreadHelper.JoinableTaskContext" /> around each test and joins pending operations
+///     afterwards.
+///     Apply it at assembly level. Tests that need the main thread must run on an STA thread (e.g. <c>[StaFact]</c>).
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method)]
 public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttribute
@@ -34,8 +34,10 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
 
         if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
         {
-            _denyExecutionSynchronizationContext = new DenyExecutionSynchronizationContext(SynchronizationContext.Current);
-            ThreadHelper.JoinableTaskContext = new JoinableTaskContext(_denyExecutionSynchronizationContext.MainThread, _denyExecutionSynchronizationContext);
+            _denyExecutionSynchronizationContext =
+                new DenyExecutionSynchronizationContext(SynchronizationContext.Current);
+            ThreadHelper.JoinableTaskContext = new JoinableTaskContext(_denyExecutionSynchronizationContext.MainThread,
+                _denyExecutionSynchronizationContext);
             return;
         }
 
@@ -65,11 +67,13 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
                     // Note that ThreadHelper.JoinableTaskContext.Factory must be used to bypass the default behavior of
                     // ThreadHelper.JoinableTaskFactory since the latter adds new tasks to the collection and would therefore
                     // never complete.
-                    ThreadHelper.JoinableTaskContext.Factory.Run(() => ThreadHelper.JoinPendingOperationsAsync(cts.Token));
+                    ThreadHelper.JoinableTaskContext.Factory.Run(() =>
+                        ThreadHelper.JoinPendingOperationsAsync(cts.Token));
                 }
                 catch (OperationCanceledException) when (cts.IsCancellationRequested)
                 {
-                    if (int.TryParse(Environment.GetEnvironmentVariable("GE_TEST_SLEEP_SECONDS_ON_HANG"), out int sleepSeconds) && sleepSeconds > 0)
+                    if (int.TryParse(Environment.GetEnvironmentVariable("GE_TEST_SLEEP_SECONDS_ON_HANG"),
+                            out var sleepSeconds) && sleepSeconds > 0)
                     {
                         Thread.Sleep(TimeSpan.FromSeconds(sleepSeconds));
                     }
@@ -82,7 +86,8 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
                 ThreadHelper.JoinableTaskContext = null!;
                 if (_denyExecutionSynchronizationContext is not null)
                 {
-                    SynchronizationContext.SetSynchronizationContext(_denyExecutionSynchronizationContext.UnderlyingContext);
+                    SynchronizationContext.SetSynchronizationContext(_denyExecutionSynchronizationContext
+                        .UnderlyingContext);
                 }
             }
 
@@ -108,13 +113,15 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
     }
 
     private static void HandleApplicationThreadException(object? sender, ThreadExceptionEventArgs e)
-        => StoreThreadException(e.Exception);
+    {
+        StoreThreadException(e.Exception);
+    }
 
     private static void StoreThreadException(Exception ex)
     {
         if (_threadException is not null)
         {
-            ex = new AggregateException([_threadException.SourceException, ex]);
+            ex = new AggregateException(_threadException.SourceException, ex);
         }
 
         _threadException = ExceptionDispatchInfo.Capture(ex);
@@ -122,27 +129,29 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
 
     private class DenyExecutionSynchronizationContext : SynchronizationContext
     {
-        private readonly SynchronizationContext? _underlyingContext;
-        private readonly Thread _mainThread;
         private readonly StrongBox<ExceptionDispatchInfo> _failedTransfer;
 
         public DenyExecutionSynchronizationContext(SynchronizationContext? underlyingContext)
-            : this(underlyingContext, mainThread: null, failedTransfer: null)
+            : this(underlyingContext, null, null)
         {
         }
 
-        private DenyExecutionSynchronizationContext(SynchronizationContext? underlyingContext, Thread? mainThread, StrongBox<ExceptionDispatchInfo>? failedTransfer)
+        private DenyExecutionSynchronizationContext(SynchronizationContext? underlyingContext, Thread? mainThread,
+            StrongBox<ExceptionDispatchInfo>? failedTransfer)
         {
-            _underlyingContext = underlyingContext;
-            _mainThread = mainThread ?? new Thread(MainThreadStart);
+            UnderlyingContext = underlyingContext;
+            MainThread = mainThread ?? new Thread(MainThreadStart);
             _failedTransfer = failedTransfer ?? new StrongBox<ExceptionDispatchInfo>();
         }
 
-        internal SynchronizationContext? UnderlyingContext => _underlyingContext;
+        internal SynchronizationContext? UnderlyingContext { get; }
 
-        internal Thread MainThread => _mainThread;
+        internal Thread MainThread { get; }
 
-        private static void MainThreadStart() => throw new InvalidOperationException("This thread should never be started.");
+        private static void MainThreadStart()
+        {
+            throw new InvalidOperationException("This thread should never be started.");
+        }
 
         internal void ThrowIfSwitchOccurred()
         {
@@ -164,7 +173,7 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
             }
 
 #pragma warning disable VSTHRD001 // Avoid legacy thread switching APIs
-            (_underlyingContext ?? new SynchronizationContext()).Post(d, state);
+            (UnderlyingContext ?? new SynchronizationContext()).Post(d, state);
 #pragma warning restore VSTHRD001 // Avoid legacy thread switching APIs
         }
 
@@ -183,18 +192,20 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
             }
 
 #pragma warning disable VSTHRD001 // Avoid legacy thread switching APIs
-            (_underlyingContext ?? new SynchronizationContext()).Send(d, state);
+            (UnderlyingContext ?? new SynchronizationContext()).Send(d, state);
 #pragma warning restore VSTHRD001 // Avoid legacy thread switching APIs
         }
 
         public override SynchronizationContext CreateCopy()
         {
-            return new DenyExecutionSynchronizationContext(_underlyingContext?.CreateCopy(), _mainThread, _failedTransfer);
+            return new DenyExecutionSynchronizationContext(UnderlyingContext?.CreateCopy(), MainThread,
+                _failedTransfer);
         }
 
         private static void ThrowFailedTransferExceptionForCapture()
         {
-            throw new InvalidOperationException("Tests cannot use SwitchToMainThreadAsync unless they are marked with ApartmentState.STA.");
+            throw new InvalidOperationException(
+                "Tests cannot use SwitchToMainThreadAsync unless they are marked with ApartmentState.STA.");
         }
     }
 
@@ -217,14 +228,14 @@ public sealed class ConfigureJoinableTaskFactoryAttribute : BeforeAfterTestAttri
             output.AppendLine();
             output.AppendLine($"HANG DETECTED: guid {hangId}");
 
-            HangReportContribution report = ((IHangReportContributor)Context).GetHangReport();
+            var report = ((IHangReportContributor)Context).GetHangReport();
             if (report.ContentName!.EndsWith("dgml", StringComparison.InvariantCultureIgnoreCase))
             {
                 try
                 {
-                    string assemblyLocation = Assembly.GetExecutingAssembly().Location;
-                    string? reportLocation = Path.GetDirectoryName(assemblyLocation);
-                    string reportFileName = Path.Combine(reportLocation!, $"{hangId}.dgml");
+                    var assemblyLocation = Assembly.GetExecutingAssembly().Location;
+                    var reportLocation = Path.GetDirectoryName(assemblyLocation);
+                    var reportFileName = Path.Combine(reportLocation!, $"{hangId}.dgml");
 
                     File.WriteAllText(reportFileName, report.Content);
                     output.AppendLine($"HANG report: {reportFileName}");

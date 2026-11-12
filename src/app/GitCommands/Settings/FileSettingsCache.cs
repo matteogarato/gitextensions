@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Timers;
 using GitCommands.Utils;
 using Timer = System.Timers.Timer;
 
@@ -7,34 +8,28 @@ namespace GitCommands.Settings;
 [DebuggerDisplay("{_byNameMap.Count} {" + nameof(SettingsFilePath) + ",nq}")]
 public abstract class FileSettingsCache : SettingsCache
 {
-    private const double SaveTime = 2000;
-    private const string BackupFileExtension = ".backup";
-    private const string UnreadableFileExtension = ".unreadable";
-    private DateTime? _lastFileRead;
-    private DateTime _lastFileModificationDate;
-    private DateTime? _lastModificationDate;
-    private bool _lastReadFailed;
+    private const double _saveTime = 2000;
+    private const string _backupFileExtension = ".backup";
+    private const string _unreadableFileExtension = ".unreadable";
+    private readonly bool _autoSave;
     private readonly FileSystemWatcher _fileWatcher = new();
 
     // The FileSystemWatcher is not reporting changes for WSL
     // https://github.com/microsoft/WSL/issues/4581
     private readonly bool _forceFileChangeChecks;
+    private DateTime _lastFileModificationDate;
+    private DateTime? _lastFileRead;
+    private DateTime? _lastModificationDate;
+    private bool _lastReadFailed;
 
     private Timer? _saveTimer;
-    private readonly bool _autoSave;
-
-    public string SettingsFilePath { get; }
 
     protected FileSettingsCache(string settingsFilePath, bool autoSave = true)
     {
         SettingsFilePath = settingsFilePath;
         _autoSave = autoSave;
 
-        _saveTimer = new Timer(SaveTime)
-        {
-            Enabled = false,
-            AutoReset = false
-        };
+        _saveTimer = new Timer(_saveTime) { Enabled = false, AutoReset = false };
         _saveTimer.Elapsed += OnSaveTimer;
 
         _fileWatcher.IncludeSubdirectories = false;
@@ -46,7 +41,7 @@ public abstract class FileSettingsCache : SettingsCache
 
         try
         {
-            string? dir = Path.GetDirectoryName(SettingsFilePath);
+            var dir = Path.GetDirectoryName(SettingsFilePath);
             if (Directory.Exists(dir))
             {
                 // Notifications may not fire
@@ -64,6 +59,8 @@ public abstract class FileSettingsCache : SettingsCache
 
         FileChanged();
     }
+
+    public string SettingsFilePath { get; }
 
     protected override void Dispose(bool disposing)
     {
@@ -93,7 +90,7 @@ public abstract class FileSettingsCache : SettingsCache
     }
 
     public static T FromCache<T>(string settingsFilePath, Lazy<T> createSettingsCache)
-         where T : FileSettingsCache
+        where T : FileSettingsCache
     {
         return WeakRefCache.Default.Get(settingsFilePath + ":" + typeof(T).FullName, createSettingsCache);
     }
@@ -138,7 +135,7 @@ public abstract class FileSettingsCache : SettingsCache
                 return;
             }
 
-            string tmpFile = Path.GetTempFileName();
+            var tmpFile = Path.GetTempFileName();
             WriteSettings(tmpFile);
 
             if (File.Exists(SettingsFilePath))
@@ -147,7 +144,8 @@ public abstract class FileSettingsCache : SettingsCache
                 // the ones which were parsed before the error. Keep the unreadable file under its own
                 // name and leave the last backup which could be read alone, so that both remain
                 // available for recovery.
-                string copyName = SettingsFilePath + (_lastReadFailed ? UnreadableFileExtension : BackupFileExtension);
+                var copyName =
+                    SettingsFilePath + (_lastReadFailed ? _unreadableFileExtension : _backupFileExtension);
                 try
                 {
                     File.Copy(SettingsFilePath, copyName, true);
@@ -161,7 +159,7 @@ public abstract class FileSettingsCache : SettingsCache
             try
             {
                 // ensure the directory structure exists
-                string? parentFolder = Path.GetDirectoryName(SettingsFilePath);
+                var parentFolder = Path.GetDirectoryName(SettingsFilePath);
                 if (!Directory.Exists(parentFolder))
                 {
                     Directory.CreateDirectory(parentFolder!);
@@ -228,7 +226,9 @@ public abstract class FileSettingsCache : SettingsCache
             FileChanged();
         }
 
-        return !_lastFileRead.HasValue || (_lastFileModificationDate > _lastFileRead.Value && !(_lastModificationDate.HasValue && _lastModificationDate >= _lastFileModificationDate));
+        return !_lastFileRead.HasValue || (_lastFileModificationDate > _lastFileRead.Value &&
+                                           !(_lastModificationDate.HasValue &&
+                                             _lastModificationDate >= _lastFileModificationDate));
     }
 
     protected override void SettingsChanged()
@@ -244,7 +244,7 @@ public abstract class FileSettingsCache : SettingsCache
     }
 
     // Used to eliminate multiple settings file open and close to save multiple values.  Settings will be saved SAVETIME milliseconds after the last setvalue is called
-    private void OnSaveTimer(object? source, System.Timers.ElapsedEventArgs e)
+    private void OnSaveTimer(object? source, ElapsedEventArgs e)
     {
         ((Timer)source!).Stop();
         Save();
@@ -257,7 +257,7 @@ public abstract class FileSettingsCache : SettingsCache
         {
             _saveTimer.Stop();
             _saveTimer.AutoReset = true;
-            _saveTimer.Interval = SaveTime;
+            _saveTimer.Interval = _saveTime;
             _saveTimer.AutoReset = false;
 
             _saveTimer.Start();
@@ -265,19 +265,25 @@ public abstract class FileSettingsCache : SettingsCache
     }
 
     internal TestAccessor GetTestAccessor()
-        => new(this);
-
-    internal readonly struct TestAccessor
     {
-        private readonly FileSettingsCache _fileSettingsCache;
+        return new TestAccessor(this);
+    }
 
-        public TestAccessor(FileSettingsCache fileSettingsCache)
+    internal readonly struct TestAccessor(FileSettingsCache fileSettingsCache)
+    {
+        public FileSystemWatcher FileSystemWatcher
         {
-            _fileSettingsCache = fileSettingsCache;
+            get => fileSettingsCache._fileWatcher;
         }
 
-        public FileSystemWatcher FileSystemWatcher => _fileSettingsCache._fileWatcher;
-        public void SaveImpl() => _fileSettingsCache.SaveImpl();
-        public void SetLastModificationDate(DateTime date) => _fileSettingsCache._lastModificationDate = date;
+        public void SaveImpl()
+        {
+            fileSettingsCache.SaveImpl();
+        }
+
+        public void SetLastModificationDate(DateTime date)
+        {
+            fileSettingsCache._lastModificationDate = date;
+        }
     }
 }

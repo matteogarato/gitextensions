@@ -19,20 +19,21 @@ public class ChoiceSetting : ISetting
         }
     }
 
-    public string Name { get; }
-    public string Caption { get; }
     public string? DefaultValue { get; }
     public IList<string> Values { get; }
     public ComboBox? CustomControl { get; set; }
-
-    public string? ValueOrDefault(SettingsSource settings)
-    {
-        return this[settings] ?? DefaultValue;
-    }
 
     public string? this[SettingsSource settings]
     {
         get => settings.GetString(Name, null);
         set => settings.SetString(Name, value);
+    }
+
+    string ISetting.Name { get; }
+    string ISetting.Caption { get; }
+
+    public string? ValueOrDefault(SettingsSource settings)
+    {
+        return this[settings] ?? DefaultValue;
     }
 }

@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
@@ -8,16 +8,18 @@ namespace GitUI;
 
 // NOTE do not make this class abstract as it breaks the WinForms designer in VS
 
-/// <summary>Base class for a Git Extensions <see cref="Form"/>.</summary>
+/// <summary>Base class for a Git Extensions <see cref="Form" />.</summary>
 /// <remarks>Includes support for font, hotkey, icon, translation, and position restore.</remarks>
 public partial class GitExtensionsDialog : GitModuleForm
 {
-    private static readonly Pen FooterDividerPen = new(SystemColors.ControlLight.MakeDarkerBy(0.04));
+    private static readonly Pen _footerDividerPen = new(SystemColors.ControlLight.MakeDarkerBy(0.04));
 
-    /// <summary>Creates a new <see cref="GitExtensionsForm"/> indicating position restore.</summary>
-    /// <param name="enablePositionRestore">Indicates whether the <see cref="Form"/>'s position
-    /// will be restored upon being re-opened.</param>
-    protected GitExtensionsDialog(IGitUICommands? commands, bool enablePositionRestore)
+    /// <summary>Creates a new <see cref="GitExtensionsForm" /> indicating position restore.</summary>
+    /// <param name="enablePositionRestore">
+    ///     Indicates whether the <see cref="Form" />'s position
+    ///     will be restored upon being re-opened.
+    /// </param>
+    protected GitExtensionsDialog(IGitUiCommands? commands, bool enablePositionRestore)
         : base(commands, enablePositionRestore)
     {
         InitializeComponent();
@@ -28,38 +30,41 @@ public partial class GitExtensionsDialog : GitModuleForm
 
         // Draw a separator line at the top of the footer panel, similar to what Task Dialog does
         ControlsPanel.Paint += (s, e)
-            => e.Graphics.DrawLine(FooterDividerPen, new Point(e.ClipRectangle.Left, 0), new Point(e.ClipRectangle.Right, 0));
+            => e.Graphics.DrawLine(_footerDividerPen, new Point(e.ClipRectangle.Left, 0),
+                new Point(e.ClipRectangle.Right, 0));
     }
 
     /// <summary>
-    /// Gets or sets the anchor pointing to a section in the manual pertaining to this dialog.
+    ///     Gets or sets the anchor pointing to a section in the manual pertaining to this dialog.
     /// </summary>
     /// <remarks>
-    /// The URL structure:
-    /// https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
+    ///     The URL structure:
+    ///     https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
     /// </remarks>
     public string? ManualSectionAnchorName { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of a document pertaining to this dialog.
+    ///     Gets or sets the name of a document pertaining to this dialog.
     /// </summary>
     /// <remarks>
-    /// The URL structure:
-    /// https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
+    ///     The URL structure:
+    ///     https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
     /// </remarks>
     public string? ManualSectionSubfolder { get; set; }
 
     /// <summary>
-    ///  <para>Gets the minimum height preferred by the form.</para>
-    ///  <para>
-    ///   <b>NOTE:</b> This requires that the <see cref="MainPanel"/> content is configured as follows:<br />
-    ///   - <c>AutoSize = true</c><br />
-    ///   - <c>AutoSizeMode = AutoSizeMode.GrowAndShrink</c><br />
-    ///   - <c>Dock = DockStyle.Fil</c>
-    ///  </para>
+    ///     <para>Gets the minimum height preferred by the form.</para>
+    ///     <para>
+    ///         <b>NOTE:</b> This requires that the <see cref="MainPanel" /> content is configured as follows:<br />
+    ///         - <c>AutoSize = true</c><br />
+    ///         - <c>AutoSizeMode = AutoSizeMode.GrowAndShrink</c><br />
+    ///         - <c>Dock = DockStyle.Fil</c>
+    ///     </para>
     /// </summary>
     public int PreferredMinimumHeight
-        => MainPanel.PreferredSize.Height + ControlsPanel.PreferredSize.Height + (Size.Height - ClientSize.Height);
+    {
+        get => MainPanel.PreferredSize.Height + ControlsPanel.PreferredSize.Height + (Size.Height - ClientSize.Height);
+    }
 
     protected override void OnHelpButtonClicked(CancelEventArgs e)
     {
@@ -73,7 +78,7 @@ public partial class GitExtensionsDialog : GitModuleForm
 
         base.OnHelpButtonClicked(e);
 
-        string url = UserManual.UserManual.UrlFor(ManualSectionSubfolder, ManualSectionAnchorName);
+        var url = UserManual.UserManual.UrlFor(ManualSectionSubfolder, ManualSectionAnchorName);
         OsShellUtil.OpenUrlInDefaultBrowser(url);
 
         // We've handled the event

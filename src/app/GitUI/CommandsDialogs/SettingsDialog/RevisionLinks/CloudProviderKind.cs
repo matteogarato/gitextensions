@@ -4,5 +4,5 @@ public enum CloudProviderKind
 {
     None = 0,
     GitHub,
-    AzureDevOps,
+    AzureDevOps
 }

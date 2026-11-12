@@ -1,12 +1,9 @@
 ﻿using System.Diagnostics;
-using GitCommands;
-using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
-using GitExtensions.Shims.WinForms;
 using GitExtUtils;
+using GitUI.Compat;
 using GitUI.ConsoleEmulation;
 using GitUI.ConsoleEmulation.PlainText;
-using GitUI.Models;
 using GitUI.UserControls;
 
 namespace GitUI.HelperDialogs;
@@ -16,24 +13,25 @@ namespace GitUI.HelperDialogs;
 public partial class FormStatus : GitExtensionsDialog
 {
     private readonly bool _useDialogSettings;
-    private bool _errorOccurred;
+    private protected Action<FormStatus>? AbortCallback;
 
     private protected Action<FormStatus>? ProcessCallback;
-    private protected Action<FormStatus>? AbortCallback;
+    private bool _errorOccurred;
 
     /// <summary>For the visual designer and the XAML loader only, like WinForms.</summary>
     /// <remarks>
-    ///  The dialog is built the same way as at run time, but without commands: starting an
-    ///  operation from it is an error, which <see cref="GitModuleForm.UICommands"/> reports.
+    ///     The dialog is built the same way as at run time, but without commands: starting an
+    ///     operation from it is an error, which <see cref="GitModuleForm.UiCommands" /> reports.
     /// </remarks>
     public FormStatus()
-        : this(commands: null, PlainTextConsoleEmulatorsRegistry.Instance, useDialogSettings: false)
+        : this(null, PlainTextConsoleEmulatorsRegistry.Instance, false)
     {
     }
 
-    /// <param name="commands">The commands, or <see langword="null"/> for the designer.</param>
-    public FormStatus(IGitUICommands? commands, IConsoleEmulatorsRegistry consoleEmulatorsRegistry, bool useDialogSettings)
-        : base(commands, enablePositionRestore: true)
+    /// <param name="commands">The commands, or <see langword="null" /> for the designer.</param>
+    public FormStatus(IGitUiCommands? commands, IConsoleEmulatorsRegistry consoleEmulatorsRegistry,
+        bool useDialogSettings)
+        : base(commands, true)
     {
         _useDialogSettings = useDialogSettings;
 
@@ -78,8 +76,8 @@ public partial class FormStatus : GitExtensionsDialog
     private protected IConsoleCommandRunner ConsoleCommandRunner { get; }
 
     /// <summary>
-    /// Gets the logged output text. Note that this is a separate string from what you see in the console output control.
-    /// For instance, progress messages might be skipped; other messages might be added manually.
+    ///     Gets the logged output text. Note that this is a separate string from what you see in the console output control.
+    ///     For instance, progress messages might be skipped; other messages might be added manually.
     /// </summary>
     private protected FormStatusOutputLog OutputLog { get; } = new();
 
@@ -99,14 +97,15 @@ public partial class FormStatus : GitExtensionsDialog
         ProcessCallback?.Invoke(this);
     }
 
-    public static void ShowErrorDialog(IWin32Window? owner, IGitUICommands commands, string text, params string[] output)
+    public static void ShowErrorDialog(IWin32Window? owner, IGitUiCommands commands, string text,
+        params string[] output)
     {
-        using FormStatus form = new(commands, consoleEmulatorsRegistry: PlainTextConsoleEmulatorsRegistry.Instance, useDialogSettings: true);
+        using FormStatus form = new(commands, PlainTextConsoleEmulatorsRegistry.Instance, true);
         form.Text = text;
         if (output?.Length > 0)
         {
-            IPlainTextConsoleCommandRunner commandRunner = (IPlainTextConsoleCommandRunner)form.ConsoleCommandRunner;
-            foreach (string line in output)
+            var commandRunner = (IPlainTextConsoleCommandRunner)form.ConsoleCommandRunner;
+            foreach (var line in output)
             {
                 commandRunner.WriteOutputText(line);
             }
@@ -119,7 +118,7 @@ public partial class FormStatus : GitExtensionsDialog
         form.Abort.IsVisible = false;
 
         // We know that an operation (whatever it may have been) has failed, so set the error state.
-        form.Done(isSuccess: false);
+        form.Done(false);
 
         form.ShowDialog(owner);
     }
@@ -149,7 +148,7 @@ public partial class FormStatus : GitExtensionsDialog
         try
         {
             RunProcessInfo runProcessInfo = new(ProcessString!, ProcessArguments!, GetOutputString(), DateTime.Now);
-            UICommands.GetRequiredService<IOutputHistoryRecorder>().RecordHistory(runProcessInfo);
+            UiCommands.GetRequiredService<IOutputHistoryRecorder>().RecordHistory(runProcessInfo);
         }
         catch (Exception exception)
         {
@@ -164,7 +163,7 @@ public partial class FormStatus : GitExtensionsDialog
         AcceptButton = Ok;
         Abort.IsEnabled = false;
 
-        if (isSuccess && (_useDialogSettings && AppSettings.CloseProcessDialog))
+        if (isSuccess && _useDialogSettings && AppSettings.CloseProcessDialog)
         {
             Close();
         }
@@ -186,8 +185,8 @@ public partial class FormStatus : GitExtensionsDialog
         // This has to happen on the UI thread
         await this.SwitchToMainThreadAsync();
 
-        int index = text.LastIndexOf('%');
-        if (index > 4 && int.TryParse(text.AsSpan(index - 3, 3), out int progressValue) && progressValue >= 0)
+        var index = text.LastIndexOf('%');
+        if (index > 4 && int.TryParse(text.AsSpan(index - 3, 3), out var progressValue) && progressValue >= 0)
         {
             ProgressBar.IsIndeterminate = false;
             ProgressBar.Value = Math.Min(100, progressValue);
@@ -221,8 +220,9 @@ public partial class FormStatus : GitExtensionsDialog
         try
         {
             AbortCallback?.Invoke(this);
-            OutputLog.Append(Environment.NewLine + "Aborted");  // TODO: write to display control also, if we pull the function up to this base class
-            Done(isSuccess: false);
+            OutputLog.Append(Environment.NewLine +
+                             "Aborted"); // TODO: write to display control also, if we pull the function up to this base class
+            Done(false);
             DialogResult = DialogResult.Abort;
         }
         catch
@@ -236,7 +236,8 @@ public partial class FormStatus : GitExtensionsDialog
 
         // Maintain the invariant: if changing to "don't keep" and conditions are such that the dialog would have closed in dont-keep mode, then close it
         // Not checking for UseDialogSettings because checkbox is only visible with True
-        if ((KeepDialogOpen.IsChecked != true /* keep off */) && Ok.IsEnabled /* done */ && (!_errorOccurred /* and successful */))
+        if (KeepDialogOpen.IsChecked != true /* keep off */ && Ok.IsEnabled /* done */ &&
+            !_errorOccurred /* and successful */)
         {
             Close();
         }
@@ -255,7 +256,7 @@ public partial class FormStatus : GitExtensionsDialog
 
     private void Ok_Click(object sender, EventArgs e)
     {
-        DialogResult = DialogResult.OK;
+        DialogResult = DialogResult.Ok;
         Close();
     }
 }

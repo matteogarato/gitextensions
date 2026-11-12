@@ -1,14 +1,14 @@
-﻿using GitExtensions.Extensibility;
-
-namespace GitExtensions.Extensibility.Git;
+﻿namespace GitExtensions.Extensibility.Git;
 
 // TODO: This should not be in Extensibility!
 
 public sealed class FilteredGitRefsProvider : IFilteredGitRefsProvider
 {
+    private readonly Lazy<IReadOnlyList<IGitRef>> _getRefs;
+
     public FilteredGitRefsProvider(IGitModule module)
     {
-        _getRefs = new(() => module.GetRefs(RefsFilter.NoFilter));
+        _getRefs = new Lazy<IReadOnlyList<IGitRef>>(() => module.GetRefs(RefsFilter.NoFilter));
     }
 
     public FilteredGitRefsProvider(Lazy<IReadOnlyList<IGitRef>> getRefs)
@@ -16,10 +16,8 @@ public sealed class FilteredGitRefsProvider : IFilteredGitRefsProvider
         _getRefs = getRefs;
     }
 
-    private readonly Lazy<IReadOnlyList<IGitRef>> _getRefs;
-
-    /// <inherit/>
-    public IReadOnlyList<IGitRef> GetRefs(RefsFilter filter)
+    /// <inherit />
+    IReadOnlyList<IGitRef> IFilteredGitRefsProvider.GetRefs(RefsFilter filter)
     {
         if (filter == RefsFilter.NoFilter)
         {

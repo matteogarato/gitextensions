@@ -10,6 +10,7 @@ public static class TranslationUtil
     private const BindingFlags _propertyFlags
         = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static |
           BindingFlags.NonPublic | BindingFlags.SetProperty;
+
     private const BindingFlags _fieldFlags
         = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static |
           BindingFlags.NonPublic | BindingFlags.SetField;
@@ -26,15 +27,7 @@ public static class TranslationUtil
         "Title"
     ];
 
-    private static bool IsTranslatableItemInComponent(PropertyInfo property, object item)
-    {
-        string[] localizableItemNames = GetLocalizablePropertiesFromAttribute(item)
-            ?? _translatableItemInComponentNames;
-
-        return property.PropertyType == typeof(string) && localizableItemNames.Contains(property.Name, StringComparer.Ordinal);
-    }
-
-    private static readonly string[] UnTranslatableDLLs =
+    private static readonly string[] _unTranslatableDlLs =
     [
         "mscorlib",
         "Microsoft",
@@ -50,10 +43,22 @@ public static class TranslationUtil
         "Newtonsoft",
         "ConEmuWinForms",
         "TranslationApp",
-        "netstandard",
+        "netstandard"
     ];
 
-    private static bool AllowTranslateProperty([NotNullWhen(returnValue: true)] string? text)
+    private static readonly char _posixDirectorySeparatorChar = '/';
+    private static readonly char _nativeDirectorySeparatorChar = Path.DirectorySeparatorChar;
+
+    private static bool IsTranslatableItemInComponent(PropertyInfo property, object item)
+    {
+        var localizableItemNames = GetLocalizablePropertiesFromAttribute(item)
+                                   ?? _translatableItemInComponentNames;
+
+        return property.PropertyType == typeof(string) &&
+               localizableItemNames.Contains(property.Name, StringComparer.Ordinal);
+    }
+
+    private static bool AllowTranslateProperty([NotNullWhen(true)] string? text)
     {
         if (text is null)
         {
@@ -70,12 +75,14 @@ public static class TranslationUtil
             yield return (objName, obj);
         }
 
-        foreach (FieldInfo field in obj.GetType().GetFields(_fieldFlags)!)
+        foreach (var field in obj.GetType().GetFields(_fieldFlags)!)
         {
             if (field.IsPublic && !field.IsInitOnly)
             {
                 // if public AND modifiable (NOT readonly)
-                Debug.WriteLine(string.Format("Skip field {0}.{1} [{2}]", obj.GetType().Name, field.Name, field.GetValue(obj)), "Translation");
+                Debug.WriteLine(
+                    string.Format("Skip field {0}.{1} [{2}]", obj.GetType().Name, field.Name, field.GetValue(obj)),
+                    "Translation");
                 continue;
             }
 
@@ -85,7 +92,7 @@ public static class TranslationUtil
 
     public static void AddTranslationItem(string category, object obj, string propName, ITranslation translation)
     {
-        PropertyInfo? property = obj?.GetType().GetProperty(propName, _propertyFlags);
+        var property = obj?.GetType().GetProperty(propName, _propertyFlags);
 
         if (property?.GetValue(obj, null) is string value && AllowTranslateProperty(value))
         {
@@ -131,30 +138,31 @@ public static class TranslationUtil
             isTranslatable = property => IsTranslatableItemInComponent(property, item);
         }
 
-        foreach (PropertyInfo property in item.GetType().GetProperties(_fieldFlags).Where(isTranslatable))
+        foreach (var property in item.GetType().GetProperties(_fieldFlags).Where(isTranslatable))
         {
             yield return property;
         }
     }
 
-    public static void AddTranslationItemsFromList(string category, ITranslation translation, IEnumerable<(string Name, object Item)> items)
+    public static void AddTranslationItemsFromList(string category, ITranslation translation,
+        IEnumerable<(string Name, object Item)> items)
     {
-        foreach ((string itemName, object itemObj) in items)
+        foreach ((var itemName, var itemObj) in items)
         {
             if (itemObj is ToolTip tooltip)
             {
-                string toolTipTitle = tooltip.ToolTipTitle;
+                var toolTipTitle = tooltip.ToolTipTitle;
 
                 if (!string.IsNullOrEmpty(toolTipTitle))
                 {
                     translation.AddTranslationItem(category, itemName, "ToolTipTitle", toolTipTitle);
                 }
 
-                foreach ((string itemNameForTooltip, object itemObjForTooltip) in items)
+                foreach ((var itemNameForTooltip, var itemObjForTooltip) in items)
                 {
                     if (itemObjForTooltip is Control control)
                     {
-                        string? tooltipString = tooltip.GetToolTip(control);
+                        var tooltipString = tooltip.GetToolTip(control);
                         if (!string.IsNullOrEmpty(tooltipString))
                         {
                             // Will add an entry in the xlf file with id `NameOfControl.NameOfTooltipControl` ex: "PushToRemote.toolTip1"
@@ -166,9 +174,9 @@ public static class TranslationUtil
                 continue;
             }
 
-            foreach (PropertyInfo property in GetItemPropertiesEnumerator(itemName, itemObj))
+            foreach (var property in GetItemPropertiesEnumerator(itemName, itemObj))
             {
-                object? value = property.GetValue(itemObj, null);
+                var value = property.GetValue(itemObj, null);
 
                 if (value is null)
                 {
@@ -187,9 +195,9 @@ public static class TranslationUtil
 
                 if (value is IList listItems)
                 {
-                    for (int index = 0; index < listItems.Count; index++)
+                    for (var index = 0; index < listItems.Count; index++)
                     {
-                        string? listItem = listItems[index] as string;
+                        var listItem = listItems[index] as string;
 
                         if (AllowTranslateProperty(listItem))
                         {
@@ -201,9 +209,10 @@ public static class TranslationUtil
         }
     }
 
-    public static void TranslateItemsFromList(string category, ITranslation translation, IEnumerable<(string Name, object Item)> items)
+    public static void TranslateItemsFromList(string category, ITranslation translation,
+        IEnumerable<(string Name, object Item)> items)
     {
-        foreach ((string itemName, object itemObj) in items)
+        foreach ((var itemName, var itemObj) in items)
         {
             // If a user control is being translated through its host control (e.g. FilterToolBar is hosted on FormBrowse,
             // and its translations are recorded under 'FormBrowse' node) then the host's "$this.Text" will be applied to
@@ -217,20 +226,25 @@ public static class TranslationUtil
 
             if (itemObj is ToolTip tooltip)
             {
-                static string? ProvideDefaultValue() => null;
+                static string? ProvideDefaultValue()
+                {
+                    return null;
+                }
 
-                string? toolTipTitle = translation.TranslateItem(category, itemName, "ToolTipTitle", ProvideDefaultValue);
+                var toolTipTitle =
+                    translation.TranslateItem(category, itemName, "ToolTipTitle", ProvideDefaultValue);
 
                 if (!string.IsNullOrEmpty(toolTipTitle))
                 {
                     tooltip.ToolTipTitle = toolTipTitle;
                 }
 
-                foreach ((string itemNameForTooltip, object itemObjForTooltip) in items)
+                foreach ((var itemNameForTooltip, var itemObjForTooltip) in items)
                 {
                     if (itemObjForTooltip is Control control)
                     {
-                        string? tooltipString = translation.TranslateItem(category, itemNameForTooltip, itemName, ProvideDefaultValue);
+                        var tooltipString = translation.TranslateItem(category, itemNameForTooltip, itemName,
+                            ProvideDefaultValue);
 
                         if (!string.IsNullOrEmpty(tooltipString))
                         {
@@ -242,19 +256,23 @@ public static class TranslationUtil
                 continue;
             }
 
-            foreach (PropertyInfo propertyInfo in GetItemPropertiesEnumerator(itemName, itemObj))
+            foreach (var propertyInfo in GetItemPropertiesEnumerator(itemName, itemObj))
             {
-                PropertyInfo property = propertyInfo; // copy for lambda
+                var property = propertyInfo; // copy for lambda
 
                 if (property.Name == "Items" && typeof(IList).IsAssignableFrom(property.PropertyType))
                 {
-                    IList list = (IList)property.GetValue(itemObj, null)!;
-                    for (int index = 0; index < list.Count; index++)
+                    var list = (IList)property.GetValue(itemObj, null)!;
+                    for (var index = 0; index < list.Count; index++)
                     {
                         if (list[index] is string listValue)
                         {
-                            string ProvideDefaultValue() => listValue;
-                            string? value = translation.TranslateItem(category, itemName, "Item" + index,
+                            string ProvideDefaultValue()
+                            {
+                                return listValue;
+                            }
+
+                            var value = translation.TranslateItem(category, itemName, "Item" + index,
                                 ProvideDefaultValue);
 
                             if (!string.IsNullOrEmpty(value))
@@ -266,8 +284,12 @@ public static class TranslationUtil
                 }
                 else if (property.PropertyType.IsEquivalentTo(typeof(string)))
                 {
-                    string ProvideDefaultValue() => (string)property.GetValue(itemObj, null)!;
-                    string? value = translation.TranslateItem(category, itemName, property.Name, ProvideDefaultValue);
+                    string ProvideDefaultValue()
+                    {
+                        return (string)property.GetValue(itemObj, null)!;
+                    }
+
+                    var value = translation.TranslateItem(category, itemName, property.Name, ProvideDefaultValue);
 
                     if (!string.IsNullOrEmpty(value))
                     {
@@ -295,21 +317,24 @@ public static class TranslationUtil
 
     public static void TranslateProperty(string category, object obj, string propName, ITranslation translation)
     {
-        PropertyInfo? property = obj?.GetType().GetProperty(propName, _propertyFlags);
+        var property = obj?.GetType().GetProperty(propName, _propertyFlags);
 
         if (property is null)
         {
             return;
         }
 
-        string? value = translation.TranslateItem(category, propName, "Text", ProvideDefaultValue);
+        var value = translation.TranslateItem(category, propName, "Text", ProvideDefaultValue);
 
         if (!string.IsNullOrEmpty(value) && property.CanWrite)
         {
             property.SetValue(obj, value, null);
         }
 
-        static string ProvideDefaultValue() => "";
+        static string ProvideDefaultValue()
+        {
+            return "";
+        }
     }
 
     public static void TranslateItemsFromFields(string category, object obj, ITranslation translation)
@@ -334,18 +359,18 @@ public static class TranslationUtil
             return true;
         }
 
-        string[] localizableProperties = GetLocalizablePropertiesFromAttribute(itemObj) ?? ["Items"];
+        var localizableProperties = GetLocalizablePropertiesFromAttribute(itemObj) ?? ["Items"];
 
         return localizableProperties.Contains(property.Name, StringComparer.Ordinal) &&
                property.GetValue(itemObj, null) is IList items &&
                items.Count != 0;
     }
 
-    /// <summary>true if the specified <see cref="Assembly"/> may be translatable.</summary>
+    /// <summary>true if the specified <see cref="Assembly" /> may be translatable.</summary>
     private static bool IsTranslatable(this Assembly assembly)
     {
-        bool isInvalid = UnTranslatableDLLs.Any(
-            asm => assembly.FullName!.StartsWith(asm, StringComparison.OrdinalIgnoreCase));
+        var isInvalid =
+            _unTranslatableDlLs.Any(asm => assembly.FullName!.StartsWith(asm, StringComparison.OrdinalIgnoreCase));
 
         return !isInvalid;
     }
@@ -353,7 +378,7 @@ public static class TranslationUtil
     public static Dictionary<string, List<Type>> GetTranslatableTypes()
     {
         Dictionary<string, List<Type>> dictionary = [];
-        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies().Where(p => !p.IsDynamic))
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Where(p => !p.IsDynamic))
         {
             if (_processedAssemblies.Contains(assembly.FullName!))
             {
@@ -367,16 +392,16 @@ public static class TranslationUtil
                 continue;
             }
 
-            bool isPlugin = assembly.Location.ToPosixPath().Contains("/Plugins/", StringComparison.OrdinalIgnoreCase);
-            string key = isPlugin ? ".Plugins" : "";
+            var isPlugin = assembly.Location.ToPosixPath().Contains("/Plugins/", StringComparison.OrdinalIgnoreCase);
+            var key = isPlugin ? ".Plugins" : "";
 
-            if (!dictionary.TryGetValue(key, out List<Type>? list))
+            if (!dictionary.TryGetValue(key, out var list))
             {
                 list = [];
                 dictionary.Add(key, list);
             }
 
-            foreach (Type type in GetLoadableTypes(assembly))
+            foreach (var type in GetLoadableTypes(assembly))
             {
                 if (type.IsClass && typeof(ITranslate).IsAssignableFrom(type) && !type.IsAbstract)
                 {
@@ -394,10 +419,10 @@ public static class TranslationUtil
 
         object? obj = null;
 
-        ConstructorInfo[] constructors = type.GetConstructors(constructorFlags);
+        var constructors = type.GetConstructors(constructorFlags);
 
         // try to find parameterless constructor first
-        foreach (ConstructorInfo constructor in constructors)
+        foreach (var constructor in constructors)
         {
             if (constructor.GetParameters().Length == 0)
             {
@@ -407,8 +432,8 @@ public static class TranslationUtil
 
         if (obj is null && constructors.Length != 0)
         {
-            ConstructorInfo parameterConstructor = constructors[0];
-            ParameterInfo[] parameters = parameterConstructor.GetParameters();
+            var parameterConstructor = constructors[0];
+            var parameters = parameterConstructor.GetParameters();
             obj = parameterConstructor.Invoke(new object[parameters.Length]);
         }
 
@@ -426,7 +451,7 @@ public static class TranslationUtil
             Console.WriteLine($"ERROR getting types of {assembly.Location}:");
             Console.WriteLine(e);
             Console.WriteLine("Processing the following types anyway:");
-            foreach (Type? type in e.Types.Where(t => t != null)!)
+            foreach (var type in e.Types.Where(t => t != null)!)
             {
                 Console.WriteLine(type?.FullName);
             }
@@ -442,15 +467,12 @@ public static class TranslationUtil
             ?.TranslatableProperties;
     }
 
-    private static readonly char PosixDirectorySeparatorChar = '/';
-    private static readonly char NativeDirectorySeparatorChar = Path.DirectorySeparatorChar;
-
     /// <summary>
-    ///  Replaces native path separator with POSIX path separator (/).
+    ///     Replaces native path separator with POSIX path separator (/).
     /// </summary>
     [return: NotNullIfNotNull(nameof(path))]
     private static string? ToPosixPath(this string? path)
     {
-        return path?.Replace(NativeDirectorySeparatorChar, PosixDirectorySeparatorChar);
+        return path?.Replace(_nativeDirectorySeparatorChar, _posixDirectorySeparatorChar);
     }
 }

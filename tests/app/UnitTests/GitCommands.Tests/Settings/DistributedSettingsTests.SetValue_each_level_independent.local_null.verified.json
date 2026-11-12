@@ -1,4 +1,4 @@
 ﻿{
-  "global": "global-value",
-  "distributed": "distributed-value"
+    "global": "global-value",
+    "distributed": "distributed-value"
 }

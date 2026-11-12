@@ -4,6 +4,9 @@ using System.Net;
 using System.Runtime.InteropServices;
 using Git.hub;
 using GitCommands;
+using GitCommands.Git;
+using GitCommands.Settings;
+using GitExtUtils.GitUI;
 using GitUI.UserControls.Settings;
 using ResourceManager;
 
@@ -11,24 +14,17 @@ namespace GitUI.CommandsDialogs.BrowseDialog;
 
 public partial class FormUpdates : GitExtensionsDialog
 {
-    #region Translation
-    private readonly TranslationString _newVersionAvailable = new("There is a new version {0} of Git Extensions available");
-    private readonly TranslationString _noUpdatesFound = new("No updates found");
-    private readonly TranslationString _downloadingUpdate = new("Downloading update...");
-    private readonly TranslationString _errorHeading = new("Download Failed");
-    private readonly TranslationString _errorMessage = new("Failed to download an update.");
-    #endregion
+    private readonly Version _currentVersion;
+    private string _netRuntimeDownloadUrl = string.Empty;
+    private string _newVersion = string.Empty;
 
     private IWin32Window? _ownerWindow;
-    private Version _currentVersion;
-    private bool _updateFound;
-    private string _netRuntimeDownloadUrl = string.Empty;
-    private string _updateUrl = string.Empty;
-    private string _newVersion = string.Empty;
     private Version? _requiredNetRuntimeVersion;
+    private bool _updateFound;
+    private string _updateUrl = string.Empty;
 
     public FormUpdates(Version currentVersion)
-        : base(commands: null, enablePositionRestore: false)
+        : base(null, false)
     {
         _currentVersion = currentVersion;
 
@@ -71,17 +67,18 @@ public partial class FormUpdates : GitExtensionsDialog
         try
         {
             Client github = new();
-            Repository gitExtRepo = github.getRepository("gitextensions", "gitextensions");
+            var gitExtRepo = github.GetRepository("gitextensions", "gitextensions");
 
-            GitHubReference? configData = gitExtRepo?.GetRef("heads/configdata");
+            var configData = gitExtRepo?.GetRef("heads/configdata");
 
-            GitHubTree? tree = configData?.GetTree();
+            var tree = configData?.GetTree();
             if (tree is null)
             {
                 return;
             }
 
-            GitHubTreeEntry? releases = tree.Tree.FirstOrDefault(entry => "GitExtensions.releases".Equals(entry.Path, StringComparison.InvariantCultureIgnoreCase));
+            var releases = tree.Tree.FirstOrDefault(entry =>
+                "GitExtensions.releases".Equals(entry.Path, StringComparison.InvariantCultureIgnoreCase));
 
             if (releases?.Blob.Value is not null)
             {
@@ -103,23 +100,24 @@ public partial class FormUpdates : GitExtensionsDialog
         catch (Exception ex)
         {
             ThreadHelper.JoinableTaskFactory.Run(async () =>
+            {
+                await this.SwitchToMainThreadAsync();
+                if (Visible)
                 {
-                    await this.SwitchToMainThreadAsync();
-                    if (Visible)
-                    {
-                        ExceptionUtils.ShowException(this, ex, string.Empty, true);
-                    }
-                });
+                    ExceptionUtils.ShowException(this, ex, string.Empty, true);
+                }
+            });
             Done();
         }
     }
 
     private void CheckForNewerVersion(string releases)
     {
-        IEnumerable<ReleaseVersion> versions = ReleaseVersion.Parse(releases);
-        IEnumerable<ReleaseVersion> updates = ReleaseVersion.GetNewerVersions(_currentVersion, AppSettings.CheckForReleaseCandidates, versions);
+        var versions = ReleaseVersion.Parse(releases);
+        var updates =
+            ReleaseVersion.GetNewerVersions(_currentVersion, AppSettings.CheckForReleaseCandidates, versions);
 
-        ReleaseVersion? update = updates.OrderBy(version => version.ApplicationVersion).LastOrDefault();
+        var update = updates.OrderBy(version => version.ApplicationVersion).LastOrDefault();
         if (update is not null)
         {
             _updateFound = true;
@@ -138,9 +136,11 @@ public partial class FormUpdates : GitExtensionsDialog
         return;
 
         string AdaptFromX64ToCurrentProcessArchitecture(string link)
-            => RuntimeInformation.OSArchitecture == Architecture.X64
+        {
+            return RuntimeInformation.OSArchitecture == Architecture.X64
                 ? link
                 : link.Replace("-x64-", $"-{RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant()}-");
+        }
     }
 
     private void Done()
@@ -157,9 +157,10 @@ public partial class FormUpdates : GitExtensionsDialog
                 linkChangeLog.Visible = true;
                 linkDirectDownload.Visible = true;
 
-                if (UpdateRequired(_requiredNetRuntimeVersion, UserEnvironmentInformation.GetDotnetDesktopRuntimeVersions()))
+                if (UpdateRequired(_requiredNetRuntimeVersion,
+                        UserEnvironmentInformation.GetDotnetDesktopRuntimeVersions()))
                 {
-                    DisplayNetRuntimeLink(format: linkRequiredDotNetRuntime.Text, _requiredNetRuntimeVersion!);
+                    DisplayNetRuntimeLink(linkRequiredDotNetRuntime.Text, _requiredNetRuntimeVersion!);
                 }
 
                 if (AppSettings.IsPortable())
@@ -192,18 +193,19 @@ public partial class FormUpdates : GitExtensionsDialog
             return;
         }
 
-        string versionText1 = requiredNetRuntimeVersion.ToString(fieldCount: 2);
-        string versionText2 = requiredNetRuntimeVersion.ToString(fieldCount: 3);
-        string versionText3 = requiredNetRuntimeVersion.ToString(fieldCount: 1);
+        var versionText1 = requiredNetRuntimeVersion.ToString(2);
+        var versionText2 = requiredNetRuntimeVersion.ToString(3);
+        var versionText3 = requiredNetRuntimeVersion.ToString(1);
         linkRequiredDotNetRuntime.Text = string.Format(format, versionText1, versionText2, versionText3);
 
-        int start = linkRequiredDotNetRuntime.Text.IndexOf(versionText2, StringComparison.Ordinal);
-        int length = versionText2.Length;
+        var start = linkRequiredDotNetRuntime.Text.IndexOf(versionText2, StringComparison.Ordinal);
+        var length = versionText2.Length;
         linkRequiredDotNetRuntime.LinkArea = new LinkArea(start, length);
 
         // The aka.ms/dotnet-core-applaunch URL expects the architecture and RID in lowercase (e.g. x64, arm64).
-        string arch = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
-        _netRuntimeDownloadUrl = $@"https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch={arch}&rid=win-{arch}&apphost_version={requiredNetRuntimeVersion.ToString(fieldCount: 3)}&gui=true";
+        var arch = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
+        _netRuntimeDownloadUrl =
+            $@"https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch={arch}&rid=win-{arch}&apphost_version={requiredNetRuntimeVersion.ToString(3)}&gui=true";
 
         linkRequiredDotNetRuntime.Visible = true;
     }
@@ -238,18 +240,31 @@ public partial class FormUpdates : GitExtensionsDialog
                 break;
 
             case LaunchType.LocalDotNetRuntime:
-                OsShellUtil.OpenUrlInDefaultBrowser("https://github.com/gitextensions/gitextensions/wiki/.NET-Desktop-Runtime");
+                OsShellUtil.OpenUrlInDefaultBrowser(
+                    "https://github.com/gitextensions/gitextensions/wiki/.NET-Desktop-Runtime");
                 break;
         }
     }
 
-    private void linkChangeLog_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => LaunchUrl(LaunchType.ChangeLog);
+    private void linkChangeLog_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+    {
+        LaunchUrl(LaunchType.ChangeLog);
+    }
 
-    private void linkDirectDownload_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => LaunchUrl(LaunchType.DirectDownload);
+    private void linkDirectDownload_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+    {
+        LaunchUrl(LaunchType.DirectDownload);
+    }
 
-    private void linkRequiredDotNetRuntime_InfoClicked(object sender, EventArgs e) => LaunchUrl(LaunchType.LocalDotNetRuntime);
+    private void linkRequiredDotNetRuntime_InfoClicked(object sender, EventArgs e)
+    {
+        LaunchUrl(LaunchType.LocalDotNetRuntime);
+    }
 
-    private void linkRequiredDotNetRuntime_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => LaunchUrl(LaunchType.DotNetRuntime);
+    private void linkRequiredDotNetRuntime_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+    {
+        LaunchUrl(LaunchType.DotNetRuntime);
+    }
 
     private void btnUpdateNow_Click(object sender, EventArgs e)
     {
@@ -260,17 +275,19 @@ public partial class FormUpdates : GitExtensionsDialog
 
         ThreadHelper.FileAndForget(async () =>
         {
-            string fileName = Path.GetFileName(_updateUrl);
+            var fileName = Path.GetFileName(_updateUrl);
             try
             {
 #pragma warning disable SYSLIB0014 // 'WebClient' is obsolete
                 using WebClient webClient = new();
 #pragma warning restore SYSLIB0014 // 'WebClient' is obsolete
-                await webClient.DownloadFileTaskAsync(new Uri(_updateUrl), Environment.GetEnvironmentVariable("TEMP") + "\\" + fileName);
+                await webClient.DownloadFileTaskAsync(new Uri(_updateUrl),
+                    Environment.GetEnvironmentVariable("TEMP") + "\\" + fileName);
             }
             catch (Exception ex)
             {
-                MessageBoxes.Show(this, _errorMessage.Text + Environment.NewLine + ex.Message, _errorHeading.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBoxes.Show(this, _errorMessage.Text + Environment.NewLine + ex.Message, _errorHeading.Text,
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -279,7 +296,8 @@ public partial class FormUpdates : GitExtensionsDialog
                 Process process = new();
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.FileName = "msiexec.exe";
-                process.StartInfo.Arguments = string.Format("/i \"{0}\\{1}\" /qb LAUNCH=1", Environment.GetEnvironmentVariable("TEMP"), fileName);
+                process.StartInfo.Arguments = string.Format("/i \"{0}\\{1}\" /qb LAUNCH=1",
+                    Environment.GetEnvironmentVariable("TEMP"), fileName);
                 process.Start();
 
                 await this.SwitchToMainThreadAsync();
@@ -300,8 +318,13 @@ public partial class FormUpdates : GitExtensionsDialog
             return false;
         }
 
-        IEnumerable<Version> matchingMajor = installed.Where(version => version.Major == required.Major);
+        var matchingMajor = installed.Where(version => version.Major == required.Major);
         return !matchingMajor.Any(version => version >= required);
+    }
+
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
     }
 
     internal enum LaunchType
@@ -312,23 +335,38 @@ public partial class FormUpdates : GitExtensionsDialog
         LocalDotNetRuntime
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
-
-    internal readonly struct TestAccessor
+    internal readonly struct TestAccessor(FormUpdates form)
     {
-        private readonly FormUpdates _form;
-
-        public TestAccessor(FormUpdates form)
+        public SettingsLinkLabel LinkRequiredNetRuntime
         {
-            _form = form;
+            get => form.linkRequiredDotNetRuntime;
         }
 
-        public SettingsLinkLabel linkRequiredNetRuntime => _form.linkRequiredDotNetRuntime;
+        public string NetRuntimeDownloadUrl
+        {
+            get => form._netRuntimeDownloadUrl;
+        }
 
-        public string NetRuntimeDownloadUrl => _form._netRuntimeDownloadUrl;
+        public void DisplayNetRuntimeLink(string format, Version requiredNetRuntimeVersion)
+        {
+            form.DisplayNetRuntimeLink(format, requiredNetRuntimeVersion);
+        }
 
-        public void DisplayNetRuntimeLink(string format, Version requiredNetRuntimeVersion) => _form.DisplayNetRuntimeLink(format, requiredNetRuntimeVersion);
-
-        public void LaunchUrl(LaunchType launchType) => _form.LaunchUrl(launchType);
+        public void LaunchUrl(LaunchType launchType)
+        {
+            form.LaunchUrl(launchType);
+        }
     }
+
+    #region Translation
+
+    private readonly TranslationString _newVersionAvailable =
+        new("There is a new version {0} of Git Extensions available");
+
+    private readonly TranslationString _noUpdatesFound = new("No updates found");
+    private readonly TranslationString _downloadingUpdate = new("Downloading update...");
+    private readonly TranslationString _errorHeading = new("Download Failed");
+    private readonly TranslationString _errorMessage = new("Failed to download an update.");
+
+    #endregion
 }

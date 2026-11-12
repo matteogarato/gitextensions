@@ -1,16 +1,15 @@
-using GitCommands;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Settings;
 using GitExtUtils;
 using GitUI.ConsoleEmulation;
-using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages;
 
 public partial class ConsoleStyleSettingsPage : SettingsPageWithHeader
 {
-    private readonly TranslationString _defaultThemeDisplayName = new("Default");
     private readonly TranslationString _consoleDefaultFontText = new("Console Default");
+    private readonly TranslationString _defaultThemeDisplayName = new("Default");
 
     private Font? _consoleFont;
 
@@ -22,8 +21,9 @@ public partial class ConsoleStyleSettingsPage : SettingsPageWithHeader
         cboConsoleEmulator.DisplayMember = nameof(IConsoleEmulator.DisplayName);
         cboConsoleEmulator.ValueMember = nameof(IConsoleEmulator.Name);
 
-        IReadOnlyCollection<IConsoleEmulator> emulators = serviceProvider.GetRequiredService<IConsoleEmulatorsRegistry>().AvailableConsoleEmulators;
-        foreach (IConsoleEmulator emulator in emulators)
+        var emulators =
+            serviceProvider.GetRequiredService<IConsoleEmulatorsRegistry>().AvailableConsoleEmulators;
+        foreach (var emulator in emulators)
         {
             cboConsoleEmulator.Items.Add(emulator);
         }
@@ -37,7 +37,8 @@ public partial class ConsoleStyleSettingsPage : SettingsPageWithHeader
     {
         cboConsoleEmulator.SelectedItem = cboConsoleEmulator.Items
             .OfType<IConsoleEmulator>()
-            .FirstOrDefault(e => string.Equals(e.Name, AppSettings.ConsoleEmulatorName.Value, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(e =>
+                string.Equals(e.Name, AppSettings.ConsoleEmulatorName.Value, StringComparison.OrdinalIgnoreCase));
         if (cboConsoleEmulator.SelectedIndex < 0 && cboConsoleEmulator.Items.Count > 0)
         {
             cboConsoleEmulator.SelectedIndex = 0;
@@ -74,15 +75,15 @@ public partial class ConsoleStyleSettingsPage : SettingsPageWithHeader
         }
 
         _NO_TRANSLATE_cboStyle.Items.Add(_defaultThemeDisplayName.Text);
-        foreach (string theme in emulator.AvailableThemes)
+        foreach (var theme in emulator.AvailableThemes)
         {
             _NO_TRANSLATE_cboStyle.Items.Add(theme);
         }
 
         _NO_TRANSLATE_cboStyle.Enabled = emulator.AvailableThemes.Count > 0;
 
-        string? saved = AppSettings.ConEmuStyle.Value;
-        int matchIndex = string.IsNullOrEmpty(saved)
+        var saved = AppSettings.ConEmuStyle.Value;
+        var matchIndex = string.IsNullOrEmpty(saved)
             ? 0
             : FindThemeIndex(saved);
         _NO_TRANSLATE_cboStyle.SelectedIndex = matchIndex >= 0 ? matchIndex : 0;
@@ -90,8 +91,8 @@ public partial class ConsoleStyleSettingsPage : SettingsPageWithHeader
 
         int FindThemeIndex(string theme)
         {
-            int index = 1; // skip "Default"
-            foreach (string available in emulator.AvailableThemes)
+            var index = 1; // skip "Default"
+            foreach (var available in emulator.AvailableThemes)
             {
                 if (string.Equals(available, theme, StringComparison.OrdinalIgnoreCase))
                 {
@@ -113,9 +114,9 @@ public partial class ConsoleStyleSettingsPage : SettingsPageWithHeader
     private void consoleFontChangeButton_Click(object sender, EventArgs e)
     {
         consoleFontDialog.Font = _consoleFont ?? new Font("Consolas", 12);
-        DialogResult result = consoleFontDialog.ShowDialog(this);
+        var result = consoleFontDialog.ShowDialog(this);
 
-        if (result is (DialogResult.OK or DialogResult.Yes))
+        if (result is DialogResult.OK or DialogResult.Yes)
         {
             Validates.NotNull(consoleFontDialog.Font);
             SetCurrentConsoleFont(consoleFontDialog.Font);

@@ -1,17 +1,16 @@
 ﻿using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.UserControls.RevisionGrid;
 
-public class RevisionLoadEventArgs : GitUIEventArgs
+public class RevisionLoadEventArgs(
+    IWin32Window? ownerForm,
+    IGitUiCommands gitUiCommands,
+    Lazy<IReadOnlyList<IGitRef>> getRefs,
+    Lazy<IReadOnlyCollection<GitRevision>> getStashRevs,
+    bool forceRefresh)
+    : GitUiEventArgs(ownerForm, gitUiCommands, getRefs)
 {
-    public RevisionLoadEventArgs(IWin32Window? ownerForm, IGitUICommands gitUICommands, Lazy<IReadOnlyList<IGitRef>> getRefs, Lazy<IReadOnlyCollection<GitRevision>> getStashRevs, bool forceRefresh)
-        : base(ownerForm, gitUICommands, getRefs)
-    {
-        GetStashRevs = getStashRevs;
-        ForceRefresh = forceRefresh;
-    }
-
-    public Lazy<IReadOnlyCollection<GitRevision>> GetStashRevs { get; init; }
-    public bool ForceRefresh { get; init; }
+    public Lazy<IReadOnlyCollection<GitRevision>> GetStashRevs { get; init; } = getStashRevs;
+    public bool ForceRefresh { get; init; } = forceRefresh;
 }

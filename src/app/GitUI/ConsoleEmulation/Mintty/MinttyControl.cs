@@ -4,14 +4,14 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
+using GitExtUtils.GitUI;
 
 namespace GitUI.ConsoleEmulation.Mintty;
 
 internal sealed class MinttyControl : Panel
 {
-    private MinttySession? _runningSession;
-    private CancellationTokenSource? _sessionCts;
     private HANDLE _jobHandle = NativeMethods.CreateKillOnCloseJob();
+    private CancellationTokenSource? _sessionCts;
 
     public MinttyControl()
     {
@@ -23,23 +23,30 @@ internal sealed class MinttyControl : Panel
         SetStyle(ControlStyles.Selectable, true);
     }
 
-    internal MinttySession? RunningSession => _runningSession;
+    internal MinttySession? RunningSession { get; private set; }
 
-    internal bool IsShellRunning => _runningSession is not null && !_runningSession.IsExited;
+    internal bool IsShellRunning
+    {
+        get => RunningSession is not null && !RunningSession.IsExited;
+    }
 
-    public MinttySession StartCommand(MinttyStartInfo startInfo, string minttyPath, string bashPath, ConsoleEmulatorSettings consoleSettings)
+    public MinttySession StartCommand(MinttyStartInfo startInfo, string minttyPath, string bashPath,
+        ConsoleEmulatorSettings consoleSettings)
     {
         ResetSession();
 
-        CancellationTokenSource sessionCts = _sessionCts!;
-        CancellationToken ct = sessionCts.Token;
+        var sessionCts = _sessionCts!;
+        var ct = sessionCts.Token;
 
-        (MinttySession session, MinttyConsoleRuntime.CommandLaunchParams launchParams) = MinttySession.StartCommandSession(startInfo);
-        _runningSession = session;
+        (var session, var launchParams) =
+            MinttySession.StartCommandSession(startInfo);
+        RunningSession = session;
 
-        string minttyArgs = $"{BuildMinttyThemingArgs(consoleSettings)}--nodaemon --window hide --log - \"{bashPath}\" -c \"{launchParams.BashBootstrapCommand}\"";
+        var minttyArgs =
+            $"{BuildMinttyThemingArgs(consoleSettings)}--nodaemon --window hide --log - \"{bashPath}\" -c \"{launchParams.BashBootstrapCommand}\"";
 
-        LaunchAndEmbed(session, minttyPath, minttyArgs, startInfo.StartupDirectory, launchParams.EnvironmentVariables, OnExited, ct, redirectStdout: true);
+        LaunchAndEmbed(session, minttyPath, minttyArgs, startInfo.StartupDirectory, launchParams.EnvironmentVariables,
+            OnExited, ct, true);
 
         return session;
 
@@ -55,16 +62,18 @@ internal sealed class MinttyControl : Panel
         }
     }
 
-    public MinttySession StartInteractiveShell(string minttyPath, string bashPath, string workDir, ConsoleEmulatorSettings consoleSettings, Action? shellExitedCallback = null)
+    public MinttySession StartInteractiveShell(string minttyPath, string bashPath, string workDir,
+        ConsoleEmulatorSettings consoleSettings, Action? shellExitedCallback = null)
     {
         ResetSession();
-        CancellationTokenSource sessionCts = _sessionCts!;
-        CancellationToken ct = sessionCts.Token;
+        var sessionCts = _sessionCts!;
+        var ct = sessionCts.Token;
 
-        string minttyArgs = $"{BuildMinttyThemingArgs(consoleSettings)}--nodaemon --window hide \"{bashPath}\" --login -i";
+        var minttyArgs =
+            $"{BuildMinttyThemingArgs(consoleSettings)}--nodaemon --window hide \"{bashPath}\" --login -i";
 
-        MinttySession session = MinttySession.StartInteractiveShellSession();
-        _runningSession = session;
+        var session = MinttySession.StartInteractiveShellSession();
+        RunningSession = session;
 
         LaunchAndEmbed(session, minttyPath, minttyArgs, workDir, new Dictionary<string, string>(), OnExited, ct);
 
@@ -84,7 +93,7 @@ internal sealed class MinttyControl : Panel
 
     public void SendConsoleInput(string text)
     {
-        HWND hwnd = _runningSession?.WindowHandle ?? HWND.Null;
+        var hwnd = RunningSession?.WindowHandle ?? HWND.Null;
         if (hwnd.IsNull)
         {
             return;
@@ -92,17 +101,17 @@ internal sealed class MinttyControl : Panel
 
         NativeMethods.FocusWindowWithAttachedInput(hwnd);
 
-        foreach (char c in text)
+        foreach (var c in text)
         {
             if (c is '\r' or '\n')
             {
-                PInvoke.PostMessage(hwnd, NativeMethods.WM_KEYDOWN, (nuint)VIRTUAL_KEY.VK_RETURN, (nint)0);
-                PInvoke.PostMessage(hwnd, NativeMethods.WM_CHAR, (nuint)'\r', (nint)0);
-                PInvoke.PostMessage(hwnd, NativeMethods.WM_KEYUP, (nuint)VIRTUAL_KEY.VK_RETURN, (nint)0);
+                PInvoke.PostMessage(hwnd, NativeMethods.WmKeydown, (nuint)VIRTUAL_KEY.VK_RETURN, (nint)0);
+                PInvoke.PostMessage(hwnd, NativeMethods.WmChar, (nuint)'\r', (nint)0);
+                PInvoke.PostMessage(hwnd, NativeMethods.WmKeyup, (nuint)VIRTUAL_KEY.VK_RETURN, (nint)0);
             }
             else
             {
-                PInvoke.PostMessage(hwnd, NativeMethods.WM_CHAR, (nuint)c, (nint)0);
+                PInvoke.PostMessage(hwnd, NativeMethods.WmChar, (nuint)c, (nint)0);
             }
         }
     }
@@ -128,8 +137,8 @@ internal sealed class MinttyControl : Panel
         _sessionCts?.Cancel();
         _sessionCts?.Dispose();
         _sessionCts = new CancellationTokenSource();
-        _runningSession?.Dispose();
-        _runningSession = null;
+        RunningSession?.Dispose();
+        RunningSession = null;
     }
 
     private void LaunchAndEmbed(MinttySession session,
@@ -148,16 +157,16 @@ internal sealed class MinttyControl : Panel
             WorkingDirectory = workDir ?? Environment.CurrentDirectory,
             UseShellExecute = false,
             RedirectStandardOutput = redirectStdout,
-            CreateNoWindow = true,
+            CreateNoWindow = true
         };
 
-        foreach ((string key, string value) in envVariables)
+        foreach ((var key, var value) in envVariables)
         {
             psi.EnvironmentVariables[key] = value;
         }
 
-        Process minttyProcess = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start mintty.exe");
+        var minttyProcess = Process.Start(psi)
+                            ?? throw new InvalidOperationException("Failed to start mintty.exe");
 
         if (!_jobHandle.IsNull)
         {
@@ -174,14 +183,16 @@ internal sealed class MinttyControl : Panel
         ThreadHelper.FileAndForget(() => FindAndEmbedWindowAsync(minttyProcess, session, ct));
     }
 
-    private async Task FindAndEmbedWindowAsync(Process minttyProcess, MinttySession session, CancellationToken sessionCt)
+    private async Task FindAndEmbedWindowAsync(Process minttyProcess, MinttySession session,
+        CancellationToken sessionCt)
     {
         ThreadHelper.ThrowIfOnUIThread();
 
-        TimeSpan findWindowTimeout = TimeSpan.FromSeconds(15);
+        var findWindowTimeout = TimeSpan.FromSeconds(15);
         using CancellationTokenSource timeoutCts = new(findWindowTimeout);
-        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(sessionCt, timeoutCts.Token);
-        CancellationToken ct = linkedCts.Token;
+        using var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(sessionCt, timeoutCts.Token);
+        var ct = linkedCts.Token;
 
         try
         {
@@ -190,14 +201,15 @@ internal sealed class MinttyControl : Panel
             // and causes the host dialog's focus to flicker as it races with our embed.
             // If the wait times out under load, proceed anyway: the embed may still
             // succeed, and killing mintty here would also kill the spawned git process.
-            TimeSpan idleTimeout = TimeSpan.FromSeconds(10);
-            bool idle = await Task.Run(() => minttyProcess.WaitForInputIdle(idleTimeout), ct);
+            var idleTimeout = TimeSpan.FromSeconds(10);
+            var idle = await Task.Run(() => minttyProcess.WaitForInputIdle(idleTimeout), ct);
             if (!idle)
             {
-                throw new InvalidOperationException($"Waiting for mintty to get idle timed out after {idleTimeout.TotalSeconds} seconds for PID {minttyProcess.Id}.");
+                throw new InvalidOperationException(
+                    $"Waiting for mintty to get idle timed out after {idleTimeout.TotalSeconds} seconds for PID {minttyProcess.Id}.");
             }
 
-            HWND hwnd = HWND.Null;
+            var hwnd = HWND.Null;
 
             while (!ct.IsCancellationRequested)
             {
@@ -213,7 +225,8 @@ internal sealed class MinttyControl : Panel
 
             if (hwnd.IsNull)
             {
-                throw new InvalidOperationException($"Could not locate mintty window for PID {minttyProcess.Id} within {findWindowTimeout.TotalSeconds} seconds.");
+                throw new InvalidOperationException(
+                    $"Could not locate mintty window for PID {minttyProcess.Id} within {findWindowTimeout.TotalSeconds} seconds.");
             }
 
             await EmbedWindowAsync(hwnd);
@@ -231,7 +244,8 @@ internal sealed class MinttyControl : Panel
             // Don't kill mintty: the spawned git process is in the same job and would be
             // terminated mid-write, leaving traces like index.lock behind. Let the command finish in
             // the hidden mintty window — its output still reaches the host via stdout.
-            Trace.WriteLine($"MinttyControl: Failed to embed mintty window for PID {minttyProcess.Id}. The command will continue running invisibly until completion. Error: {ex}");
+            Trace.WriteLine(
+                $"MinttyControl: Failed to embed mintty window for PID {minttyProcess.Id}. The command will continue running invisibly until completion. Error: {ex}");
             this.InvokeAndForget(() => ShowEmbedFailure(ex, minttyProcess));
         }
     }
@@ -242,7 +256,7 @@ internal sealed class MinttyControl : Panel
         TaskCompletionSource<(HWND Handle, int Width, int Height)> panelStateTcs = new();
         BeginInvoke(() => panelStateTcs.SetResult(((HWND)Handle, Width, Height)));
 
-        (HWND panelHwnd, int width, int height) = await panelStateTcs.Task;
+        (var panelHwnd, var width, var height) = await panelStateTcs.Task;
 
         // The synchronous cross-process Win32 calls below all send messages to
         // mintty's thread. Running them on the UI thread freezes the entire app
@@ -252,19 +266,21 @@ internal sealed class MinttyControl : Panel
         // Probe mintty's pump before any blocking cross-process call.
         // SendMessageTimeout(SMTO_ABORTIFHUNG) is bounded and cannot itself
         // hang. If this fails, none of the cross-process calls below are safe.
-        TimeSpan responsivenessTimeout = TimeSpan.FromSeconds(5);
+        var responsivenessTimeout = TimeSpan.FromSeconds(5);
         if (!NativeMethods.IsWindowResponsive(hwnd, responsivenessTimeout))
         {
-            throw new InvalidOperationException($"Mintty window did not respond within {responsivenessTimeout.TotalSeconds} seconds.");
+            throw new InvalidOperationException(
+                $"Mintty window did not respond within {responsivenessTimeout.TotalSeconds} seconds.");
         }
 
-        WINDOW_STYLE style = (WINDOW_STYLE)PInvoke.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE);
+        var style = (WINDOW_STYLE)PInvoke.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE);
         style &= ~(WINDOW_STYLE.WS_CAPTION | WINDOW_STYLE.WS_THICKFRAME | WINDOW_STYLE.WS_BORDER);
         style |= WINDOW_STYLE.WS_CHILD;
         PInvoke.SetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE, (int)style);
 
-        WINDOW_EX_STYLE extendedStyle = (WINDOW_EX_STYLE)PInvoke.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
-        extendedStyle &= ~(WINDOW_EX_STYLE.WS_EX_CLIENTEDGE | WINDOW_EX_STYLE.WS_EX_WINDOWEDGE | WINDOW_EX_STYLE.WS_EX_APPWINDOW);
+        var extendedStyle = (WINDOW_EX_STYLE)PInvoke.GetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+        extendedStyle &= ~(WINDOW_EX_STYLE.WS_EX_CLIENTEDGE | WINDOW_EX_STYLE.WS_EX_WINDOWEDGE |
+                           WINDOW_EX_STYLE.WS_EX_APPWINDOW);
         extendedStyle |= WINDOW_EX_STYLE.WS_EX_TOOLWINDOW;
         PInvoke.SetWindowLong(hwnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, (int)extendedStyle);
 
@@ -293,7 +309,7 @@ internal sealed class MinttyControl : Panel
     {
         base.OnGotFocus(e);
 
-        HWND hwnd = _runningSession?.WindowHandle ?? HWND.Null;
+        var hwnd = RunningSession?.WindowHandle ?? HWND.Null;
         if (!hwnd.IsNull)
         {
             NativeMethods.FocusWindowWithAttachedInput(hwnd);
@@ -303,7 +319,7 @@ internal sealed class MinttyControl : Panel
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
-        HWND hwnd = _runningSession?.WindowHandle ?? HWND.Null;
+        var hwnd = RunningSession?.WindowHandle ?? HWND.Null;
         if (!hwnd.IsNull && Width > 0 && Height > 0)
         {
             // SWP_ASYNCWINDOWPOS posts the size change to mintty's thread instead of a
@@ -324,8 +340,8 @@ internal sealed class MinttyControl : Panel
             _sessionCts?.Cancel();
             _sessionCts?.Dispose();
             _sessionCts = null;
-            _runningSession?.Dispose();
-            _runningSession = null;
+            RunningSession?.Dispose();
+            RunningSession = null;
 
             if (!_jobHandle.IsNull)
             {
@@ -359,7 +375,7 @@ internal sealed class MinttyControl : Panel
             BackColor = SystemColors.Control,
             ColumnCount = 1,
             RowCount = 2,
-            Padding = new Padding(20),
+            Padding = new Padding(20)
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -371,7 +387,7 @@ internal sealed class MinttyControl : Panel
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
             AutoSize = false,
-            ForeColor = SystemColors.GrayText,
+            ForeColor = SystemColors.GrayText
         };
 
         Button showButton = new()
@@ -380,7 +396,7 @@ internal sealed class MinttyControl : Panel
             Text = "Show mintty window externally",
             AutoSize = true,
             Anchor = AnchorStyles.None,
-            Margin = new Padding(0, 8, 0, 0),
+            Margin = new Padding(0, 8, 0, 0)
         };
         showButton.Click += (_, _) =>
         {
@@ -393,12 +409,12 @@ internal sealed class MinttyControl : Panel
 
                 // Try the targeted lookup first; only fall back to enumerating every top-level window of the process
                 // if it fails (e.g. mintty's pump was so slow we never saw its window appear).
-                HWND mainHwnd = NativeMethods.FindMinttyWindowForProcess(minttyProcess.Id);
-                List<HWND> windows = mainHwnd.IsNull
+                var mainHwnd = NativeMethods.FindMinttyWindowForProcess(minttyProcess.Id);
+                var windows = mainHwnd.IsNull
                     ? NativeMethods.EnumerateProcessWindows(minttyProcess.Id)
                     : [mainHwnd];
 
-                foreach (HWND hwnd in windows)
+                foreach (var hwnd in windows)
                 {
                     // mintty was started with --window hide; if embedding failed, it threw
                     // before we touched any styles, so the window keeps its original chrome

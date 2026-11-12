@@ -2,8 +2,6 @@ namespace GitUI.ScriptsEngine;
 
 internal partial class SimplePrompt : Form, IUserInputPrompt
 {
-    public string UserInput { get; private set; } = "";
-
     public SimplePrompt(string? title, string? label, string? defaultValue)
     {
         InitializeComponent();
@@ -18,6 +16,13 @@ internal partial class SimplePrompt : Form, IUserInputPrompt
         {
             labelInput.Text = $"{label}:";
         }
+    }
+
+    private string UserInput { get; set; } = "";
+
+    string IUserInputPrompt.UserInput
+    {
+        get => UserInput;
     }
 
     private void btnOk_Click(object sender, EventArgs e)

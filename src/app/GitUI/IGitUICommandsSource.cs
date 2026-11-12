@@ -2,23 +2,18 @@
 
 namespace GitUI;
 
-public sealed class GitUICommandsChangedEventArgs : EventArgs
+public sealed class GitUiCommandsChangedEventArgs(IGitUiCommands? oldCommands) : EventArgs
 {
-    public GitUICommandsChangedEventArgs(IGitUICommands? oldCommands)
-    {
-        OldCommands = oldCommands;
-    }
-
-    public IGitUICommands? OldCommands { get; }
+    public IGitUiCommands? OldCommands { get; } = oldCommands;
 }
 
-/// <summary>Provides <see cref="IGitUICommands"/> and a change notification.</summary>
-public interface IGitUICommandsSource
+/// <summary>Provides <see cref="IGitUiCommands" /> and a change notification.</summary>
+public interface IGitUiCommandsSource
 {
-    /// <summary>Raised after <see cref="UICommands"/> changes.</summary>
-    event EventHandler<GitUICommandsChangedEventArgs> UICommandsChanged;
-
-    /// <summary>Gets the <see cref="IGitUICommands"/> value.</summary>
+    /// <summary>Gets the <see cref="IGitUiCommands" /> value.</summary>
     /// <exception cref="InvalidOperationException">Attempting to get a value when none has been set.</exception>
-    IGitUICommands UICommands { get; }
+    IGitUiCommands UiCommands { get; }
+
+    /// <summary>Raised after <see cref="UiCommands" /> changes.</summary>
+    event EventHandler<GitUiCommandsChangedEventArgs> UiCommandsChanged;
 }

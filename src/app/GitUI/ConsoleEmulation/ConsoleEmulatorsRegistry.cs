@@ -12,13 +12,13 @@ internal sealed class ConsoleEmulatorsRegistry(
     Func<Font?> consoleFont)
     : IConsoleEmulatorsRegistry
 {
-    public IReadOnlyCollection<IConsoleEmulator> AvailableConsoleEmulators { get; } =
+    IReadOnlyCollection<IConsoleEmulator> IConsoleEmulatorsRegistry.AvailableConsoleEmulators { get; } =
         consoleEmulators.Where(x => x.IsSupportedInCurrentEnvironment).ToArray();
 
     /// <summary>
-    ///  Creates a console process controller for the configured emulator.
+    ///     Creates a console process controller for the configured emulator.
     /// </summary>
-    public IConsoleCommandRunner CreateCommandController()
+    IConsoleCommandRunner IConsoleEmulatorsRegistry.CreateCommandController()
     {
         if (!useConsoleEmulation.Value)
         {
@@ -40,9 +40,9 @@ internal sealed class ConsoleEmulatorsRegistry(
     }
 
     /// <summary>
-    ///  Creates a console shell controller for the configured emulator, if available.
+    ///     Creates a console shell controller for the configured emulator, if available.
     /// </summary>
-    public IConsoleShellRunner? CreateShellRunner()
+    IConsoleShellRunner? IConsoleEmulatorsRegistry.CreateShellRunner()
     {
         if (TryGetConfiguredConsoleEmulator() is { } configuredEmulator)
         {
@@ -64,7 +64,7 @@ internal sealed class ConsoleEmulatorsRegistry(
 
     private string? ResolveTheme(IConsoleEmulator emulator)
     {
-        string? configured = consoleEmulatorTheme.Value;
+        var configured = consoleEmulatorTheme.Value;
         if (!string.IsNullOrEmpty(configured)
             && emulator.AvailableThemes.Contains(configured, StringComparer.OrdinalIgnoreCase))
         {

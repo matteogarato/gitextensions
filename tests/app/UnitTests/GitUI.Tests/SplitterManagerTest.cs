@@ -2,11 +2,12 @@
 using GitUI;
 
 namespace GitUITests;
-public partial class SplitterManagerTest
+
+public class SplitterManagerTest
 {
-    private MemorySettings _settings = null!;
     private const int _designTimeSplitterWidth = 100;
     private const int _designTimeSplitterDistance = 40;
+    private readonly MemorySettings _settings = null!;
 
     public SplitterManagerTest()
     {
@@ -22,7 +23,7 @@ public partial class SplitterManagerTest
         const int splitterDistance = 30;
         {
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitter.Width = splitterWidth;
             splitter.SplitterDistance = splitterDistance;
             splitManager.AddSplitter(splitter, splitterName);
@@ -32,7 +33,7 @@ public partial class SplitterManagerTest
         {
             // act
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitManager.AddSplitter(splitter, splitterName);
             splitter.Width = 2 * splitterWidth;
             splitManager.RestoreSplitters();
@@ -53,7 +54,7 @@ public partial class SplitterManagerTest
         const int splitterDistance = 70;
         {
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitter.Width = splitterWidth;
             splitter.SplitterDistance = splitterDistance;
             splitManager.AddSplitter(splitter, splitterName);
@@ -63,7 +64,7 @@ public partial class SplitterManagerTest
         {
             // act
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitManager.AddSplitter(splitter, splitterName);
             splitter.Width = splitterWidth + deltaWidth;
             splitter.FixedPanel = FixedPanel.Panel1;
@@ -85,7 +86,7 @@ public partial class SplitterManagerTest
         const int splitterDistance = 130;
         {
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitter.Width = splitterWidth;
             splitter.SplitterDistance = splitterDistance;
             splitManager.AddSplitter(splitter, splitterName);
@@ -95,9 +96,9 @@ public partial class SplitterManagerTest
         {
             // act
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitManager.AddSplitter(splitter, splitterName);
-            int splitterNewWidth = splitterWidth + deltaWidth;
+            var splitterNewWidth = splitterWidth + deltaWidth;
             splitter.Width = splitterNewWidth;
             splitter.FixedPanel = FixedPanel.Panel2;
             splitManager.RestoreSplitters();
@@ -120,7 +121,7 @@ public partial class SplitterManagerTest
         const int splitterDistance = 120;
         {
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitter.Width = splitterWidth;
             splitter.SplitterDistance = splitterDistance;
             splitManager.AddSplitter(splitter, splitterName);
@@ -130,7 +131,7 @@ public partial class SplitterManagerTest
         {
             // act
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitManager.AddSplitter(splitter, splitterName);
             const int deltaWidth = -20;
             const int splitterNewWidth = splitterWidth + deltaWidth;
@@ -153,7 +154,8 @@ public partial class SplitterManagerTest
             {
                 // Note: if the width of the splitter control itself is not regarded,
                 // this splitter control would move to the left every time the splitter container is restored.
-                splitter.SplitterDistance.Should().Be(splitterDistance + deltaWidth + splitter.SplitterWidth - /* doubled padding */2);
+                splitter.SplitterDistance.Should()
+                    .Be(splitterDistance + deltaWidth + splitter.SplitterWidth - /* doubled padding */2);
             }
         }
     }
@@ -169,7 +171,7 @@ public partial class SplitterManagerTest
         const int splitterDistance = 120;
         {
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitter.Width = splitterWidth;
             splitter.SplitterDistance = splitterDistance;
             splitManager.AddSplitter(splitter, splitterName);
@@ -179,7 +181,7 @@ public partial class SplitterManagerTest
         {
             // act
             SplitterManager splitManager = new(_settings);
-            SplitContainer splitter = CreateVerticalSplitContainer();
+            var splitter = CreateVerticalSplitContainer();
             splitManager.AddSplitter(splitter, splitterName);
             const int splitterNewWidth = 180;
             splitter.Width = splitterNewWidth;
@@ -211,7 +213,7 @@ public partial class SplitterManagerTest
         const string splitterName = "splitterName";
         const int defaultDistance = 75;
         SplitterManager splitManager = new(_settings);
-        SplitContainer splitContainer = CreateVerticalSplitContainer();
+        var splitContainer = CreateVerticalSplitContainer();
         splitManager.AddSplitter(splitContainer, splitterName, defaultDistance);
 
         splitContainer.Panel1MinSize = 5;
@@ -224,7 +226,7 @@ public partial class SplitterManagerTest
         splitContainer.SplitterDistance.Should().Be(defaultDistance);
 
         // Verify that settings were not previously stored
-        SplitterManager.SplitterData splitterData = splitManager.GetTestAccessor().Splitters[0];
+        var splitterData = splitManager.GetTestAccessor().Splitters[0];
         _settings.GetInt(splitterData.SizeSettingsKey).Should().BeNull();
         _settings.GetInt(splitterData.DistanceSettingsKey).Should().BeNull();
     }
@@ -236,7 +238,7 @@ public partial class SplitterManagerTest
         const string splitterName = "splitterName";
         const int defaultDistance = 10;
         SplitterManager splitManager = new(_settings);
-        SplitContainer splitContainer = CreateVerticalSplitContainer();
+        var splitContainer = CreateVerticalSplitContainer();
         splitManager.AddSplitter(splitContainer, splitterName, defaultDistance);
 
         splitContainer.Panel1MinSize = 30;
@@ -249,7 +251,7 @@ public partial class SplitterManagerTest
         splitContainer.SplitterDistance.Should().Be(_designTimeSplitterDistance);
 
         // Verify that settings were not previously stored
-        SplitterManager.SplitterData splitterData = splitManager.GetTestAccessor().Splitters[0];
+        var splitterData = splitManager.GetTestAccessor().Splitters[0];
         _settings.GetInt(splitterData.SizeSettingsKey).Should().BeNull();
         _settings.GetInt(splitterData.DistanceSettingsKey).Should().BeNull();
     }
@@ -261,13 +263,13 @@ public partial class SplitterManagerTest
         const string splitterName = "splitterName";
         const int defaultDistance = 50;
         SplitterManager splitManager = new(_settings);
-        SplitContainer splitContainer = CreateVerticalSplitContainer();
+        var splitContainer = CreateVerticalSplitContainer();
         splitManager.AddSplitter(splitContainer, splitterName, defaultDistance);
 
         splitContainer.Panel1MinSize = 5;
         splitContainer.Panel2MinSize = 5;
 
-        SplitterManager.SplitterData splitterData = splitManager.GetTestAccessor().Splitters[0];
+        var splitterData = splitManager.GetTestAccessor().Splitters[0];
         _settings.SetInt(splitterData.SizeSettingsKey, 0);
         _settings.SetInt(splitterData.DistanceSettingsKey, 0);
 

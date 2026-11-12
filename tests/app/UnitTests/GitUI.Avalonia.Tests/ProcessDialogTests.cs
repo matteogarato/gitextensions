@@ -1,24 +1,25 @@
 ﻿using System.ComponentModel.Design;
 using System.Diagnostics;
+using System.IO.Abstractions;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
-using GitCommands;
+using GitCommands.Git;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
-using GitUI;
+using GitUI.ConsoleEmulation.PlainText;
 using GitUI.HelperDialogs;
 using GitUI.UserControls;
 using Microsoft.VisualStudio.Threading;
 
-namespace GitExtensionsTests;
+namespace GitUI.AvaloniaTests;
 
 /// <summary>
-///  Tests for the ported process dialogs: construction, and an end-to-end run of a real
-///  git command through <see cref="FormProcess"/> with the plain text console emulation.
+///     Tests for the ported process dialogs: construction, and an end-to-end run of a real
+///     git command through <see cref="FormProcess" /> with the plain text console emulation.
 /// </summary>
 public sealed class ProcessDialogTests : IDisposable
 {
-    private ServiceContainer _serviceContainer = null!;
+    private readonly ServiceContainer _serviceContainer = null!;
 
     public ProcessDialogTests()
     {
@@ -31,21 +32,24 @@ public sealed class ProcessDialogTests : IDisposable
         // process dialogs consume.
         _serviceContainer = new ServiceContainer();
         GitExtUtils.ServiceContainerRegistry.RegisterServices(_serviceContainer);
-        System.IO.Abstractions.FileSystem fileSystem = new();
-        GitCommands.Git.GitDirectoryResolver gitDirectoryResolver = new(fileSystem);
-        _serviceContainer.AddService<System.IO.Abstractions.IFileSystem>(fileSystem);
-        _serviceContainer.AddService<GitCommands.Git.IGitDirectoryResolver>(gitDirectoryResolver);
+        FileSystem fileSystem = new();
+        GitDirectoryResolver gitDirectoryResolver = new(fileSystem);
+        _serviceContainer.AddService<IFileSystem>(fileSystem);
+        _serviceContainer.AddService<IGitDirectoryResolver>(gitDirectoryResolver);
         GitCommands.ServiceContainerRegistry.RegisterServices(_serviceContainer);
-        GitUI.ServiceContainerRegistry.RegisterServices(_serviceContainer);
+        ServiceContainerRegistry.RegisterServices(_serviceContainer);
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _serviceContainer.Dispose();
     }
 
-    private GitUICommands CreateCommands(string workingDir)
-        => new(_serviceContainer, new GitModule(_serviceContainer.GetRequiredService<IGitExecutorProvider>(), workingDir));
+    private GitUiCommands CreateCommands(string workingDir)
+    {
+        return new(_serviceContainer,
+            new GitModule(_serviceContainer.GetRequiredService<IGitExecutorProvider>(), workingDir));
+    }
 
     [AvaloniaFact]
     public void PasswordInput_should_construct()
@@ -57,7 +61,8 @@ public sealed class ProcessDialogTests : IDisposable
     [AvaloniaFact]
     public void FormStatus_should_construct()
     {
-        using FormStatus form = new(CreateCommands(Path.GetTempPath()), GitUI.ConsoleEmulation.PlainText.PlainTextConsoleEmulatorsRegistry.Instance, useDialogSettings: false);
+        using FormStatus form = new(CreateCommands(Path.GetTempPath()), PlainTextConsoleEmulatorsRegistry.Instance,
+            false);
         form.ErrorOccurred().Should().BeFalse();
         form.KeepDialogOpen.IsVisible.Should().BeFalse();
     }
@@ -73,20 +78,21 @@ public sealed class ProcessDialogTests : IDisposable
         form.KeepDialogOpen.IsVisible.Should().BeFalse();
 
         // Only the commands are absent, and asking for them says so.
-        form.Invoking(f => _ = f.UICommands).Should().Throw<InvalidOperationException>()
+        form.Invoking(f => _ = f.UiCommands).Should().Throw<InvalidOperationException>()
             .WithMessage("*constructed incorrectly*");
     }
 
     [AvaloniaFact]
     public void FormStatus_should_be_translated_by_the_designer_constructor()
     {
-        string original = AppSettings.CurrentTranslation ?? "";
+        var original = AppSettings.CurrentTranslation ?? "";
         try
         {
             AppSettings.CurrentTranslation = "German";
             using FormStatus form = new();
 
-            form.Abort.Content.Should().Be("_Abbrechen", "InitializeComplete must translate the dialog the loader built");
+            form.Abort.Content.Should()
+                .Be("_Abbrechen", "InitializeComplete must translate the dialog the loader built");
         }
         finally
         {
@@ -97,7 +103,7 @@ public sealed class ProcessDialogTests : IDisposable
     [AvaloniaFact]
     public void FormProcess_should_construct()
     {
-        using FormProcess form = new(CreateCommands(Path.GetTempPath()), arguments: "version", Path.GetTempPath(), input: null, useDialogSettings: true);
+        using FormProcess form = new(CreateCommands(Path.GetTempPath()), "version", Path.GetTempPath(), null, true);
         form.Title.Should().StartWith("Process");
         form.ProcessString.Should().NotBeNullOrEmpty();
     }
@@ -105,13 +111,13 @@ public sealed class ProcessDialogTests : IDisposable
     [AvaloniaFact]
     public void FormProcess_should_run_a_git_command_and_report_success()
     {
-        FormProcess form = new(CreateCommands(Path.GetTempPath()), arguments: "version", Path.GetTempPath(), input: null, useDialogSettings: false);
+        FormProcess form = new(CreateCommands(Path.GetTempPath()), "version", Path.GetTempPath(), null, false);
         try
         {
             form.Show();
 
             // The command runs in the background; pump the dispatcher until Done enables OK.
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
             while (!form.Ok.IsEnabled && stopwatch.ElapsedMilliseconds < 30_000)
             {
                 Dispatcher.UIThread.RunJobs();
@@ -131,12 +137,13 @@ public sealed class ProcessDialogTests : IDisposable
     [AvaloniaFact]
     public void FormProcess_should_report_an_error_for_a_failing_command()
     {
-        FormProcess form = new(CreateCommands(Path.GetTempPath()), arguments: "definitely-not-a-git-command", Path.GetTempPath(), input: null, useDialogSettings: false);
+        FormProcess form = new(CreateCommands(Path.GetTempPath()), "definitely-not-a-git-command", Path.GetTempPath(),
+            null, false);
         try
         {
             form.Show();
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
             while (!form.Ok.IsEnabled && stopwatch.ElapsedMilliseconds < 30_000)
             {
                 Dispatcher.UIThread.RunJobs();

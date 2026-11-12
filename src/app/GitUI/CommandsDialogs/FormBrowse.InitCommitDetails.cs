@@ -1,7 +1,7 @@
-﻿using GitCommands;
+﻿using GitCommands.Settings;
 using GitExtUtils.GitUI;
 using GitUI.Properties;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
@@ -14,20 +14,20 @@ partial class FormBrowse
     {
         // set tab page images
         CommitInfoTabControl.ImageList = new ImageList
-        {
-            ColorDepth = ColorDepth.Depth32Bit,
-            ImageSize = DpiUtil.Scale(new Size(16, 16)),
-            Images =
             {
-                { nameof(Images.CommitSummary), Images.CommitSummary },
-                { nameof(Images.FileTree), Images.FileTree },
-                { nameof(Images.Diff), Images.Diff },
-                { nameof(Images.Key), Images.Key },
-                { nameof(Images.Console), Images.Console },
-                { nameof(Images.GitCommandLog), Images.GitCommandLog }
+                ColorDepth = ColorDepth.Depth32Bit,
+                ImageSize = DpiUtil.Scale(new Size(16, 16)),
+                Images =
+                {
+                    { nameof(Images.CommitSummary), Images.CommitSummary },
+                    { nameof(Images.FileTree), Images.FileTree },
+                    { nameof(Images.Diff), Images.Diff },
+                    { nameof(Images.Key), Images.Key },
+                    { nameof(Images.Console), Images.Console },
+                    { nameof(Images.GitCommandLog), Images.GitCommandLog }
+                }
             }
-        }
-        .FixImageTransparencyRegression();
+            .FixImageTransparencyRegression();
 
         CommitInfoTabPage.ImageKey = nameof(Images.CommitSummary);
         DiffTabPage.ImageKey = nameof(Images.Diff);
@@ -41,7 +41,7 @@ partial class FormBrowse
             CommitInfoTabControl.SelectedIndexChanged += CommitInfoTabControl_SelectedIndexChanged;
         }
 
-        FillBuildReport(revision: null); // Ensure correct page visibility
+        FillBuildReport(null); // Ensure correct page visibility
 
         // Populate terminal tab after translation within InitializeComplete
         FillTerminalTab();
@@ -49,7 +49,8 @@ partial class FormBrowse
 
     private void FillBuildReport(GitRevision? revision)
     {
-        _buildReportTabPageExtension ??= new BuildReportTabPageExtension(() => Module, CommitInfoTabControl, _buildReportTabCaption.Text);
+        _buildReportTabPageExtension ??=
+            new BuildReportTabPageExtension(() => Module, CommitInfoTabControl, _buildReportTabCaption.Text);
 
         // Note: FillBuildReport will check if tab is visible and revision is OK
         _buildReportTabPageExtension.FillBuildReport(revision);

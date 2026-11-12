@@ -7,30 +7,24 @@ public interface IThemeCssUrlResolver
     string ResolveCssUrl(string url);
 }
 
-public class ThemeCssUrlResolver : IThemeCssUrlResolver
+public class ThemeCssUrlResolver(IThemePathProvider themePathProvider) : IThemeCssUrlResolver
 {
-    private const string CssVariableUserThemesDirectory = "{UserAppData}/";
-    private readonly IThemePathProvider _themePathProvider;
+    private const string _cssVariableUserThemesDirectory = "{UserAppData}/";
 
-    public ThemeCssUrlResolver(IThemePathProvider themePathProvider)
+    string IThemeCssUrlResolver.ResolveCssUrl(string url)
     {
-        _themePathProvider = themePathProvider;
-    }
-
-    public string ResolveCssUrl(string url)
-    {
-        if (url.EndsWith(_themePathProvider.ThemeExtension, StringComparison.OrdinalIgnoreCase))
+        if (url.EndsWith(themePathProvider.ThemeExtension, StringComparison.OrdinalIgnoreCase))
         {
-            url = url[..^_themePathProvider.ThemeExtension.Length];
+            url = url[..^themePathProvider.ThemeExtension.Length];
         }
 
-        ThemeId id = url.StartsWith(CssVariableUserThemesDirectory)
-            ? new ThemeId(url[CssVariableUserThemesDirectory.Length..], isBuiltin: false)
-            : new ThemeId(url, isBuiltin: true);
+        var id = url.StartsWith(_cssVariableUserThemesDirectory)
+            ? new ThemeId(url[_cssVariableUserThemesDirectory.Length..])
+            : new ThemeId(url, true);
 
         try
         {
-            return _themePathProvider.GetThemePath(id);
+            return themePathProvider.GetThemePath(id);
         }
         catch (Exception ex)
         {

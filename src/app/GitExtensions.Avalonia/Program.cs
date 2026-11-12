@@ -22,10 +22,12 @@ internal static class Program
     }
 
     /// <summary>
-    ///  Also used by the Avalonia designer/previewer tooling, which discovers it by name.
+    ///     Also used by the Avalonia designer/previewer tooling, which discovers it by name.
     /// </summary>
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
+    }
 }

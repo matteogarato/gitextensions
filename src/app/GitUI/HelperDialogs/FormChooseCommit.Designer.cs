@@ -1,4 +1,6 @@
-﻿namespace GitUI.HelperDialogs;
+﻿using GitUI.UserControls.RevisionGrid;
+
+namespace GitUI.HelperDialogs;
 
 partial class FormChooseCommit
 {
@@ -30,7 +32,7 @@ partial class FormChooseCommit
     {
         btnOK = new Button();
         tableLayoutPanel1 = new TableLayoutPanel();
-        revisionGrid = new GitUI.RevisionGridControl();
+        revisionGrid = new RevisionGridControl();
         flowLayoutPanel1 = new FlowLayoutPanel();
         label1 = new Label();
         buttonGotoCommit = new Button();

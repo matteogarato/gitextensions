@@ -5,25 +5,23 @@ using GitExtensions.Extensibility.Git;
 namespace GitUI.Editor.Diff;
 
 /// <summary>
-/// Highlight git-range-diff
+///     Highlight git-range-diff
 /// </summary>
 public partial class RangeDiffHighlightService : DiffHighlightService
 {
-    [GeneratedRegex(@"^(\u001b\[.*?m)?\s*(\d+|-):", RegexOptions.ExplicitCapture)]
-    private static partial Regex RangeHeaderRegex { get; }
-
-    private static readonly string[] _diffFullPrefixes = ["      ", "    ++", "    + ", "     +", "    --", "    - ", "     -", "    +-", "    -+", "    "];
+    private static readonly string[] _diffFullPrefixes =
+        ["      ", "    ++", "    + ", "     +", "    --", "    - ", "     -", "    +-", "    -+", "    "];
 
     public RangeDiffHighlightService(ref string text, DiffViewerLineNumberControl lineNumbersControl)
-        : base(ref text, useGitColoring: true)
+        : base(ref text, true)
     {
-        _diffLinesInfo = new();
-        int bufferLine = 0;
-        ReadOnlySpan<char> textAsSpan = text.AsSpan();
-        foreach (Range range in textAsSpan.Split(Delimiters.LineFeed))
+        DiffLinesInfo = new DiffLinesInfo();
+        var bufferLine = 0;
+        var textAsSpan = text.AsSpan();
+        foreach (var range in textAsSpan.Split(Delimiters.LineFeed))
         {
             ++bufferLine;
-            _diffLinesInfo.Add(new DiffLineInfo
+            DiffLinesInfo.Add(new DiffLineInfo
             {
                 LineNumInDiff = bufferLine,
                 LeftLineNumber = DiffLineInfo.NotApplicableLineNum,
@@ -34,15 +32,25 @@ public partial class RangeDiffHighlightService : DiffHighlightService
             });
         }
 
-        lineNumbersControl.DisplayLineNum(_diffLinesInfo, showLeftColumn: false);
+        lineNumbersControl.DisplayLineNum(DiffLinesInfo, false);
     }
+
+    [GeneratedRegex(@"^(\u001b\[.*?m)?\s*(\d+|-):", RegexOptions.ExplicitCapture)]
+    private static partial Regex RangeHeaderRegex { get; }
 
     // git-range-diff has an extended subset of git-diff options, base is the same
     public static IGitCommandConfiguration GetGitCommandConfiguration(IGitModule module)
-        => DiffHighlightService.GetGitCommandConfiguration(module, useGitColoring: true, "range-diff");
+    {
+        return GetGitCommandConfiguration(module, true, "range-diff");
+    }
 
     public override bool IsSearchMatch(DiffViewerLineNumberControl lineNumbersControl, int indexInText)
-        => lineNumbersControl.GetLineInfo(indexInText)?.LineType is DiffLineType.Header;
+    {
+        return lineNumbersControl.GetLineInfo(indexInText)?.LineType is DiffLineType.Header;
+    }
 
-    public override string[] GetFullDiffPrefixes() => _diffFullPrefixes;
+    public override string[] GetFullDiffPrefixes()
+    {
+        return _diffFullPrefixes;
+    }
 }

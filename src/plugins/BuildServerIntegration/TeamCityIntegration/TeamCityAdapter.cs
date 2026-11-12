@@ -12,23 +12,21 @@ using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.BuildServerIntegration;
 using GitExtensions.Extensibility.Git;
 using GitExtensions.Extensibility.Settings;
-using GitUI;
+using GitExtUtils.GitUI;
 using GitUIPluginInterfaces.BuildServerIntegration;
-using Microsoft;
 using Microsoft.VisualStudio.Threading;
 
-namespace TeamCityIntegration;
+namespace GitExtensions.Plugins.TeamCityIntegration;
 
 [MetadataAttribute]
 [AttributeUsage(AttributeTargets.Class)]
-public sealed class TeamCityIntegrationMetadataAttribute : BuildServerAdapterMetadataAttribute
+public sealed class TeamCityIntegrationMetadataAttribute(string buildServerType)
+    : BuildServerAdapterMetadataAttribute(buildServerType)
 {
-    public TeamCityIntegrationMetadataAttribute(string buildServerType)
-        : base(buildServerType)
+    public override string? CanBeLoaded
     {
+        get => null;
     }
-
-    public override string? CanBeLoaded => null;
 }
 
 [Export(typeof(IBuildServerAdapter))]
@@ -37,14 +35,14 @@ public sealed class TeamCityIntegrationMetadataAttribute : BuildServerAdapterMet
 internal sealed class TeamCityAdapter : IBuildServerAdapter
 {
     public const string PluginName = "TeamCity";
-    private IBuildServerWatcher? _buildServerWatcher;
-
-    private HttpClientHandler? _httpClientHandler;
-    private HttpClient? _httpClient;
-
-    private string? _httpClientHostSuffix;
 
     private readonly List<JoinableTask<IEnumerable<string>>> _getBuildTypesTask = [];
+    private IBuildServerWatcher? _buildServerWatcher;
+    private HttpClient? _httpClient;
+
+    private HttpClientHandler? _httpClientHandler;
+
+    private string? _httpClientHostSuffix;
 
     private CookieContainer? _teamCityNtlmAuthCookie;
 
@@ -54,41 +52,10 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
     private Regex? BuildIdFilter { get; set; }
 
-    private CookieContainer GetTeamCityNtlmAuthCookie(string serverUrl, IBuildServerCredentials? buildServerCredentials)
-    {
-        if (_teamCityNtlmAuthCookie is not null)
-        {
-            return _teamCityNtlmAuthCookie;
-        }
-
-        string url = serverUrl + "ntlmLogin.html";
-        CookieContainer cookieContainer = new();
-#pragma warning disable SYSLIB0014 // 'WebRequest.Create(string)' is obsolete
-        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-#pragma warning restore SYSLIB0014 // 'WebRequest.Create(string)' is obsolete
-        request.CookieContainer = cookieContainer;
-
-        if (buildServerCredentials is not null
-            && !string.IsNullOrEmpty(buildServerCredentials.Username)
-            && !string.IsNullOrEmpty(buildServerCredentials.Password))
-        {
-            request.Credentials = new NetworkCredential(buildServerCredentials.Username, buildServerCredentials.Password);
-        }
-        else
-        {
-            request.Credentials = CredentialCache.DefaultCredentials;
-        }
-
-        request.PreAuthenticate = true;
-        request.GetResponse();
-
-        _teamCityNtlmAuthCookie = cookieContainer;
-        return _teamCityNtlmAuthCookie;
-    }
-
     public string? LogAsGuestUrlParameter { get; set; }
 
-    public void Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
+    void IBuildServerAdapter.Initialize(IBuildServerWatcher buildServerWatcher, SettingsSource config,
+        Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
     {
         if (_buildServerWatcher is not null)
         {
@@ -100,7 +67,7 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         ProjectNames = buildServerWatcher.ReplaceVariables(config.GetString("ProjectName", ""))
             .Split(['|'], StringSplitOptions.RemoveEmptyEntries);
 
-        string buildIdFilerSetting = config.GetString("BuildIdFilter", "");
+        var buildIdFilerSetting = config.GetString("BuildIdFilter", "");
         if (!BuildServerSettingsHelper.IsRegexValid(buildIdFilerSetting))
         {
             return;
@@ -116,17 +83,78 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
             if (ProjectNames.Length > 0)
             {
                 _getBuildTypesTask.Clear();
-                foreach (string name in ProjectNames)
+                foreach (var name in ProjectNames)
                 {
                     _getBuildTypesTask.Add(ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                     {
-                        XDocument response = await GetProjectFromNameXmlResponseAsync(name, CancellationToken.None).ConfigureAwait(false);
+                        var response = await GetProjectFromNameXmlResponseAsync(name, CancellationToken.None)
+                            .ConfigureAwait(false);
                         return from element in response.XPathSelectElements("/project/buildTypes/buildType")
-                               select element.Attribute("id")!.Value;
+                            select element.Attribute("id")!.Value;
                     }));
                 }
             }
         }
+    }
+
+    /// <summary>
+    ///     Gets a unique key which identifies this build server.
+    /// </summary>
+    string IBuildServerAdapter.UniqueKey
+    {
+        get
+        {
+            Validates.NotNull(_httpClient);
+            return _httpClient.BaseAddress!.Host;
+        }
+    }
+
+    IObservable<BuildInfo> IBuildServerAdapter.GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
+    {
+        return GetBuilds(scheduler, sinceDate, false);
+    }
+
+    IObservable<BuildInfo> IBuildServerAdapter.GetRunningBuilds(IScheduler scheduler)
+    {
+        return GetBuilds(scheduler, null, true);
+    }
+
+    void IDisposable.Dispose()
+    {
+        _httpClient?.Dispose();
+    }
+
+    private CookieContainer GetTeamCityNtlmAuthCookie(string serverUrl, IBuildServerCredentials? buildServerCredentials)
+    {
+        if (_teamCityNtlmAuthCookie is not null)
+        {
+            return _teamCityNtlmAuthCookie;
+        }
+
+        var url = serverUrl + "ntlmLogin.html";
+        CookieContainer cookieContainer = new();
+#pragma warning disable SYSLIB0014 // 'WebRequest.Create(string)' is obsolete
+        var request = (HttpWebRequest)WebRequest.Create(url);
+#pragma warning restore SYSLIB0014 // 'WebRequest.Create(string)' is obsolete
+        request.CookieContainer = cookieContainer;
+
+        if (buildServerCredentials is not null
+            && !string.IsNullOrEmpty(buildServerCredentials.Username)
+            && !string.IsNullOrEmpty(buildServerCredentials.Password))
+        {
+            request.Credentials =
+                new NetworkCredential(buildServerCredentials.Username, buildServerCredentials.Password);
+        }
+        else
+        {
+            request.Credentials = CredentialCache.DefaultCredentials;
+        }
+
+        request.PreAuthenticate = true;
+        request.GetResponse();
+
+        _teamCityNtlmAuthCookie = cookieContainer;
+        return _teamCityNtlmAuthCookie;
     }
 
     public void InitializeHttpClient(string hostname)
@@ -148,28 +176,6 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
     }
 
-    /// <summary>
-    /// Gets a unique key which identifies this build server.
-    /// </summary>
-    public string UniqueKey
-    {
-        get
-        {
-            Validates.NotNull(_httpClient);
-            return _httpClient.BaseAddress!.Host;
-        }
-    }
-
-    public IObservable<BuildInfo> GetFinishedBuildsSince(IScheduler scheduler, DateTime? sinceDate = null)
-    {
-        return GetBuilds(scheduler, sinceDate, false);
-    }
-
-    public IObservable<BuildInfo> GetRunningBuilds(IScheduler scheduler)
-    {
-        return GetBuilds(scheduler, null, true);
-    }
-
     public IObservable<BuildInfo> GetBuilds(IScheduler scheduler, DateTime? sinceDate = null, bool? running = null)
     {
         if (_httpClient?.BaseAddress is null || ProjectNames == null || ProjectNames.Length == 0)
@@ -178,11 +184,11 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         }
 
         return Observable.Create<BuildInfo>((observer, cancellationToken) =>
-            Task.Run(
-                () => scheduler.Schedule(() => ObserveBuilds(sinceDate, running, observer, cancellationToken))));
+            Task.Run(() => scheduler.Schedule(() => ObserveBuilds(sinceDate, running, observer, cancellationToken))));
     }
 
-    private void ObserveBuilds(DateTime? sinceDate, bool? running, IObserver<BuildInfo> observer, CancellationToken cancellationToken)
+    private void ObserveBuilds(DateTime? sinceDate, bool? running, IObserver<BuildInfo> observer,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -193,31 +199,39 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
             Validates.NotNull(BuildIdFilter);
 
-            IObserver<BuildInfo> localObserver = observer;
-            IEnumerable<string> buildTypes = _getBuildTypesTask.SelectMany(t => t.Join()).Where(id => BuildIdFilter.IsMatch(id));
-            Task<XDocument>[] buildIdTasks = [.. buildTypes.Select(buildTypeId => GetFilteredBuildsXmlResponseAsync(buildTypeId, cancellationToken, sinceDate, running))];
+            var localObserver = observer;
+            var buildTypes =
+                _getBuildTypesTask.SelectMany(t => t.Join()).Where(id => BuildIdFilter.IsMatch(id));
+            Task<XDocument>[] buildIdTasks =
+            [
+                .. buildTypes.Select(buildTypeId =>
+                    GetFilteredBuildsXmlResponseAsync(buildTypeId, cancellationToken, sinceDate, running))
+            ];
 
             Task.Factory
                 .ContinueWhenAll(
                     buildIdTasks,
                     completedTasks =>
-                        {
-                            string[] buildIds = [.. completedTasks.Where(task => task.Status == TaskStatus.RanToCompletion)
-                                                         .SelectMany(
-                                                             buildIdTask =>
-                                                             buildIdTask.CompletedResult()
-                                                                        .XPathSelectElements("/builds/build")
-                                                                        .Select(x => x.Attribute("id")!.Value))];
+                    {
+                        string[] buildIds =
+                        [
+                            .. completedTasks.Where(task => task.Status == TaskStatus.RanToCompletion)
+                                .SelectMany(buildIdTask =>
+                                    buildIdTask.CompletedResult()
+                                        .XPathSelectElements("/builds/build")
+                                        .Select(x => x.Attribute("id")!.Value))
+                        ];
 
-                            NotifyObserverOfBuilds(buildIds, observer, cancellationToken);
-                        },
+                        NotifyObserverOfBuilds(buildIds, observer, cancellationToken);
+                    },
                     cancellationToken,
                     TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously,
                     TaskScheduler.Current)
                 .ContinueWith(
                     task => localObserver.OnError(task.Exception!),
                     CancellationToken.None,
-                    TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted,
+                    TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously |
+                    TaskContinuationOptions.OnlyOnFaulted,
                     TaskScheduler.Current);
         }
         catch (OperationCanceledException)
@@ -230,28 +244,29 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         }
     }
 
-    private void NotifyObserverOfBuilds(string[] buildIds, IObserver<BuildInfo> observer, CancellationToken cancellationToken)
+    private void NotifyObserverOfBuilds(string[] buildIds, IObserver<BuildInfo> observer,
+        CancellationToken cancellationToken)
     {
         List<Task> tasks = new(8);
-        int buildsLeft = buildIds.Length;
+        var buildsLeft = buildIds.Length;
 
-        foreach (string buildId in buildIds.OrderByDescending(int.Parse))
+        foreach (var buildId in buildIds.OrderByDescending(int.Parse))
         {
-            Task notifyObserverTask =
+            var notifyObserverTask =
                 GetBuildFromIdXmlResponseAsync(buildId, cancellationToken)
                     .ContinueWith(
                         task =>
+                        {
+                            if (task.Status == TaskStatus.RanToCompletion)
                             {
-                                if (task.Status == TaskStatus.RanToCompletion)
+                                var buildDetails = task.CompletedResult();
+                                var buildInfo = CreateBuildInfo(buildDetails);
+                                if (buildInfo.CommitHashList.Any())
                                 {
-                                    XDocument buildDetails = task.CompletedResult();
-                                    BuildInfo buildInfo = CreateBuildInfo(buildDetails);
-                                    if (buildInfo.CommitHashList.Any())
-                                    {
-                                        observer.OnNext(buildInfo);
-                                    }
+                                    observer.OnNext(buildInfo);
                                 }
-                            },
+                            }
+                        },
                         cancellationToken,
                         TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously,
                         TaskScheduler.Current);
@@ -302,20 +317,21 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
     private BuildInfo CreateBuildInfo(XDocument buildXmlDocument)
     {
-        XElement buildXElement = buildXmlDocument.Element("build")!;
-        string idValue = buildXElement.Attribute("id")!.Value;
-        string statusValue = buildXElement.Attribute("status")!.Value;
-        string startDateText = buildXElement.Element("startDate")!.Value;
-        string statusText = buildXElement.Element("statusText")!.Value;
-        string webUrl = buildXElement.Attribute("webUrl")!.Value + LogAsGuestUrlParameter;
-        IEnumerable<XElement> revisionsElements = buildXElement.XPathSelectElements("revisions/revision");
-        List<ObjectId> commitHashList = [.. revisionsElements.Select(x => ObjectId.Parse(x.Attribute("version")!.Value))];
-        XAttribute? runningAttribute = buildXElement.Attribute("running");
+        var buildXElement = buildXmlDocument.Element("build")!;
+        var idValue = buildXElement.Attribute("id")!.Value;
+        var statusValue = buildXElement.Attribute("status")!.Value;
+        var startDateText = buildXElement.Element("startDate")!.Value;
+        var statusText = buildXElement.Element("statusText")!.Value;
+        var webUrl = buildXElement.Attribute("webUrl")!.Value + LogAsGuestUrlParameter;
+        var revisionsElements = buildXElement.XPathSelectElements("revisions/revision");
+        List<ObjectId> commitHashList =
+            [.. revisionsElements.Select(x => ObjectId.Parse(x.Attribute("version")!.Value))];
+        var runningAttribute = buildXElement.Attribute("running");
 
         if (runningAttribute is not null && Convert.ToBoolean(runningAttribute.Value))
         {
-            XElement? runningInfoXElement = buildXElement.Element("running-info");
-            string? currentStageText = runningInfoXElement?.Attribute("currentStageText")?.Value;
+            var runningInfoXElement = buildXElement.Element("running-info");
+            var currentStageText = runningInfoXElement?.Attribute("currentStageText")?.Value;
 
             statusText = currentStageText ?? statusText;
         }
@@ -348,33 +364,36 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
         Validates.NotNull(_httpClient);
 
-        return _httpClient.GetAsync(FormatRelativePath(restServicePath), HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                         .ContinueWith(
+        return _httpClient.GetAsync(FormatRelativePath(restServicePath), HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken)
+            .ContinueWith(
 #pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
-                             task => GetStreamFromHttpResponseAsync(task, restServicePath, cancellationToken),
+                task => GetStreamFromHttpResponseAsync(task, restServicePath, cancellationToken),
 #pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
-                             cancellationToken,
-                             TaskContinuationOptions.AttachedToParent,
-                             TaskScheduler.Current)
-                         .Unwrap();
+                cancellationToken,
+                TaskContinuationOptions.AttachedToParent,
+                TaskScheduler.Current)
+            .Unwrap();
     }
 
-    private Task<Stream> GetStreamFromHttpResponseAsync(Task<HttpResponseMessage> task, string restServicePath, CancellationToken cancellationToken)
+    private Task<Stream> GetStreamFromHttpResponseAsync(Task<HttpResponseMessage> task, string restServicePath,
+        CancellationToken cancellationToken)
     {
         if (!task.IsCompleted)
         {
             throw new InvalidOperationException($"Task in state '{task.Status}' was expected to be completed.");
         }
 
-        bool retry = task.IsCanceled && !cancellationToken.IsCancellationRequested;
-        bool unauthorized = task.Status == TaskStatus.RanToCompletion &&
-                            (task.CompletedResult().StatusCode == HttpStatusCode.Unauthorized || task.CompletedResult().StatusCode == HttpStatusCode.Forbidden);
+        var retry = task.IsCanceled && !cancellationToken.IsCancellationRequested;
+        var unauthorized = task.Status == TaskStatus.RanToCompletion &&
+                           (task.CompletedResult().StatusCode == HttpStatusCode.Unauthorized ||
+                            task.CompletedResult().StatusCode == HttpStatusCode.Forbidden);
 
         if (!retry)
         {
             if (task.CompletedResult().IsSuccessStatusCode)
             {
-                HttpContent httpContent = task.CompletedResult().Content;
+                var httpContent = task.CompletedResult().Content;
 
                 if (httpContent.Headers.ContentType?.MediaType == "text/html")
                 {
@@ -397,18 +416,21 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         {
             Validates.NotNull(_buildServerWatcher);
 
-            IBuildServerCredentials? buildServerCredentials = _buildServerWatcher.GetBuildServerCredentials(this, true);
-            bool useBuildServerCredentials = buildServerCredentials is not null
-                && buildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.UsernameAndPassword
-                && !string.IsNullOrWhiteSpace(buildServerCredentials.Username) && !string.IsNullOrWhiteSpace(buildServerCredentials.Password);
+            var buildServerCredentials = _buildServerWatcher.GetBuildServerCredentials(this, true);
+            var useBuildServerCredentials = buildServerCredentials is not null
+                                            && buildServerCredentials.BuildServerCredentialsType ==
+                                            BuildServerCredentialsType.UsernameAndPassword
+                                            && !string.IsNullOrWhiteSpace(buildServerCredentials.Username) &&
+                                            !string.IsNullOrWhiteSpace(buildServerCredentials.Password);
             if (useBuildServerCredentials)
             {
                 UpdateHttpClientOptionsCredentialsAuth(buildServerCredentials!);
             }
 
-            bool useBuildServerBearerToken = buildServerCredentials is not null
-                && buildServerCredentials.BuildServerCredentialsType == BuildServerCredentialsType.BearerToken
-                && !string.IsNullOrWhiteSpace(buildServerCredentials.BearerToken);
+            var useBuildServerBearerToken = buildServerCredentials is not null
+                                            && buildServerCredentials.BuildServerCredentialsType ==
+                                            BuildServerCredentialsType.BearerToken
+                                            && !string.IsNullOrWhiteSpace(buildServerCredentials.BearerToken);
             if (useBuildServerBearerToken)
             {
                 UpdateHttpClientOptionsBearerTokenAuth(buildServerCredentials!);
@@ -439,7 +461,8 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
             _httpClientHostSuffix = "httpAuth";
             CreateNewHttpClient(HostName);
-            _httpClientHandler.CookieContainer = GetTeamCityNtlmAuthCookie(_httpClient.BaseAddress!.AbsoluteUri, buildServerCredentials);
+            _httpClientHandler.CookieContainer =
+                GetTeamCityNtlmAuthCookie(_httpClient.BaseAddress!.AbsoluteUri, buildServerCredentials);
         }
         catch (Exception exception)
         {
@@ -463,7 +486,8 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         Validates.NotNull(buildServerCredentials.Password);
 
         _httpClientHostSuffix = "httpAuth";
-        _httpClient.DefaultRequestHeaders.Authorization = CreateBasicHeader(buildServerCredentials.Username, buildServerCredentials.Password);
+        _httpClient.DefaultRequestHeaders.Authorization =
+            CreateBasicHeader(buildServerCredentials.Username, buildServerCredentials.Password);
     }
 
     private void UpdateHttpClientOptionsBearerTokenAuth(IBuildServerCredentials buildServerCredentials)
@@ -483,7 +507,7 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
     private static AuthenticationHeaderValue CreateBasicHeader(string username, string password)
     {
-        byte[] byteArray = Encoding.UTF8.GetBytes($"{username}:{password}");
+        var byteArray = Encoding.UTF8.GetBytes($"{username}:{password}");
         return new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
     }
 
@@ -494,14 +518,14 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
     private Task<XDocument> GetXmlResponseAsync(string relativePath, CancellationToken cancellationToken)
     {
-        Task<Stream> getStreamTask = GetStreamAsync(relativePath, cancellationToken);
+        var getStreamTask = GetStreamAsync(relativePath, cancellationToken);
 
         return getStreamTask.ContinueWith(
             task =>
-                {
-                    using Stream responseStream = task.Result;
-                    return XDocument.Load(responseStream);
-                },
+            {
+                using var responseStream = task.Result;
+                return XDocument.Load(responseStream);
+            },
             cancellationToken,
             TaskContinuationOptions.AttachedToParent,
             TaskScheduler.Current);
@@ -532,7 +556,8 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
         return GetXmlResponseAsync("projects", cancellationToken);
     }
 
-    private Task<XDocument> GetFilteredBuildsXmlResponseAsync(string buildTypeId, CancellationToken cancellationToken, DateTime? sinceDate = null, bool? running = null)
+    private Task<XDocument> GetFilteredBuildsXmlResponseAsync(string buildTypeId, CancellationToken cancellationToken,
+        DateTime? sinceDate = null, bool? running = null)
     {
         List<string> values = ["branch:(default:any)"];
 
@@ -546,16 +571,16 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
             values.Add(string.Format("running:{0}", running.Value.ToString(CultureInfo.InvariantCulture)));
         }
 
-        string buildLocator = string.Join(",", values);
-        string url = string.Format("buildTypes/id:{0}/builds/?locator={1}", buildTypeId, buildLocator);
-        Task<XDocument> filteredBuildsXmlResponseTask = GetXmlResponseAsync(url, cancellationToken);
+        var buildLocator = string.Join(",", values);
+        var url = string.Format("buildTypes/id:{0}/builds/?locator={1}", buildTypeId, buildLocator);
+        var filteredBuildsXmlResponseTask = GetXmlResponseAsync(url, cancellationToken);
 
         return filteredBuildsXmlResponseTask;
     }
 
     private static DateTime DecodeJsonDateTime(string dateTimeString)
     {
-        DateTime dateTime = new DateTime(
+        var dateTime = new DateTime(
                 int.Parse(dateTimeString.AsSpan(0, 4)),
                 int.Parse(dateTimeString.AsSpan(4, 2)),
                 int.Parse(dateTimeString.AsSpan(6, 2)),
@@ -571,33 +596,34 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
     private static string FormatJsonDate(DateTime dateTime)
     {
-        return dateTime.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss-0000", CultureInfo.InvariantCulture).Replace(":", string.Empty);
-    }
-
-    public void Dispose()
-    {
-        _httpClient?.Dispose();
+        return dateTime.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss-0000", CultureInfo.InvariantCulture)
+            .Replace(":", string.Empty);
     }
 
     public Project? GetProjectsTree()
     {
-        XDocument projectsRootElement = ThreadHelper.JoinableTaskFactory.Run(() => GetProjectsResponseAsync(CancellationToken.None));
-        List<Project> projects = [.. projectsRootElement.Root!.Elements().Where(e => (string?)e.Attribute("archived") != "true").Select(e => new Project
-        {
-            Id = (string?)e.Attribute("id"),
-            Name = (string?)e.Attribute("name"),
-            ParentProject = (string?)e.Attribute("parentProjectId"),
-            SubProjects = []
-        })];
+        var projectsRootElement =
+            ThreadHelper.JoinableTaskFactory.Run(() => GetProjectsResponseAsync(CancellationToken.None));
+        List<Project> projects =
+        [
+            .. projectsRootElement.Root!.Elements().Where(e => (string?)e.Attribute("archived") != "true").Select(e =>
+                new Project
+                {
+                    Id = (string?)e.Attribute("id"),
+                    Name = (string?)e.Attribute("name"),
+                    ParentProject = (string?)e.Attribute("parentProjectId"),
+                    SubProjects = []
+                })
+        ];
 
-        Dictionary<string, Project> projectDictionary = projects.ToDictionary(p => p.Id!, p => p);
+        var projectDictionary = projects.ToDictionary(p => p.Id!, p => p);
 
         Project? rootProject = null;
-        foreach (Project project in projects)
+        foreach (var project in projects)
         {
             if (project.ParentProject is not null)
             {
-                Project parentProject = projectDictionary[project.ParentProject];
+                var parentProject = projectDictionary[project.ParentProject];
                 Validates.NotNull(parentProject.SubProjects);
                 parentProject.SubProjects.Add(project);
             }
@@ -612,19 +638,26 @@ internal sealed class TeamCityAdapter : IBuildServerAdapter
 
     public List<Build> GetProjectBuilds(string projectId)
     {
-        XDocument projectsRootElement = ThreadHelper.JoinableTaskFactory.Run(() => GetProjectFromNameXmlResponseAsync(projectId, CancellationToken.None));
-        return [.. projectsRootElement.Root!.Element("buildTypes")!.Elements().Select(e => new Build
-        {
-            Id = (string?)e.Attribute("id"),
-            Name = (string?)e.Attribute("name"),
-            ParentProject = (string?)e.Attribute("projectId")
-        })];
+        var projectsRootElement = ThreadHelper.JoinableTaskFactory.Run(() =>
+            GetProjectFromNameXmlResponseAsync(projectId, CancellationToken.None));
+        return
+        [
+            .. projectsRootElement.Root!.Element("buildTypes")!.Elements().Select(e =>
+                new Build
+                {
+                    Id = (string?)e.Attribute("id"),
+                    Name = (string?)e.Attribute("name"),
+                    ParentProject = (string?)e.Attribute("projectId")
+                })
+        ];
     }
 
     public Build GetBuildType(string buildId)
     {
-        XDocument projectsRootElement = ThreadHelper.JoinableTaskFactory.Run(() => GetBuildTypeFromIdXmlResponseAsync(buildId, CancellationToken.None));
-        XElement? buildType = projectsRootElement.Root;
+        var projectsRootElement =
+            ThreadHelper.JoinableTaskFactory.Run(() =>
+                GetBuildTypeFromIdXmlResponseAsync(buildId, CancellationToken.None));
+        var buildType = projectsRootElement.Root;
         return new Build
         {
             Id = buildId,
@@ -648,5 +681,9 @@ public class Build
     public string? ParentProject { get; set; }
     public string? Id { get; set; }
     public string? Name { get; set; }
-    public string DisplayName => Name + " (" + Id + ")";
+
+    public string DisplayName
+    {
+        get => Name + " (" + Id + ")";
+    }
 }

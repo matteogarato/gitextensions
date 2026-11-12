@@ -3,7 +3,7 @@
 public class GitConfigurationException : Exception
 {
     public GitConfigurationException(string configPath, Exception? innerException)
-        : this(configPath, message: null, innerException)
+        : this(configPath, null, innerException)
     {
     }
 

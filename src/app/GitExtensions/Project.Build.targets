@@ -9,11 +9,11 @@
     -->
   <Target Name="_CopyTranslations" AfterTargets="AfterBuild">
     <_GetAvailableTranslationsCodeTask
-          TranslationFolder="$(ProjectDir)\..\GitUI\Translation\">
+      TranslationFolder="$(ProjectDir)\..\GitUI\Translation\">
       <Output ItemName="Translations" TaskParameter="Output"/>
     </_GetAvailableTranslationsCodeTask>
 
-    <Copy SourceFiles="@(Translations)" DestinationFolder="$(TargetDir)Translation" ContinueOnError="false" />
+    <Copy SourceFiles="@(Translations)" DestinationFolder="$(TargetDir)Translation" ContinueOnError="false"/>
   </Target>
 
   <!--
@@ -31,7 +31,7 @@
   <Target Name="_EnumeratePlugins" AfterTargets="AfterBuild">
 
     <ItemGroup>
-      <Folders Include="$([System.IO.Directory]::GetDirectories(&quot;$(ArtifactsPluginsDir)&quot;))" />
+      <Folders Include="$([System.IO.Directory]::GetDirectories(&quot;$(ArtifactsPluginsDir)&quot;))"/>
       <OnlyDirs Include="@(Folders->Replace($(TargetDir), ''))"/>
     </ItemGroup>
 
@@ -40,14 +40,14 @@
       <TargetAppConfig>@(AppConfigFileDestination)</TargetAppConfig>
 
       <Namespace>
-        <Namespace Prefix="ns" Uri="urn:schemas-microsoft-com:asm.v1" />
+        <Namespace Prefix="ns" Uri="urn:schemas-microsoft-com:asm.v1"/>
       </Namespace>
     </PropertyGroup>
 
     <XmlPoke XmlInputPath="$(TargetAppConfig.ToString())"
-            Namespaces="$(Namespace)"
-            Query="configuration/runtime/ns:assemblyBinding/ns:probing/@privatePath" 
-            Value="$(ProbingPrivatePath.ToString())" />
+             Namespaces="$(Namespace)"
+             Query="configuration/runtime/ns:assemblyBinding/ns:probing/@privatePath"
+             Value="$(ProbingPrivatePath.ToString())"/>
   </Target>
 
 </Project>

@@ -1,19 +1,19 @@
 namespace GitExtensions.Plugins.GitStatistics.PieChart;
 
 /// <summary>
-///   Structure with graphics utility methods.
+///     Structure with graphics utility methods.
 /// </summary>
 public static class GraphicsUtil
 {
     /// <summary>
-    ///   Checks if point is contained within <c>RectangleF</c> structure
-    ///   and extends rectangle bounds if necessary to include the point.
+    ///     Checks if point is contained within <c>RectangleF</c> structure
+    ///     and extends rectangle bounds if necessary to include the point.
     /// </summary>
-    /// <param name = "rect">
-    ///   Reference to <c>RectangleF</c> to check.
+    /// <param name="rect">
+    ///     Reference to <c>RectangleF</c> to check.
     /// </param>
-    /// <param name = "pointToInclude">
-    ///   <c>PointF</c> object to include.
+    /// <param name="pointToInclude">
+    ///     <c>PointF</c> object to include.
     /// </param>
     public static void IncludePoint(ref RectangleF rect, PointF pointToInclude)
     {
@@ -22,15 +22,15 @@ public static class GraphicsUtil
     }
 
     /// <summary>
-    ///   Checks if x-coordinate is contained within the <c>RectangleF</c>
-    ///   structure and extends rectangle bounds if necessary to include
-    ///   the point.
+    ///     Checks if x-coordinate is contained within the <c>RectangleF</c>
+    ///     structure and extends rectangle bounds if necessary to include
+    ///     the point.
     /// </summary>
-    /// <param name = "rect">
-    ///   <c>RectangleF</c> to check.
+    /// <param name="rect">
+    ///     <c>RectangleF</c> to check.
     /// </param>
-    /// <param name = "xToInclude">
-    ///   x-coordinate to include.
+    /// <param name="xToInclude">
+    ///     x-coordinate to include.
     /// </param>
     public static void IncludePointX(ref RectangleF rect, float xToInclude)
     {
@@ -46,15 +46,15 @@ public static class GraphicsUtil
     }
 
     /// <summary>
-    ///   Checks if y-coordinate is contained within the <c>RectangleF</c>
-    ///   structure and extends rectangle bounds if necessary to include
-    ///   the point.
+    ///     Checks if y-coordinate is contained within the <c>RectangleF</c>
+    ///     structure and extends rectangle bounds if necessary to include
+    ///     the point.
     /// </summary>
-    /// <param name = "rect">
-    ///   <c>RectangleF</c> to check.
+    /// <param name="rect">
+    ///     <c>RectangleF</c> to check.
     /// </param>
-    /// <param name = "yToInclude">
-    ///   y-coordinate to include.
+    /// <param name="yToInclude">
+    ///     y-coordinate to include.
     /// </param>
     public static void IncludePointY(ref RectangleF rect, float yToInclude)
     {

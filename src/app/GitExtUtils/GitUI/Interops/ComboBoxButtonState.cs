@@ -1,11 +1,11 @@
-﻿namespace System;
+﻿namespace GitExtUtils.GitUI.Interops;
 
 internal static partial class NativeMethods
 {
     internal enum ComboBoxButtonState : uint
     {
-        STATE_SYSTEM_NONE = 0,
-        STATE_SYSTEM_INVISIBLE = 0x00008000,
-        STATE_SYSTEM_PRESSED = 0x00000008
+        StateSystemNone = 0,
+        StateSystemInvisible = 0x00008000,
+        StateSystemPressed = 0x00000008
     }
 }

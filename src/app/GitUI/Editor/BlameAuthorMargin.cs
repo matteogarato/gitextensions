@@ -1,29 +1,34 @@
 ﻿using GitExtUtils.GitUI;
-using ICSharpCode.TextEditor;
+using ICSharpCode.TextEditor.Gui;
 
 namespace GitUI.Editor;
 
 /// <summary>
-/// This class display avatars in the gutter in a blame control.
+///     This class display avatars in the gutter in a blame control.
 /// </summary>
-public class BlameAuthorMargin : AbstractMargin
+public class BlameAuthorMargin(TextArea textArea) : AbstractMargin(textArea)
 {
-    private static readonly int AgeBucketMarkerWidth = Convert.ToInt32(4 * DpiUtil.ScaleX);
-    private Image?[]? _avatars;
-    private readonly Color _backgroundColor;
-    private GitBlameEntry[]? _blameLines;
+    private static readonly int _ageBucketMarkerWidth = Convert.ToInt32(4 * DpiUtil.ScaleX);
+    private readonly Color _backgroundColor = SystemColors.Window;
     private readonly Dictionary<int, SolidBrush> _brushs = [];
+    private Image?[]? _avatars;
+    private GitBlameEntry[]? _blameLines;
     private bool _isVisible = true;
 
-    public BlameAuthorMargin(TextArea textArea) : base(textArea)
+    public int LineHeight
     {
-        _backgroundColor = SystemColors.Window;
+        get => textArea.TextView.FontHeight;
     }
 
-    public int LineHeight => textArea.TextView.FontHeight;
-    public override int Width => LineHeight + AgeBucketMarkerWidth + DpiUtil.Scale(2);
+    public override int Width
+    {
+        get => LineHeight + _ageBucketMarkerWidth + DpiUtil.Scale(2);
+    }
 
-    public override bool IsVisible => _isVisible;
+    public override bool IsVisible
+    {
+        get => _isVisible;
+    }
 
     public void Initialize(IEnumerable<GitBlameEntry> blameLines)
     {
@@ -31,7 +36,7 @@ public class BlameAuthorMargin : AbstractMargin
         _avatars = Array.ConvertAll(_blameLines, a => a.Avatar);
 
         // Update the resolution otherwise the image is not drawn at the good size :(
-        foreach (Image? avatar in _avatars)
+        foreach (var avatar in _avatars)
         {
             if (avatar is Bitmap bitmapAvatar)
             {
@@ -40,7 +45,7 @@ public class BlameAuthorMargin : AbstractMargin
         }
 
         // Build brushes
-        foreach (GitBlameEntry blameLine in _blameLines)
+        foreach (var blameLine in _blameLines)
         {
             if (!_brushs.ContainsKey(blameLine.AgeBucketIndex))
             {
@@ -68,24 +73,25 @@ public class BlameAuthorMargin : AbstractMargin
             return;
         }
 
-        int verticalOffset = textArea.VirtualTop.Y;
-        int lineStart = verticalOffset / LineHeight;
-        int negativeOffset = (lineStart * LineHeight) - verticalOffset;
-        int lineCount = (int)Math.Ceiling((double)(rect.Height - negativeOffset) / LineHeight);
+        var verticalOffset = textArea.VirtualTop.Y;
+        var lineStart = verticalOffset / LineHeight;
+        var negativeOffset = (lineStart * LineHeight) - verticalOffset;
+        var lineCount = (int)Math.Ceiling((double)(rect.Height - negativeOffset) / LineHeight);
 
-        for (int i = 0; i < lineCount; i++)
+        for (var i = 0; i < lineCount; i++)
         {
             if (lineStart + i >= _avatars.Length)
             {
                 break;
             }
 
-            int y = negativeOffset + (i * LineHeight);
-            g.FillRectangle(_brushs[_blameLines[lineStart + i].AgeBucketIndex], 0, y, AgeBucketMarkerWidth, LineHeight);
+            var y = negativeOffset + (i * LineHeight);
+            g.FillRectangle(_brushs[_blameLines[lineStart + i].AgeBucketIndex], 0, y, _ageBucketMarkerWidth,
+                LineHeight);
 
             if (_avatars[lineStart + i] is not null)
             {
-                g.DrawImage(_avatars[lineStart + i]!, new Point(AgeBucketMarkerWidth, y));
+                g.DrawImage(_avatars[lineStart + i]!, new Point(_ageBucketMarkerWidth, y));
             }
         }
 

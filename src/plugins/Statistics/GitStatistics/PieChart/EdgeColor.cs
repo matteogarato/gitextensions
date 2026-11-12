@@ -3,19 +3,19 @@
 namespace GitExtensions.Plugins.GitStatistics.PieChart;
 
 /// <summary>
-///   Structure representing edge color used for rendering.
+///     Structure representing edge color used for rendering.
 /// </summary>
 public static class EdgeColor
 {
-    private const float BrightnessThreshold = 0.4F;
+    private const float _brightnessThreshold = 0.4F;
 
     /// <summary>
-    ///   Gets the actual color used for rendering.
+    ///     Gets the actual color used for rendering.
     /// </summary>
     public static Color GetRenderingColor(EdgeColorType edgeColorType, Color color)
     {
         DebugHelpers.Assert(color != Color.Empty, "color != Color.Empty");
-        if (edgeColorType is (EdgeColorType.Contrast or EdgeColorType.EnhancedContrast))
+        if (edgeColorType is EdgeColorType.Contrast or EdgeColorType.EnhancedContrast)
         {
             edgeColorType = GetContrastColorType(color, edgeColorType);
         }
@@ -50,25 +50,26 @@ public static class EdgeColor
 
     private static EdgeColorType GetContrastColorType(Color color, EdgeColorType colorType)
     {
-        DebugHelpers.Assert(colorType is (EdgeColorType.Contrast or EdgeColorType.EnhancedContrast), "colorType is(EdgeColorType.Contrast or EdgeColorType.EnhancedContrast)");
-        if (color.GetBrightness() > BrightnessThreshold)
+        DebugHelpers.Assert(colorType is EdgeColorType.Contrast or EdgeColorType.EnhancedContrast,
+            "colorType is(EdgeColorType.Contrast or EdgeColorType.EnhancedContrast)");
+        if (color.GetBrightness() > _brightnessThreshold)
         {
             return colorType ==
                    EdgeColorType.Contrast
-                       ? EdgeColorType.DarkerThanSurface
-                       : EdgeColorType.DarkerDarkerThanSurface;
+                ? EdgeColorType.DarkerThanSurface
+                : EdgeColorType.DarkerDarkerThanSurface;
         }
 
         return colorType ==
                EdgeColorType.Contrast
-                   ? EdgeColorType.LighterThanSurface
-                   : EdgeColorType.LighterLighterThanSurface;
+            ? EdgeColorType.LighterThanSurface
+            : EdgeColorType.LighterLighterThanSurface;
     }
 
     private static Color GetFullContrastColor(Color color)
     {
         return
-            color.GetBrightness() > BrightnessThreshold
+            color.GetBrightness() > _brightnessThreshold
                 ? Color.Black
                 : Color.White;
     }

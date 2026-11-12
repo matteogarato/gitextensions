@@ -1,26 +1,25 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI;
 
 public static class RevisionDiffInfoProvider
 {
     /// <summary>
-    /// One row selected:
-    /// B - Selected row
-    /// A - B's parent
-    ///
-    /// Two rows selected:
-    /// A - first selected row
-    /// B - second selected row.
+    ///     One row selected:
+    ///     B - Selected row
+    ///     A - B's parent
+    ///     Two rows selected:
+    ///     A - first selected row
+    ///     B - second selected row.
     /// </summary>
     public static bool TryGet(
         IReadOnlyList<GitRevision?>? revisions,
         RevisionDiffKind diffKind,
-        [NotNullWhen(returnValue: true)] out string? firstRevision,
+        [NotNullWhen(true)] out string? firstRevision,
         out string? secondRevision,
-        [NotNullWhen(returnValue: false)] out string? error)
+        [NotNullWhen(false)] out string? error)
     {
         // NOTE Order in revisions is that first clicked is last in array
 
@@ -40,7 +39,7 @@ public static class RevisionDiffInfoProvider
             return false;
         }
 
-        GitRevision? revision0 = revisions[0];
+        var revision0 = revisions[0];
 
         if (revision0 is null)
         {
@@ -58,7 +57,7 @@ public static class RevisionDiffInfoProvider
             return false;
         }
 
-        if (diffKind == RevisionDiffKind.DiffAB)
+        if (diffKind == RevisionDiffKind.DiffAb)
         {
             // If revisions[1]?.Guid is null, the "commit before the initial" is used as firstRev
             firstRevision = revisions.Count == 1

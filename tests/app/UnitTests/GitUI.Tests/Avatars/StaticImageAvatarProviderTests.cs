@@ -1,6 +1,7 @@
 ﻿using GitUI.Avatars;
 
 namespace GitUITests.Avatars;
+
 public class StaticImageAvatarProviderTests : IDisposable
 {
     private const int _size = 64;
@@ -8,14 +9,9 @@ public class StaticImageAvatarProviderTests : IDisposable
     private const string _email = "a@a.a";
     private const string _name = "John Lennon";
 
-    private readonly Image _img;
+    private readonly Image _img = new Bitmap(_size, _size);
 
-    public StaticImageAvatarProviderTests()
-    {
-        _img = new Bitmap(_size, _size);
-    }
-
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _img.Dispose();
     }
@@ -25,7 +21,7 @@ public class StaticImageAvatarProviderTests : IDisposable
     {
         StaticImageAvatarProvider provider = new(_img);
 
-        Image? result = await provider.GetAvatarAsync(_email, _name, _size);
+        var result = await provider.GetAvatarAsync(_email, _name, _size);
 
         result.Should().BeSameAs(_img);
     }
@@ -34,10 +30,10 @@ public class StaticImageAvatarProviderTests : IDisposable
     public async Task Resized_images_are_cached_and_same_instance_is_returned_on_second_call()
     {
         StaticImageAvatarProvider provider = new(_img);
-        int otherSize = 32;
+        var otherSize = 32;
 
-        Image? result1 = await provider.GetAvatarAsync(_email, _name, otherSize);
-        Image? result2 = await provider.GetAvatarAsync(_email, _name, otherSize);
+        var result1 = await provider.GetAvatarAsync(_email, _name, otherSize);
+        var result2 = await provider.GetAvatarAsync(_email, _name, otherSize);
 
         result2.Should().BeSameAs(result1);
     }

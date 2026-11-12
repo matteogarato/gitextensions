@@ -1,16 +1,17 @@
 ﻿using System.Text;
-using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Theming;
 using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
 
 namespace GitUI.Editor.Diff;
 
 /// <summary>
-/// Common class for highlighting of diff style files.
+///     Common class for highlighting of diff style files.
 /// </summary>
 public abstract class DiffHighlightService : TextHighlightService
 {
@@ -18,18 +19,19 @@ public abstract class DiffHighlightService : TextHighlightService
     private static readonly Color _addedForeColor = AppColor.AnsiTerminalGreenForeBold.GetThemeColor();
     private static readonly Color _removedBackColor = AppColor.AnsiTerminalRedBackNormal.GetThemeColor();
     private static readonly Color _removedForeColor = AppColor.AnsiTerminalRedForeBold.GetThemeColor();
+    protected readonly List<TextMarker> TextMarkers = [];
 
-    protected readonly bool _useGitColoring;
-    protected readonly List<TextMarker> _textMarkers = [];
-    protected DiffLinesInfo _diffLinesInfo = null!;
+    protected readonly bool UseGitColoring;
+    protected DiffLinesInfo DiffLinesInfo = null!;
 
     public DiffHighlightService(ref string text, bool useGitColoring)
     {
-        _useGitColoring = useGitColoring;
+        UseGitColoring = useGitColoring;
         SetText(ref text);
     }
 
-    public static IGitCommandConfiguration GetGitCommandConfiguration(IGitModule module, bool useGitColoring, string command)
+    public static IGitCommandConfiguration GetGitCommandConfiguration(IGitModule module, bool useGitColoring,
+        string command)
     {
         if (!useGitColoring)
         {
@@ -38,28 +40,28 @@ public abstract class DiffHighlightService : TextHighlightService
         }
 
         GitCommandConfiguration commandConfiguration = new();
-        IReadOnlyList<GitConfigItem> items = GitCommandConfiguration.Default.Get(command);
-        foreach (GitConfigItem cfg in items)
+        var items = GitCommandConfiguration.Default.Get(command);
+        foreach (var cfg in items)
         {
             commandConfiguration.Add(cfg, command);
         }
 
         // https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---color-moved-wsltmodesgt
         // Disable by default, document that this can be enabled.
-        SetIfUnsetInGit(key: "diff.colormovedws", value: "no");
+        SetIfUnsetInGit("diff.colormovedws", "no");
 
         // https://git-scm.com/docs/git-diff#Documentation/git-diff.txt-diffwordRegex
         // Set to "minimal" diff unless configured.
-        SetIfUnsetInGit(key: "diff.wordregex", value: "\"[a-z0-9_]+|.\"");
+        SetIfUnsetInGit("diff.wordregex", "\"[a-z0-9_]+|.\"");
 
         // dimmed-zebra highlights borders better than the default "zebra"
-        SetIfUnsetInGit(key: "diff.colormoved", value: "dimmed-zebra");
+        SetIfUnsetInGit("diff.colormoved", "dimmed-zebra");
 
         // Use reverse color to follow GE theme
-        string reverse = AppSettings.ReverseGitColoring.Value ? "reverse" : "";
+        var reverse = AppSettings.ReverseGitColoring.Value ? "reverse" : "";
 
-        SetIfUnsetInGit(key: "color.diff.old", value: $"red {reverse}");
-        SetIfUnsetInGit(key: "color.diff.new", value: $"green {reverse}");
+        SetIfUnsetInGit("color.diff.old", $"red {reverse}");
+        SetIfUnsetInGit("color.diff.new", $"green {reverse}");
 
         if (AppSettings.ReverseGitColoring.Value)
         {
@@ -67,34 +69,34 @@ public abstract class DiffHighlightService : TextHighlightService
             GitVersion supportsBrightColors = new("2.26.0.0");
             if (module.GitVersion >= supportsBrightColors)
             {
-                SetIfUnsetInGit(key: "color.diff.oldmoved", value: "black brightmagenta");
-                SetIfUnsetInGit(key: "color.diff.newmoved", value: "black brightblue");
-                SetIfUnsetInGit(key: "color.diff.oldmovedalternative", value: "black brightcyan");
-                SetIfUnsetInGit(key: "color.diff.newmovedalternative", value: "black brightyellow");
+                SetIfUnsetInGit("color.diff.oldmoved", "black brightmagenta");
+                SetIfUnsetInGit("color.diff.newmoved", "black brightblue");
+                SetIfUnsetInGit("color.diff.oldmovedalternative", "black brightcyan");
+                SetIfUnsetInGit("color.diff.newmovedalternative", "black brightyellow");
             }
             else
             {
-                SetIfUnsetInGit(key: "color.diff.oldmoved", value: "reverse bold magenta");
-                SetIfUnsetInGit(key: "color.diff.newmoved", value: "reverse bold blue");
-                SetIfUnsetInGit(key: "color.diff.oldmovedalternative", value: "reverse bold cyan");
-                SetIfUnsetInGit(key: "color.diff.newmovedalternative", value: "reverse bold yellow");
+                SetIfUnsetInGit("color.diff.oldmoved", "reverse bold magenta");
+                SetIfUnsetInGit("color.diff.newmoved", "reverse bold blue");
+                SetIfUnsetInGit("color.diff.oldmovedalternative", "reverse bold cyan");
+                SetIfUnsetInGit("color.diff.newmovedalternative", "reverse bold yellow");
             }
         }
 
         // Set dimmed colors, default is gray dimmed/italic
-        SetIfUnsetInGit(key: "color.diff.oldmoveddimmed", value: $"magenta dim {reverse}");
-        SetIfUnsetInGit(key: "color.diff.newmoveddimmed", value: $"blue dim {reverse}");
-        SetIfUnsetInGit(key: "color.diff.oldmovedalternativedimmed", value: $"cyan dim {reverse}");
-        SetIfUnsetInGit(key: "color.diff.newmovedalternativedimmed", value: $"yellow dim {reverse}");
+        SetIfUnsetInGit("color.diff.oldmoveddimmed", $"magenta dim {reverse}");
+        SetIfUnsetInGit("color.diff.newmoveddimmed", $"blue dim {reverse}");
+        SetIfUnsetInGit("color.diff.oldmovedalternativedimmed", $"cyan dim {reverse}");
+        SetIfUnsetInGit("color.diff.newmovedalternativedimmed", $"yellow dim {reverse}");
 
         // range-diff
         if (command == "range-diff")
         {
             // No override for contextBold, contextDimmed
-            SetIfUnsetInGit(key: "color.diff.oldbold", value: $"brightred {reverse}");
-            SetIfUnsetInGit(key: "color.diff.newbold", value: $"brightgreen {reverse}");
-            SetIfUnsetInGit(key: "color.diff.olddimmed", value: $"red dim {reverse}");
-            SetIfUnsetInGit(key: "color.diff.newdimmed", value: $"green dim {reverse}");
+            SetIfUnsetInGit("color.diff.oldbold", $"brightred {reverse}");
+            SetIfUnsetInGit("color.diff.newbold", $"brightgreen {reverse}");
+            SetIfUnsetInGit("color.diff.olddimmed", $"red dim {reverse}");
+            SetIfUnsetInGit("color.diff.newdimmed", $"green dim {reverse}");
         }
 
         return commandConfiguration;
@@ -110,103 +112,111 @@ public abstract class DiffHighlightService : TextHighlightService
     }
 
     public override void AddTextHighlighting(IDocument document)
-        => document.MarkerStrategy.AddMarkers(_textMarkers);
+    {
+        document.MarkerStrategy.AddMarkers(TextMarkers);
+    }
 
     public override bool IsSearchMatch(DiffViewerLineNumberControl lineNumbersControl, int indexInText)
-        => lineNumbersControl.GetLineInfo(indexInText)?.LineType is (DiffLineType.Minus or DiffLineType.Plus or DiffLineType.MinusPlus or DiffLineType.Grep);
+    {
+        return lineNumbersControl.GetLineInfo(indexInText)?.LineType is (DiffLineType.Minus or DiffLineType.Plus
+            or DiffLineType.MinusPlus or DiffLineType.Grep);
+    }
 
     public abstract string[] GetFullDiffPrefixes();
 
     private void SetText(ref string text)
     {
-        if (!_useGitColoring)
+        if (!UseGitColoring)
         {
             return;
         }
 
         StringBuilder sb = new(text.Length);
-        AnsiEscapeUtilities.ParseEscape(text, sb, _textMarkers);
+        AnsiEscapeUtilities.ParseEscape(text, sb, TextMarkers);
 
         text = sb.ToString();
     }
 
     /// <summary>
-    /// Set highlighting for <paramref name="text"/>.
-    /// The parsed added/removed lines in <see cref="_diffLinesInfo"/> is used as well as
-    /// the highlighting in <see cref="_textMarkers"/> (if Git highlighting <see cref="_useGitColoring"/>),
-    /// is used to mark inline differences (dim unchanged part of lines).
+    ///     Set highlighting for <paramref name="text" />.
+    ///     The parsed added/removed lines in <see cref="DiffLinesInfo" /> is used as well as
+    ///     the highlighting in <see cref="TextMarkers" /> (if Git highlighting <see cref="UseGitColoring" />),
+    ///     is used to mark inline differences (dim unchanged part of lines).
     /// </summary>
     /// <param name="text">The text to process.</param>
     internal void SetHighlighting(string text)
     {
         // Apply GE word highlighting for Patch display (may apply to Difftastic setting, if not available for a repo)
-        if (!_useGitColoring || AppSettings.DiffDisplayAppearance.Value != GitCommands.Settings.DiffDisplayAppearance.GitWordDiff)
+        if (!UseGitColoring || AppSettings.DiffDisplayAppearance.Value != DiffDisplayAppearance.GitWordDiff)
         {
-            List<TextMarker> markers = _useGitColoring ? [] : _textMarkers;
+            var markers = UseGitColoring ? [] : TextMarkers;
             AddInlineDifferenceMarkers(markers, text);
-            if (_useGitColoring)
+            if (UseGitColoring)
             {
                 // The in-line diffs must be inserted before the diff to override the markings (the original markers are not changed).
-                _textMarkers.InsertRange(0, markers);
+                TextMarkers.InsertRange(0, markers);
             }
         }
 
-        if (!_useGitColoring)
+        if (!UseGitColoring)
         {
-            HighlightAddedAndDeletedLines(_textMarkers);
+            HighlightAddedAndDeletedLines(TextMarkers);
         }
     }
 
     /// <summary>
-    /// Highlight lines that are added, removed and header lines.
-    /// This is an alternative configuration to use the Git diff coloring (that has more features).
+    ///     Highlight lines that are added, removed and header lines.
+    ///     This is an alternative configuration to use the Git diff coloring (that has more features).
     /// </summary>
     /// <param name="textMarkers">The markers to append to.</param>
     private void HighlightAddedAndDeletedLines(List<TextMarker> textMarkers)
     {
-        foreach (ISegment segment in GetAllLines(DiffLineType.Minus))
+        foreach (var segment in GetAllLines(DiffLineType.Minus))
         {
             textMarkers.Add(CreateTextMarker(segment.Offset, segment.Length, _removedBackColor));
         }
 
-        foreach (ISegment segment in GetAllLines(DiffLineType.Plus))
+        foreach (var segment in GetAllLines(DiffLineType.Plus))
         {
             textMarkers.Add(CreateTextMarker(segment.Offset, segment.Length, _addedBackColor));
         }
 
-        foreach (ISegment segment in GetAllLines(DiffLineType.Header))
+        foreach (var segment in GetAllLines(DiffLineType.Header))
         {
             textMarkers.Add(CreateTextMarker(segment.Offset, segment.Length, AppColor.DiffSection.GetThemeColor()));
         }
     }
 
     /// <summary>
-    ///  Matches related removed and added lines in a consecutive block of a patch document and marks identical parts dimmed.
+    ///     Matches related removed and added lines in a consecutive block of a patch document and marks identical parts
+    ///     dimmed.
     /// </summary>
     private void AddInlineDifferenceMarkers(List<TextMarker> textMarkers, string text)
     {
-        int index = 0;
-        DiffLineInfo[] diffLines = [.. _diffLinesInfo.DiffLines.Values.OrderBy(l => l.LineNumInDiff)];
-        const int diffContentOffset = 1; // in order to skip the prefixes '-' / '+' (this is only for normal patch format)
-        bool dimBackground = !_useGitColoring || AppSettings.ReverseGitColoring.Value;
+        var index = 0;
+        DiffLineInfo[] diffLines = [.. DiffLinesInfo.DiffLines.Values.OrderBy(l => l.LineNumInDiff)];
+        const int
+            diffContentOffset = 1; // in order to skip the prefixes '-' / '+' (this is only for normal patch format)
+        var dimBackground = !UseGitColoring || AppSettings.ReverseGitColoring.Value;
 
         // Process the next blocks of removed / added diffLines and mark in-line differences
         while (index < diffLines.Length)
         {
             // git-diff presents the removed lines directly followed by the added in a "block"
-            IReadOnlyList<ISegment> linesRemoved = GetBlockOfLines(diffLines, DiffLineType.Minus, ref index, found: false);
+            IReadOnlyList<ISegment> linesRemoved = GetBlockOfLines(diffLines, DiffLineType.Minus, ref index, false);
             if (linesRemoved.Count == 0)
             {
                 continue;
             }
 
-            IReadOnlyList<ISegment> linesAdded = GetBlockOfLines(diffLines, DiffLineType.Plus, ref index, found: true);
+            IReadOnlyList<ISegment> linesAdded = GetBlockOfLines(diffLines, DiffLineType.Plus, ref index, true);
             if (linesAdded.Count == 0)
             {
                 continue;
             }
 
-            foreach ((ISegment lineRemoved, ISegment lineAdded) in LinesMatcher.FindLinePairs(GetText, linesRemoved, linesAdded))
+            foreach ((var lineRemoved, var lineAdded) in LinesMatcher.FindLinePairs(GetText, linesRemoved,
+                         linesAdded))
             {
                 AddDifferenceMarkers(textMarkers, GetText, lineRemoved, lineAdded, diffContentOffset, dimBackground);
             }
@@ -215,30 +225,35 @@ public abstract class DiffHighlightService : TextHighlightService
         return;
 
         string GetText(ISegment line)
-            => text[(line.Offset + diffContentOffset)..(line.Offset + line.Length)];
+        {
+            return text[(line.Offset + diffContentOffset)..(line.Offset + line.Length)];
+        }
     }
 
     private IEnumerable<ISegment> GetAllLines(DiffLineType diffLineType)
-        => _diffLinesInfo?.DiffLines.Where(i => i.Value.LineType == diffLineType && i.Value.LineSegment is not null)
-            .Select(l => l.Value.LineSegment!)
-            ?? [];
+    {
+        return DiffLinesInfo?.DiffLines.Where(i => i.Value.LineType == diffLineType && i.Value.LineSegment is not null)
+                   .Select(l => l.Value.LineSegment!)
+               ?? [];
+    }
 
     /// <summary>
-    /// Get next block of diffLines following beginline
+    ///     Get next block of diffLines following beginline
     /// </summary>
     /// <param name="diffLines">The parsed diffLines for the document.</param>
     /// <param name="diffLineType">The type of diffLines to find (e.g. added/removed).</param>
     /// <param name="index">The index in diffLines to start with.</param>
     /// <param name="found">If a lineInDiff was found. This is also used to get the added diffLines just after the removed.</param>
     /// <returns>The block of segments.</returns>
-    private static List<ISegment> GetBlockOfLines(DiffLineInfo[] diffLines, DiffLineType diffLineType, ref int index, bool found)
+    private static List<ISegment> GetBlockOfLines(DiffLineInfo[] diffLines, DiffLineType diffLineType, ref int index,
+        bool found)
     {
         List<ISegment> result = [];
-        int gapLines = 0;
+        var gapLines = 0;
 
         for (; index < diffLines.Length; ++index)
         {
-            DiffLineInfo diffLine = diffLines[index];
+            var diffLine = diffLines[index];
             if (diffLine.LineType != diffLineType)
             {
                 if (!found)
@@ -275,24 +290,28 @@ public abstract class DiffHighlightService : TextHighlightService
         return result;
     }
 
-    internal static void AddDifferenceMarkers(List<TextMarker> markers, Func<ISegment, string> getText, ISegment lineRemoved, ISegment lineAdded, int beginOffset, bool dimBackground)
+    internal static void AddDifferenceMarkers(List<TextMarker> markers, Func<ISegment, string> getText,
+        ISegment lineRemoved, ISegment lineAdded, int beginOffset, bool dimBackground)
     {
-        ReadOnlySpan<char> textRemoved = LimitLength(getText(lineRemoved).AsSpan());
-        ReadOnlySpan<char> textAdded = LimitLength(getText(lineAdded).AsSpan());
-        int offsetRemoved = lineRemoved.Offset + beginOffset;
-        int offsetAdded = lineAdded.Offset + beginOffset;
-        (int lengthIdenticalAtStart, int lengthIdenticalAtEnd) = AddDifferenceMarkers(markers, textRemoved, textAdded, offsetRemoved, offsetAdded, dimBackground);
+        var textRemoved = LimitLength(getText(lineRemoved).AsSpan());
+        var textAdded = LimitLength(getText(lineAdded).AsSpan());
+        var offsetRemoved = lineRemoved.Offset + beginOffset;
+        var offsetAdded = lineAdded.Offset + beginOffset;
+        (var lengthIdenticalAtStart, var lengthIdenticalAtEnd) = AddDifferenceMarkers(markers, textRemoved, textAdded,
+            offsetRemoved, offsetAdded, dimBackground);
 
         if (lengthIdenticalAtStart > 0)
         {
-            markers.Add(CreateDimmedMarker(offsetRemoved, lengthIdenticalAtStart, isRemoved: true, dimBackground));
-            markers.Add(CreateDimmedMarker(offsetAdded, lengthIdenticalAtStart, isRemoved: false, dimBackground));
+            markers.Add(CreateDimmedMarker(offsetRemoved, lengthIdenticalAtStart, true, dimBackground));
+            markers.Add(CreateDimmedMarker(offsetAdded, lengthIdenticalAtStart, false, dimBackground));
         }
 
         if (lengthIdenticalAtEnd > 0)
         {
-            markers.Add(CreateDimmedMarker(offsetRemoved + textRemoved.Length - lengthIdenticalAtEnd, lengthIdenticalAtEnd, isRemoved: true, dimBackground));
-            markers.Add(CreateDimmedMarker(offsetAdded + textAdded.Length - lengthIdenticalAtEnd, lengthIdenticalAtEnd, isRemoved: false, dimBackground));
+            markers.Add(CreateDimmedMarker(offsetRemoved + textRemoved.Length - lengthIdenticalAtEnd,
+                lengthIdenticalAtEnd, true, dimBackground));
+            markers.Add(CreateDimmedMarker(offsetAdded + textAdded.Length - lengthIdenticalAtEnd, lengthIdenticalAtEnd,
+                false, dimBackground));
         }
 
         return;
@@ -305,7 +324,8 @@ public abstract class DiffHighlightService : TextHighlightService
     }
 
     private static (int LengthIdenticalAtStart, int LengthIdenticalAtEnd) AddDifferenceMarkers(
-        List<TextMarker> markers, ReadOnlySpan<char> textRemoved, ReadOnlySpan<char> textAdded, int offsetRemoved, int offsetAdded, bool dimBackground)
+        List<TextMarker> markers, ReadOnlySpan<char> textRemoved, ReadOnlySpan<char> textAdded, int offsetRemoved,
+        int offsetAdded, bool dimBackground)
     {
         // removed:             added:              "d" stands for "deleted" / "i" for "inserted" -> anchor marker in added / removed
         // "d b R a "           " b A a i"          split at "b" (stands for "before")
@@ -316,28 +336,29 @@ public abstract class DiffHighlightService : TextHighlightService
         //        4.      3.          4.      3.
         // "d"" b ""R"" a """   """ b ""A"" a ""i"
 
-        int lengthIdenticalAtStart = 0;
-        int lengthIdenticalAtEnd = 0;
+        var lengthIdenticalAtStart = 0;
+        var lengthIdenticalAtEnd = 0;
 
-        int endRemoved = textRemoved.Length;
-        int endAdded = textAdded.Length;
+        var endRemoved = textRemoved.Length;
+        var endAdded = textAdded.Length;
         if (endRemoved == endAdded && textRemoved == textAdded)
         {
             lengthIdenticalAtStart = endRemoved;
             return (lengthIdenticalAtStart, lengthIdenticalAtEnd);
         }
 
-        (string? commonWord, int startIndexIdenticalRemoved, int startIndexIdenticalAdded) = LinesMatcher.FindBestMatch(textRemoved.ToString(), textAdded.ToString());
+        (var commonWord, var startIndexIdenticalRemoved, var startIndexIdenticalAdded) =
+            LinesMatcher.FindBestMatch(textRemoved.ToString(), textAdded.ToString());
         if (commonWord is not null)
         {
-            int lengthIdentical = commonWord.Length;
+            var lengthIdentical = commonWord.Length;
 
             // "LeftPart|CommonWord|RightPart"
             // "LeftPart|CommonWord|identical|Different|identical"
             // "LeftPart|CommonWord+identical" ignored  ^^^^^^^^^ -> lengthIdenticalAtEnd (final value)
-            int startIndexRightPartRemoved = startIndexIdenticalRemoved + lengthIdentical;
-            int startIndexRightPartAdded = startIndexIdenticalAdded + lengthIdentical;
-            (int lengthIdenticalAtStartRightPart, lengthIdenticalAtEnd) = AddDifferenceMarkers(markers,
+            var startIndexRightPartRemoved = startIndexIdenticalRemoved + lengthIdentical;
+            var startIndexRightPartAdded = startIndexIdenticalAdded + lengthIdentical;
+            (var lengthIdenticalAtStartRightPart, lengthIdenticalAtEnd) = AddDifferenceMarkers(markers,
                 textRemoved[startIndexRightPartRemoved..], textAdded[startIndexRightPartAdded..],
                 offsetRemoved + startIndexRightPartRemoved, offsetAdded + startIndexRightPartAdded, dimBackground);
             lengthIdentical += lengthIdenticalAtStartRightPart;
@@ -345,7 +366,7 @@ public abstract class DiffHighlightService : TextHighlightService
             ////                                                             "LeftPart|CommonWord+identical"
             ////                                        "identical|Different|identical|CommonWord+identical"
             //// lengthIdenticalAtStart (final value) <- ^^^^^^^^^  ignored "identical+CommonWord+identical"
-            (lengthIdenticalAtStart, int lengthIdenticalAtLeftPartEnd) = AddDifferenceMarkers(markers,
+            (lengthIdenticalAtStart, var lengthIdenticalAtLeftPartEnd) = AddDifferenceMarkers(markers,
                 textRemoved[..startIndexIdenticalRemoved], textAdded[..startIndexIdenticalAdded],
                 offsetRemoved, offsetAdded, dimBackground);
             lengthIdentical += lengthIdenticalAtLeftPartEnd;
@@ -353,44 +374,51 @@ public abstract class DiffHighlightService : TextHighlightService
             startIndexIdenticalAdded -= lengthIdenticalAtLeftPartEnd;
 
             // join with identical part at start or end or dim the identical part
-            if (startIndexIdenticalRemoved == lengthIdenticalAtStart && startIndexIdenticalAdded == lengthIdenticalAtStart)
+            if (startIndexIdenticalRemoved == lengthIdenticalAtStart &&
+                startIndexIdenticalAdded == lengthIdenticalAtStart)
             {
                 lengthIdenticalAtStart += lengthIdentical;
             }
             else if (startIndexIdenticalRemoved + lengthIdentical + lengthIdenticalAtEnd == endRemoved
-                && startIndexIdenticalAdded + lengthIdentical + lengthIdenticalAtEnd == endAdded)
+                     && startIndexIdenticalAdded + lengthIdentical + lengthIdenticalAtEnd == endAdded)
             {
                 lengthIdenticalAtEnd += lengthIdentical;
             }
             else
             {
-                markers.Add(CreateDimmedMarker(offsetRemoved + startIndexIdenticalRemoved, lengthIdentical, isRemoved: true, dimBackground));
-                markers.Add(CreateDimmedMarker(offsetAdded + startIndexIdenticalAdded, lengthIdentical, isRemoved: false, dimBackground));
+                markers.Add(CreateDimmedMarker(offsetRemoved + startIndexIdenticalRemoved, lengthIdentical, true,
+                    dimBackground));
+                markers.Add(CreateDimmedMarker(offsetAdded + startIndexIdenticalAdded, lengthIdentical, false,
+                    dimBackground));
             }
         }
         else
         {
             // find end of identical part at start
-            int minEnd = Math.Min(endRemoved, endAdded);
+            var minEnd = Math.Min(endRemoved, endAdded);
             while (lengthIdenticalAtStart < minEnd
-                && textRemoved[lengthIdenticalAtStart] == textAdded[lengthIdenticalAtStart])
+                   && textRemoved[lengthIdenticalAtStart] == textAdded[lengthIdenticalAtStart])
             {
                 ++lengthIdenticalAtStart;
             }
 
             // find start of identical part at end
-            int startIndexIdenticalAtEndRemoved = endRemoved;
-            int startIndexIdenticalAtEndAdded = endAdded;
-            while (startIndexIdenticalAtEndRemoved > lengthIdenticalAtStart && startIndexIdenticalAtEndAdded > lengthIdenticalAtStart
-                && textRemoved[startIndexIdenticalAtEndRemoved - 1] == textAdded[startIndexIdenticalAtEndAdded - 1])
+            var startIndexIdenticalAtEndRemoved = endRemoved;
+            var startIndexIdenticalAtEndAdded = endAdded;
+            while (startIndexIdenticalAtEndRemoved > lengthIdenticalAtStart && startIndexIdenticalAtEndAdded >
+                                                                            lengthIdenticalAtStart
+                                                                            && textRemoved[
+                                                                                startIndexIdenticalAtEndRemoved - 1] ==
+                                                                            textAdded[
+                                                                                startIndexIdenticalAtEndAdded - 1])
             {
                 --startIndexIdenticalAtEndRemoved;
                 --startIndexIdenticalAtEndAdded;
                 ++lengthIdenticalAtEnd;
             }
 
-            int lengthDifferentRemoved = startIndexIdenticalAtEndRemoved - lengthIdenticalAtStart;
-            int lengthDifferentAdded = startIndexIdenticalAtEndAdded - lengthIdenticalAtStart;
+            var lengthDifferentRemoved = startIndexIdenticalAtEndRemoved - lengthIdenticalAtStart;
+            var lengthDifferentAdded = startIndexIdenticalAtEndAdded - lengthIdenticalAtStart;
             if (lengthDifferentRemoved == 0 && lengthDifferentAdded > 0)
             {
                 markers.Add(CreateAnchorMarker(offsetRemoved + lengthIdenticalAtStart, _addedForeColor));
@@ -405,19 +433,29 @@ public abstract class DiffHighlightService : TextHighlightService
     }
 
     private static TextMarker CreateAnchorMarker(int offset, Color color)
-        => new(offset, length: 0, TextMarkerType.InterChar, color);
+    {
+        return new TextMarker(offset, 0, TextMarkerType.InterChar, color);
+    }
 
     private static TextMarker CreateDimmedMarker(int offset, int length, bool isRemoved, bool dimBackground)
-        => dimBackground
+    {
+        return dimBackground
             ? CreateTextMarker(offset, length, (isRemoved ? _removedBackColor : _addedBackColor).DimColor().DimColor())
-            : new(offset, length, TextMarkerType.SolidBlock, AppColor.EditorBackground.GetThemeColor(), (isRemoved ? _removedForeColor : _addedForeColor).DimColor());
+            : new TextMarker(offset, length, TextMarkerType.SolidBlock, AppColor.EditorBackground.GetThemeColor(),
+                (isRemoved ? _removedForeColor : _addedForeColor).DimColor());
+    }
 
     private static TextMarker CreateTextMarker(int offset, int length, Color backColor)
-        => new(offset, length, TextMarkerType.SolidBlock, backColor, backColor.GetTextColor());
+    {
+        return new TextMarker(offset, length, TextMarkerType.SolidBlock, backColor, backColor.GetTextColor());
+    }
 
     internal static class TestAccessor
     {
-        internal static List<ISegment> GetBlockOfLines(DiffLineInfo[] diffLines, DiffLineType diffLineType, ref int index, bool found)
-            => DiffHighlightService.GetBlockOfLines(diffLines, diffLineType, ref index, found);
+        internal static List<ISegment> GetBlockOfLines(DiffLineInfo[] diffLines, DiffLineType diffLineType,
+            ref int index, bool found)
+        {
+            return DiffHighlightService.GetBlockOfLines(diffLines, diffLineType, ref index, found);
+        }
     }
 }

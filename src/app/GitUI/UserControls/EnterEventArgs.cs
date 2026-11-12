@@ -1,11 +1,6 @@
-﻿namespace GitUI;
+﻿namespace GitUI.UserControls;
 
-public class EnterEventArgs : EventArgs
+public class EnterEventArgs(bool byMouse) : EventArgs
 {
-    public bool ByMouse { get; }
-
-    public EnterEventArgs(bool byMouse)
-    {
-        ByMouse = byMouse;
-    }
+    public bool ByMouse { get; } = byMouse;
 }

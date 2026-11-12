@@ -1,5 +1,6 @@
 ﻿using GitCommands;
 using GitCommands.Git;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 using GitExtUtils;
@@ -13,7 +14,7 @@ public sealed partial class FormRenameBranch : GitModuleForm
     private readonly GitBranchNameOptions _gitBranchNameOptions = new(AppSettings.AutoNormaliseSymbol);
     private readonly string _oldName;
 
-    public FormRenameBranch(IGitUICommands commands, string defaultBranch)
+    public FormRenameBranch(IGitUiCommands commands, string defaultBranch)
         : base(commands)
     {
         _branchNameNormaliser = commands.GetRequiredService<IGitBranchNameNormaliser>();
@@ -31,8 +32,8 @@ public sealed partial class FormRenameBranch : GitModuleForm
             return;
         }
 
-        int caretPosition = BranchNameTextBox.SelectionStart;
-        string branchName = _branchNameNormaliser.Normalise(BranchNameTextBox.Text, _gitBranchNameOptions);
+        var caretPosition = BranchNameTextBox.SelectionStart;
+        var branchName = _branchNameNormaliser.Normalise(BranchNameTextBox.Text, _gitBranchNameOptions);
         BranchNameTextBox.Text = branchName;
         BranchNameTextBox.SelectionStart = caretPosition;
     }
@@ -43,7 +44,7 @@ public sealed partial class FormRenameBranch : GitModuleForm
         // if the user hits [Enter] at any point, we need to trigger BranchNameTextBox Leave event
         Ok.Focus();
 
-        string newName = BranchNameTextBox.Text;
+        var newName = BranchNameTextBox.Text;
 
         if (newName == _oldName)
         {
@@ -51,8 +52,8 @@ public sealed partial class FormRenameBranch : GitModuleForm
             return;
         }
 
-        ArgumentString command = Commands.RenameBranch(_oldName, newName);
-        bool success = FormProcess.ShowDialog(this, UICommands, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+        var command = Commands.RenameBranch(_oldName, newName);
+        var success = FormProcess.ShowDialog(this, UiCommands, command, Module.WorkingDir, null, true);
 
         DialogResult = success ? DialogResult.OK : DialogResult.None;
     }

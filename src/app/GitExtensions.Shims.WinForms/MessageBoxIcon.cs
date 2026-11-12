@@ -1,8 +1,8 @@
 ﻿namespace GitExtensions.Shims.WinForms;
 
 /// <summary>
-///  Stand-in for <c>System.Windows.Forms.MessageBoxIcon</c>; values match WinForms
-///  (several names intentionally share a value, as in WinForms).
+///     Stand-in for <c>System.Windows.Forms.MessageBoxIcon</c>; values match WinForms
+///     (several names intentionally share a value, as in WinForms).
 /// </summary>
 public enum MessageBoxIcon
 {
@@ -14,5 +14,5 @@ public enum MessageBoxIcon
     Exclamation = 0x30,
     Warning = 0x30,
     Asterisk = 0x40,
-    Information = 0x40,
+    Information = 0x40
 }

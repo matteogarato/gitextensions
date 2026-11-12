@@ -1,20 +1,20 @@
 ﻿using System.Diagnostics;
-using CommonTestUtils;
 using GitCommands;
-using GitUI;
+using GitExtUtils.GitUI;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitCommandsTests;
+
 public sealed class AsyncLoaderTests : IDisposable
 {
-    private AsyncLoader _loader = null!;
+    private readonly AsyncLoader _loader = null!;
 
     public AsyncLoaderTests()
     {
         _loader = new AsyncLoader();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         _loader.Dispose();
     }
@@ -25,9 +25,9 @@ public sealed class AsyncLoaderTests : IDisposable
         SemaphoreSlim loadSignal = new(0);
         SemaphoreSlim completeSignal = new(0);
 
-        int started = 0;
-        int completed = 0;
-        Task task = _loader.LoadAsync(
+        var started = 0;
+        var completed = 0;
+        var task = _loader.LoadAsync(
             () =>
             {
                 started++;
@@ -54,7 +54,7 @@ public sealed class AsyncLoaderTests : IDisposable
     [StaFact]
     public async Task Load_performed_on_thread_pool_and_result_handled_via_callers_context()
     {
-        Thread callerThread = Thread.CurrentThread;
+        var callerThread = Thread.CurrentThread;
         Thread? loadThread = null;
         Thread? continuationThread = null;
 
@@ -76,9 +76,9 @@ public sealed class AsyncLoaderTests : IDisposable
         SemaphoreSlim loadSignal = new(0);
         SemaphoreSlim completeSignal = new(0);
 
-        int started = 0;
-        int completed = 0;
-        Task task = _loader.LoadAsync(
+        var started = 0;
+        var completed = 0;
+        var task = _loader.LoadAsync(
             () =>
             {
                 started++;
@@ -109,9 +109,9 @@ public sealed class AsyncLoaderTests : IDisposable
         // Deliberately use a long delay as cancellation should cut it short
         _loader.Delay = TimeSpan.FromMilliseconds(5000);
 
-        int started = 0;
-        int completed = 0;
-        Task task = _loader.LoadAsync(
+        var started = 0;
+        var completed = 0;
+        var task = _loader.LoadAsync(
             () => started++,
             () => completed++);
 
@@ -136,9 +136,9 @@ public sealed class AsyncLoaderTests : IDisposable
         SemaphoreSlim loadSignal = new(0);
         SemaphoreSlim completeSignal = new(0);
 
-        int started = 0;
-        int completed = 0;
-        Task task = _loader.LoadAsync(
+        var started = 0;
+        var completed = 0;
+        var task = _loader.LoadAsync(
             () =>
             {
                 started++;
@@ -168,7 +168,7 @@ public sealed class AsyncLoaderTests : IDisposable
     {
         _loader.Delay = TimeSpan.FromMilliseconds(200);
 
-        Stopwatch sw = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
 
         await _loader.LoadAsync(
             () => sw.Stop(),
@@ -203,13 +203,13 @@ public sealed class AsyncLoaderTests : IDisposable
     {
         Exception ex = new();
 
-        JoinableTask loadTask = ThreadHelper.JoinableTaskFactory.RunAsync(() =>
+        var loadTask = ThreadHelper.JoinableTaskFactory.RunAsync(() =>
             _loader.LoadAsync(
-                loadContent: () => throw ex,
-                onLoaded: () => Assert.Fail("The load callback should not run after an error.")));
+                () => throw ex,
+                () => Assert.Fail("The load callback should not run after an error.")));
 
-        Action act = () => loadTask.Join();
-        Exception oe = act.Should().Throw<Exception>().Which;
+        var act = () => loadTask.Join();
+        var oe = act.Should().Throw<Exception>().Which;
         ex.Should().BeSameAs(oe);
     }
 
@@ -226,12 +226,12 @@ public sealed class AsyncLoaderTests : IDisposable
 
         Exception ex = new();
 
-        JoinableTask loadTask = ThreadHelper.JoinableTaskFactory.RunAsync(() => _loader.LoadAsync(
+        var loadTask = ThreadHelper.JoinableTaskFactory.RunAsync(() => _loader.LoadAsync(
             () => throw ex,
             () => Assert.Fail("The load callback should not run after an error.")));
 
-        Action act = () => loadTask.Join();
-        Exception oe = act.Should().Throw<Exception>().Which;
+        var act = () => loadTask.Join();
+        var oe = act.Should().Throw<Exception>().Which;
 
         observed.Count.Should().Be(1);
         observed[0].Should().BeSameAs(ex);
@@ -249,15 +249,15 @@ public sealed class AsyncLoaderTests : IDisposable
         loader.Dispose();
 
         // Any use after dispose should throw
-        Func<Task> act1 = async () => await loader.LoadAsync(() => { }, () => { });
+        var act1 = async () => await loader.LoadAsync(() => { }, () => { });
         await act1.Should().ThrowAsync<ObjectDisposedException>();
-        Func<Task> act2 = async () => await loader.LoadAsync(() => 1, i => { });
+        var act2 = async () => await loader.LoadAsync(() => 1, i => { });
         await act2.Should().ThrowAsync<ObjectDisposedException>();
-        Func<Task> act3 = async () => await loader.LoadAsync(_ => { }, () => { });
+        var act3 = async () => await loader.LoadAsync(_ => { }, () => { });
         await act3.Should().ThrowAsync<ObjectDisposedException>();
-        Func<Task> act4 = async () => await loader.LoadAsync(_ => 1, i => { });
+        var act4 = async () => await loader.LoadAsync(_ => 1, i => { });
         await act4.Should().ThrowAsync<ObjectDisposedException>();
-        Action act5 = () => loader.Cancel();
+        var act5 = () => loader.Cancel();
         act5.Should().Throw<ObjectDisposedException>();
     }
 }

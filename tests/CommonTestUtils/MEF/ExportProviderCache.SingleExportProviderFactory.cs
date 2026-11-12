@@ -10,36 +10,42 @@ namespace CommonTestUtils.MEF;
 
 public static partial class ExportProviderCache
 {
-    private sealed class SingleExportProviderFactory : IExportProviderFactory
+    private sealed class SingleExportProviderFactory(
+        Scope scope,
+        ComposableCatalog catalog,
+        CompositionConfiguration configuration,
+        IExportProviderFactory exportProviderFactory)
+        : IExportProviderFactory
     {
-        private readonly Scope _scope;
-        private readonly ComposableCatalog _catalog;
-        private readonly CompositionConfiguration _configuration;
-        private readonly IExportProviderFactory _exportProviderFactory;
-
-        public SingleExportProviderFactory(Scope scope, ComposableCatalog catalog, CompositionConfiguration configuration, IExportProviderFactory exportProviderFactory)
+        ExportProvider IExportProviderFactory.CreateExportProvider()
         {
-            _scope = scope;
-            _catalog = catalog;
-            _configuration = configuration;
-            _exportProviderFactory = exportProviderFactory;
+            // Currently this implementation deviates from the typical behavior of IExportProviderFactory. For the
+            // duration of a single test, an instance of SingleExportProviderFactory will continue returning the
+            // same ExportProvider instance each time this method is called.
+            //
+            // It may be clearer to refactor the implementation to only allow one call to CreateExportProvider in
+            // the context of a single test. https://github.com/dotnet/roslyn/issues/25863
+            return GetOrCreateExportProvider();
         }
 
         public ExportProvider GetOrCreateExportProvider()
         {
-            ComposableCatalog expectedCatalog = Interlocked.CompareExchange(ref _scope.ExpectedCatalog, _catalog, null) ?? _catalog;
-            RequireForSingleExportProvider(expectedCatalog == _catalog);
+            var expectedCatalog =
+                Interlocked.CompareExchange(ref scope.ExpectedCatalog, catalog, null) ?? catalog;
+            RequireForSingleExportProvider(expectedCatalog == catalog);
 
-            ExportProvider? expected = _scope.ExpectedProviderForCatalog;
+            var expected = scope.ExpectedProviderForCatalog;
             if (expected == null)
             {
-                foreach (IReadOnlyCollection<ComposedPartDiagnostic> errorCollection in _configuration.CompositionErrors)
+                foreach (var errorCollection in configuration.CompositionErrors)
                 {
-                    foreach (ComposedPartDiagnostic error in errorCollection)
+                    foreach (var error in errorCollection)
                     {
-                        foreach (ComposedPart part in error.Parts)
+                        foreach (var part in error.Parts)
                         {
-                            foreach ((ImportDefinitionBinding importBinding, IReadOnlyList<ExportDefinitionBinding> exportBindings) in part.SatisfyingExports)
+                            foreach ((var importBinding,
+                                         var exportBindings) in part
+                                         .SatisfyingExports)
                             {
                                 if (exportBindings.Count <= 1)
                                 {
@@ -54,7 +60,8 @@ public static partial class ExportProviderCache
                                     // when a test ExportProvider is created with a mock implementation without
                                     // first removing a value provided by default.
                                     throw new InvalidOperationException(
-                                        "Failed to construct the MEF catalog for testing. Multiple exports were found for a part for which only one export is expected:" + Environment.NewLine
+                                        "Failed to construct the MEF catalog for testing. Multiple exports were found for a part for which only one export is expected:" +
+                                        Environment.NewLine
                                         + error.Message);
                                 }
                             }
@@ -62,26 +69,16 @@ public static partial class ExportProviderCache
                     }
                 }
 
-                expected = _exportProviderFactory.CreateExportProvider();
-                expected = Interlocked.CompareExchange(ref _scope.ExpectedProviderForCatalog, expected, null) ?? expected;
-                Interlocked.CompareExchange(ref _scope.CurrentExportProvider, expected, null);
+                expected = exportProviderFactory.CreateExportProvider();
+                expected = Interlocked.CompareExchange(ref scope.ExpectedProviderForCatalog, expected, null) ??
+                           expected;
+                Interlocked.CompareExchange(ref scope.CurrentExportProvider, expected, null);
             }
 
-            ExportProvider? exportProvider = _scope.CurrentExportProvider;
+            var exportProvider = scope.CurrentExportProvider;
             RequireForSingleExportProvider(exportProvider == expected);
 
             return exportProvider;
-        }
-
-        ExportProvider IExportProviderFactory.CreateExportProvider()
-        {
-            // Currently this implementation deviates from the typical behavior of IExportProviderFactory. For the
-            // duration of a single test, an instance of SingleExportProviderFactory will continue returning the
-            // same ExportProvider instance each time this method is called.
-            //
-            // It may be clearer to refactor the implementation to only allow one call to CreateExportProvider in
-            // the context of a single test. https://github.com/dotnet/roslyn/issues/25863
-            return GetOrCreateExportProvider();
         }
 
         private void RequireForSingleExportProvider([DoesNotReturnIf(false)] bool condition)
@@ -111,7 +108,8 @@ public static partial class ExportProviderCache
                 //   rather than break up the test into distinct tests for each case.
                 // * A test referenced different predefined ExportProvider instances within the context of a test.
                 //   Each test is expected to use the same ExportProvider throughout the test.
-                throw new InvalidOperationException($"Only one {_scope.Name} {nameof(ExportProvider)} can be created in the context of a single test.");
+                throw new InvalidOperationException(
+                    $"Only one {scope.Name} {nameof(ExportProvider)} can be created in the context of a single test.");
             }
         }
     }

@@ -2,41 +2,40 @@
 using GitCommands.Git;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
+using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.HelperDialogs;
 using GitUI.Theming;
 using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using Microsoft;
 using ResourceManager;
+using GitRevision = GitExtensions.Extensibility.Git.GitRevision;
 
 namespace GitUI.CommandsDialogs;
 
 public partial class FormDiff : GitModuleForm
 {
-    private string? _firstCommitDisplayStr;
-    private string? _secondCommitDisplayStr;
-    private GitRevision? _firstRevision;
-    private GitRevision? _secondRevision;
-    private readonly GitRevision? _mergeBase;
-    private Lazy<ObjectId> _currentHead;
-
-    private readonly IGitRevisionTester _revisionTester;
-    private readonly IFileStatusListContextMenuController _revisionDiffContextMenuController;
-    private readonly IFullPathResolver _fullPathResolver;
-    private readonly IFindFilePredicateProvider _findFilePredicateProvider;
-    private readonly CancellationTokenSequence _populateDiffFilesSequence = new();
-    private readonly CancellationTokenSequence _viewChangesSequence = new();
-
-    private readonly ToolTip _toolTipControl = new();
-
     private readonly TranslationString _anotherBranchTooltip = new("Select another branch");
     private readonly TranslationString _anotherCommitTooltip = new("Select another commit");
     private readonly TranslationString _btnSwapTooltip = new("Swap BASE and Compare commits");
     private readonly TranslationString _ckCompareToMergeBase = new("Compare to merge &base");
+    private readonly Lazy<ObjectId> _currentHead;
+    private readonly IFindFilePredicateProvider _findFilePredicateProvider;
+    private readonly IFullPathResolver _fullPathResolver;
+    private readonly GitRevision? _mergeBase;
+    private readonly CancellationTokenSequence _populateDiffFilesSequence = new();
+    private readonly IFileStatusListContextMenuController _revisionDiffContextMenuController;
+
+    private readonly IGitRevisionTester _revisionTester;
+
+    private readonly ToolTip _toolTipControl = new();
+    private readonly CancellationTokenSequence _viewChangesSequence = new();
+    private string? _firstCommitDisplayStr;
+    private GitRevision? _firstRevision;
+    private string? _secondCommitDisplayStr;
+    private GitRevision? _secondRevision;
 
     public FormDiff(
-        IGitUICommands commands,
+        IGitUiCommands commands,
         ObjectId firstId,
         ObjectId secondId,
         string firstCommitDisplayStr, string secondCommitDisplayStr)
@@ -60,16 +59,16 @@ public partial class FormDiff : GitModuleForm
 
         // _mergeBase is not changed if first/second is changed
         // similar, _currentHead is not updated if changed in Browse
-        _currentHead = new(() => Module.GetCurrentCheckout());
-        ObjectId firstMergeId = firstId.IsArtificial ? _currentHead.Value : firstId;
-        ObjectId secondMergeId = secondId.IsArtificial ? _currentHead.Value : secondId;
+        _currentHead = new Lazy<ObjectId>(() => Module.GetCurrentCheckout());
+        var firstMergeId = firstId.IsArtificial ? _currentHead.Value : firstId;
+        var secondMergeId = secondId.IsArtificial ? _currentHead.Value : secondId;
         if (firstMergeId.IsZero || secondMergeId.IsZero || firstMergeId == secondMergeId)
         {
             _mergeBase = null;
         }
         else
         {
-            ObjectId mergeBase = Module.GetMergeBase(firstMergeId, secondMergeId);
+            var mergeBase = Module.GetMergeBase(firstMergeId, secondMergeId);
             _mergeBase = mergeBase.IsZero ? null : new GitRevision(mergeBase);
         }
 
@@ -92,7 +91,7 @@ public partial class FormDiff : GitModuleForm
     }
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
@@ -128,7 +127,7 @@ public partial class FormDiff : GitModuleForm
         // I.e., git difftool --gui --no-prompt --dir-diff -R HEAD fails, but
         // git difftool --gui --no-prompt --dir-diff HEAD succeeds
         // Thus, we disable comparing "from" working directory.
-        bool enableDifftoolDirDiff = _firstRevision?.ObjectId != ObjectId.WorkTreeId;
+        var enableDifftoolDirDiff = _firstRevision?.ObjectId != ObjectId.WorkTreeId;
         btnCompareDirectoriesWithDiffTool.Enabled = enableDifftoolDirDiff;
 
         Validates.NotNull(_secondRevision);
@@ -144,13 +143,14 @@ public partial class FormDiff : GitModuleForm
             revisions = [_secondRevision, _firstRevision];
         }
 
-        DiffFiles.InvokeAndForget(() => DiffFiles.SetDiffsAsync(revisions, _currentHead.Value, _populateDiffFilesSequence.Next()));
+        DiffFiles.InvokeAndForget(() =>
+            DiffFiles.SetDiffsAsync(revisions, _currentHead.Value, _populateDiffFilesSequence.Next()));
     }
 
     private void ShowSelectedFileDiff()
     {
         _ = DiffText.ViewChangesAsync(DiffFiles.SelectedItem,
-            cancellationToken: _viewChangesSequence.Next());
+            _viewChangesSequence.Next());
     }
 
     private void btnSwap_Click(object sender, EventArgs e)
@@ -167,10 +167,10 @@ public partial class FormDiff : GitModuleForm
 
     private void btnCompareDirectoriesWithDiffTool_Clicked(object sender, EventArgs e)
     {
-        GitRevision? firstRevision = ckCompareToMergeBase.Checked ? _mergeBase : _firstRevision;
+        var firstRevision = ckCompareToMergeBase.Checked ? _mergeBase : _firstRevision;
         Validates.NotNull(firstRevision);
         Validates.NotNull(_secondRevision);
-        Module.OpenWithDifftoolDirDiff(firstRevision.Guid, _secondRevision.Guid, customTool: null);
+        Module.OpenWithDifftoolDirDiff(firstRevision.Guid, _secondRevision.Guid, null);
     }
 
     private void btnPickAnotherFirstBranch_Click(object sender, EventArgs e)
@@ -200,28 +200,28 @@ public partial class FormDiff : GitModuleForm
     private ContextMenuDiffToolInfo GetContextMenuDiffToolInfo()
     {
         List<ObjectId> parentIds = [.. DiffFiles.SelectedItems.FirstIds()];
-        bool firstIsParent = _revisionTester.AllFirstAreParentsToSelected(parentIds, _secondRevision);
-        bool localExists = _revisionTester.AnyLocalFileExists(DiffFiles.SelectedItems.Select(i => i.Item));
+        var firstIsParent = _revisionTester.AllFirstAreParentsToSelected(parentIds, _secondRevision);
+        var localExists = _revisionTester.AnyLocalFileExists(DiffFiles.SelectedItems.Select(i => i.Item));
 
-        bool allAreNew = DiffFiles.SelectedItems.All(i => i.Item.IsNew);
-        bool allAreDeleted = DiffFiles.SelectedItems.All(i => i.Item.IsDeleted);
+        var allAreNew = DiffFiles.SelectedItems.All(i => i.Item.IsNew);
+        var allAreDeleted = DiffFiles.SelectedItems.All(i => i.Item.IsDeleted);
 
         return new ContextMenuDiffToolInfo(
             _secondRevision,
             parentIds,
-            allAreNew: allAreNew,
-            allAreDeleted: allAreDeleted,
-            firstIsParent: firstIsParent,
-            localExists: localExists);
+            allAreNew,
+            allAreDeleted,
+            firstIsParent,
+            localExists);
     }
 
     private void PickAnotherBranch(GitRevision preSelectCommit, ref string? displayStr, ref GitRevision? revision)
     {
-        using FormCompareToBranch form = new(UICommands, preSelectCommit.ObjectId);
+        using FormCompareToBranch form = new(UiCommands, preSelectCommit.ObjectId);
         if (form.ShowDialog(this) == DialogResult.OK)
         {
             displayStr = form.BranchName;
-            ObjectId objectId = Module.RevParse(form.BranchName!);
+            var objectId = Module.RevParse(form.BranchName!);
             revision = objectId.IsZero ? null : new GitRevision(objectId);
             PopulateDiffFiles();
         }
@@ -229,7 +229,7 @@ public partial class FormDiff : GitModuleForm
 
     private void PickAnotherCommit(GitRevision preSelect, ref string? displayStr, ref GitRevision? revision)
     {
-        using FormChooseCommit form = new(UICommands, preselectCommit: preSelect.Guid, showArtificial: true);
+        using FormChooseCommit form = new(UiCommands, preSelect.Guid, true);
         if (form.ShowDialog(this) == DialogResult.OK)
         {
             revision = form.SelectedRevision;

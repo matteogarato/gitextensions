@@ -1,23 +1,38 @@
 ﻿using System.Reflection;
 
-namespace GitUI;
+namespace GitExtUtils.GitUI;
 
 public static class ListViewExtensions
 {
-    public static IEnumerable<ListViewItem> SelectedItems(this ListView listView) =>
-        listView.SelectedItems.Cast<ListViewItem>();
+    private static readonly Lazy<MethodInfo> _getItemRectOrEmptyMethod =
+        new(() => typeof(ListView).GetMethod(
+            "GetItemRectOrEmpty",
+            BindingFlags.Instance | BindingFlags.NonPublic)!);
 
-    public static IEnumerable<ListViewItem> Items(this ListView listView) =>
-        listView.Items.Cast<ListViewItem>();
+    public static IEnumerable<ListViewItem> SelectedItems(this ListView listView)
+    {
+        return listView.SelectedItems.Cast<ListViewItem>();
+    }
 
-    public static IEnumerable<ListViewGroup> Groups(this ListView listView) =>
-        listView.Groups.Cast<ListViewGroup>();
+    public static IEnumerable<ListViewItem> Items(this ListView listView)
+    {
+        return listView.Items.Cast<ListViewItem>();
+    }
 
-    public static T Tag<T>(this ListViewItem item) =>
-        (T)item.Tag!;
+    public static IEnumerable<ListViewGroup> Groups(this ListView listView)
+    {
+        return listView.Groups.Cast<ListViewGroup>();
+    }
 
-    public static T Tag<T>(this ListViewGroup grp) =>
-        (T)grp.Tag!;
+    public static T Tag<T>(this ListViewItem item)
+    {
+        return (T)item.Tag!;
+    }
+
+    public static T Tag<T>(this ListViewGroup grp)
+    {
+        return (T)grp.Tag!;
+    }
 
     public static Image? Image(this ListViewItem item)
     {
@@ -29,15 +44,19 @@ public static class ListViewExtensions
         return item.ImageList.Images[item.ImageIndex];
     }
 
-    public static IEnumerable<T> ItemTags<T>(this ListView listView) =>
-        listView.Items().Select(Tag<T>);
+    public static IEnumerable<T> ItemTags<T>(this ListView listView)
+    {
+        return listView.Items().Select(Tag<T>);
+    }
 
-    public static IEnumerable<T> SelectedItemTags<T>(this ListView listView) =>
-        listView.SelectedItems().Select(Tag<T>);
+    public static IEnumerable<T> SelectedItemTags<T>(this ListView listView)
+    {
+        return listView.SelectedItems().Select(Tag<T>);
+    }
 
     /// <summary>
-    /// <para>For practical purposes: The last <see cref="ListViewItem"/> added to selection.</para>
-    /// <para>Actually: Focused item if selected, otherwise last item in <see cref="SelectedItems"/> list.</para>
+    ///     <para>For practical purposes: The last <see cref="ListViewItem" /> added to selection.</para>
+    ///     <para>Actually: Focused item if selected, otherwise last item in <see cref="SelectedItems" /> list.</para>
     /// </summary>
     public static ListViewItem? LastSelectedItem(this ListView listView)
     {
@@ -55,14 +74,11 @@ public static class ListViewExtensions
     }
 
     /// <summary>
-    /// A workaround for <see cref="ListViewItem.Bounds"/> which throws <see cref="ArgumentException"/>
-    /// on item from a collapsed <see cref="ListViewGroup"/>.
+    ///     A workaround for <see cref="ListViewItem.Bounds" /> which throws <see cref="ArgumentException" />
+    ///     on item from a collapsed <see cref="ListViewGroup" />.
     /// </summary>
-    public static Rectangle BoundsOrEmpty(this ListViewItem item) =>
-        (Rectangle)_getItemRectOrEmptyMethod.Value.Invoke(item.ListView, [item.Index])!;
-
-    private static readonly Lazy<MethodInfo> _getItemRectOrEmptyMethod =
-        new(() => typeof(ListView).GetMethod(
-            "GetItemRectOrEmpty",
-            BindingFlags.Instance | BindingFlags.NonPublic)!);
+    public static Rectangle BoundsOrEmpty(this ListViewItem item)
+    {
+        return (Rectangle)_getItemRectOrEmptyMethod.Value.Invoke(item.ListView, [item.Index])!;
+    }
 }

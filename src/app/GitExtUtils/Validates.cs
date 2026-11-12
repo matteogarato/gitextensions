@@ -1,9 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft;
 
 // Use of the Microsoft namespace here is to match that of Assumes and Requires from the vs-validation library
 
-namespace Microsoft;
+namespace GitExtUtils;
 
 internal static class Validates
 {
@@ -12,7 +13,7 @@ internal static class Validates
     // Extensions.
 
     [DebuggerStepThrough]
-    public static void NotNull<T>([ValidatedNotNull, NotNull] T? value)
+    public static void NotNull<T>([ValidatedNotNull] [NotNull] T? value)
         where T : class
     {
         if (value == null)
@@ -32,5 +33,8 @@ internal static class Validates
     }
 
     [DoesNotReturn]
-    private static void Fail(string message) => throw new(message);
+    private static void Fail(string message)
+    {
+        throw new Exception(message);
+    }
 }

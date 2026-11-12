@@ -1,7 +1,7 @@
 ﻿namespace GitExtensions.Extensibility.Configurations;
 
 /// <summary>
-///  Provides the ability to access the .gitmodules config file.
+///     Provides the ability to access the .gitmodules config file.
 /// </summary>
 public interface ISubmodulesConfigFile
 {

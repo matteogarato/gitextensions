@@ -8,9 +8,9 @@ using System.Drawing;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using NetSpell.SpellChecker.Dictionary;
+using SpellChecker.Dictionary;
 
-namespace NetSpell.SpellChecker;
+namespace SpellChecker;
 
 /// <summary>
 ///     The Spelling class encapsulates the functions necessary to check
@@ -19,24 +19,51 @@ namespace NetSpell.SpellChecker;
 [ToolboxBitmap(typeof(Spelling), "Spelling.bmp")]
 public partial class Spelling : Component
 {
+    #region private variables
+
+    private Container _components;
+
+    #endregion
+
+    #region Component Designer generated code
+
+    /// <summary>
+    ///     Required method for Designer support - do not modify
+    ///     the contents of this method with the code editor.
+    /// </summary>
+    private void InitializeComponent()
+    {
+        _components = new Container();
+    }
+
+    #endregion
+
+    public void AddAutoCompleteWords(IEnumerable<string> words)
+    {
+        foreach (var word in words)
+        {
+            _autoCompleteWords.Add(word);
+        }
+    }
+
     #region Global Regex
-    [GeneratedRegex(@"^\d")]
-    private static partial Regex DigitRegex { get; }
-    [GeneratedRegex(@"</[c-g\d]+>|</[i-o\d]+>|</[a\d]+>|</[q-z\d]+>|<[cg]+[^>]*>|<[i-o]+[^>]*>|<[q-z]+[^>]*>|<[a]+[^>]*>|<(\[^\]*\|'[^']*'|[^'\>])*>", RegexOptions.IgnoreCase)]
+
+    [GeneratedRegex(@"^\d")] private static partial Regex DigitRegex { get; }
+
+    [GeneratedRegex(
+        @"</[c-g\d]+>|</[i-o\d]+>|</[a\d]+>|</[q-z\d]+>|<[cg]+[^>]*>|<[i-o]+[^>]*>|<[q-z]+[^>]*>|<[a]+[^>]*>|<(\[^\]*\|'[^']*'|[^'\>])*>",
+        RegexOptions.IgnoreCase)]
     private static partial Regex HtmlRegex { get; }
-    [GeneratedRegex(@"\D")]
-    private static partial Regex LetterRegex { get; }
-    [GeneratedRegex(@"[^\p{Lu}]")]
-    private static partial Regex UpperRegex { get; } // @"[^A-Z]
-    [GeneratedRegex(@"\b[\w']+\b")]
-    private static partial Regex WordRegex { get; } // @"\b[A-Za-z0-9_'À-ÿ]+\b"
+
+    [GeneratedRegex(@"\D")] private static partial Regex LetterRegex { get; }
+
+    [GeneratedRegex(@"[^\p{Lu}]")] private static partial Regex UpperRegex { get; } // @"[^A-Z]
+
+    [GeneratedRegex(@"\b[\w']+\b")] private static partial Regex WordRegex { get; } // @"\b[A-Za-z0-9_'À-ÿ]+\b"
 
     private MatchCollection _htmlTags;
     private MatchCollection _words;
-    #endregion
 
-    #region private variables
-    private Container _components;
     #endregion
 
     #region Events
@@ -159,7 +186,7 @@ public partial class Spelling : Component
     #region private methods
 
     /// <summary>
-    /// Clean up any resources being used.
+    ///     Clean up any resources being used.
     /// </summary>
     protected override void Dispose(bool disposing)
     {
@@ -218,7 +245,7 @@ public partial class Spelling : Component
 
         if (IgnoreHtml)
         {
-            int startIndex = GetWordIndex();
+            var startIndex = GetWordIndex();
 
             foreach (Match item in _htmlTags)
             {
@@ -272,11 +299,7 @@ public partial class Spelling : Component
 
     private void SuggestWord(string word, List<Word> tempSuggestion)
     {
-        Word ws = new()
-        {
-            Text = word,
-            EditDistance = EditDistance(CurrentWord, word)
-        };
+        Word ws = new() { Text = word, EditDistance = EditDistance(CurrentWord, word) };
         tempSuggestion.Add(ws);
     }
 
@@ -286,17 +309,17 @@ public partial class Spelling : Component
     /// </summary>
     private void ReplaceChars(List<Word> tempSuggestion)
     {
-        List<string> replacementChars = Dictionary.ReplaceCharacters;
-        for (int i = 0; i < replacementChars.Count; i++)
+        var replacementChars = Dictionary.ReplaceCharacters;
+        for (var i = 0; i < replacementChars.Count; i++)
         {
-            int split = replacementChars[i].IndexOf(' ');
-            string key = replacementChars[i][..split];
-            string replacement = replacementChars[i][(split + 1)..];
+            var split = replacementChars[i].IndexOf(' ');
+            var key = replacementChars[i][..split];
+            var replacement = replacementChars[i][(split + 1)..];
 
-            int pos = CurrentWord.IndexOf(key, StringComparison.InvariantCulture);
+            var pos = CurrentWord.IndexOf(key, StringComparison.InvariantCulture);
             while (pos > -1)
             {
-                string tempWord = $"{CurrentWord[..pos]}{replacement}{CurrentWord[(pos + key.Length)..]}";
+                var tempWord = $"{CurrentWord[..pos]}{replacement}{CurrentWord[(pos + key.Length)..]}";
 
                 if (FindWord(ref tempWord))
                 {
@@ -314,15 +337,15 @@ public partial class Spelling : Component
     /// </summary>
     private void BadChar(List<Word> tempSuggestion)
     {
-        string tryme = Dictionary.TryCharacters;
+        var tryme = Dictionary.TryCharacters;
 
-        for (int i = 0; i < CurrentWord.Length; i++)
+        for (var i = 0; i < CurrentWord.Length; i++)
         {
             StringBuilder tempWord = new(CurrentWord);
-            for (int x = 0; x < tryme.Length; x++)
+            for (var x = 0; x < tryme.Length; x++)
             {
                 tempWord[i] = tryme[x];
-                string word = tempWord.ToString();
+                var word = tempWord.ToString();
                 if (FindWord(ref word))
                 {
                     SuggestWord(word, tempSuggestion);
@@ -338,12 +361,12 @@ public partial class Spelling : Component
     {
         if (CurrentWord.Length > 1)
         {
-            for (int i = 0; i < CurrentWord.Length; i++)
+            for (var i = 0; i < CurrentWord.Length; i++)
             {
                 StringBuilder tempWord = new(CurrentWord);
                 tempWord.Remove(i, 1);
 
-                string word = tempWord.ToString();
+                var word = tempWord.ToString();
                 if (FindWord(ref word))
                 {
                     SuggestWord(word, tempSuggestion);
@@ -357,16 +380,16 @@ public partial class Spelling : Component
     /// </summary>
     private void ForgotChar(List<Word> tempSuggestion)
     {
-        string tryme = Dictionary.TryCharacters;
+        var tryme = Dictionary.TryCharacters;
 
-        for (int i = 0; i <= CurrentWord.Length; i++)
+        for (var i = 0; i <= CurrentWord.Length; i++)
         {
-            for (int x = 0; x < tryme.Length; x++)
+            for (var x = 0; x < tryme.Length; x++)
             {
                 StringBuilder tempWord = new(CurrentWord);
                 tempWord.Insert(i, tryme[x]);
 
-                string word = tempWord.ToString();
+                var word = tempWord.ToString();
                 if (FindWord(ref word))
                 {
                     SuggestWord(word, tempSuggestion);
@@ -380,12 +403,12 @@ public partial class Spelling : Component
     /// </summary>
     private void SwapChar(List<Word> tempSuggestion)
     {
-        for (int i = 0; i < CurrentWord.Length - 1; i++)
+        for (var i = 0; i < CurrentWord.Length - 1; i++)
         {
             StringBuilder tempWord = new(CurrentWord);
 
             (tempWord[i + 1], tempWord[i]) = (tempWord[i], tempWord[i + 1]);
-            string word = tempWord.ToString();
+            var word = tempWord.ToString();
             if (FindWord(ref word))
             {
                 SuggestWord(word, tempSuggestion);
@@ -399,14 +422,14 @@ public partial class Spelling : Component
     /// </summary>
     private void TwoWords(List<Word> tempSuggestion)
     {
-        for (int i = 1; i < CurrentWord.Length - 1; i++)
+        for (var i = 1; i < CurrentWord.Length - 1; i++)
         {
-            string firstWord = CurrentWord[..i];
-            string secondWord = CurrentWord[i..];
+            var firstWord = CurrentWord[..i];
+            var secondWord = CurrentWord[i..];
 
             if (FindWord(ref firstWord) && FindWord(ref secondWord))
             {
-                string tempWord = firstWord + " " + secondWord;
+                var tempWord = firstWord + " " + secondWord;
                 SuggestWord(tempWord, tempSuggestion);
             }
         }
@@ -431,10 +454,10 @@ public partial class Spelling : Component
             return;
         }
 
-        int replacedIndex = WordIndex;
+        var replacedIndex = WordIndex;
 
-        int index = _words[replacedIndex].Index;
-        int length = _words[replacedIndex].Length;
+        var index = _words[replacedIndex].Index;
+        var length = _words[replacedIndex].Length;
 
         // adjust length to remove extra white space after first word
         if (index == 0
@@ -446,18 +469,18 @@ public partial class Spelling : Component
 
         // adjust length to remove double white space
         else if (index > 0
-            && index + length < _text.Length
-            && _text[index - 1] == ' '
-            && _text[index + length] == ' ')
+                 && index + length < _text.Length
+                 && _text[index - 1] == ' '
+                 && _text[index + length] == ' ')
         {
             length++; // removing trailing space
         }
 
         // adjust index to remove extra white space before punctuation
         else if (index > 0
-            && index + length < _text.Length
-            && _text[index - 1] == ' '
-            && char.IsPunctuation(_text[index + length]))
+                 && index + length < _text.Length
+                 && _text[index - 1] == ' '
+                 && char.IsPunctuation(_text[index + length]))
         {
             index--;
             length++;
@@ -465,14 +488,14 @@ public partial class Spelling : Component
 
         // adjust index to remove extra white space before last word
         else if (index > 0
-            && index + length == _text.Length
-            && _text[index - 1] == ' ')
+                 && index + length == _text.Length
+                 && _text[index - 1] == ' ')
         {
             index--;
             length++;
         }
 
-        string deletedWord = _text.ToString(index, length);
+        var deletedWord = _text.ToString(index, length);
         _text.Remove(index, length);
 
         CalculateWords();
@@ -504,43 +527,43 @@ public partial class Spelling : Component
     public int EditDistance(string source, string target, bool positionPriority)
     {
         // i.e. 2-D array
-        int[,] matrix = new int[source.Length + 1, target.Length + 1];
+        var matrix = new int[source.Length + 1, target.Length + 1];
 
         // boundary conditions
         matrix[0, 0] = 0;
 
-        for (int j = 1; j <= target.Length; j++)
+        for (var j = 1; j <= target.Length; j++)
         {
             // boundary conditions
-            int val = matrix[0, j - 1];
+            var val = matrix[0, j - 1];
             matrix[0, j] = val + 1;
         }
 
         // outer loop
-        for (int i = 1; i <= source.Length; i++)
+        for (var i = 1; i <= source.Length; i++)
         {
             // boundary conditions
-            int val = matrix[i - 1, 0];
+            var val = matrix[i - 1, 0];
             matrix[i, 0] = val + 1;
 
             // inner loop
-            for (int j = 1; j <= target.Length; j++)
+            for (var j = 1; j <= target.Length; j++)
             {
-                int diag = matrix[i - 1, j - 1];
+                var diag = matrix[i - 1, j - 1];
 
                 if (!source.AsSpan(i - 1, 1).SequenceEqual(target.AsSpan(j - 1, 1)))
                 {
                     diag++;
                 }
 
-                int deletion = matrix[i - 1, j];
-                int insertion = matrix[i, j - 1];
-                int match = Math.Min(deletion + 1, insertion + 1);
+                var deletion = matrix[i - 1, j];
+                var insertion = matrix[i, j - 1];
+                var match = Math.Min(deletion + 1, insertion + 1);
                 matrix[i, j] = Math.Min(diag, match);
-            }// for j
-        }// for i
+            } // for j
+        } // for i
 
-        int dist = matrix[source.Length, target.Length];
+        var dist = matrix[source.Length, target.Length];
 
         // extra edit on first and last chars
         if (positionPriority)
@@ -581,7 +604,7 @@ public partial class Spelling : Component
     /// </remarks>
     public int EditDistance(string source, string target)
     {
-        return EditDistance(source, target, positionPriority: true);
+        return EditDistance(source, target, true);
     }
 
     /// <summary>
@@ -609,18 +632,18 @@ public partial class Spelling : Component
             return 0;
         }
 
-        int low = 0;
-        int high = _words.Count - 1;
+        var low = 0;
+        var high = _words.Count - 1;
 
         // binary search
         while (low <= high)
         {
-            int mid = (low + high) / 2;
-            int wordStartIndex = _words[mid].Index;
-            int wordEndIndex = _words[mid].Index + _words[mid].Length - 1;
+            var mid = (low + high) / 2;
+            var wordStartIndex = _words[mid].Index;
+            var wordEndIndex = _words[mid].Index + _words[mid].Length - 1;
 
             // add white space to end of word by finding the start of the next word
-            if ((mid + 1) < _words.Count)
+            if (mid + 1 < _words.Count)
             {
                 wordEndIndex = _words[mid + 1].Index - 1;
             }
@@ -734,18 +757,19 @@ public partial class Spelling : Component
             return;
         }
 
-        string replacedWord = CurrentWord;
-        int replacedIndex = WordIndex;
+        var replacedWord = CurrentWord;
+        var replacedIndex = WordIndex;
 
-        int index = _words[replacedIndex].Index;
-        int length = _words[replacedIndex].Length;
+        var index = _words[replacedIndex].Index;
+        var length = _words[replacedIndex].Length;
 
         _text.Remove(index, length);
 
         // if first letter upper case, match case for replacement word
         if (char.IsUpper(_words[replacedIndex].ValueSpan[0]))
         {
-            _replacementWord = $"{char.ToUpper(_replacementWord[0], CultureInfo.CurrentUICulture)}{_replacementWord[1..]}";
+            _replacementWord =
+                $"{char.ToUpper(_replacementWord[0], CultureInfo.CurrentUICulture)}{_replacementWord[1..]}";
         }
 
         _text.Insert(index, _replacementWord);
@@ -774,23 +798,23 @@ public partial class Spelling : Component
     }
 
     /// <summary>
-    ///     Spell checks the words in the <see cref="Text"/> property starting
-    ///     at the <see cref="WordIndex"/> position.
+    ///     Spell checks the words in the <see cref="Text" /> property starting
+    ///     at the <see cref="WordIndex" /> position.
     /// </summary>
     /// <returns>
     ///     Returns true if there is a word found in the text
     ///     that is not in the dictionaries
     /// </returns>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="WordIndex"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="WordIndex" />
     public bool SpellCheck()
     {
         return SpellCheck(_wordIndex, WordCount - 1);
     }
 
     /// <summary>
-    ///     Spell checks the words in the <see cref="Text"/> property starting
-    ///     at the <see cref="WordIndex"/> position. This overload takes in the
+    ///     Spell checks the words in the <see cref="Text" /> property starting
+    ///     at the <see cref="WordIndex" /> position. This overload takes in the
     ///     WordIndex to start checking from.
     /// </summary>
     /// <param name="startWordIndex" type="int">
@@ -802,8 +826,8 @@ public partial class Spelling : Component
     ///     Returns true if there is a word found in the text
     ///     that is not in the dictionaries
     /// </returns>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="WordIndex"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="WordIndex" />
     public bool SpellCheck(int startWordIndex)
     {
         WordIndex = startWordIndex;
@@ -811,8 +835,8 @@ public partial class Spelling : Component
     }
 
     /// <summary>
-    ///     Spell checks a range of words in the <see cref="Text"/> property starting
-    ///     at the <see cref="WordIndex"/> position and ending at endWordIndex.
+    ///     Spell checks a range of words in the <see cref="Text" /> property starting
+    ///     at the <see cref="WordIndex" /> position and ending at endWordIndex.
     /// </summary>
     /// <param name="startWordIndex" type="int">
     ///     <para>
@@ -828,8 +852,8 @@ public partial class Spelling : Component
     ///     Returns true if there is a word found in the text
     ///     that is not in the dictionaries
     /// </returns>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="WordIndex"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="WordIndex" />
     public bool SpellCheck(int startWordIndex, int endWordIndex)
     {
         if (startWordIndex > endWordIndex || _words is null || _words.Count == 0)
@@ -841,19 +865,19 @@ public partial class Spelling : Component
 
         Initialize();
 
-        bool misspelledWord = false;
+        var misspelledWord = false;
 
-        for (int i = startWordIndex; i <= endWordIndex; i++)
+        for (var i = startWordIndex; i <= endWordIndex; i++)
         {
             // save the current word index
             WordIndex = i;
-            string currentWord = CurrentWord;
+            var currentWord = CurrentWord;
 
             if (CheckString(currentWord))
             {
                 if (!TestWord())
                 {
-                    if (ReplaceList.TryGetValue(currentWord, out string word))
+                    if (ReplaceList.TryGetValue(currentWord, out var word))
                     {
                         ReplacementWord = word;
                         ReplaceWord();
@@ -861,14 +885,14 @@ public partial class Spelling : Component
                     else if (!IgnoreList.Contains(currentWord))
                     {
                         misspelledWord = true;
-                        OnMisspelledWord(new SpellingEventArgs(currentWord, i, _words[i].Index));       // raise event
+                        OnMisspelledWord(new SpellingEventArgs(currentWord, i, _words[i].Index)); // raise event
                     }
                 }
                 else if (i > 0 && _words[i - 1].Value == currentWord
-                    && (_words[i - 1].Index + _words[i - 1].Length + 1) == _words[i].Index)
+                               && _words[i - 1].Index + _words[i - 1].Length + 1 == _words[i].Index)
                 {
                     misspelledWord = true;
-                    OnDoubledWord(new SpellingEventArgs(currentWord, i, _words[i].Index));      // raise event
+                    OnDoubledWord(new SpellingEventArgs(currentWord, i, _words[i].Index)); // raise event
                 }
             }
         }
@@ -882,8 +906,8 @@ public partial class Spelling : Component
     }
 
     /// <summary>
-    ///     Spell checks the words in the <see cref="Text"/> property starting
-    ///     at the <see cref="WordIndex"/> position. This overload takes in the
+    ///     Spell checks the words in the <see cref="Text" /> property starting
+    ///     at the <see cref="WordIndex" /> position. This overload takes in the
     ///     text to spell check
     /// </summary>
     /// <param name="text" type="string">
@@ -895,8 +919,8 @@ public partial class Spelling : Component
     ///     Returns true if there is a word found in the text
     ///     that is not in the dictionaries
     /// </returns>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="WordIndex"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="WordIndex" />
     public bool SpellCheck(string text)
     {
         Text = text;
@@ -904,8 +928,8 @@ public partial class Spelling : Component
     }
 
     /// <summary>
-    ///     Spell checks the words in the <see cref="Text"/> property starting
-    ///     at the <see cref="WordIndex"/> position. This overload takes in
+    ///     Spell checks the words in the <see cref="Text" /> property starting
+    ///     at the <see cref="WordIndex" /> position. This overload takes in
     ///     the text to check and the WordIndex to start checking from.
     /// </summary>
     /// <param name="text" type="string">
@@ -922,8 +946,8 @@ public partial class Spelling : Component
     ///     Returns true if there is a word found in the text
     ///     that is not in the dictionaries
     /// </returns>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="WordIndex"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="WordIndex" />
     public bool SpellCheck(string text, int startWordIndex)
     {
         WordIndex = startWordIndex;
@@ -932,7 +956,7 @@ public partial class Spelling : Component
     }
 
     /// <summary>
-    ///     Populates the <see cref="Suggestions"/> property with word suggestions
+    ///     Populates the <see cref="Suggestions" /> property with word suggestions
     ///     for the word
     /// </summary>
     /// <param name="word" type="string">
@@ -941,14 +965,14 @@ public partial class Spelling : Component
     ///     </para>
     /// </param>
     /// <remarks>
-    ///     This method sets the <see cref="Text"/> property to the word.
-    ///     Then calls <see cref="TestWord(string)"/> on the word to generate the need
+    ///     This method sets the <see cref="Text" /> property to the word.
+    ///     Then calls <see cref="TestWord(string)" /> on the word to generate the need
     ///     information for suggestions. Note that the Text, CurrentWord and WordIndex
     ///     properties are set when calling this method.
     /// </remarks>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="Suggestions"/>
-    /// <seealso cref="TestWord(string)"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="Suggestions" />
+    /// <seealso cref="TestWord(string)" />
     public void Suggest(string word)
     {
         Text = word;
@@ -959,16 +983,16 @@ public partial class Spelling : Component
     }
 
     /// <summary>
-    ///     Populates the <see cref="Suggestions"/> property with word suggestions
-    ///     for the <see cref="CurrentWord"/>
+    ///     Populates the <see cref="Suggestions" /> property with word suggestions
+    ///     for the <see cref="CurrentWord" />
     /// </summary>
     /// <remarks>
-    ///     <see cref="TestWord()"/> or <see cref="TestWord(string)"/> must have been called before calling this method
+    ///     <see cref="TestWord()" /> or <see cref="TestWord(string)" /> must have been called before calling this method
     /// </remarks>
-    /// <seealso cref="CurrentWord"/>
-    /// <seealso cref="Suggestions"/>
-    /// <seealso cref="TestWord()"/>
-    /// <seealso cref="TestWord(string)"/>
+    /// <seealso cref="CurrentWord" />
+    /// <seealso cref="Suggestions" />
+    /// <seealso cref="TestWord()" />
+    /// <seealso cref="TestWord(string)" />
     public void Suggest()
     {
         // can't generate suggestions with out current word
@@ -983,14 +1007,14 @@ public partial class Spelling : Component
         List<Word> tempSuggestion = [];
 
         if ((SuggestionMode == SuggestionEnum.PhoneticNearMiss
-            || SuggestionMode == SuggestionEnum.Phonetic)
+             || SuggestionMode == SuggestionEnum.Phonetic)
             && _dictionary.PhoneticRules.Count > 0)
         {
             // generate phonetic code for possible root word
             Dictionary<string, string> codes = [];
-            foreach (string tempWord in _dictionary.PossibleBaseWords)
+            foreach (var tempWord in _dictionary.PossibleBaseWords)
             {
-                string tempCode = _dictionary.PhoneticCode(tempWord);
+                var tempCode = _dictionary.PhoneticCode(tempWord);
                 if (tempCode.Length > 0)
                 {
                     codes.TryAdd(tempCode, tempCode);
@@ -1000,14 +1024,14 @@ public partial class Spelling : Component
             if (codes.Count > 0)
             {
                 // search root words for phonetic codes
-                foreach (Word word in _dictionary.BaseWords.Values)
+                foreach (var word in _dictionary.BaseWords.Values)
                 {
                     if (codes.ContainsKey(word.PhoneticCode))
                     {
-                        List<string> words = _dictionary.ExpandWord(word);
+                        var words = _dictionary.ExpandWord(word);
 
                         // add expanded words
-                        foreach (string expandedWord in words)
+                        foreach (var expandedWord in words)
                         {
                             SuggestWord(expandedWord, tempSuggestion);
                         }
@@ -1045,12 +1069,12 @@ public partial class Spelling : Component
 
         TraceWriter.TraceVerbose("Total Suggestions Found: {0}", tempSuggestion.Count);
 
-        tempSuggestion.Sort();  // sorts by edit score
+        tempSuggestion.Sort(); // sorts by edit score
         Suggestions.Clear();
 
-        foreach (Word suggestion in tempSuggestion)
+        foreach (var suggestion in tempSuggestion)
         {
-            string word = suggestion.Text;
+            var word = suggestion.Text;
 
             // looking for duplicates
             if (!Suggestions.Contains(word))
@@ -1099,7 +1123,7 @@ public partial class Spelling : Component
             return true;
         }
 
-        string lowerWord = word.ToLower();
+        var lowerWord = word.ToLower();
         if (word != lowerWord)
         {
             return Dictionary.Contains(lowerWord);
@@ -1130,7 +1154,7 @@ public partial class Spelling : Component
             return true;
         }
 
-        string wordLower = word.ToLowerInvariant();
+        var wordLower = word.ToLowerInvariant();
         if (word != wordLower && Dictionary.Contains(wordLower))
         {
             word = wordLower;
@@ -1240,7 +1264,7 @@ public partial class Spelling : Component
     ///     List of words to automatically ignore
     /// </summary>
     /// <remarks>
-    ///     When <see cref="IgnoreAllWord"/> is clicked, the <see cref="CurrentWord"/> is added to this list
+    ///     When <see cref="IgnoreAllWord" /> is clicked, the <see cref="CurrentWord" /> is added to this list
     /// </remarks>
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -1266,7 +1290,7 @@ public partial class Spelling : Component
     ///     List of words and replacement values to automatically replace
     /// </summary>
     /// <remarks>
-    ///     When <see cref="ReplaceAllWord()"/> is clicked, the <see cref="CurrentWord"/> is added to this list
+    ///     When <see cref="ReplaceAllWord()" /> is clicked, the <see cref="CurrentWord" /> is added to this list
     /// </remarks>
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -1275,8 +1299,8 @@ public partial class Spelling : Component
     /// <summary>
     ///     The word to used when replacing the misspelled word
     /// </summary>
-    /// <seealso cref="ReplaceAllWord()"/>
-    /// <seealso cref="ReplaceWord()"/>
+    /// <seealso cref="ReplaceAllWord()" />
+    /// <seealso cref="ReplaceWord()" />
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public string ReplacementWord
@@ -1305,9 +1329,9 @@ public partial class Spelling : Component
     /// <summary>
     ///     An array of word suggestions for the correct spelling of the misspelled word
     /// </summary>
-    /// <seealso cref="Suggest()"/>
-    /// <seealso cref="SpellCheck()"/>
-    /// <seealso cref="MaxSuggestions"/>
+    /// <seealso cref="Suggest()" />
+    /// <seealso cref="SpellCheck()" />
+    /// <seealso cref="MaxSuggestions" />
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public List<string> Suggestions { get; } = [];
@@ -1397,25 +1421,4 @@ public partial class Spelling : Component
     }
 
     #endregion
-
-    #region Component Designer generated code
-
-    /// <summary>
-    /// Required method for Designer support - do not modify
-    /// the contents of this method with the code editor.
-    /// </summary>
-    private void InitializeComponent()
-    {
-        _components = new Container();
-    }
-
-    #endregion
-
-    public void AddAutoCompleteWords(IEnumerable<string> words)
-    {
-        foreach (string word in words)
-        {
-            _autoCompleteWords.Add(word);
-        }
-    }
 }

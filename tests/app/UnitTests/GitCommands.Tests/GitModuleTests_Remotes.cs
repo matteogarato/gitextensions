@@ -1,7 +1,5 @@
 ﻿using System.Collections.Frozen;
-using CommonTestUtils;
 using GitCommands;
-using GitCommands.Config;
 using GitCommands.Git;
 
 namespace GitCommandsTests;
@@ -17,9 +15,9 @@ partial class GitModuleTests
 
         using (_executable.StageOutput($"remote add \"{name}\" \"{path.ToPosixPath()}\"", output))
         {
-            using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-            using IDisposable configListEffective = _executable.StageOutput("config list --includes --null", "");
-            using IDisposable configListLocal = _executable.StageOutput("config list --local --includes --null", "");
+            using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+            using var configListEffective = _executable.StageOutput("config list --includes --null", "");
+            using var configListLocal = _executable.StageOutput("config list --local --includes --null", "");
             GitVersion.ResetVersion();
 
             _gitModule.AddRemote(name, path).Should().Be(output);
@@ -38,10 +36,10 @@ partial class GitModuleTests
         const string remoteName = "foo";
         const string output = "bar";
 
-        using IDisposable remoteRemove = _executable.StageOutput($"remote rm \"{remoteName}\"", output);
-        using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-        using IDisposable configListEffective = _executable.StageOutput("config list --includes --null", "");
-        using IDisposable configListLocal = _executable.StageOutput("config list --local --includes --null", "");
+        using var remoteRemove = _executable.StageOutput($"remote rm \"{remoteName}\"", output);
+        using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+        using var configListEffective = _executable.StageOutput("config list --includes --null", "");
+        using var configListLocal = _executable.StageOutput("config list --local --includes --null", "");
         GitVersion.ResetVersion();
 
         _gitModule.RemoveRemote(remoteName).Should().Be(output);
@@ -57,10 +55,10 @@ partial class GitModuleTests
         const string newName = "far";
         const string output = "bar";
 
-        using IDisposable remoteRename = _executable.StageOutput($"remote rename \"{oldName}\" \"{newName}\"", output);
-        using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-        using IDisposable configListEffective = _executable.StageOutput("config list --includes --null", "");
-        using IDisposable configListLocal = _executable.StageOutput("config list --local --includes --null", "");
+        using var remoteRename = _executable.StageOutput($"remote rename \"{oldName}\" \"{newName}\"", output);
+        using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+        using var configListEffective = _executable.StageOutput("config list --includes --null", "");
+        using var configListLocal = _executable.StageOutput("config list --local --includes --null", "");
         GitVersion.ResetVersion();
 
         _gitModule.RenameRemote(oldName, newName).Should().Be(output);
@@ -85,35 +83,35 @@ partial class GitModuleTests
     public async Task GetRemotes_should_parse_correctly_configured_remotes()
     {
         string[] lines =
-            [
-                "RussKie\tgit://github.com/RussKie/gitextensions.git (fetch)",
-                "RussKie\tgit://github.com/RussKie/gitextensions.git (push)",
-                "origin\tgit@github.com:drewnoakes/gitextensions.git (fetch)",
-                "origin\tgit@github.com:drewnoakes/gitextensions.git (push)",
-                "upstream\tgit@github.com:gitextensions/gitextensions.git (fetch)",
-                "upstream\tgit@github.com:gitextensions/gitextensions.git (push)",
-                "asymmetrical\thttps://github.com/gitextensions/fetch.git (fetch)",
-                "asymmetrical\thttps://github.com/gitextensions/push.git (push)",
-                "with-space\tc:\\Bare Repo (fetch)",
-                "with-space\tc:\\Bare Repo (push)",
+        [
+            "RussKie\tgit://github.com/RussKie/gitextensions.git (fetch)",
+            "RussKie\tgit://github.com/RussKie/gitextensions.git (push)",
+            "origin\tgit@github.com:drewnoakes/gitextensions.git (fetch)",
+            "origin\tgit@github.com:drewnoakes/gitextensions.git (push)",
+            "upstream\tgit@github.com:gitextensions/gitextensions.git (fetch)",
+            "upstream\tgit@github.com:gitextensions/gitextensions.git (push)",
+            "asymmetrical\thttps://github.com/gitextensions/fetch.git (fetch)",
+            "asymmetrical\thttps://github.com/gitextensions/push.git (push)",
+            "with-space\tc:\\Bare Repo (fetch)",
+            "with-space\tc:\\Bare Repo (push)",
 
-                // A remote may have multiple push URLs, but only a single fetch URL
-                "multi\tgit@github.com:drewnoakes/gitextensions.git (fetch)",
-                "multi\tgit@github.com:drewnoakes/gitextensions.git (push)",
-                "multi\tgit@gitlab.com:drewnoakes/gitextensions.git (push)",
+            // A remote may have multiple push URLs, but only a single fetch URL
+            "multi\tgit@github.com:drewnoakes/gitextensions.git (fetch)",
+            "multi\tgit@github.com:drewnoakes/gitextensions.git (push)",
+            "multi\tgit@gitlab.com:drewnoakes/gitextensions.git (push)",
 
-                "ignoreunknown\tgit@github.com:drewnoakes/gitextensions.git (unknownType)",
-                "ignorenotab git@github.com:drewnoakes/gitextensions.git (fetch)",
-                "ignoremissingtype\tgit@gitlab.com:drewnoakes/gitextensions.git",
-                "git@gitlab.com:drewnoakes/gitextensions.git",
+            "ignoreunknown\tgit@github.com:drewnoakes/gitextensions.git (unknownType)",
+            "ignorenotab git@github.com:drewnoakes/gitextensions.git (fetch)",
+            "ignoremissingtype\tgit@gitlab.com:drewnoakes/gitextensions.git",
+            "git@gitlab.com:drewnoakes/gitextensions.git",
 
-                "with_option\thttps://github.com/flannelhead/jsmn-stream.git (fetch) [blob:none]",
-                "with_option\thttps://github.com/flannelhead/jsmn-stream.git (push) [ignored]"
-            ];
+            "with_option\thttps://github.com/flannelhead/jsmn-stream.git (fetch) [blob:none]",
+            "with_option\thttps://github.com/flannelhead/jsmn-stream.git (push) [ignored]"
+        ];
 
         using (_executable.StageOutput("remote -v", string.Join("\n", lines)))
         {
-            IReadOnlyList<GitExtensions.Extensibility.Git.Remote> remotes = await _gitModule.GetRemotesAsync();
+            var remotes = await _gitModule.GetRemotesAsync();
 
             remotes.Count.Should().Be(7);
 
@@ -162,7 +160,7 @@ partial class GitModuleTests
 
         using (_executable.StageOutput("remote", string.Join("\n", lines)))
         {
-            IReadOnlyList<string> remotes = _gitModule.GetRemoteNames();
+            var remotes = _gitModule.GetRemoteNames();
 
             remotes.Should().Equal(lines);
         }
@@ -180,25 +178,28 @@ partial class GitModuleTests
         // Mock IGitModule.GetRemoteNames() call
         using (_executable.StageOutput("remote", remotes))
         {
-            using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-            using IDisposable configListEffective = _executable.StageOutput("config list --includes --null", settings1);
-            using IDisposable configListLocal = _executable.StageOutput("config list --local --includes --null", settings1);
+            using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+            using var configListEffective = _executable.StageOutput("config list --includes --null", settings1);
+            using var configListLocal =
+                _executable.StageOutput("config list --local --includes --null", settings1);
             GitVersion.ResetVersion();
 
-            FrozenDictionary<string, Color> colors = _gitModule.GetRemoteColors();
+            var colors = _gitModule.GetRemoteColors();
 
             colors.Count.Should().Be(1);
             colors[fork].Should().Be(Color.FromArgb(204, 204, 204));
 
             // "Color" another remote
-            using IDisposable configListEffective2 = _executable.StageOutput("config list --includes --null", settings2);
-            using IDisposable configListLocal2 = _executable.StageOutput("config list --local --includes --null", settings2);
+            using var configListEffective2 =
+                _executable.StageOutput("config list --includes --null", settings2);
+            using var configListLocal2 =
+                _executable.StageOutput("config list --local --includes --null", settings2);
             _gitModule.InvalidateGitSettings();
             _gitModule.GetEffectiveSetting("reload now");
             _gitModule.GetSettings("reload local settings, too");
 
             // Call again to check if cached colors are returned
-            FrozenDictionary<string, Color> colors1 = _gitModule.GetRemoteColors();
+            var colors1 = _gitModule.GetRemoteColors();
 
             colors1.Count.Should().Be(1);
             colors1[fork].Should().Be(Color.FromArgb(204, 204, 204));
@@ -217,25 +218,28 @@ partial class GitModuleTests
         // Mock IGitModule.GetRemoteNames() call
         using (_executable.StageOutput("remote", remotes))
         {
-            using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-            using IDisposable configListEffective = _executable.StageOutput("config list --includes --null", settings1);
-            using IDisposable configListLocal = _executable.StageOutput("config list --local --includes --null", settings1);
+            using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+            using var configListEffective = _executable.StageOutput("config list --includes --null", settings1);
+            using var configListLocal =
+                _executable.StageOutput("config list --local --includes --null", settings1);
             GitVersion.ResetVersion();
 
-            FrozenDictionary<string, Color> colors = _gitModule.GetRemoteColors();
+            var colors = _gitModule.GetRemoteColors();
 
             colors.Count.Should().Be(1);
             colors[fork].Should().Be(Color.FromArgb(204, 204, 204));
 
             // "Color" another remote
-            using IDisposable configListEffective2 = _executable.StageOutput("config list --includes --null", settings2);
-            using IDisposable configListLocal2 = _executable.StageOutput("config list --local --includes --null", settings2);
+            using var configListEffective2 =
+                _executable.StageOutput("config list --includes --null", settings2);
+            using var configListLocal2 =
+                _executable.StageOutput("config list --local --includes --null", settings2);
             _gitModule.InvalidateGitSettings();
             _gitModule.GetEffectiveSetting("reload now");
             _gitModule.GetSettings("reload local settings, too");
 
             // Call again to check if cached colors are returned
-            FrozenDictionary<string, Color> colors1 = _gitModule.GetRemoteColors();
+            var colors1 = _gitModule.GetRemoteColors();
 
             colors1.Count.Should().Be(1);
 
@@ -249,7 +253,7 @@ partial class GitModuleTests
         using (_executable.StageOutput("remote", remotes))
         {
             // Reload the colors
-            FrozenDictionary<string, Color> colors2 = _gitModule.GetRemoteColors();
+            var colors2 = _gitModule.GetRemoteColors();
 
             colors2.Count.Should().Be(2);
             colors2[fork].Should().Be(Color.FromArgb(204, 204, 204)); // "#cccccc"
@@ -268,12 +272,13 @@ partial class GitModuleTests
         // Mock IGitModule.GetRemoteNames() call
         using (_executable.StageOutput("remote", remotes))
         {
-            using IDisposable gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
-            using IDisposable configListEffective = _executable.StageOutput("config list --includes --null", settings1);
-            using IDisposable configListLocal = _executable.StageOutput("config list --local --includes --null", settings1);
+            using var gitVersion = _executable.StageOutput("--version", "git version 2.46.0");
+            using var configListEffective = _executable.StageOutput("config list --includes --null", settings1);
+            using var configListLocal =
+                _executable.StageOutput("config list --local --includes --null", settings1);
             GitVersion.ResetVersion();
 
-            FrozenDictionary<string, Color> colors = _gitModule.GetRemoteColors();
+            var colors = _gitModule.GetRemoteColors();
 
             colors.Count.Should().Be(1);
             _gitModule.GetTestAccessor().RemoteColors!.Count.Should().Be(1);

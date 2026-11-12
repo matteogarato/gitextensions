@@ -1,19 +1,18 @@
 ﻿using System.Text;
+using GitCommands.Settings;
 using GitExtensions.Extensibility;
 using GitExtensions.Extensibility.Git;
 
 namespace GitCommands.Git;
 
 /// <summary>
-///  Provides a minimal git execution context for lightweight repository operations such as reading the current branch.
+///     Provides a minimal git execution context for lightweight repository operations such as reading the current branch.
 /// </summary>
 internal sealed class GitExecutor : IGitExecutor
 {
     private static Encoding? _systemEncoding;
 
     private readonly IGitDirectoryResolver _gitDirectoryResolverInstance;
-
-    public bool IsReftableRepo { get; set; }
 
     public GitExecutor(IGitDirectoryResolver gitDirectoryResolver, string? workingDir)
     {
@@ -32,7 +31,8 @@ internal sealed class GitExecutor : IGitExecutor
             // (e.g. zsh), which glob-expands patterns like "--exclude=refs/sessions/**" before git ever sees them. zsh's default
             // "nomatch" behaviour then aborts the whole command with a non-zero exit and no output when the pattern matches nothing,
             // which silently empties revision/diff output for any repo whose distro defaults to zsh (or any shell) with that setting.
-            GitExecutable = new Executable(() => AppSettings.WslCommand, WorkingDir, $"-d {WslDistro} --cd {WorkingDir.RemoveTrailingPathSeparator().Quote()} --exec {AppSettings.WslGitCommand} ");
+            GitExecutable = new Executable(() => AppSettings.WslCommand, WorkingDir,
+                $"-d {WslDistro} --cd {WorkingDir.RemoveTrailingPathSeparator().Quote()} --exec {AppSettings.WslGitCommand} ");
             GitCommandRunner = new GitCommandRunner(GitExecutable, () => SystemEncoding);
         }
         else
@@ -44,57 +44,102 @@ internal sealed class GitExecutor : IGitExecutor
 
     /// <inheritdoc />
     /// <remarks>
-    ///  Setter is needed for tests that need to replace the GitCommandRunner with a mock.
+    ///     Setter is needed for tests that need to replace the GitCommandRunner with a mock.
     /// </remarks>
-    public IGitCommandRunner GitCommandRunner { get; private set; }
+    private IGitCommandRunner GitCommandRunner { get; set; }
 
     /// <inheritdoc />
     /// <remarks>
-    ///  Setter is needed for tests that need to replace the GitExecutable with a mock.
+    ///     Setter is needed for tests that need to replace the GitExecutable with a mock.
     /// </remarks>
-    public IExecutable GitExecutable { get; private set; }
+    private IExecutable GitExecutable { get; set; }
 
     /// <summary>
-    ///  Gets the system encoding.
+    ///     Gets the system encoding.
     /// </summary>
-    public static Encoding SystemEncoding => _systemEncoding ??= new SystemEncodingReader().Read();
+    public static Encoding SystemEncoding
+    {
+        get => _systemEncoding ??= new SystemEncodingReader().Read();
+    }
 
-    public string WorkingDir { get; init; }
+    private string WorkingDir { get; }
 
     /// <summary>
-    ///  Gets the  Windows Git executable associated with this executor.
+    ///     Gets the  Windows Git executable associated with this executor.
     /// </summary>
     /// <remarks>
-    ///  Setter is needed for tests that need to replace the GitWindowsExecutable with a mock.
+    ///     Setter is needed for tests that need to replace the GitWindowsExecutable with a mock.
     /// </remarks>
-    public IExecutable GitWindowsExecutable { get; private set; }
+    private IExecutable GitWindowsExecutable { get; set; }
 
-    public IGitCommandRunner GitWindowsCommandRunner { get; }
+    bool IGitExecutor.IsReftableRepo { get; set; }
 
-    public string WslDistro { get; }
+    /// <inheritdoc />
+    /// <remarks>
+    ///     Setter is needed for tests that need to replace the GitCommandRunner with a mock.
+    /// </remarks>
+    IGitCommandRunner IGitExecutor.GitCommandRunner
+    {
+        get => GitCommandRunner;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    ///     Setter is needed for tests that need to replace the GitExecutable with a mock.
+    /// </remarks>
+    IExecutable IGitExecutor.GitExecutable
+    {
+        get => GitExecutable;
+    }
+
+    string IGitExecutor.WorkingDir
+    {
+        get => WorkingDir;
+    }
 
     /// <summary>
-    ///  Gets the ".git" directory path.
+    ///     Gets the  Windows Git executable associated with this executor.
     /// </summary>
-    public string GetGitDirectory()
+    /// <remarks>
+    ///     Setter is needed for tests that need to replace the GitWindowsExecutable with a mock.
+    /// </remarks>
+    IExecutable IGitExecutor.GitWindowsExecutable
+    {
+        get => GitWindowsExecutable;
+    }
+
+    IGitCommandRunner IGitExecutor.GitWindowsCommandRunner { get; }
+
+    string IGitExecutor.WslDistro { get; }
+
+    /// <summary>
+    ///     Gets the ".git" directory path.
+    /// </summary>
+    string IGitExecutor.GetGitDirectory()
     {
         return GetGitDirectory(WorkingDir);
     }
 
     /// <summary>
-    ///  Gets the path to the Git directory associated with the specified repository path.
+    ///     Gets the path to the Git directory associated with the specified repository path.
     /// </summary>
-    /// <param name="repositoryPath">The file system path to the root of the repository. This path must refer to an existing Git repository.</param>
+    /// <param name="repositoryPath">
+    ///     The file system path to the root of the repository. This path must refer to an existing
+    ///     Git repository.
+    /// </param>
     /// <returns>
-    ///  The path to the Git directory for the specified repository, or null if the path does not correspond to a
-    ///  valid Git repository.
+    ///     The path to the Git directory for the specified repository, or null if the path does not correspond to a
+    ///     valid Git repository.
     /// </returns>
     internal string GetGitDirectory(string repositoryPath)
     {
         return _gitDirectoryResolverInstance.Resolve(repositoryPath);
     }
 
-    internal TestAccessor GetTestAccessor() => new(this);
+    internal TestAccessor GetTestAccessor()
+    {
+        return new TestAccessor(this);
+    }
 
     internal readonly struct TestAccessor(GitExecutor executor)
     {

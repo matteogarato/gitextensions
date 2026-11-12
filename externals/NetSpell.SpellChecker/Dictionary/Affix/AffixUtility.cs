@@ -1,9 +1,9 @@
 using System;
 
-namespace NetSpell.SpellChecker.Dictionary.Affix;
+namespace SpellChecker.Dictionary.Affix;
 
 /// <summary>
-/// Summary description for AffixUtility.
+///     Summary description for AffixUtility.
 /// </summary>
 public static class AffixUtility
 {
@@ -25,16 +25,16 @@ public static class AffixUtility
     /// </returns>
     public static string AddPrefix(string word, AffixRule rule)
     {
-        foreach (AffixEntry entry in rule.AffixEntries)
+        foreach (var entry in rule.AffixEntries)
         {
             // check that this entry is valid
             if (word.Length >= entry.ConditionCount)
             {
-                int passCount = 0;
-                for (int i = 0; i < entry.ConditionCount; i++)
+                var passCount = 0;
+                for (var i = 0; i < entry.ConditionCount; i++)
                 {
                     int charCode = word[i];
-                    if ((entry.Condition[charCode] & (1 << i)) == (1 << i))
+                    if ((entry.Condition[charCode] & (1 << i)) == 1 << i)
                     {
                         passCount++;
                     }
@@ -46,7 +46,7 @@ public static class AffixUtility
 
                 if (passCount == entry.ConditionCount)
                 {
-                    string tempWord = word[entry.StripCharacters.Length..];
+                    var tempWord = word[entry.StripCharacters.Length..];
                     tempWord = entry.AddCharacters + tempWord;
                     return tempWord;
                 }
@@ -74,16 +74,16 @@ public static class AffixUtility
     /// </returns>
     public static string AddSuffix(string word, AffixRule rule)
     {
-        foreach (AffixEntry entry in rule.AffixEntries)
+        foreach (var entry in rule.AffixEntries)
         {
             // check that this entry is valid
             if (word.Length >= entry.ConditionCount)
             {
-                int passCount = 0;
-                for (int i = 0; i < entry.ConditionCount; i++)
+                var passCount = 0;
+                for (var i = 0; i < entry.ConditionCount; i++)
                 {
                     int charCode = word[^(entry.ConditionCount - i)];
-                    if ((entry.Condition[charCode] & (1 << i)) == (1 << i))
+                    if ((entry.Condition[charCode] & (1 << i)) == 1 << i)
                     {
                         passCount++;
                     }
@@ -95,8 +95,8 @@ public static class AffixUtility
 
                 if (passCount == entry.ConditionCount)
                 {
-                    int tempLen = word.Length - entry.StripCharacters.Length;
-                    string tempWord = word[..tempLen];
+                    var tempLen = word.Length - entry.StripCharacters.Length;
+                    var tempWord = word[..tempLen];
                     tempWord += entry.AddCharacters;
                     return tempWord;
                 }
@@ -122,7 +122,7 @@ public static class AffixUtility
     public static void EncodeConditions(string conditionText, AffixEntry entry)
     {
         // clear the conditions array
-        for (int i = 0; i < entry.Condition.Length; i++)
+        for (var i = 0; i < entry.Condition.Length; i++)
         {
             entry.Condition[i] = 0;
         }
@@ -134,20 +134,20 @@ public static class AffixUtility
             return;
         }
 
-        bool neg = false;  /* complement indicator */
-        bool group = false;  /* group indicator */
-        bool end = false;   /* end condition indicator */
-        int num = 0;    /* number of conditions */
+        var neg = false; /* complement indicator */
+        var group = false; /* group indicator */
+        var end = false; /* end condition indicator */
+        var num = 0; /* number of conditions */
 
         Span<char> memberChars = stackalloc char[200];
-        int numMember = 0;   /* number of member in group */
+        var numMember = 0; /* number of member in group */
 
-        foreach (char cond in conditionText)
+        foreach (var cond in conditionText)
         {
             // parse member group
             if (cond == '[')
             {
-                group = true;  // start a group
+                group = true; // start a group
             }
             else if (cond == '^' && group)
             {
@@ -165,7 +165,7 @@ public static class AffixUtility
             }
             else
             {
-                end = true;  // no group
+                end = true; // no group
             }
 
             // set condition
@@ -176,13 +176,13 @@ public static class AffixUtility
                     if (neg)
                     {
                         // turn all chars on
-                        for (int j = 0; j < entry.Condition.Length; j++)
+                        for (var j = 0; j < entry.Condition.Length; j++)
                         {
                             entry.Condition[j] = entry.Condition[j] | (1 << num);
                         }
 
                         // turn off chars in member group
-                        for (int j = 0; j < numMember; j++)
+                        for (var j = 0; j < numMember; j++)
                         {
                             int charCode = memberChars[j];
                             entry.Condition[charCode] = entry.Condition[charCode] & ~(1 << num);
@@ -191,7 +191,7 @@ public static class AffixUtility
                     else
                     {
                         // turn on chars in member group
-                        for (int j = 0; j < numMember; j++)
+                        for (var j = 0; j < numMember; j++)
                         {
                             int charCode = memberChars[j];
                             entry.Condition[charCode] = entry.Condition[charCode] | (1 << num);
@@ -207,7 +207,7 @@ public static class AffixUtility
                     if (cond == '.')
                     {
                         // wild card character, turn all chars on
-                        for (int j = 0; j < entry.Condition.Length; j++)
+                        for (var j = 0; j < entry.Condition.Length; j++)
                         {
                             entry.Condition[j] = entry.Condition[j] | (1 << num);
                         }
@@ -249,20 +249,22 @@ public static class AffixUtility
     /// </remarks>
     public static string RemovePrefix(string word, AffixEntry entry)
     {
-        int tempLength = word.Length - entry.AddCharacters.Length;
-        if ((tempLength > 0)
-            && (tempLength + entry.StripCharacters.Length >= entry.ConditionCount)
+        var tempLength = word.Length - entry.AddCharacters.Length;
+        if (tempLength > 0
+            && tempLength + entry.StripCharacters.Length >= entry.ConditionCount
             && word.StartsWith(entry.AddCharacters))
         {
             // strip chars plus word without affix
-            string tempWord = $"{entry.StripCharacters}{word.AsSpan(entry.AddCharacters.Length)}";
+            var tempWord = $"{entry.StripCharacters}{word.AsSpan(entry.AddCharacters.Length)}";
 
             // check that this is valid
-            for (int i = 0; i < entry.ConditionCount; i++)
+            for (var i = 0; i < entry.ConditionCount; i++)
             {
                 int charCode = tempWord[i];
-                if ((entry.Condition[charCode] & (1 << i)) != (1 << i))
+                if ((entry.Condition[charCode] & (1 << i)) != 1 << i)
+                {
                     return word; // not valid
+                }
             }
 
             return tempWord;
@@ -292,20 +294,22 @@ public static class AffixUtility
     /// </remarks>
     public static string RemoveSuffix(string word, AffixEntry entry)
     {
-        int tempLength = word.Length - entry.AddCharacters.Length;
-        if ((tempLength > 0)
-            && (tempLength + entry.StripCharacters.Length >= entry.ConditionCount)
+        var tempLength = word.Length - entry.AddCharacters.Length;
+        if (tempLength > 0
+            && tempLength + entry.StripCharacters.Length >= entry.ConditionCount
             && word.EndsWith(entry.AddCharacters))
         {
             // word without affix plus strip chars
-            string tempWord = $"{word.AsSpan(0, tempLength)}{entry.StripCharacters}";
+            var tempWord = $"{word.AsSpan(0, tempLength)}{entry.StripCharacters}";
 
             // check that this is valid
-            for (int i = 0; i < entry.ConditionCount; i++)
+            for (var i = 0; i < entry.ConditionCount; i++)
             {
                 int charCode = tempWord[^(entry.ConditionCount - i)];
-                if ((entry.Condition[charCode] & (1 << i)) != (1 << i))
+                if ((entry.Condition[charCode] & (1 << i)) != 1 << i)
+                {
                     return word; // not valid
+                }
             }
 
             return tempWord;

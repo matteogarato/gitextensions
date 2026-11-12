@@ -1,7 +1,7 @@
 ﻿namespace GitUI.CommandsDialogs;
 
 /// <summary>
-/// Shows a form asking if the user wants to reset their changes.
+///     Shows a form asking if the user wants to reset their changes.
 /// </summary>
 public partial class FormResetChanges : GitExtensionsForm
 {
@@ -13,8 +13,6 @@ public partial class FormResetChanges : GitExtensionsForm
         Reset,
         ResetAndDelete
     }
-
-    public ActionEnum SelectedAction { get; private set; }
 
     public FormResetChanges(bool hasExistingFiles, bool hasNewFiles, string? confirmationMessage = null)
     {
@@ -30,12 +28,15 @@ public partial class FormResetChanges : GitExtensionsForm
             confirmationMessage = confirmationMessage.ReplaceLineEndings(Environment.NewLine);
             txtMessage.Text = confirmationMessage;
 
-            Size formSize = Size;
-            Size preferredSize = formSize + txtMessage.PreferredSize - txtMessage.Size;
-            formSize.Height = Math.Clamp(preferredSize.Height, formSize.Height, Screen.GetWorkingArea(this).Height * 3 / 4);
-            formSize.Width = Math.Clamp(preferredSize.Width + SystemInformation.VerticalScrollBarWidth, formSize.Width, Screen.GetWorkingArea(this).Width * 3 / 4);
+            var formSize = Size;
+            var preferredSize = formSize + txtMessage.PreferredSize - txtMessage.Size;
+            formSize.Height = Math.Clamp(preferredSize.Height, formSize.Height,
+                Screen.GetWorkingArea(this).Height * 3 / 4);
+            formSize.Width = Math.Clamp(preferredSize.Width + SystemInformation.VerticalScrollBarWidth, formSize.Width,
+                Screen.GetWorkingArea(this).Width * 3 / 4);
             Size = formSize;
-            txtMessage.ScrollBars = confirmationMessage.Contains(Environment.NewLine) ? ScrollBars.Both : ScrollBars.None;
+            txtMessage.ScrollBars =
+                confirmationMessage.Contains(Environment.NewLine) ? ScrollBars.Both : ScrollBars.None;
             txtMessage.WordWrap = true;
         }
 
@@ -57,14 +58,18 @@ public partial class FormResetChanges : GitExtensionsForm
         }
     }
 
+    public ActionEnum SelectedAction { get; private set; }
+
     /// <summary>
-    /// Shows the dialog modally under the given owner, and returns the user's selection (RESET, RESET_AND_DELETE, or CANCEL).
+    ///     Shows the dialog modally under the given owner, and returns the user's selection (RESET, RESET_AND_DELETE, or
+    ///     CANCEL).
     /// </summary>
     /// <param name="owner">Shows this form as a modal dialog with the specified owner.</param>
     /// <param name="hasExistingFiles">Where there are existing (modified) files selected.</param>
     /// <param name="hasNewFiles">Where there are new (untracked) files selected.</param>
     /// <param name="confirmationMessage">Optional confirmation message replacing the default.</param>
-    public static ActionEnum ShowResetDialog(IWin32Window? owner, bool hasExistingFiles, bool hasNewFiles, string? confirmationMessage = null)
+    public static ActionEnum ShowResetDialog(IWin32Window? owner, bool hasExistingFiles, bool hasNewFiles,
+        string? confirmationMessage = null)
     {
         using FormResetChanges form = new(hasExistingFiles, hasNewFiles, confirmationMessage);
         form.ShowDialog(owner);

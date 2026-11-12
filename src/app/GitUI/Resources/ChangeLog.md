@@ -4,29 +4,29 @@
 ### Version v7.2.1 (18 Aug 2026)
 
 #### Changes:
-* [#13238] fix(TextAreaControl): measure glyph width
-* [#13236] feat(issue-triage): close legacy runtime loading reports
-* [#13234] feat(plugins): validate compatibility on load
-* [#13230] fix(scripts): avoid crash by outdated plugins
-* [#13225] fix(bug reporter): remove wrong configuration
-* [#13221] feat(cross-platform): add names of diff/merge tools
-* [#13219] fix(push reject): ignore ANSI escape sequences
+
+* [#13238] fix (TextAreaControl): measure glyph width
+* [#13236] feat (issue-triage): close legacy runtime loading reports
+* [#13234] feat (plugins): validate compatibility on load
+* [#13230] fix (scripts): avoid crash by outdated plugins
+* [#13225] fix (bug reporter): remove wrong configuration
+* [#13221] feat (cross-platform): add names of diff/merge tools
+* [#13219] fix (push reject): ignore ANSI escape sequences
 * [#13214] fix: three cross-platform fixes for HOME, the avatar cache path and meld
-* [#13210] ci(pr-automation): set appropriate permissions for updating PRs
-* [#13209] fix(cancellation): Pass cancellation tokens to awaited tasks
-* [#13206] fix(push button): restore color if not behind
-* [#13203] perf(clone): choose Windows / WSL git according to destination directory
+* [#13210] ci (pr-automation): set appropriate permissions for updating PRs
+* [#13209] fix (cancellation): Pass cancellation tokens to awaited tasks
+* [#13206] fix (push button): restore color if not behind
+* [#13203] perf (clone): choose Windows / WSL git according to destination directory
 * [#13199] Limit reset check to scope of documentation to "not loose commits"
 * [#13182] ci: only clear no-recent-activity label on author response
-* [#13180] fix(worktree): normalise new branch name and offer to switch after create
+* [#13180] fix (worktree): normalise new branch name and offer to switch after create
 * [#13174] Preserve anchored repositories when trimming recent repository history
 * [#13168] Push ShellProvider into DI
 * [#13165] docs: add DAG (Docs-Augmented Generation) agent documentation
-* [#13163] feat(confirmations): Add in-dialog "Don't show again" checkbox
+* [#13163] feat (confirmations): Add in-dialog "Don't show again" checkbox
 * [#13116] ci: harden build workflow and fix test-report gating
 * [#13103] fix-issue-12926-camel-humps-1865650694615130258
-* [#12985] chore(rebase): Bypass false debug assertion
-
+* [#12985] chore (rebase): Bypass false debug assertion
 
 [#13238]:https://github.com/gitextensions/gitextensions/pull/13238
 [#13236]:https://github.com/gitextensions/gitextensions/pull/13236
@@ -51,29 +51,28 @@
 [#13103]:https://github.com/gitextensions/gitextensions/pull/13103
 [#12985]:https://github.com/gitextensions/gitextensions/pull/12985
 
-
 ### Version v7.2.0 (10 Jul 2026)
 
 #### Changes:
+
 * [#13159] fix: unblock UI thread while awaiting merge tool
 * [#13158] perf: make classes sealed
-* [#13154] fix(ISetting): read and store bool in lowercase
-* [#13150] ci(cla-check): Reject "noreply" email
+* [#13154] fix (ISetting): read and store bool in lowercase
+* [#13150] ci (cla-check): Reject "noreply" email
 * [#13148] Do not show merge commit editor when there are no errors
-* [#13147] feat(.gitignore): Support single selected folder
+* [#13147] feat (.gitignore): Support single selected folder
 * [#13145] Fix unhandled exception when selecting non-TrueType font in Appearance settings
 * [#13143] fix: checkout branch --track
 * [#13139] Avoid some string allocations, plus some collection tweaks
-* [#13138] fix(Reset changes): Restrict to working dir
-* [#13137] feat(RevisionGrid): Preview amend on Ctrl+click
-* [#13135] build(translation): Verify Transifex base files
+* [#13138] fix (Reset changes): Restrict to working dir
+* [#13137] feat (RevisionGrid): Preview amend on Ctrl+click
+* [#13135] build (translation): Verify Transifex base files
 * [#13134] fix: dispose Process handles
-* [#13133] feat(RevisionGrid): Improve label hover hit-test
-* [#13129] fix(FormCommit): Avoid empty diff on multi-selection
+* [#13133] feat (RevisionGrid): Improve label hover hit-test
+* [#13129] fix (FormCommit): Avoid empty diff on multi-selection
 * [#13117] fix: remove unused UxTheme native methods
-* [#13104] feat(RevisionGrid): Draw ahead/behind info; adapt tag shape
+* [#13104] feat (RevisionGrid): Draw ahead/behind info; adapt tag shape
 * [#13064] feat: hide fetch-all UI when there is only one remote
-
 
 [#13159]:https://github.com/gitextensions/gitextensions/pull/13159
 [#13158]:https://github.com/gitextensions/gitextensions/pull/13158
@@ -94,18 +93,17 @@
 [#13104]:https://github.com/gitextensions/gitextensions/pull/13104
 [#13064]:https://github.com/gitextensions/gitextensions/pull/13064
 
-
 ### Version v7.1.0 (14 Jun 2026)
 
 #### Changes:
+
 * [#13115] ci: convert FabricBot automation to GitHub Actions
 * [#13114] ci: add CLA sign-off check workflow for pull requests
 * [#13111] fix: copilot to mention extensibility changes in reviews
 * [#13108] Avoid some heap allocations
 * [#13107] Make private & internal classes sealed, plus some collection tweaks
-* [#13095] feat(FormFixHome): Detect alternative global git config
+* [#13095] feat (FormFixHome): Detect alternative global git config
 * [#13035] Implement Mintty console emulator support
-
 
 [#13115]:https://github.com/gitextensions/gitextensions/pull/13115
 [#13114]:https://github.com/gitextensions/gitextensions/pull/13114
@@ -115,48 +113,47 @@
 [#13095]:https://github.com/gitextensions/gitextensions/pull/13095
 [#13035]:https://github.com/gitextensions/gitextensions/pull/13035
 
-
 ### Version v7.0.1 (31 May 2026)
 
 #### Changes:
-* [#13090] fix(SubmoduleHelpers): Support quoted filenames
-* [#13087] fix(StartFileHistoryDialog): Add missing call
-* [#13084] refactor(AppSettings): Replace dynamic type coercion with baked-in converters
-* [#13049] Optimized StringBuilder usage
 
+* [#13090] fix (SubmoduleHelpers): Support quoted filenames
+* [#13087] fix (StartFileHistoryDialog): Add missing call
+* [#13084] refactor (AppSettings): Replace dynamic type coercion with baked-in converters
+* [#13049] Optimized StringBuilder usage
 
 [#13090]:https://github.com/gitextensions/gitextensions/pull/13090
 [#13087]:https://github.com/gitextensions/gitextensions/pull/13087
 [#13084]:https://github.com/gitextensions/gitextensions/pull/13084
 [#13049]:https://github.com/gitextensions/gitextensions/pull/13049
 
-
 ### Version v7.0.0 (25 May 2026)
 
 #### Changes:
-* [#13081] fix(StartFileHistoryDialog): Avoid error popup
-* [#13080] fix(create repo): Pass ServiceProvider
+
+* [#13081] fix (StartFileHistoryDialog): Avoid error popup
+* [#13080] fix (create repo): Pass ServiceProvider
 * [#13077] Fix regex pattern for rejected push detection
 * [#13075] feat: "Reset Changes" and "Commit" working directory context menu (#9…
-* [#13074] fix(remote branch prefix): Allow trailing slash
+* [#13074] fix (remote branch prefix): Allow trailing slash
 * [#13073] fix: Use ReadUnaligned for IsArtificial
-* [#13072] fix(save selected as): Support top-level files
+* [#13072] fix (save selected as): Support top-level files
 * [#13062] refactor: Remove nullability of ISetting<T>.Value
 * [#13061] ci: Enable display of test errors
-* [#13058] perf(ObjectId): convert from sealed class to readonly struct
-* [#13057] fix(FileStatusList): Avoid filename truncation to empty
-* [#13054] fix(set_version_to.cs): Add shebang
+* [#13058] perf (ObjectId): convert from sealed class to readonly struct
+* [#13057] fix (FileStatusList): Avoid filename truncation to empty
+* [#13054] fix (set_version_to.cs): Add shebang
 * [#13053] perf: Optimize StringBuilder usage
 * [#13048] chore: Remove unused parts of ISetting<T>
 * [#13047] fix: Fixup substition of startIndex by means of slicing
-* [#13046] perf(text editor): Avoid string allocations
-* [#13045] fix(git config): Do not throw on multiple values when not changed
+* [#13046] perf (text editor): Avoid string allocations
+* [#13045] fix (git config): Do not throw on multiple values when not changed
 * [#13044] Removed unneeded Dictionary lookups
 * [#13041]  Use SearchValues to find indexes of chars
-* [#13040] fix(FormPush): Invalidate git config
-* [#13038] feat(revision grid): Condense remote labels
-* [#13037] fix(repo menu): Actually update on revisions loaded
-* [#13034] feat(interactive ref labels): Improve UX
+* [#13040] fix (FormPush): Invalidate git config
+* [#13038] feat (revision grid): Condense remote labels
+* [#13037] fix (repo menu): Actually update on revisions loaded
+* [#13034] feat (interactive ref labels): Improve UX
 * [#13032] feat: tooltip for submodules in the left panel
 * [#13031] fix: Make layered settings work
 * [#13027] Adopt fore colors
@@ -165,37 +162,37 @@
 * [#13018] ci: Upload test reports on failure
 * [#13016] fix: quiet git-reset
 * [#13015] fix: ShowError MessageBoxes in plugins
-* [#13014] feat(view settings): Add button "save as default"  to "diff viewer" settings page
-* [#13009] fix(user scripts): Always provide internal items
-* [#13001] feat(worktree): strip common directory prefix from worktree display names
+* [#13014] feat (view settings): Add button "save as default"  to "diff viewer" settings page
+* [#13009] fix (user scripts): Always provide internal items
+* [#13001] feat (worktree): strip common directory prefix from worktree display names
 * [#12999] feat: auto-detect Azure DevOps for build status and PR creation
 * [#12998] chore: Update ICSharpCode.TextEditor submodule (syntax highlighting for .slnx, .vsconfig, .slnf)
 * [#12997] feat: add Copy path and Show in folder to worktree context menu
-* [#12996] feat(UI): add Shift+MouseWheel horizontal scrolling
+* [#12996] feat (UI): add Shift+MouseWheel horizontal scrolling
 * [#12995] ci: name portable artifact with version and commit hash
 * [#12993] ci: add workflow_run test report for fork PRs
 * [#12992] Allow to have console emulator plugins
-* [#12991] feat(interactive ref labels): Improve UX
-* [#12990] fix(file tree): Avoid split folder
+* [#12991] feat (interactive ref labels): Improve UX
+* [#12990] fix (file tree): Avoid split folder
 * [#12989] Allow preconfigure prefix and colour per remote
 * [#12987] refactor: convert JoinableTaskFactory.Run tests to async Task
 * [#12986] ci: exclude test code from SonarQube analysis
-* [#12984] fix(commit):fix hideous resize of status bar when staging
+* [#12984] fix (commit):fix hideous resize of status bar when staging
 * [#12983] ci: publish portable archive artifact from GHA workflow
 * [#12982] refactor: modernize test assertions and infrastructure
 * [#12980] feat: scroll revision grid to worktree commit on selection
 * [#12979] ci: avoid duplicate runs on PR branches
-* [#12978] perf(ObjectId): use InlineArray buffer with SIMD operations and vectorized hex conversion
+* [#12978] perf (ObjectId): use InlineArray buffer with SIMD operations and vectorized hex conversion
 * [#12976] docs: Fix .NET 10 download link and Windows version requirement in README
-* [#12974] feat(GetSelectedBranch): Reduce noise on WSL failure
+* [#12974] feat (GetSelectedBranch): Reduce noise on WSL failure
 * [#12973] fix!: worktree with Git < 2.36
-* [#12971] perf(ObjectId): use SkipLocalsInit and SearchValues for hex validation
+* [#12971] perf (ObjectId): use SkipLocalsInit and SearchValues for hex validation
 * [#12970] perf: add ExplicitCapture to regex options where missing
-* [#12969] refactor: remove redundant IExecutable.GetWorkingDirectory() method
+* [#12969] refactor: remove redundant IExecutable.GetWorkingDirectory () method
 * [#12964] perf: use Path.Join over Path.Combine for known-relative path segments
 * [#12962] feat: handle worktree branches in delete branch dialog
 * [#12961] build: replace FluentAssertions NuGet package with AwesomeAssertions
-* [#12960] fix(test): fix flaky CancellationTokenSequence concurrency test
+* [#12960] fix (test): fix flaky CancellationTokenSequence concurrency test
 * [#12958] chore: remove dead .NET Framework app.config content
 * [#12957] Migrate from Newtonsoft.Json to System.Text.Json
 * [#12956] refactor: replace EnvUtils methods with modern .NET framework equivalents
@@ -215,87 +212,86 @@
 * [#12942] feat: tweaked ansi terminal colors
 * [#12941] feat: themeable selection color
 * [#12939] Update SourceLink to fix worktrees in this repo
-* [#12938] fix(TextBoxSilencer): Allow Ctrl+Home/End to navigate to document boundaries
-* [#12937] fix(repo menu): Display hotkeys again
-* [#12936] fix(RevisionGrid): Hide tooltip on app deactivate
-* [#12934] feat(editor): add Zed editor as git editor
-* [#12933] refactor(IGitExecutor): Remove GetSelectedBranch
+* [#12938] fix (TextBoxSilencer): Allow Ctrl+Home/End to navigate to document boundaries
+* [#12937] fix (repo menu): Display hotkeys again
+* [#12936] fix (RevisionGrid): Hide tooltip on app deactivate
+* [#12934] feat (editor): add Zed editor as git editor
+* [#12933] refactor (IGitExecutor): Remove GetSelectedBranch
 * [#12929] fix: nullable ThreadHelper
 * [#12928] fix: load Dashboard once
 * [#12927] feat: add Worktrees to toolbar and navigation tree
-* [#12922] feat(git config): Improve message on unexpected multi-value config
+* [#12922] feat (git config): Improve message on unexpected multi-value config
 * [#12921] Repo menu opening
-* [#12920] fix(RegisterPlugins): Perfom using _loadOperations
-* [#12919] fix(EditboxBasedConsoleOutputControl): Avoid NRE
-* [#12915] feat(repo button): Mention Ctrl in tooltip
+* [#12920] fix (RegisterPlugins): Perfom using _loadOperations
+* [#12919] fix (EditboxBasedConsoleOutputControl): Avoid NRE
+* [#12915] feat (repo button): Mention Ctrl in tooltip
 * [#12910] build: remove obsolete BitBucket plugin
-* [#12909] fix(output history): Ensure collapsed panels if disabled after showing as panel
-* [#12908] feat(PluginSettingsPage): Add state to exception
+* [#12909] fix (output history): Ensure collapsed panels if disabled after showing as panel
+* [#12908] feat (PluginSettingsPage): Add state to exception
 * [#12895] fix remove JiraCommitHintPlugin
 * [#12894] fix: remove obsolete GitFlow plugin
 * [#12893] fix: git 2.53
 * [#12892] fix: gource DownloadFile
-* [#12890] feat(RevisionGridControl): Add tsmiPushBranch
+* [#12890] feat (RevisionGridControl): Add tsmiPushBranch
 * [#12877] Copilot UI design guidelines
 * [#12875] Dialogs layout alignment - `FormCreateWorktree`
 * [#12874] fix: prevent initial watermark when control starts focused
-* [#12872] feat(portable): Pinnable to taskbar per folder
+* [#12872] feat (portable): Pinnable to taskbar per folder
 * [#12871] Tests for OsShellUtil
-* [#12869] feat(recent repo list): Improve readability
+* [#12869] feat (recent repo list): Improve readability
 * [#12864] Fix/sq warnings
 * [#12863] feat: Add scripts lf/crlf conversion
-* [#12861] feat(FormBrowse): Automatically load body & notes
+* [#12861] feat (FormBrowse): Automatically load body & notes
 * [#12860] refactor `BugReportInvoker` to make it testable
 * [#12859] Allow to disable tooltips in revision grid
-* [#12858] fix(PathFirstComparer): Use InvariantCulture consistently
-* [#12852] fix(dashboard): focus search on start
-* [#12850] feat(BugReportInvoker): Ignore missing runtime DLL on application exit and if repeated
+* [#12858] fix (PathFirstComparer): Use InvariantCulture consistently
+* [#12852] fix (dashboard): focus search on start
+* [#12850] feat (BugReportInvoker): Ignore missing runtime DLL on application exit and if repeated
 * [#12841] Fix: Console launch fails when Windows username contains spaces
-* [#12840] feat(user scripts): Support selected folder for "{SelectedRelativePaths}"
-* [#12839] feat(user scripts): Add example for editor integration
+* [#12840] feat (user scripts): Support selected folder for "{SelectedRelativePaths}"
+* [#12839] feat (user scripts): Add example for editor integration
 * [#12837] fix: difftool second revision
-* [#12827] feat(update): Adapt download link to OSArchitecture
-* [#12818] fix(FileViewer): Scrollbar visibility & scroll to
-* [#12817] fix(Reset changes): Limit size of popup
-* [#12815] fix(show skip-worktree): Make mnemonic unique
-* [#12811] feat(HotkeySettingsManager): Default hotkeys for GoToFirst/LastParent
-* [#12810] feat(file multi-selection): Display focused file, not nothing
-* [#12806] feat(file encoding): Selectable per file
-* [#12805] feat(assembly loading error): Also detect if wrapped with other exceptions
+* [#12827] feat (update): Adapt download link to OSArchitecture
+* [#12818] fix (FileViewer): Scrollbar visibility & scroll to
+* [#12817] fix (Reset changes): Limit size of popup
+* [#12815] fix (show skip-worktree): Make mnemonic unique
+* [#12811] feat (HotkeySettingsManager): Default hotkeys for GoToFirst/LastParent
+* [#12810] feat (file multi-selection): Display focused file, not nothing
+* [#12806] feat (file encoding): Selectable per file
+* [#12805] feat (assembly loading error): Also detect if wrapped with other exceptions
 * [#12780] Fix statistics plugin not showing line counts
 * [#12778] ci: Build release for x64 and arm64 using GitHub Actions
 * [#12772] Enhances the 'remote repositories' window
 * [#12768] fix: Consistent capitalization of folder "setup"
 * [#12764] style: property for GeneratedRegex
-* [#12763] feat(git-grep): Add regex options to toolbar
+* [#12763] feat (git-grep): Add regex options to toolbar
 * [#12762] fix: VSTHRD103: Call async methods when in an async method
 * [#12761] Code analysis fixes
-* [#12759] feat(user scripts): Replace all supported arguments always
+* [#12759] feat (user scripts): Replace all supported arguments always
 * [#12758] fix: ResolveConflicts dialog for choose version
-* [#12757] style(.editorconfig): Add charset = utf-8-bom
+* [#12757] style (.editorconfig): Add charset = utf-8-bom
 * [#12750] chore: Handle GDI exception in FileStatusListView_DrawNode
-* [#12749] feat(skip-worktree files): Show in Diff tab, show diff
-* [#12745] fix(git status): Update after special rebase
-* [#12740] feat(FormCommit): Make auto-selection of staged optional
-* [#12735] feat(settings): Mention and show env var GIT_CONFIG_GLOBAL
-* [#12734] feat(user scripts): Add argument "{ColumnNumber}"
-* [#12733] fix(PictureBox.OnPaint): Handle exceptions
-* [#12731] fix(FindNextOrOpenWithDifftool): Show "Text not found"
+* [#12749] feat (skip-worktree files): Show in Diff tab, show diff
+* [#12745] fix (git status): Update after special rebase
+* [#12740] feat (FormCommit): Make auto-selection of staged optional
+* [#12735] feat (settings): Mention and show env var GIT_CONFIG_GLOBAL
+* [#12734] feat (user scripts): Add argument "{ColumnNumber}"
+* [#12733] fix (PictureBox.OnPaint): Handle exceptions
+* [#12731] fix (FindNextOrOpenWithDifftool): Show "Text not found"
 * [#12730] feat: Add Notes column
 * [#12723] fix: GitGrep toolbar options
-* [#12722] fix(FormCommit): update status for dirty unstaged submodules
-* [#12718] feat(theme): follow Windows app color mode
-* [#12717] fix(RevisionGridControl): NRE on special stashes
-* [#12705] feat(RevisionGraph): Show single child in tooltip
-* [#12703] chore(SettingsPageBase): Remove unused bindings
-* [#12660] feat(repos dropdown): Allow to filter the recent repos
+* [#12722] fix (FormCommit): update status for dirty unstaged submodules
+* [#12718] feat (theme): follow Windows app color mode
+* [#12717] fix (RevisionGridControl): NRE on special stashes
+* [#12705] feat (RevisionGraph): Show single child in tooltip
+* [#12703] chore (SettingsPageBase): Remove unused bindings
+* [#12660] feat (repos dropdown): Allow to filter the recent repos
 * [#12659] Show branch name in dashboard and menus for reftable repos
-* [#12647] cleanup  changing GitExtensions.Extensibility
+* [#12647] cleanup changing GitExtensions.Extensibility
 * [#12596] Add recent repositories to Windows Start menu jump list
 * [#12515] feat!: .net10
 * [#12478] Dynamic commit message template
 * [#12367] Add ComboBoxWatermarkManager for control of ComboBox watermark text
-
 
 [#13081]:https://github.com/gitextensions/gitextensions/pull/13081
 [#13080]:https://github.com/gitextensions/gitextensions/pull/13080
@@ -459,30 +455,28 @@
 [#12478]:https://github.com/gitextensions/gitextensions/pull/12478
 [#12367]:https://github.com/gitextensions/gitextensions/pull/12367
 
-
 ### Version v6.0.5 (28 Nov 2025)
 
 #### Changes:
-* [#12707] fix(plugin loading): Await registration before use
-* [#12704] fix(CheckSettingsLogic): Prefer native executables
 
+* [#12707] fix (plugin loading): Await registration before use
+* [#12704] fix (CheckSettingsLogic): Prefer native executables
 
 [#12707]:https://github.com/gitextensions/gitextensions/pull/12707
 [#12704]:https://github.com/gitextensions/gitextensions/pull/12704
 
-
 ### Version v6.0.4 (18 Nov 2025)
 
 #### Changes:
-* [#12691] fix(GitModuleForm): Avoid InvalidOperationException
-* [#12687] fix(renamed/copied file): Correctly display in tree
-* [#12681] fix(git error): Actually treat as user external operation
+
+* [#12691] fix (GitModuleForm): Avoid InvalidOperationException
+* [#12687] fix (renamed/copied file): Correctly display in tree
+* [#12681] fix (git error): Actually treat as user external operation
 * [#12675] Fix deadlock in ThemeModule.Load during app restart
 * [#12671] Fix NBug crash reports for invalid command-line arguments
-* [#12658] fix(save folder as): Get longest common path
+* [#12658] fix (save folder as): Get longest common path
 * [#12655] fix: concurrent access GitVersion
-* [#12651] fix(stash picker): Add 1px offset if high DPI scaling factor is fractional
-
+* [#12651] fix (stash picker): Add 1px offset if high DPI scaling factor is fractional
 
 [#12691]:https://github.com/gitextensions/gitextensions/pull/12691
 [#12687]:https://github.com/gitextensions/gitextensions/pull/12687
@@ -493,26 +487,26 @@
 [#12655]:https://github.com/gitextensions/gitextensions/pull/12655
 [#12651]:https://github.com/gitextensions/gitextensions/pull/12651
 
-
 ### Version v6.0.3 (9 Nov 2025)
 
 #### Changes:
+
 * [#12643] User theme folder path and creation
-* [#12624] fix(Settings): Do not re-enable CredentialHelper edit if multi-value
-* [#12621] fix(DpiUtil): Avoid breaking plugin compatibility
+* [#12624] fix (Settings): Do not re-enable CredentialHelper edit if multi-value
+* [#12621] fix (DpiUtil): Avoid breaking plugin compatibility
 * [#12620] fix: ignore long filepath filters when listing revisions
 * [#12619] Trivial: Switch to the null-conditional operator in a couple of places
-* [#12615] fix(FileStatusList): Calculate available width for truncating filenames
+* [#12615] fix (FileStatusList): Calculate available width for truncating filenames
 * [#12601] fix: Theme loading error suppressions
 * [#12599] fix: ls-files %objecttype Git version check
-* [#12598] fix(File tree): Avoid split folders
+* [#12598] fix (File tree): Avoid split folders
 * [#12597] Teach Copilot a few obvious things
 * [#12594] Fix stash picker hidden at high DPI scaling
 * [#12593] Fix NullReferenceException in GitHub3Plugin on first commit window open
 * [#12592] Suppress NBug reports for transient Windows update errors (Patch Tuesday)
 * [#12581] fix: icon for default PulMerge button
 * [#12580] Fix overflow error in GitImpact graph rendering when displaying zero-change weeks
-* [#12579] fix(FileStatusList.ContextMenu): Clarify Find file hotkey
+* [#12579] fix (FileStatusList.ContextMenu): Clarify Find file hotkey
 * [#12570] Test performance: Initialization of reference repositories
 * [#12565] Fix: Suppress "Rate limit exceeded" error when checking for updates
 * [#12563] System.Threading.Lock
@@ -521,7 +515,6 @@
 * [#12549] Test robustness: Account for system changes in init.defaultbranch
 * [#12498] Feature/branch name in reftable repos
 * [#12494] fix: simplify submodule helpers
-
 
 [#12643]:https://github.com/gitextensions/gitextensions/pull/12643
 [#12624]:https://github.com/gitextensions/gitextensions/pull/12624
@@ -548,13 +541,13 @@
 [#12498]:https://github.com/gitextensions/gitextensions/pull/12498
 [#12494]:https://github.com/gitextensions/gitextensions/pull/12494
 
-
 ### Version v6.0.2 (10 Oct 2025)
 
 #### Changes:
+
 * [#12551] Update contributors.txt
 * [#12548] Test robustness: Account for core.autocrlf in DiffHighlightServiceTests.MarkInlineGap
-* [#12544] fix(FileStatusList): set files as new for initial commit
+* [#12544] fix (FileStatusList): set files as new for initial commit
 * [#12543] fix: include rc in .net debug listings
 * [#12542] fix: appveyor warning for lineending
 * [#12541] fix: do not add / to submodule names
@@ -564,7 +557,6 @@
 * [#12519] fix: prepare for .net10
 * [#12499] fix: show recent destination directories on clone
 * [#176] Small grammar change to dialogbox text
-
 
 [#12551]:https://github.com/gitextensions/gitextensions/pull/12551
 [#12548]:https://github.com/gitextensions/gitextensions/pull/12548
@@ -579,12 +571,12 @@
 [#12499]:https://github.com/gitextensions/gitextensions/pull/12499
 [#176]:https://github.com/gitextensions/gitextensions/pull/176
 
-
 ### Version v6.0.1 (14 Sep 2025)
 
 #### Changes:
+
 * [#12505] fix: submodule tooltip on default thread
-* [#12504] feat(filter): format native path to repo relative path
+* [#12504] feat (filter): format native path to repo relative path
 * [#12501] fix: ls-files for Git <2.38
 * [#12500] fix: no throw for commit count
 * [#12496] fix: read worktree files from the filesystem
@@ -594,26 +586,25 @@
 * [#12470] fix: GetCommitData is includeNotes, not cache
 * [#12469] fix: format submodule status
 * [#12468] perf: one Git command for added/removed
-* [#12467] fix(diff): present submodules also if no local path
+* [#12467] fix (diff): present submodules also if no local path
 * [#12463] Fix GitExtensions.sln
 * [#12462] fix: Remove attribute ThemeAware
 * [#12459] fix: assert in patch grid
 * [#12454] Remove `skip` arg from ControlUtil.FindDescendants
 * [#12445] Load PR Template from local file
-* [#12444] fix(TextView): Clamp FirstVisibleLine
-* [#12438] fix(filetree): Hide "Show in File tree"
+* [#12444] fix (TextView): Clamp FirstVisibleLine
+* [#12438] fix (filetree): Hide "Show in File tree"
 * [#12437] fix: present git-status errors
 * [#12436] fix: present removed submodules
-* [#12435] fix(FormOpenDirectory): Restore button label
-* [#12434] fix(FormPush): Align labels with fields
-* [#12426] fix(multi-value git config): "credential.helper"
-* [#12424] fix(file tree context menu): Unique mnemonic for "Collapse root folders"
-* [#12423] fix(AsyncStreamReaderTests): Relax timing
-* [#12421] fix(file tree): ls-tree if no grep
-* [#12418] fix(copy file paths): Reactivate shortcut Ctrl+C
+* [#12435] fix (FormOpenDirectory): Restore button label
+* [#12434] fix (FormPush): Align labels with fields
+* [#12426] fix (multi-value git config): "credential.helper"
+* [#12424] fix (file tree context menu): Unique mnemonic for "Collapse root folders"
+* [#12423] fix (AsyncStreamReaderTests): Relax timing
+* [#12421] fix (file tree): ls-tree if no grep
+* [#12418] fix (copy file paths): Reactivate shortcut Ctrl+C
 * [#12414] Consider non-existent config setting for remote branch
 * [#12407] Add numbers and mnemonics in the “Recent repositories” menu
-
 
 [#12505]:https://github.com/gitextensions/gitextensions/pull/12505
 [#12504]:https://github.com/gitextensions/gitextensions/pull/12504
@@ -646,41 +637,41 @@
 [#12414]:https://github.com/gitextensions/gitextensions/pull/12414
 [#12407]:https://github.com/gitextensions/gitextensions/pull/12407
 
-
 ### Version v6.0 (16 Jun 2025)
 
 #### Changes:
+
 * [#12409] Keyboard mnemonic for “Remember choice”
 * [#12405] Fixup restore of file selection
 * [#12402] Enforce WSL working directory, fix Git Command Log display
-* [#12399] fix(CommitInfo): Avoid NRE
-* [#12397] fix(FormCommit): Prevent double diff loading
+* [#12399] fix (CommitInfo): Avoid NRE
+* [#12397] fix (FormCommit): Prevent double diff loading
 * [#12396] fix: adopt LinkLabel for large files
-* [#12394] feat(MultiSelectTreeView): Select block using keys
-* [#12390] fix(GitRef): Do not remove too much when removing prefix
-* [#12383] fix(FindAndReplaceForm): Make multi-file search cancelable
+* [#12394] feat (MultiSelectTreeView): Select block using keys
+* [#12390] fix (GitRef): Do not remove too much when removing prefix
+* [#12383] fix (FindAndReplaceForm): Make multi-file search cancelable
 * [#12376] ui: tune pull icons
-* [#12373] feat(git config): Add credential.helper and "reuse recorded resolution of conflicted merges"
+* [#12373] feat (git config): Add credential.helper and "reuse recorded resolution of conflicted merges"
 * [#12368] fix: jumplist ignore \\wsl$\
 * [#12360] fix: theme fix cleanup
 * [#12357] fix: pull icons dark mode
-* [#12356] fix(WSL): Make "edit commit" & "reword commit" work
-* [#12351] feat(WSL, dubious ownership): Improve first use of WSL repo
-* [#12349] feat(rename file/folder): Add to context menu
+* [#12356] fix (WSL): Make "edit commit" & "reword commit" work
+* [#12351] feat (WSL, dubious ownership): Improve first use of WSL repo
+* [#12349] feat (rename file/folder): Add to context menu
 * [#12348] ref : fix-foldername-GitHub3
-* [#12345] feat(shell extension): Reset multiple; operate on folder without selection
-* [#12344] fix(message editor): Disable URL detection
-* [#12343] fix(LeftSplitContainer): Workaround shift on load
-* [#12342] feat(reset current branch): Update submodules if not disabled
-* [#12341] feat(file tree): Provide git-grep
+* [#12345] feat (shell extension): Reset multiple; operate on folder without selection
+* [#12344] fix (message editor): Disable URL detection
+* [#12343] fix (LeftSplitContainer): Workaround shift on load
+* [#12342] feat (reset current branch): Update submodules if not disabled
+* [#12341] feat (file tree): Provide git-grep
 * [#12336] Improve support for branch mapping
-* [#12335] feat(file tree): Expand if filtered to less than 100 files
+* [#12335] feat (file tree): Expand if filtered to less than 100 files
 * [#12325] fix: adapt a few icons to dark mode
 * [#12324] Feature/worktree fixes
 * [#12321] feat: mark current line in editor
-* [#12320] feat(file context menu): Provide the same operations everywhere
-* [#12317] feat(diff viewer): Set caret to first change line
-* [#12312] feat(File Tree): Use RevisionDiffControl instead of RevisionFileTreeControl
+* [#12320] feat (file context menu): Provide the same operations everywhere
+* [#12317] feat (diff viewer): Set caret to first change line
+* [#12312] feat (File Tree): Use RevisionDiffControl instead of RevisionFileTreeControl
 * [#12311] Fix Find button scaling in git-grep dialog
 * [#12309] Initialize color picker with remote's color
 * [#12307] Fix Stashes drop-down size calculation
@@ -688,78 +679,77 @@
 * [#12305] Fix FormRemotes color label size
 * [#12296] Checkout "other" branch after reset
 * [#12295] feat: Add DebugHelpers.Trace[If]
-* [#12294] feat(ExitCode): Display larger values hexadecimal
-* [#12293] feat(FileStatusList): Display file icons for git-grep and if grouped by file extension
-* [#12287] feat(VisualStudioIntegration): Go to line; retry on reject
+* [#12294] feat (ExitCode): Display larger values hexadecimal
+* [#12293] feat (FileStatusList): Display file icons for git-grep and if grouped by file extension
+* [#12287] feat (VisualStudioIntegration): Go to line; retry on reject
 * [#12285] fix: progress ICSharpCode.TextEditor
 * [#12282] Add more keyboard mnemonics
-* [#12281] fix(stage submodule): Get working in Diff tab again
+* [#12281] fix (stage submodule): Get working in Diff tab again
 * [#12277] Update dependencies
-* [#12276] fix(delete files): Avoid wrong popup and actually support deleting multiple files
-* [#12275] refactor(LinkFactory.ExecuteLink): Use OsShellUtil
-* [#12274] fix(FileViewer): Avoid crash on animated image file
+* [#12276] fix (delete files): Avoid wrong popup and actually support deleting multiple files
+* [#12275] refactor (LinkFactory.ExecuteLink): Use OsShellUtil
+* [#12274] fix (FileViewer): Avoid crash on animated image file
 * [#12273] Allow customise colors of remotes
-* [#12271] fix(RevisionGraph): Correctly handle partly visible initial revision
-* [#12267] feat(FormCommit): Add hidden setting for word wrap in message editor
-* [#12264] feat(CheckListSettingsPage): Improve display of git version
-* [#12257] fix(FileSettingsCache): The last change must win!
+* [#12271] fix (RevisionGraph): Correctly handle partly visible initial revision
+* [#12267] feat (FormCommit): Add hidden setting for word wrap in message editor
+* [#12264] feat (CheckListSettingsPage): Improve display of git version
+* [#12257] fix (FileSettingsCache): The last change must win!
 * [#12255] Remember blame splitter position
 * [#12254] Onboard to the GitHub workflow based issue-labeler
-* [#12253] fix(tests): Serialize execution; Load and create default settings file
+* [#12253] fix (tests): Serialize execution; Load and create default settings file
 * [#12251] fix: Address NU1510 warning
-* [#12248] fix(tests): Add missing Dispose calls to test teardown
-* [#12246] fix(FileStatusList): sort copied before renamed
-* [#12245] fix(FileStatusList): status for renamed in branch diffs
+* [#12248] fix (tests): Add missing Dispose calls to test teardown
+* [#12246] fix (FileStatusList): sort copied before renamed
+* [#12245] fix (FileStatusList): status for renamed in branch diffs
 * [#12244] build: Embed AutoCompleteRegexes as raw string literal
-* [#12243] fix(BlameControl): Avoid negative number of spaces
-* [#12228] fix(BackgroundFetchPlugin): Fetch on repo opening when periodic fetch enabled
-* [#12222] fix(AppSettings): Reset git version after storing
+* [#12243] fix (BlameControl): Avoid negative number of spaces
+* [#12228] fix (BackgroundFetchPlugin): Fetch on repo opening when periodic fetch enabled
+* [#12222] fix (AppSettings): Reset git version after storing
 * [#12219] fix: catch plugin settings load exceptions
 * [#12218] fix: adjust settings check colors
 * [#12217] FormUpdate: display .NET runtime requirements
 * [#12215] feat: Clarify update & git exe path
-* [#12213] fix(GIT_SSH): Avoid "error: cannot spawn : No such file or directory" with .NET9
-* [#12211] feat(Clone): improve git url detection
-* [#12209] perf(context menus): Cache script icons (for context menus)
+* [#12213] fix (GIT_SSH): Avoid "error: cannot spawn : No such file or directory" with .NET9
+* [#12211] feat (Clone): improve git url detection
+* [#12209] perf (context menus): Cache script icons (for context menus)
 * [#12201] Git config
 * [#12200] feat: Display autostash in RevisionGrid
 * [#12198] Handle exceptions
 * [#12197] refactor: convert to .net6 argument null check syntax
-* [#12196] fix(diff): fix switch back to "Patch" diff appearence
+* [#12196] fix (diff): fix switch back to "Patch" diff appearence
 * [#12194] fix: prevent double call to SetGitModule on repo change
-* [#12192] feat(BackgroundFetchPlugin): Add option to fetch on repo opening
+* [#12192] feat (BackgroundFetchPlugin): Add option to fetch on repo opening
 * [#12189]  feat: bold-bold ansi terminal colors
-* [#12185] fix(git config settings pages): Add system-wide settings
-* [#12184] fix(reset):Fix reset unstaged changes of a new file already partly staged
+* [#12185] fix (git config settings pages): Add system-wide settings
+* [#12184] fix (reset):Fix reset unstaged changes of a new file already partly staged
 * [#12180] feat: Add SelectInLeftPanel
-* [#12179] fix(Output History Panel): Hide with Left Panel
+* [#12179] fix (Output History Panel): Hide with Left Panel
 * [#12175] feat: Clickable links in console output
-* [#12174] fix(FormCommit): Improve selection handling
-* [#12169] feat(graph): Ensure new lane color is different
+* [#12174] fix (FormCommit): Improve selection handling
+* [#12169] feat (graph): Ensure new lane color is different
 * [#12167] feat: add Light+ theme
-* [#12160] refactor(BlameControl): Use clearer interface
-* [#12156] feat(Repo Title): Append root repo to description of submodule
-* [#12154] fix(RepoStateMixed.png): Align with other repo state icons
+* [#12160] refactor (BlameControl): Use clearer interface
+* [#12156] feat (Repo Title): Append root repo to description of submodule
+* [#12154] fix (RepoStateMixed.png): Align with other repo state icons
 * [#12151] build: Debug for ICSharp
 * [#12149] FileStatusList: Add toolbar and actions on folders
 * [#12145] fix: Align a file status icon with other icons
-* [#12144] fix(Jump List): Use unique name for recent repos
-* [#12142] feat: Bring to front on drag drop of patch file(s)
-* [#12141] test(ExecutableTests): Relax timeout for slow AppVeyor
+* [#12144] fix (Jump List): Use unique name for recent repos
+* [#12142] feat: Bring to front on drag drop of patch file (s)
+* [#12141] test (ExecutableTests): Relax timeout for slow AppVeyor
 * [#12140] fix: remove override highlight linenumber control
 * [#12138] feat: Avoid just "app" / "repo" / "repository" in app title
 * [#12135] TreeView: Revert horizontal scroll
 * [#12133] fix: InactiveSelectionHighlight in theme
-* [#12131] fix(theme): Check for default theme
-* [#12127] fix(theme): Remove unused hook methods
+* [#12131] fix (theme): Check for default theme
+* [#12127] fix (theme): Remove unused hook methods
 * [#12126] chore: Remove ImageTransparentColor
 * [#12125] fix: Adapt hardcoded colors
 * [#12124] fix: MakeBackgroundDarkerBy on current theme
-* [#12123] fix(theme): Do not adapt system colors
-* [#12116] feat(`FileStatusList`): Use `TreeView`
+* [#12123] fix (theme): Do not adapt system colors
+* [#12116] feat (`FileStatusList`): Use `TreeView`
 * [#12111] .net9 dark theme
 * [#12064] .net9
-
 
 [#12409]:https://github.com/gitextensions/gitextensions/pull/12409
 [#12405]:https://github.com/gitextensions/gitextensions/pull/12405
@@ -871,68 +861,66 @@
 [#12111]:https://github.com/gitextensions/gitextensions/pull/12111
 [#12064]:https://github.com/gitextensions/gitextensions/pull/12064
 
-
 ### Version v5.2.1 (29 Jan 2025)
 
 #### Changes:
-* [#12171] fix(ShowProcessDialogPasswordInput): Default to false
-* [#12165] fix(bare repo): Skip "git status" and "git stash list"
-* [#12158] fix: Improve blame loading and other minor
-* [#12143] fix(AheadBehindDataProvider): Restrict debug output
 
+* [#12171] fix (ShowProcessDialogPasswordInput): Default to false
+* [#12165] fix (bare repo): Skip "git status" and "git stash list"
+* [#12158] fix: Improve blame loading and other minor
+* [#12143] fix (AheadBehindDataProvider): Restrict debug output
 
 [#12171]:https://github.com/gitextensions/gitextensions/pull/12171
 [#12165]:https://github.com/gitextensions/gitextensions/pull/12165
 [#12158]:https://github.com/gitextensions/gitextensions/pull/12158
 [#12143]:https://github.com/gitextensions/gitextensions/pull/12143
 
-
 ### Version v5.2 (11 Jan 2025)
 
 #### Changes:
-* [#12130] feat(git-grep): Show function name of matches
+
+* [#12130] feat (git-grep): Show function name of matches
 * [#12121] feat: Add syntax highlighting for some files
-* [#12120] fix(git-grep): Do not update on AddToSearchFilter
-* [#12119] fix(WindowPositionManager): Add vertical heuristic
+* [#12120] fix (git-grep): Do not update on AddToSearchFilter
+* [#12119] fix (WindowPositionManager): Add vertical heuristic
 * [#12118] feat: SystemColors.Window in Dashboard theme
 * [#12117] feat: branch diff adjust icons for file status
-* [#12115] refactor(`FileStatusList`): Remove `SelectedIndex` API
+* [#12115] refactor (`FileStatusList`): Remove `SelectedIndex` API
 * [#12113] fix: expand last column to ListView size
-* [#12109] chore(FileStatusList): Enable `nullable` decoration
+* [#12109] chore (FileStatusList): Enable `nullable` decoration
 * [#12105] Rename FormBrowseController -> GpgInfoProvider
-* [#12101] fix(Editor): Adapt selection length on replace
-* [#12100] fix(GPG): Remove max length of key id
-* [#12097] fix(Jump List Buttons): Deactivate on modal dialog
-* [#12096] fix(Submodules): Allow spaces in folder name
-* [#12095] fix(GetTagMessage): Do not truncate last line
-* [#12093] fix(File History): Indicate not identifiable file
-* [#12092] fix(File History): Correctly quote filename
-* [#12091] fix(PatchProcessor): Fixup encoding for diff text
-* [#12090] fix(blame previous): Remove restriction to availibility of the actual revision
-* [#12089] fix(FormBrowse): Keep file context on deactivation of filter
-* [#12085] fix(ProcessWrapper): Provide git error message instead of "External program returned non-zero exit code."
-* [#12081] chore(dubious ownership): Remove "Trust all repositories" button
-* [#12080] fix(RevisionDataGridView): Always select a revision
+* [#12101] fix (Editor): Adapt selection length on replace
+* [#12100] fix (GPG): Remove max length of key id
+* [#12097] fix (Jump List Buttons): Deactivate on modal dialog
+* [#12096] fix (Submodules): Allow spaces in folder name
+* [#12095] fix (GetTagMessage): Do not truncate last line
+* [#12093] fix (File History): Indicate not identifiable file
+* [#12092] fix (File History): Correctly quote filename
+* [#12091] fix (PatchProcessor): Fixup encoding for diff text
+* [#12090] fix (blame previous): Remove restriction to availibility of the actual revision
+* [#12089] fix (FormBrowse): Keep file context on deactivation of filter
+* [#12085] fix (ProcessWrapper): Provide git error message instead of "External program returned non-zero exit code."
+* [#12081] chore (dubious ownership): Remove "Trust all repositories" button
+* [#12080] fix (RevisionDataGridView): Always select a revision
 * [#12078] feat: Support saving LFS files
-* [#12075] chore(MemoryStream): Add missing `using` statement
-* [#12072] fix(RevisionReader): Avoid hang on lengthy StandardOutput
-* [#12065] fix(Scripts): Do not display mnemonic ampersand
+* [#12075] chore (MemoryStream): Add missing `using` statement
+* [#12072] fix (RevisionReader): Avoid hang on lengthy StandardOutput
+* [#12065] fix (Scripts): Do not display mnemonic ampersand
 * [#12063] fix: ReadExactly from stream
-* [#12062] chore(stylecop): update to 1.2.0-beta.556
-* [#12060] feat(Git Command Log): Improve display of command cache
-* [#12058] perf(FormResetAnotherBranch): Use quicker command
+* [#12062] chore (stylecop): update to 1.2.0-beta.556
+* [#12060] feat (Git Command Log): Improve display of command cache
+* [#12058] perf (FormResetAnotherBranch): Use quicker command
 * [#12057] chore: Convert remaining post-fix `FileAndForget`
-* [#12056] Fix(git-grep)
-* [#12049] fix(GPG): Ignore exit code from verify-tag
-* [#12040] fix(inline-diff): Limit highlight length
-* [#12034] feat(FileStatusList): Add examples of negative file filter
-* [#12033] feat(FileStatusList): Focus git-grep box on show
+* [#12056] Fix (git-grep)
+* [#12049] fix (GPG): Ignore exit code from verify-tag
+* [#12040] fix (inline-diff): Limit highlight length
+* [#12034] feat (FileStatusList): Add examples of negative file filter
+* [#12033] feat (FileStatusList): Focus git-grep box on show
 * [#12032] feat: skip gaps in blocks for mark inline
-* [#12031] Address  CVE-2019-0820
-* [#12029] feat(CI/ADO): Add support for pull requests
-* [#12023] feat(EditboxBasedConsoleOutputControl): Improve UX and add [password] input field
-* [#12019] feat(graph): Add branch colors to theme
-
+* [#12031] Address CVE-2019-0820
+* [#12029] feat (CI/ADO): Add support for pull requests
+* [#12023] feat (EditboxBasedConsoleOutputControl): Improve UX and add [password] input field
+* [#12019] feat (graph): Add branch colors to theme
 
 [#12130]:https://github.com/gitextensions/gitextensions/pull/12130
 [#12121]:https://github.com/gitextensions/gitextensions/pull/12121
@@ -977,44 +965,42 @@
 [#12023]:https://github.com/gitextensions/gitextensions/pull/12023
 [#12019]:https://github.com/gitextensions/gitextensions/pull/12019
 
-
-
 ### Version 5.1.1 (10 Nov 2024)
 
 #### Changes:
-* [#12028] fix(Diff View): Avoid exception on open
 
+* [#12028] fix (Diff View): Avoid exception on open
 
 [#12028]:https://github.com/gitextensions/gitextensions/pull/12028
-
 
 ### Version 5.1 (7 Nov 2024)
 
 #### Changes:
+
 * [#12018] fix: Add missing defaults to git attributes parser
-* [#12016] fix(File History): Do not change capitalization of filename
-* [#12014] fix(FilterToolBar): Correctly resize branch dropdown
-* [#12013] fix(FormCommit): Restore file selection
-* [#12012] fix(FormDiff): Avoid "A task was canceled."
-* [#12007] fix(git diff): Suppress `diff.external`
-* [#12004] fix(FileStatusList): Set `Text` for accessibility
-* [#11999] fix(Push): fix false positive detection of "detached head" state
+* [#12016] fix (File History): Do not change capitalization of filename
+* [#12014] fix (FilterToolBar): Correctly resize branch dropdown
+* [#12013] fix (FormCommit): Restore file selection
+* [#12012] fix (FormDiff): Avoid "A task was canceled."
+* [#12007] fix (git diff): Suppress `diff.external`
+* [#12004] fix (FileStatusList): Set `Text` for accessibility
+* [#11999] fix (Push): fix false positive detection of "detached head" state
 * [#11995] Singed for contributing
-* [#11994] fix(in-line diff): Support non-reversed git coloring
+* [#11994] fix (in-line diff): Support non-reversed git coloring
 * [#11993] Improve unit tests code
 * [#11992] fix: Handle dubious repo ownership, too, if detected by GitStatusMonitor
-* [#11987] fix(FormRenameBranch): Run git interactively
-* [#11983] fix(difftastic): Adjust endmarkers
+* [#11987] fix (FormRenameBranch): Run git interactively
+* [#11983] fix (difftastic): Adjust endmarkers
 * [#11981] feat: Cache the diff highlighting
-* [#11965] fix(ReportDubiousOwnership): Support normal paths, too
+* [#11965] fix (ReportDubiousOwnership): Support normal paths, too
 * [#11963] fix: commit gpgSign Git defaults
 * [#11962] fix: Reset current ansi terminal color
 * [#11960] Fix FileViewer's encoding bug when showing unstaged files
-* [#11959] fix(settings): Ignore non-boolean advanced git config settings
+* [#11959] fix (settings): Ignore non-boolean advanced git config settings
 * [#11955] fix: Restrict settings to "global" when not in a repository
-* [#11954] fix(push): fix tracking reference not well selected
-* [#11952] fix(FormGoToCommit): Improve performance
-* [#11948] fix(show git-grep): Sync and use actual visibility
+* [#11954] fix (push): fix tracking reference not well selected
+* [#11952] fix (FormGoToCommit): Improve performance
+* [#11948] fix (show git-grep): Sync and use actual visibility
 * [#11947] feat: Avoid coloring moved lines
 * [#11946] fix: Align difftastic colors
 * [#11937] Use "-D" instead of "-d" when deleting unmerged branches
@@ -1026,7 +1012,7 @@
 * [#11917] FormCommit: Disable ResetSoft if command not applicable
 * [#11916] FileStatusList: Reuse context menu separators
 * [#11915] fix: support Git < 2.26 with bright colors
-* [#11913] feat(settings): deeper checks for GitExtensions install directory
+* [#11913] feat (settings): deeper checks for GitExtensions install directory
 * [#11912] chore: Update wix to v3.14.1 (security update)
 * [#11911] Move NoWarn=NU1903 to the Wix PackageReference
 * [#11900] Correctly escape paths
@@ -1035,7 +1021,7 @@
 * [#11888] fix: LineNumber presentation for Git word-diff
 * [#11887] fix: merge adjacent textmarkers
 * [#11884] Add navigation commands "Go to first / last parent commit"
-* [#11871] fix: RunCommand() should not throw when exit is checked
+* [#11871] fix: RunCommand () should not throw when exit is checked
 * [#11865] Adjust ToolStripComboBox size based on DPI scaling
 * [#11864] Make DropDownWidth calculation Dpi aware and account for vertical scrollbar
 * [#11862] Improve in-line diff highlight and add anchor markers
@@ -1046,7 +1032,6 @@
 * [#11850] feat: GitCache: Add current directory to key
 * [#11849] fix: bold attributes applies to both fore/back
 * [#10307] Add control with last interactive Git outputs and traces
-
 
 [#12018]:https://github.com/gitextensions/gitextensions/pull/12018
 [#12016]:https://github.com/gitextensions/gitextensions/pull/12016
@@ -1104,49 +1089,48 @@
 [#11849]:https://github.com/gitextensions/gitextensions/pull/11849
 [#10307]:https://github.com/gitextensions/gitextensions/pull/10307
 
-
-
 ### Version 5.0.0 (1 Sep 2024)
 
 #### Changes:
+
 * [#11848] feat: Unprintable chars in cache viewer
 * [#11847] fix: Force black foreground colors for bold in moved diff
-* [#11846] fix(DiffHighlightService): Skip unchanged char after pure addition/removal
+* [#11846] fix (DiffHighlightService): Skip unchanged char after pure addition/removal
 * [#11842] fix: WslGitPath in FormProcess
 * [#11841] fix: Allow user to override git-grep color
 * [#11838] fix: Tweak difftastic colors
 * [#11837] Fix Revision Links settings page DPI
 * [#11836] Fix FormRevertCommit dpi
 * [#11833] fix: Keep linenumber when switching viewer
-* [#11832] fix(file tree): Do not force line first line when changing commit
+* [#11832] fix (file tree): Do not force line first line when changing commit
 * [#11830] feat: Configure ANSI background colors separately
 * [#11827] feat: Dynamically calculate dim colors
 * [#11826] fix: Migrate core.editor settings from GE x86 path
 * [#11823] feat: Themeable ANSI colors
 * [#11822] Change diff.wordRegex to match words
-* [#11818] fix(avatars/initials): fix a special case causing an exception
+* [#11818] fix (avatars/initials): fix a special case causing an exception
 * [#11817] Update dashboard logo
 * [#11811] fix: Clarify prune is for branches
 * [#11802] Improve Quick Search keyboard interaction
 * [#11799] Improve sorting in quick git ref selector dialog
-* [#11797] fix(sidepanel): Await reload before updating visibility
-* [#11795] fix(scripts): Do not quote {SelectedRelativePaths}
+* [#11797] fix (sidepanel): Await reload before updating visibility
+* [#11795] fix (scripts): Do not quote {SelectedRelativePaths}
 * [#11793] Update privacy policy reference
-* [#11791] fix(DiffMergeTools): path for diff/merge command
+* [#11791] fix (DiffMergeTools): path for diff/merge command
 * [#11790] RecentReposSettings: Streamline naming
 * [#11785] FormCommit: Fixup cursor movement in message editor
-* [#11781] fix(FileSettingsCache): Always watch repo-local settings
+* [#11781] fix (FileSettingsCache): Always watch repo-local settings
 * [#11780] Make graph settings non-experimental
 * [#11779] Improve pinned repos handling
-* [#11775] fix(AnsiEscapeUtilities): Limit error tracing
-* [#11773] feat(ScriptOptionsProvider): {SelectedRelativePaths}
+* [#11775] fix (AnsiEscapeUtilities): Limit error tracing
+* [#11773] feat (ScriptOptionsProvider): {SelectedRelativePaths}
 * [#11772] FormVerify: Provide more help to user
 * [#11771] RevisionReader: Update after at most 500 ms
-* [#11770] fix(ShellEx): Support adding multiple files
-* [#11769] fix(ReportDubiousOwnership): Replace single quotes
+* [#11770] fix (ShellEx): Support adding multiple files
+* [#11769] fix (ReportDubiousOwnership): Replace single quotes
 * [#11765] Fixup hangs moving the RevisionGrid
 * [#11759] Fix: Correct ProjectId retrieval in GitLab BuildServerIntegration due…
-* [#11758] fix(RevisionReader): Load body in dependency on commit date
+* [#11758] fix (RevisionReader): Load body in dependency on commit date
 * [#11757] Handle `RevisionReader.GetRevision` returning `null`
 * [#11754] chore: fix update-loc.cmd script (following repo restructure)
 * [#11753] Improve recovery form
@@ -1155,31 +1139,31 @@
 * [#11749] Filter: Add 2 examples of invert grep filters
 * [#11748] More meaningful and (I hope) pleasant default colors
 * [#11747] fix Hexa editor display of binary files
-* [#11746] feat(GitHub): Add commit message issue helper feature
-* [#11745] fix(diff): Script separator only if items
+* [#11746] feat (GitHub): Add commit message issue helper feature
+* [#11745] fix (diff): Script separator only if items
 * [#11744] Restructure repository
 * [#11743] Open GitHub release page for portable apps instead of downloading msi
-* [#11739] fix(difftastic): default for --strip-cr changed in 0.58
-* [#11738] fix(diff): Don't fail if user customized git `diff.*Prefix` settings
+* [#11739] fix (difftastic): default for --strip-cr changed in 0.58
+* [#11738] fix (diff): Don't fail if user customized git `diff.*Prefix` settings
 * [#11735] Convert FormCommitTemplateSettings to GitExtensionsDialog; fix Dpi issues
 * [#11734] Expose ScriptOptionsProvider to toolbar event scripts
-* [#11733] fix(RevisionReader): do not quote GetRevision() hash
-* [#11731] fix(revgrid): SuperprojectModule has no workingdir
+* [#11733] fix (RevisionReader): do not quote GetRevision () hash
+* [#11731] fix (revgrid): SuperprojectModule has no workingdir
 * [#11727] Improve recovery of files UX
 * [#11725] Checkout *remote* branch: more helpful labels
 * [#11724] fix: label "No changes" no more hiding first file of the list
-* [#11722] fix(RevisionDataGridView): Update RowCount while loading
+* [#11722] fix (RevisionDataGridView): Update RowCount while loading
 * [#11721] Diff moved lines: Use dimmed-zebra algorithm
 * [#11719] Render revision graph in the background
 * [#11718] Refresh less on author highlighting
-* [#11714] fix(RevisionDataGridView): Cancel outdated update
+* [#11714] fix (RevisionDataGridView): Cancel outdated update
 * [#11713] conemu-inside: No trace output in release build
-* [#11712] perf(graph): Keep more lines in cache when scrolling forward
+* [#11712] perf (graph): Keep more lines in cache when scrolling forward
 * [#11709] Allow selecting custom icons for user defined scripts
 * [#11705] Links for InfoClicked in Settings
-* [#11704] feat(SettingsCheckBox): Use hand cursor for icon
+* [#11704] feat (SettingsCheckBox): Use hand cursor for icon
 * [#11703] FormChooseCommit & Rebase onto: Display only potential commits
-* [#11698] fix(TranslationUtil): Suppress Trace output
+* [#11698] fix (TranslationUtil): Suppress Trace output
 * [#11697] refactor: Factor out ExecutionResult.ThrowIfErrorExit
 * [#11696] Fix FormRemotes DPI scaling
 * [#11695] Fix FormInit DPI issues; align with FormClone
@@ -1188,17 +1172,17 @@
 * [#11692] Fix author highlighting background color
 * [#11690] Update ignore patterns of FormGitIgnore; Fix DPI issues
 * [#11688] Fix HEAD ref arrow scaling
-* [#11687] perf(FileStatusList): Initialize ImageList data only once
+* [#11687] perf (FileStatusList): Initialize ImageList data only once
 * [#11686] Scale PictureBox background images
 * [#11685] Fix "Modify the commit message" button Dpi scaling
 * [#11684] Fix FormClone DPI issues
 * [#11680] fix finding merge base when unrelated history
 * [#11677] Difftastic as diff viewer
-* [#11675] feat(RevisionGrid): Column width adjustments
+* [#11675] feat (RevisionGrid): Column width adjustments
 * [#11674] Always use Git coloring for word-diff
 * [#11673] Display "mixed" diff as red/green
-* [#11672] fix(FormResetAnotherBranch): Do not open ComboBox drop down on Enter
-* [#11665] feat(FormCommit): Add Conventional Commit message support
+* [#11672] fix (FormResetAnotherBranch): Do not open ComboBox drop down on Enter
+* [#11665] feat (FormCommit): Add Conventional Commit message support
 * [#11661] DeleteRemote: Add an option to delete a local tracking branch
 * [#11660] Small refactoring or adjustments
 * [#11659] FormResolveConflicts: Avoid fragmented translation strings
@@ -1225,13 +1209,13 @@
 * [#11615] Fix FormCommit "splitRight" moving down on each FormCommit open
 * [#11612] Fix FormRebase DPI issues
 * [#11611] Improve flaky LeftPanelTests.Submodules
-* [#11610] fix(CommitPickerSmallControl): fix commit count crash
+* [#11610] fix (CommitPickerSmallControl): fix commit count crash
 * [#11608] SubmoduleInfo: Do not quote empty ref
 * [#11605] RevDiff Find file clarification
 * [#11601] OnRevisionRead: Handle OperationCanceledException
 * [#11596] Fix avatars not loading behind a corporate proxy
 * [#11594] Shorten RevisionGraphTests file names
-* [#11591] fix(FormPush): fix tracking detection broken
+* [#11591] fix (FormPush): fix tracking detection broken
 * [#11590] Git diff coloring
 * [#11586] Avoid test hangs due to grid background task
 * [#11585] Add a default shortcut for "CreateSquashCommit"
@@ -1264,7 +1248,7 @@
 * [#11515] Fixup limits by RevisionGraph.Count
 * [#11507] Workaround ImageList transparent image regression introduced in .NET 8
 * [#11505] Regex explicit capture
-* [#11501] perfs: better perf for ObjectId.ToShortString()
+* [#11501] perfs: better perf for ObjectId.ToShortString ()
 * [#11494] Cancellation token for Git commands in CommitInfo
 * [#11492] FormBrowse: Avoid toolbar resize while refreshing
 * [#11491] ProxySwitcher Do not fail if http.proxy is not set
@@ -1289,7 +1273,7 @@
 * [#11458] Calculate ahead-behind on worker thread
 * [#11456] Improve graph performance (vNext)
 * [#11454] ICSharpCode.TextEditor: Improve C# syntax highlighting
-* [#11452] Remove assert in CalculateGraphIndices()
+* [#11452] Remove assert in CalculateGraphIndices ()
 * [#11448] Improve graph tests
 * [#11447] Improve (hugely!) impact graph performance
 * [#11445] Improve performance of left panel reload
@@ -1358,7 +1342,6 @@
 * [#11233] Simplify GitCommand
 * [#10893] CI: more meaningful icon instead of displaying a circle
 * [#10637] Render graph lines with less curves
-
 
 [#11848]:https://github.com/gitextensions/gitextensions/pull/11848
 [#11847]:https://github.com/gitextensions/gitextensions/pull/11847
@@ -1610,18 +1593,16 @@
 [#10893]:https://github.com/gitextensions/gitextensions/pull/10893
 [#10637]:https://github.com/gitextensions/gitextensions/pull/10637
 
-
-
 ### Version 4.2.1 (28 Nov 2023)
 
 #### Changes:
+
 * [#11393] Avoid popup resetting new file to index
 * [#11389] GPG: don't crash on artificial commits
 * [#11384] Do not migrate empty settings
 * [#11381] GitExtSshAskPass: Ensure chars are outputed as UTF8 chars
-* [#11376] Delete unused branch plugin: Makes GetBranchNames() support worktrees
+* [#11376] Delete unused branch plugin: Makes GetBranchNames () support worktrees
 * [#11369] Let git deny the commit if committer is not specified
-
 
 [#11393]:https://github.com/gitextensions/gitextensions/pull/11393
 [#11389]:https://github.com/gitextensions/gitextensions/pull/11389
@@ -1630,10 +1611,10 @@
 [#11376]:https://github.com/gitextensions/gitextensions/pull/11376
 [#11369]:https://github.com/gitextensions/gitextensions/pull/11369
 
-
 ### Version 4.2 (13 Nov 2023)
 
 #### Changes:
+
 * [#11348] SetDocumentationBaseUrl using ProductVersion
 * [#11341] Fixup ISettings<T> tests
 * [#11340] Git 2.42.0
@@ -1654,9 +1635,9 @@
 * [#11232] CommitMessageManager: Fixup ThrowIfNull
 * [#11231] Modernise FormCheckoutRevision
 * [#11225] Decode revision reader directly to Span
-* [#11224] Optimize ObjectId.ToString()
+* [#11224] Optimize ObjectId.ToString ()
 * [#11223] ObjectId use uint64 to reduce calls
-* [#11222] Remove ObjectId.Equals(string)
+* [#11222] Remove ObjectId.Equals (string)
 * [#11219] Add hotkey to ToolStripButton Default Pull/Fetch
 * [#11218] RevisionGridControl: Hide tooltip on Escape
 * [#11215] Git Command Log: Show git verb; extend context menu
@@ -1687,7 +1668,7 @@
 * [#11159] Avoid always caught exception for unset settings
 * [#11158] Update cherrypick dialog
 * [#11157] FormCommitTests: Disable AppSettings.ProvideAutocompletion
-* [#11152] Replace JTF.RunAsync() with exception-safe wrappers
+* [#11152] Replace JTF.RunAsync () with exception-safe wrappers
 * [#11149] IDE0057 simplify substring
 * [#11144] Prevent from breaking FormCommit designer
 * [#11142] Dependency injection
@@ -1759,7 +1740,6 @@
 * [#10864] Do not straighten re-used graph lanes
 * [#10851] Store view settings on request only
 * [#10649] Add support to build GE for Windows on Arm64 (WoA)
-
 
 [#11348]:https://github.com/gitextensions/gitextensions/pull/11348
 [#11341]:https://github.com/gitextensions/gitextensions/pull/11341
@@ -1887,11 +1867,10 @@
 [#10851]:https://github.com/gitextensions/gitextensions/pull/10851
 [#10649]:https://github.com/gitextensions/gitextensions/pull/10649
 
-
-
 ### Version 4.1 (01 May 2023)
 
 #### Changes:
+
 * [#10945] Open VS Code in a new window
 * [#10943] Handle all message filters starting with -- as git-log options
 * [#10938] Bugfix: Always convert ConEmu font size to integer
@@ -1923,7 +1902,7 @@
 * [#10853] Reset renamed index files
 * [#10852] Merge conflicts: Only list files in worktree
 * [#10850] Fixup submodule reference of ICSharpCode.TextEditor
-* [#10849] IScriptHostControl.CurrentBranch() to decrease overhead
+* [#10849] IScriptHostControl.CurrentBranch () to decrease overhead
 * [#10847] Restore from minimized: Configurable avoid async Git
 * [#10846] Improve avatar handling
 * [#10843] FormCommit: Read committer info using git
@@ -1948,7 +1927,7 @@
 * [#10743] Improve robustness of GitStatusMonitor
 * [#10742] Fix: "Ctrl+Enter" creates commit when Enter is released, not pressed
 * [#10737] CommitInfo: Do not try to parse commit-hash look-alike inside e-mail address
-* [#10732] Copy relative or full path(s) to clipboard
+* [#10732] Copy relative or full path (s) to clipboard
 * [#10730] EditNetSpell: Avoid unhandled-key sound for cursor keys
 * [#10727] Fix url openings in plugins
 * [#10718] Fixup splitter settings
@@ -1968,7 +1947,8 @@
 * [#10668] Add missing handler responsible for changing repos via the dropdown
 * [#10664] Fix git command for unmerged obsolete branches
 * [#10663] DeleteUnusedBranches plugin: Fix branch deletion
-* [#10648] Avoid "git : warning: in the working copy of '<file>', LF will be replaced by CRLF the next time Git touches it"
+* [#10648] Avoid "git : warning: in the working copy of '<file>', LF will be replaced by CRLF the next time Git touches
+  it"
 * [#10647] Encapsulate several top-level menus
 * [#10613] Conemu: fix switch of repo folder in console tab
 * [#10587] FormCommit: Clearer button labels
@@ -1981,7 +1961,7 @@
 * [#10389] Add config to allow file protocol to be used-Tests
 * [#10380] Keep recent repositories in the same order when filtering
 * [#10353] Add support for amend! commits
-* [#10335] Fixed an issue that caused an exception when switching languages.(#10332)
+* [#10335] Fixed an issue that caused an exception when switching languages. (#10332)
 * [#10303] RevDiff: Allow path filter for several files
 * [#10298] #6564 - make labels in putty "please load key" modal not overlap
 * [#10295] range-diff with path filter
@@ -1999,7 +1979,6 @@
 * [#10199] Improve deletion of local branches
 * [#10197] working around context menu strip being positioned incorrectly on first open
 * [#9925] Blame: open current diff/view line
-
 
 [#10945]:https://github.com/gitextensions/gitextensions/pull/10945
 [#10943]:https://github.com/gitextensions/gitextensions/pull/10943
@@ -2109,10 +2088,10 @@
 [#10197]:https://github.com/gitextensions/gitextensions/pull/10197
 [#9925]:https://github.com/gitextensions/gitextensions/pull/9925
 
-
 ### Version 4.0.0 (31 Oct 2022)
 
 #### Changes:
+
 * [10294] FormBrowse: Hide Reflog button by default
 * [10286] Git 2.38.1
 * [10285] Refresh the left panel when it's shown
@@ -2140,7 +2119,7 @@
 * [10212] Update filter toolbar when filters change
 * [10208] ConEmu 220807
 * [10205] Move revision filters to advanced filter form
-* [10203] FormDeleteRemoteBranch: GetMergedRemoteBranches() in background
+* [10203] FormDeleteRemoteBranch: GetMergedRemoteBranches () in background
 * [10193] Protect AppSettings saving using global mutex
 * [10191] Add Update-DotnetVersion script
 * [10190] Tests: Disable some commonly failed tests
@@ -2233,7 +2212,7 @@
 * [9903] Remove unused `TreeGuid`
 * [9900] RevisionGrid: Add option to fill git ref labels again
 * [9898] Make common hotkeys visible as Hotkeys
-* [9897] Browse: Clarify RefreshRevisions() handling
+* [9897] Browse: Clarify RefreshRevisions () handling
 * [9896] Share gitRefs when reloading after changing sort criterias
 * [9890] Enable fetching moved tags
 * [9888] Init sidepanel only when loading
@@ -2300,7 +2279,7 @@
 * [9747] Fix tests
 * [9745] Adjust Debug.Assert for tests
 * [9744] Make the Debug build debuggable
-* [9735] Share GitRef() at startup
+* [9735] Share GitRef () at startup
 * [9734] LeftPanel was initiated twice at startup
 * [9733] PathFilter: Set FallbackFollowedFile at every filter update
 * [9732] appveyor: avoid warnings about crlf
@@ -2339,7 +2318,8 @@
 * [9655] Add mnemonics to every menu item in FormBrowse
 * [9652] Fix: Prevent the find-replace dialog from blocking Windows shutdown
 * [9650] Fix revision lane order
-* [9645] Add ellipses (...) to branch context menu items which require additional steps to complete; update item labels to match other menus
+* [9645] Add ellipses (...) to branch context menu items which require additional steps to complete; update item labels
+  to match other menus
 * [9639] Fixup splitter persistence for CommitInfo
 * [9638] Update issue template and update BugReporter to use the new template
 * [9635] Fix #9634: Minor PR template issue: body text being rendered as a header
@@ -2372,7 +2352,7 @@
 * [9540] Remove CorePath class
 * [9539] Simplify the ISettingsSource class
 * [9528] Enhance the filters toolbar
-* [9524] GetRangeDiff() should be Async
+* [9524] GetRangeDiff () should be Async
 * [9522] Cancellation for Executable
 * [9519] Truncate tooltips for blame commit long summary
 * [9518] Add yerudako (myself) to the list of project contributors
@@ -2424,7 +2404,7 @@
 * [9330] Reduce window flicker and loss of focus
 * [9329] Fix/9166 gdi objects
 * [9326] FormRebase: Avoid list refs if not advanced
-* [9324] Remove custom ToHashSet() methods. Fixes #9159
+* [9324] Remove custom ToHashSet () methods. Fixes #9159
 * [9320] Quick search in whole commit message if loaded
 * [9318] Create empty settings file if missing
 * [9317] GitRevision: Remove Name property
@@ -2457,7 +2437,7 @@
 * [9216] Use fullPathResolver for viewing local files
 * [9212] Preparations for exceptions on git error
 * [9210] Delete temp files from settings tests
-* [9206] Use enum interface for GetRefs()
+* [9206] Use enum interface for GetRefs ()
 * [9203] LogCaptureCallStacks in AppSettings
 * [9197] Diff/Commit: Do not show Open for deleted items
 * [9196] Do not try to show deleted images in diffviewer
@@ -2497,7 +2477,7 @@
 * [9064] Do not reset a valid `AppSettings.GitBinDir`
 * [9063] Report bugs in a separate process
 * [9060] Suppress "Theme not found" if setting is empty
-* [9059] Use exit status instead of IsGitErrorMessage()
+* [9059] Use exit status instead of IsGitErrorMessage ()
 * [9058] AutoComplete: Avoid Git for non tracked files
 * [9057] rev-parse should use --quiet --verify
 * [9056] Throw on non-zero exit code and on stderror output
@@ -2604,7 +2584,6 @@
 * [8452] Allow highlight branch by ALT+Click in the grid
 * [8156] Update packages.
 * [8010] Feature/add windows explorer integration in settings
-
 
 [10294]:https://github.com/gitextensions/gitextensions/pull/10294
 [10286]:https://github.com/gitextensions/gitextensions/pull/10286
@@ -3098,17 +3077,16 @@
 [8156]:https://github.com/gitextensions/gitextensions/pull/8156
 [8010]:https://github.com/gitextensions/gitextensions/pull/8010
 
-
 ### Version 3.5.4 (25 Sep 2021)
 
 #### Changes:
+
 * [9589] Show toolbar grips
 * [9566] Fix leaking brushes
 * [9551] fix: Show current branch resets when switch repos
 * [9550] Restore splitter persistence
 * [9521] Fix Clone URL Population
-* [9505] CommitDiff: Do not Join() in Dispose()
-
+* [9505] CommitDiff: Do not Join () in Dispose ()
 
 [9589]:https://github.com/gitextensions/gitextensions/pull/9589
 [9566]:https://github.com/gitextensions/gitextensions/pull/9566
@@ -3120,25 +3098,24 @@
 ### Version 3.5.3 (17 Aug 2021)
 
 #### Changes:
+
 * [9464] Show ChecklistSettings also for settings without an autosolver
 * [9471] Unable to start ConEmu console
 * [9396] Improve handling of encodings with conflicting names
-
 
 [9464]:https://github.com/gitextensions/gitextensions/issues/9464#issuecomment-898202703
 [9471]:https://github.com/gitextensions/gitextensions/issues/9471
 [9396]:https://github.com/gitextensions/gitextensions/pull/9396
 
-
 ### Version 3.5.2 (06 Aug 2021)
 
 #### Changes:
+
 * [9374] Make showing commit message body in the revision graph optional
 * [9351] Fixup user scripts running PS in foreground
 * [9350] Fixup main menu item `Git bash`
 * [9343] [NBug] An item with the same key has already been added.
 * [9342] GitRef: Remote may be as long as Name
-
 
 [9374]:https://github.com/gitextensions/gitextensions/pull/9374
 [9351]:https://github.com/gitextensions/gitextensions/pull/9351
@@ -3146,10 +3123,10 @@
 [9343]:https://github.com/gitextensions/gitextensions/issues/9343
 [9342]:https://github.com/gitextensions/gitextensions/pull/9342
 
-
 ### Version 3.5.1 (04 Jul 2021)
 
 #### Changes:
+
 * [9321] Fixup GDI object leaks
 * [9314] Exclude vimdiff1 from custom difftools
 * [9313] Fix PathUtil handling of spaces in file names (for 3.5)
@@ -3180,7 +3157,6 @@
 * [9111] Accessibility: contrast too low
 * [9110] Missing Newtonsoft.Json.dll if installed with no plugins selected / Git Extensions (3.5.0.11713)
 * [9026] 3.5 RC1 installer issues
-
 
 [9321]:https://github.com/gitextensions/gitextensions/pull/9321
 [9314]:https://github.com/gitextensions/gitextensions/pull/9314
@@ -3213,10 +3189,10 @@
 [9110]:https://github.com/gitextensions/gitextensions/issues/9110
 [9026]:https://github.com/gitextensions/gitextensions/issues/9026
 
-
 ### Version 3.5 (25 April 2021)
 
 #### Changes:
+
 * [9103] GitHub token: Add a link to let the user generate its Personal Access Token
 * [9102] Restore splitter persistence
 * [9094] Handle more exceptions as failed external operation
@@ -3231,10 +3207,10 @@
 [9018]:https://github.com/gitextensions/gitextensions/pull/9018
 [8971]:https://github.com/gitextensions/gitextensions/pull/8971
 
-
 ### Version 3.5-RC1 (21 March 2021)
 
 #### Changes:
+
 * [9017] Push from empty FormCommit
 * [9012] #8684 Avatars are misaligned in blame form
 * [9006] Avoid invalid line number in DiffHighlightService
@@ -3286,7 +3262,7 @@
 * [8718] Handle external I/O exceptions that user can fix
 * [8716] Fix high CPU usage of TeamCityAdapter
 * [8713] TranslationApp: Include "AccessibleName"
-* [8708] FileViewer: Consistently use Stage/Reset  Lines
+* [8708] FileViewer: Consistently use Stage/Reset Lines
 * [8703]  Submodule browse: Select both first/second commits
 * [8697] Handle multi-part names for author initials
 * [8690] FormResolveConflict: Allow open without cmd/path
@@ -3315,10 +3291,10 @@
 * [8601] Fix Open with Diff Tool does not work with staged renamed file in FormCommit dialog
 * [8594] FormPush: fix tracked branches selection
 * [8593] FormGoToCommit: set focus on commit textbox when no control has focus
-* [8587] Do not  throw if Git is upgraded  while GE is started
+* [8587] Do not throw if Git is upgraded while GE is started
 * [8576] fix background / foreground contrast for gray text
 * [8575] FullPathResolver: Avoid exception for illegal characters
-* [8573] FormPush show ahead/behind for  multiple branches
+* [8573] FormPush show ahead/behind for multiple branches
 * [8572] Break the toolstrip
 * [8568] Reduced the number of draw calls on the commit info panel.
 * [8564] Implement custom avatar providers and refactor avatar handling.
@@ -3440,7 +3416,6 @@
 * [8035] Indicate merged branches in left panel
 * [7825] RevisionDiff: Stage/Unstage selected lines
 * [6339] Add ability to Copy to Clipboard, similar to commit context menu from left panel
-
 
 [9017]:https://github.com/gitextensions/gitextensions/pull/9017
 [9012]:https://github.com/gitextensions/gitextensions/pull/9012
@@ -3648,18 +3623,20 @@
 [7825]:https://github.com/gitextensions/gitextensions/pull/7825
 [6339]:https://github.com/gitextensions/gitextensions/pull/6339
 
-
 ### Version 3.4.3 (23 July 2020)
 
 #### Changes:
+
 * [8329](https://github.com/gitextensions/gitextensions/pull/8329) ConEmu 20.07.13
 * [8323](https://github.com/gitextensions/gitextensions/pull/8323) Dark silver theme
 * [8319](https://github.com/gitextensions/gitextensions/pull/8319) Resize also the backup/default avatar image
-* [8318](https://github.com/gitextensions/gitextensions/pull/8318) FormCommit: No summary  for deleted submodules
-* [8296](https://github.com/gitextensions/gitextensions/pull/8296) Disable Finish button while loading branches in GitFlow form.
+* [8318](https://github.com/gitextensions/gitextensions/pull/8318) FormCommit: No summary for deleted submodules
+* [8296](https://github.com/gitextensions/gitextensions/pull/8296) Disable Finish button while loading branches in
+  GitFlow form.
 * [8287](https://github.com/gitextensions/gitextensions/pull/8287) Restore FileStatusList focus after GoToChild/Parent
 * [8277](https://github.com/gitextensions/gitextensions/pull/8277) Track theme colors via Telemetry
-* [8274](https://github.com/gitextensions/gitextensions/pull/8274) Avoid console printouts when submodule updates are throttled
+* [8274](https://github.com/gitextensions/gitextensions/pull/8274) Avoid console printouts when submodule updates are
+  throttled
 * [8266](https://github.com/gitextensions/gitextensions/pull/8266) Fix ssh not found
 * [8250](https://github.com/gitextensions/gitextensions/pull/8250) Fix "selection only" text search on Diff view (#7784)
 * [8212](https://github.com/gitextensions/gitextensions/pull/8212) Recover lost object: Add a file preview
@@ -3667,6 +3644,7 @@
 ### Version 3.4.2 (21 June 2020)
 
 #### Changes:
+
 * [8255] [NBug] Invalid diff/merge tool requestedParameter name: toolName
 * [8252] Draw current commit message bold in detached-head mode
 * [8246] Disable context menu items rather than hiding them
@@ -3674,7 +3652,6 @@
 * [8238] Display 'Plugin Manager" next to "Plugin settings" in the menu
 * [8237] ResetAnotherBranch: Quote path arguments
 * [8231] Centrally handle user script errors
-
 
 [8255]:https://github.com/gitextensions/gitextensions/pull/8255
 [8252]:https://github.com/gitextensions/gitextensions/pull/8252
@@ -3684,19 +3661,18 @@
 [8237]:https://github.com/gitextensions/gitextensions/pull/8237
 [8231]:https://github.com/gitextensions/gitextensions/pull/8231
 
-
-
 ### Version 3.4.1 (14 June 2020)
 
 #### Changes:
+
 * [8218] Restore missing app.manifest
 
 [8218]:https://github.com/gitextensions/gitextensions/pull/8218
 
-
 ### Version 3.4 (6 June 2020)
 
 #### Changes:
+
 * [8182] Make scripts execution safer
 * [8178] AppVeyor Exception at init
 * [8177] Prevent NRE when getting AppVeyor build duration
@@ -3720,7 +3696,7 @@
 * [8059] Correct filemode for source files
 * [8058] Ignore inaccessible file in GetSelectedBranchFast
 * [8056] Select multiple revisions using Left Panel
-* [8051] git-diff override  diff.mnemonicprefix=true
+* [8051] git-diff override diff.mnemonicprefix=true
 * [8050] Unneeded rev-list for submodule status
 * [8043] Ignore GitHub API rate limit induced errors when search for app updates
 * [8042] Fix 3954 quotes in merge commit message
@@ -3759,7 +3735,7 @@
 * [7927] Move settings page titles from designer files
 * [7926] Use ViewChangesAsync consistently for changes
 * [7924] Align recent branch names
-* [7923] RevDiff: Show common/unique files for BASE->selected(B)
+* [7923] RevDiff: Show common/unique files for BASE->selected (B)
 * [7922] FileStatus icon: submodule before status updated
 * [7921] Fix 3 not reproduced exceptions
 * [7919] Settings: Color title label missing
@@ -3866,7 +3842,6 @@
 * [7329] Improve revisiongrid tooltips
 * [7213] Dark theme
 * [7044] Add and refactor diffmerge tools
-
 
 [8182]:https://github.com/gitextensions/gitextensions/pull/8182
 [8178]:https://github.com/gitextensions/gitextensions/pull/8178
@@ -4092,7 +4067,6 @@
 [7213]:https://github.com/gitextensions/gitextensions/pull/7213
 [7044]:https://github.com/gitextensions/gitextensions/pull/7044
 
-
 ### Version 3.3.1 (7 Jan 2020)
 
 #### Fixes
@@ -4103,17 +4077,16 @@
 * Installer defaults to PuTTY - PR [7545]
 * Prevent crash where _btnPreview is null when event triggered - PR [7536]
 
-
 [7576]:https://github.com/gitextensions/gitextensions/pull/7576
 [7554]:https://github.com/gitextensions/gitextensions/pull/7554
 [7549]:https://github.com/gitextensions/gitextensions/pull/7549
 [7545]:https://github.com/gitextensions/gitextensions/pull/7545
 [7536]:https://github.com/gitextensions/gitextensions/pull/7536
 
-
 ### Version 3.3 (1 Dec 2019)
 
 #### Features:
+
 * Extends Squash feature to all supported types - PR [7401]
 * Implement git-reset --merge and --keep options - PR [7367]
 * CommitDialog: New Option "Show only my messages" - PR [7337]
@@ -4131,6 +4104,7 @@
 * Generate GitHub OAuth token with github api - PR [6888]
 
 #### Fixes:
+
 * Removes extra dot from Save as revfiletree dialog - PR [7460]
 * Ignore all potential errors from PowerShell during installation - PR [7442]
 * AzureDevOps CI: prevent call if settings invalid - PR [7437]
@@ -4164,7 +4138,7 @@
 * Exclude "fixup!" and "squash!" prefixes from commit message RegEx validation - PR [7223]
 * Blame: Fix missing commit metadata on some commits - PR [7222]
 * Support older Gerrit API - PR [7216]
-* Catch ConEmu exception for Done() - PR [7212]
+* Catch ConEmu exception for Done () - PR [7212]
 * Popup when error starting mergetool - PR [7211]
 * Branch list could contain '+' - PR [7209]
 * Gerrit Plugin fixes/improvements - PR [7198]
@@ -4178,7 +4152,6 @@
 * Clarify Settings-Stash label - PR [7072]
 * Fix 3934 add force push with lease to the push dialog - PR [7047]
 * Jira commit hint plugin: fix some string not translated - PR [7040]
-
 
 [7460]:https://github.com/gitextensions/gitextensions/pull/7460
 [7449]:https://github.com/gitextensions/gitextensions/pull/7449
@@ -4264,16 +4237,15 @@
 [6910]:https://github.com/gitextensions/gitextensions/pull/6910
 [6888]:https://github.com/gitextensions/gitextensions/pull/6888
 
-
-
 ### Version 3.2.1 (2 Sep 2019)
 
 #### Features:
+
 * Fix scrolling for committers label in statistics plugin - PR [7092]
 * Display icons in commit templates menu items - PR [7037]
 * Settings: Display label to the top to make UI more readable on multiline controls - PR [7036]
 * Fix potential bad end of line replacement - PR [7032]
-* Pull form items clipped on HiDPI scaled displays  - Issue [7020]
+* Pull form items clipped on HiDPI scaled displays - Issue [7020]
 * TortoiseGitMerge.exe old default name - PR [7004]
 * Add support for "--rebase-merges" for newest version of git - PR [6920]
 * Apply stash to some files - Issue [6902]
@@ -4304,16 +4276,18 @@
 * Browse --> Diff Tab: Added images are not shown visualized - Issue [1391]
 
 #### Fixes:
+
 * [NBug] CombinedDiff artificial commit cannot be explicitly compare... - Issue [7087]
 * Crash on file "save as" - Issue [7059]
 * Open jira settings when not configured - PR [7033]
 * Overflow error in Commit Dialog - Issue [7023]
 * [NBug] Sequence contains no elements - Issue [7011]
-* Crash when clicking "Suggest" button next to merge/diff tool paths, when those paths contain forward slashes - Issue [7000]
+* Crash when clicking "Suggest" button next to merge/diff tool paths, when those paths contain forward slashes -
+  Issue [7000]
 * Remote Repositories List Empty - Issue [6983]
 * [NBug] Illegal characters in path. - Issue [6982]
 * Crash on "Create new repository" - Issue [6955]
-* Commit message  incorrect height at 150% scale factor - Issue [6898]
+* Commit message incorrect height at 150% scale factor - Issue [6898]
 * Commit message highlight is one line too high for short commit titles - Issue [6895]
 * File history issue in a repository with an enabled sparse checkout - Issue [6892]
 * Unable to blame a file - Issue [6815]
@@ -4335,7 +4309,6 @@
 * History not shown for a new file in a different branch - Issue [6458]
 * Delete tag not working - Issue [6281]
 * Commit message line endings modified by commit dialog - Issue [5908]
-
 
 [7092]:https://github.com/gitextensions/gitextensions/pull/7092
 [7087]:https://github.com/gitextensions/gitextensions/issues/7087
@@ -4403,11 +4376,10 @@
 [4909]:https://github.com/gitextensions/gitextensions/issues/4909
 [1391]:https://github.com/gitextensions/gitextensions/issues/1391
 
-
-
 ### Version 3.1.1 (2 June 2019)
 
 #### Fixes:
+
 * Ctrl+Backspace affects ReadOnly TextBox - Issue [6667]
 * incorrect {sRemotePathFromUrl} parameter evaluation - Issue [6567]
 * [NBug] Remote URLs should appear in pairs. - Issue [6562]
@@ -4415,7 +4387,6 @@
 * Pull dialog stopped "remembering" previous user selection - Issue [6503]
 * Commit message not stored after reverting a commit - Issue [6244]
 * System.Exception opening an existing repository - Issue [6093]
-
 
 [6667]:https://github.com/gitextensions/gitextensions/issues/6667
 [6567]:https://github.com/gitextensions/gitextensions/issues/6567
@@ -4425,10 +4396,10 @@
 [6244]:https://github.com/gitextensions/gitextensions/issues/6244
 [6093]:https://github.com/gitextensions/gitextensions/issues/6093
 
-
 ### Version 3.1.0 (13 May 2019)
 
 #### Features:
+
 * Include source branch in link to BitBucket create pull request - PR [6511]
 * Generate avatars with author initials as fallback of gravatar - PR [6499]
 * Hotkeys for Open with difftool | First/Selected -> Working Directory - Issue [6481]
@@ -4488,6 +4459,7 @@
 * Need -depth option on clone github dialog - Issue [3517]
 
 #### Fixes:
+
 * [NBug] Unexpected artificial commit in Git command: 11111111111111... - Issue [6535]
 * Format patch: fix patch creation when selection order is invalid (master)  - PR [6526]
 * Unhandled RefsWarningException "warning: ignoring broken ref" - Issue [6516]
@@ -4521,7 +4493,8 @@
 * Slow startup if never connected to internet - Issue [6223]
 * Orphan commit badly displayed in Revision graph - Issue [6210]
 * Exception from revision grid - Issue [6193]
-* PathTooLongExceptions for file paths shorter than 260 characters in commit window when triggered from VS extension - Issue [6170]
+* PathTooLongExceptions for file paths shorter than 260 characters in commit window when triggered from VS extension -
+  Issue [6170]
 * Jira Commit Hint plugin doesn't work - Issue [6154]
 * inverted diffs after refresh - Issue [6147]
 * Revision grid: bad behaviour when resizing of commit message column - Issue [6117]
@@ -4555,13 +4528,12 @@
 * Revisions panel empties after double click in blame view - Issue [5678]
 * Incorrect layout of the 'Specify branch' dialog - Issue [5676]
 * Git Notes don't show in beta 3.00.00.01 - Issue [5653]
-* Git extensions crash when using the mouse wheel  - Issue [5621]
+* Git extensions crash when using the mouse wheel - Issue [5621]
 * Avatars makes app unresponsive on slow internet connection - Issue [5309]
 * "Remote repositories -- Default pull behaviour" tab broken under high dpi - Issue [5028]
 * Push dialog remotes not updated - Issue [4853]
 * Jira Commit Hint plugin credentials stored in plain text - Issue [4447]
 * Plugin loading phase - Issue [3320]
-
 
 [6535]:https://github.com/gitextensions/gitextensions/issues/6535
 [6526]:https://github.com/gitextensions/gitextensions/pull/6526
@@ -4694,17 +4666,16 @@
 [3517]:https://github.com/gitextensions/gitextensions/issues/3517
 [3320]:https://github.com/gitextensions/gitextensions/issues/3320
 
-
 ### Version 3.0.2 (16 Feb 2019)
 
 #### Fixes:
+
 * QuickPull's hotkey is not working - Issue [6200]
 * Can't delete a repository included in the categories of the dashboard - Issue [6192]
 * Fix loading of some plugins that failed - PR [6159]
 * Regression: Pull Dialog Title when changing merge option - Issue [6150]
-* Shell Extension Menu Pull  - Issue [6144]
+* Shell Extension Menu Pull - Issue [6144]
 * gitexe.cmd pull - always opens dialog window in do not merge, only fetch changes - Issue [6060]
-
 
 [6200]:https://github.com/gitextensions/gitextensions/issues/6200
 [6192]:https://github.com/gitextensions/gitextensions/issues/6192
@@ -4713,10 +4684,10 @@
 [6144]:https://github.com/gitextensions/gitextensions/issues/6144
 [6060]:https://github.com/gitextensions/gitextensions/issues/6060
 
-
 ### Version 3.0.1 (20 Jan 2019)
 
 #### Fixes:
+
 * Application crashes on repository change - Issue [6094]
 * Broken issue templates - Issue [6075]
 * Commit Template Settings: Commit Template field one line only - Issue [6029]
@@ -4735,13 +4706,15 @@
 * Script: cDefaultRemotePathFromUrl returns bad information - Issue [5932]
 * Reenable vertical ruler - PR [5930]
 * Diffs are not displayed properly and cannot be scrolled - Issue [5917]
-* Left Panel branches tree view with horizontal scroll defaults to scrolling to center instead of staying on the left - Issue [5907]
+* Left Panel branches tree view with horizontal scroll defaults to scrolling to center instead of staying on the left -
+  Issue [5907]
 * Autolinks from commits hashes broken in version 3.00.00 - Issue [5904]
 * QuickPull should behave the same as the default toolbar does. - PR [5897]
 * GitFlow plugins Finish button doesn't work fine - Issue [5893]
 * Double click in empty TextBox raises ArgumentOutOfRangeException - Issue [5890]
 * Revision graph starts from the wrong point - Issue [5880]
-* When default Pull button action is set to "Fetch and prune all", the "Open pull dialog..." entry does a fetch and prune all - Issue [5879]
+* When default Pull button action is set to "Fetch and prune all", the "Open pull dialog..." entry does a fetch and
+  prune all - Issue [5879]
 * System.FormatException in diff of submodule add / update - Issue [5873]
 * VS2019 initial support - PR [5864]
 * UI freeze in 3.0 RC2 while retrieving avatars - Issue [5859]
@@ -4751,7 +4724,6 @@
 * Restore revision grid highlighting of commits by author - Issue [5197]
 * Plugin distribution - Issue [4885]
 * GitExtensions crashes on startup - "There is an error in the XML document" - Issue [3929]
-
 
 [6094]:https://github.com/gitextensions/gitextensions/issues/6094
 [6075]:https://github.com/gitextensions/gitextensions/issues/6075
@@ -4788,10 +4760,10 @@
 [4885]:https://github.com/gitextensions/gitextensions/issues/4885
 [3929]:https://github.com/gitextensions/gitextensions/issues/3929
 
-
 ### [Version 3.00.00] (09 Dec 2018)
 
 #### Features:
+
 * Fixed #5811: strange resize of the description column when selecting lines with mouse click - PR [5821]
 * Commit-graph:  Add option to always display first parent node in left-most column - Issue [5819]
 * Corrected git log command. - PR [5816]
@@ -4819,7 +4791,8 @@
 * Allow navigation to arbitrary commit through a script - Issue [5615]
 * Update commit info panel layout - PR [5611]
 * Txt change: "Show in folder" - PR [5597]
-* When ordering is unspecified use "topo-order" to prevent parents showing before all of their children are shown - PR [5596]
+* When ordering is unspecified use "topo-order" to prevent parents showing before all of their children are shown -
+  PR [5596]
 * Setting order revisions by date has no effect - Issue [5594]
 * Fix SubmoduleInfoResult having no CurrentSubmoduleName for submodules… - PR [5581]
 * Browse: Commands menu for artificial commits - Issue [5557]
@@ -4832,7 +4805,7 @@
 * Expand / collapse button of ExListView is not working - Issue [5427]
 * GoToSuperproject and GoToSubmodule hotkeys - PR [5425]
 * Fetch menu item performs the default pull action - Issue [5420]
-* About dialog Add system info  - Issue [5419]
+* About dialog Add system info - Issue [5419]
 * Leave only two rebase options in RevisionGridControl - PR [5413]
 * GUI hangs after loading repo - Issue [5408]
 * Submodule dropdown do not contain status - Issue [5386]
@@ -4867,7 +4840,7 @@
 * Increase minimum Git version to 2.11 - Issue [5106]
 * Fixing mergetool (setting) status message - PR [5102]
 * UI tweaks for v3 - PR [5087]
-* Show branches before tags in the revision grid.  - PR [5077]
+* Show branches before tags in the revision grid. - PR [5077]
 * Displaying only the abbreviated sha1 in the revision grid - Issue [5032]
 * Some default settings should be changed - Issue [5030]
 * Remove support for RevisionGrid layouts - Issue [5026]
@@ -4898,7 +4871,7 @@
 * VSIX plugin: No icon for blame - PR [4790]
 * fix: FormFixHome is messed up HiDPI - PR [4780]
 * fix: FormRemotes is messed up on HiDPI - PR [4779]
-* Icons in buttons are too small under high DPI  - Issue [4778]
+* Icons in buttons are too small under high DPI - Issue [4778]
 * Tab control header is too small under high DPI - Issue [4777]
 * Refactor repositories persistence - PR [4766]
 * GE skips dashboard if started from a Git repo - Issue [4739]
@@ -4911,7 +4884,7 @@
 * Get remotes - PR [4705]
 * Patches 3/3 - PR [4697]
 * Environment HOME path dialog is broken under windows - Issue [4690]
-*  Blame view/parsing review  - PR [4688]
+* Blame view/parsing review - PR [4688]
 * Patches 1/3 - PR [4687]
 * Multiple enumeration - PR [4682]
 * Replace tail call recursion with loop - PR [4681]
@@ -4937,7 +4910,7 @@
 * Add the current process id to the tmpFile name. - PR [4625]
 * Remove SVN support - Issue [4592]
 * Add button for opening the Commit dialog from the Rebase dialog - Issue [4588]
-* TaskCanceledException for ShowSelectedFileDiff() - Issue [4570]
+* TaskCanceledException for ShowSelectedFileDiff () - Issue [4570]
 * BrowseDiff should show differences to all selected revisions - Issue [4564]
 * FileStatusList handling of parents and selected revision - Issue [4561]
 * Commit info in history form - PR [4554]
@@ -4945,13 +4918,13 @@
 * Remove Git and Kdiff3 from installer package - Issue [4515]
 * Application font should default to Segoe UI for Windows Vista and above with themes enabled - Issue [4511]
 * F3 should open the external diff viewer instead of showing "No string specified to look for!" - Issue [4500]
-* Use native ListView and TreeView styles  - Issue [4490]
+* Use native ListView and TreeView styles - Issue [4490]
 * Refactor external link definition - PR [4480]
 * Replace some lambdas with local functions - PR [4475]
 * Find file dialog doesn't work with backslashes and full file path - Issue [4472]
 * GitRemoteManager calls GetRefs multiple times - Issue [4453]
 * Add a hotkey for toggling viewing of Tags - Issue [4449]
-* Update RestSharp dependency to latest  - Issue [4428]
+* Update RestSharp dependency to latest - Issue [4428]
 * Update ConEmu dependency to latest - Issue [4427]
 * Update references latest available versions - Issue [4426]
 * ExternalLinksParser rework - PR [4425]
@@ -4973,7 +4946,7 @@
 * Added menu to perform immediate rebase and interactively rebase without the rebase dialog - PR [4309]
 * [Discussion] GitExtensions v3.0 proposal - Issue [4308]
 * View summary of changes in revision grid - Issue [4281]
-* Support build integration support for variables  - PR [4280]
+* Support build integration support for variables - PR [4280]
 * memory leak & high CPU usage on windows 10 - Issue [4256]
 * Activate artificial commits by default #4033 - PR [4247]
 * [new feature] Sign commit with GPG - Issue [4238]
@@ -4991,7 +4964,7 @@
 * There is no way to get to favorite repositories, other than start page. - Issue [3220]
 * WinMerge is not supported as a mergetool (only as difftool) - Issue [3163]
 * Remember Split View Layout? - Issue [3072]
-* Left panel - branch  tree view - PR [3038]
+* Left panel - branch tree view - PR [3038]
 * Edit .gitignore button has display glitch - Issue [2938]
 * Add Atom Editor to Git Config section - Issue [2507]
 * Keep last used Destination in clone dialog as entered - Issue [2313]
@@ -5006,6 +4979,7 @@
 * git describe on commit tab - Issue [84]
 
 #### Fixes:
+
 * stack overflow with certain repo - Issue [5853]
 * Add try catch around method to guess system encoding. - PR [5820]
 * Can't connect to build server of TFS 2017 on premise - Issue [5773]
@@ -5022,7 +4996,7 @@
 * RevisionDiff on merge: ArgumentException double clicking the diff header to collapse it - Issue [5683]
 * AOOR in RevisionGraph - Issue [5672]
 * Commit Dialog: Commit button not as the default button - Issue [5644]
-* Running gitex.cmd from powershell doesn't ever load log panel.  - Issue [5629]
+* Running gitex.cmd from powershell doesn't ever load log panel. - Issue [5629]
 * Exception opening commit window due to bad WindowPositions.xml - Issue [5627]
 * Long branch name overflows in dashboard - Issue [5625]
 * Commit Tab does not clear on init of new repo - Issue [5624]
@@ -5060,7 +5034,7 @@
 * JTF+Rx Stack overflow - Issue [5134]
 * Error on push deleting a remote branch when a tag with the same name exists - Issue [5119]
 * Repository init dialog shows incorrect location - Issue [5107]
-* Dashboard refinements  - Issue [5084]
+* Dashboard refinements - Issue [5084]
 * Git-status in the background should use --no-optional-locks - Issue [5066]
 * Typing 'b' or 'h' into the Diff Filter Files text box doesn't insert the character - Issue [5065]
 * RevisionGrid: tooltip with multi-line body is not shown if the multi-line indicator column is hidden - Issue [5036]
@@ -5132,33 +5106,34 @@
 * Console window cannot be closed with the Escape key - Issue [3531]
 * GitCredentialWinStore missing - Issue [3511]
 * GetSubmoduleStatusAsync CancellationTokenSource Disposed - Issue [3278]
-* Not able to issue "git flow release publish" in git-flow plugin  - Issue [2838]
+* Not able to issue "git flow release publish" in git-flow plugin - Issue [2838]
 * Fields order in "create tag" window - Issue [2515]
 * Blame showing incorrect commit - Issue [2342]
 * Submodule dialog: "Name" textbox too small for long names - Issue [1858]
 
-
 ### [Version 2.51.05] (2 September 2018)
 
 #### Fixes:
+
 * Git config log.showSignature breaks revision grid - Issue [5179]
 
 #### Fixes (Mono specific):
+
 * Settings causes crash under linux/mono - Issue [5311]
 * Git Extension crashes when trying to access settings page in Ubuntu 16.04 - Issue [5187]
 * Diff view options are positioned wrong, cannot be selected under linux/mono - Issue [4978]
 
-
 ### [Version 2.51.04] (8 July 2018)
 
 #### Fixes:
+
 * A number of changed files on Commit button is always '2' - Issue [5127]
 * Error on push deleting a remote branch when a tag with the same name exists - Issue [5119]
-
 
 ### [Version 2.51.03] (26 June 2018)
 
 #### Features:
+
 * Set recommended version Git version to 2.17.1 - PR [5095]
 * RTF round-trip bug causes System.ArgumentException: File format is not valid - Issue [5005]
 * Recheck filter against displayed file name when working in the fileNameOnlyMode mode. - Issue [4991]
@@ -5166,20 +5141,23 @@
 * Add Atom Editor to Git Config section - Issue [2507]
 
 #### Fixes:
+
 * Repository init dialog shows incorrect location - Issue [5107]
 * Git-status in the background should use --no-optional-locks - Issue [5066]
 * Typing 'b' or 'h' into the Diff Filter Files text box doesn't insert the character - Issue [5065]
 * Customized window size is not kept - Issue [5021]
 * Commit index count disappears on refresh - Issue [4483]
 
-
 ### [Version 2.51.02] (24 May 2018)
 
 #### Highlights:
-* Simplified installer - Git and KDiff3 installers are no longer installed as part of GitExtensions's installation. The user will have to install external apps and tools separately.
+
+* Simplified installer - Git and KDiff3 installers are no longer installed as part of GitExtensions's installation. The
+  user will have to install external apps and tools separately.
 * Fixes to address a number of layout issues for high DPI monitors.
 
 #### Features:
+
 * Remove Git and KDiff3 from installer 2.51 - PR [4933]
 * Check for recommended Git version 2.51 - PR [4932]
 * Check for recommended Git version - PR [4929]
@@ -5190,6 +5168,7 @@
 * Remove Git from installer package - Issue [4515]
 
 #### Fixes:
+
 * Shell start script failing if run from a different directory - Issue [4975]
 * Crash when you click on the Commit tab - Issue [4956]
 * "Reset all changes" not working when "Refresh dialog on form focus" true - Issue [4907]
@@ -5202,17 +5181,16 @@
 * High HDPI is really messing up the display of screens - Issue [4099]
 * "Clean working directory" form layout broken at high DPI - Issue [3828]
 
-
-
-
 ### [Version 2.51.01] (11 Mar 2018)
 
 #### Highlights
+
 * Updated bundled Git to 2.16.2
 * Updated Putty to 0.70
 
 #### Features:
-* TaskCanceledException for ShowSelectedFileDiff() - Issue [4570]
+
+* TaskCanceledException for ShowSelectedFileDiff () - Issue [4570]
 * Add a hotkey for toggling viewing of Tags - Issue [4449]
 * Fixes on jira commit hint plugin - PR [4412]
 * Add two ScriptEvents, BeforeMerge, AfterMerge - Issue [4380]
@@ -5221,6 +5199,7 @@
 * Keep last used Destination in clone dialog as entered - Issue [2313]
 
 #### Fixes:
+
 * Wrong diff for initial commit - Issue [4580]
 * Find in the Diff tab shows differences reversed after wrapping around the files - Issue [4546]
 * "Restore to selected version" function is removed from 2.51 - Issue [4535]
@@ -5235,16 +5214,14 @@
 * Remotes not persisted - Issue [4441]
 * git log is called for artificial commits - Issue [4361]
 * "Reword Commit" doesn't refresh the UI - Issue [3935]
-* Not able to issue "git flow release publish" in git-flow plugin  - Issue [2838]
+* Not able to issue "git flow release publish" in git-flow plugin - Issue [2838]
 * Fields order in "create tag" window - Issue [2515]
 * Submodule dialog: "Name" textbox too small for long names - Issue [1858]
-
-
-
 
 ### [Version 2.51.00] (28 Jan 2018)
 
 #### Features:
+
 * Commandline difftool raised Assert - PR [4386]
 * Replace lightbulb images - PR [4351]
 * Rename arguments related to diff to firstRevision, secondRevision to … - PR [4344]
@@ -5258,7 +5235,7 @@
 * Commit & Push (forced with lease) when Amend is checked - Issue [4296]
 * FileHistory: Show Blame tab also for artificial commits - PR [4293]
 * Artificial commit changed count should be dynamic - PR [4209]
-* Jenkins build server integration: support for multi pipeline and wildcards  - Issue [4202]
+* Jenkins build server integration: support for multi pipeline and wildcards - Issue [4202]
 * GitEx does not remember splitter position - Issue [4058]
 * Enhanced view of uncommitted changes in Browse Repository - Issue [4031]
 * Support github-mac:// protocol - Issue [4276]
@@ -5332,11 +5309,12 @@
 * Implement support for --skip-worktree - Issue [3525]
 * Support signing commits via GPG - Issue [3161]
 * Diff window: configurable column for "ruler" or "gutter mark" - Issue [2868]
-* Visual Studio 2008: File history/blame shows the current line  - Issue [2839]
+* Visual Studio 2008: File history/blame shows the current line - Issue [2839]
 * Jira Commit Hint Plugin - PR [2495]
 * Context menu for commit with remote branch doesn't offer `Delete branch` option - Issue [1583]
 
 #### Fixes:
+
 * Commit view shows inverted diff output - Issue [4374]
 * Wrong diff for stashed untracked files - Issue [4373]
 * Branch filtering not working - Issue [4370]
@@ -5371,7 +5349,7 @@
 * Not able to read TAGMESSAGE file - Issue [4025]
 * Github > View pull requests... > Close throws "Object reference not set to an instance of an object." - Issue [4024]
 * Cancelling checking if shell extension is registered crashes GitExtensions - PR [4019]
-* Filter branch combobox is case sensitive  - Issue [4014]
+* Filter branch combobox is case sensitive - Issue [4014]
 * NRE on open gitextensions - Issue [4012]
 * Scripts with On event setting "AfterCheckout" or "BeforeCheckout" do not activate on revision checkout - Issue [4006]
 * Weird tab field order - Issue [3990]
@@ -5397,12 +5375,10 @@
 * Show an error message when cloning without specifying a destination - Issue [1605]
 * Error while resetting files - Issue [1307]
 
-
-
-
 ### [Version 2.51.RC2] (14 Jan 2018)
 
 #### Features:
+
 * Replace lightbulb images - PR [4351]
 * Rename arguments related to diff to firstRevision, secondRevision to … - PR [4344]
 * Use built-in stream.CopyTo method in SynchronizedProcessReader - PR [4343]
@@ -5415,11 +5391,12 @@
 * Commit & Push (forced with lease) when Amend is checked - Issue [4296]
 * FileHistory: Show Blame tab also for artificial commits - PR [4293]
 * Artificial commit changed count should be dynamic - PR [4209]
-* Jenkins build server integration: support for multi pipeline and wildcards  - Issue [4202]
+* Jenkins build server integration: support for multi pipeline and wildcards - Issue [4202]
 * GitEx does not remember splitter position - Issue [4058]
 * Enhanced view of uncommitted changes in Browse Repository - Issue [4031]
 
 #### Fixes:
+
 * Unable to add remote having selected deactivated item - Issue [4349]
 * Bitbucket Server: XSRF error when approving - Issue [4345]
 * fix: AE when starting app without a repository - PR [4340]
@@ -5429,12 +5406,10 @@
 * Browse Diff Garbage and exception for untracked files - Issue [4301]
 * Number of changed files isn't displayed in Commit button - Issue [4295]
 
-
-
-
 ### [Version 2.51.RC1] (31 Dec 2017)
 
 #### Features:
+
 * Support github-mac:// protocol - Issue [4276]
 * Add --simplify-merges when showing file full history - Issue [4264]
 * Change text in settings for artificial commits - PR [4246]
@@ -5506,11 +5481,12 @@
 * Implement support for --skip-worktree - Issue [3525]
 * Support signing commits via GPG - Issue [3161]
 * Diff window: configurable column for "ruler" or "gutter mark" - Issue [2868]
-* Visual Studio 2008: File history/blame shows the current line  - Issue [2839]
+* Visual Studio 2008: File history/blame shows the current line - Issue [2839]
 * Jira Commit Hint Plugin - PR [2495]
 * Context menu for commit with remote branch doesn't offer `Delete branch` option - Issue [1583]
 
 #### Fixes:
+
 * File rename events are not detected by filewatcher - Issue [4292]
 * Exception occurs when trying load the delete tag form - Issue [4283]
 * "View Stash" triggers System.ArgumentOutOfRangeException - Issue [4263]
@@ -5534,7 +5510,7 @@
 * Not able to read TAGMESSAGE file - Issue [4025]
 * Github > View pull requests... > Close throws "Object reference not set to an instance of an object." - Issue [4024]
 * Cancelling checking if shell extension is registered crashes GitExtensions - PR [4019]
-* Filter branch combobox is case sensitive  - Issue [4014]
+* Filter branch combobox is case sensitive - Issue [4014]
 * NRE on open gitextensions - Issue [4012]
 * Scripts with On event setting "AfterCheckout" or "BeforeCheckout" do not activate on revision checkout - Issue [4006]
 * Weird tab field order - Issue [3990]
@@ -5560,16 +5536,15 @@
 * Show an error message when cloning without specifying a destination - Issue [1605]
 * Error while resetting files - Issue [1307]
 
-
-
-
 ### [Version 2.50.02] (06 September 2017)
 
 #### Features:
+
 * Remote repositories modal defaults to inactive repo - Issue [3861]
 * Allow cherry-picking multiple commits from FormBrowse menu - PR [3852]
 
 #### Fixes:
+
 * Clicking Commit causes a crash - Issue [3827]
 * 2.50.01 Quoting issues on git checkout command - Issue [3969]
 * Can't delete index.lock because it is being used by another process. - Issue [3902]
@@ -5588,9 +5563,11 @@
 ### [Version 2.50.01] (07 July 2017)
 
 #### Fixes:
+
 * Push branch with no upstream defaults to first remote and not to "origin" - Issue [3821]
 * [Bug] after 2.50 unable to use "Revert selected lines" from commit window - Issue [3819]
-* [Bug / Regression] It is not possible to run an external difftool (F3) in the diff view of "Commit index / Current unstaged changes" - Issue [3814]
+* [Bug / Regression] It is not possible to run an external difftool (F3) in the diff view of "Commit index / Current
+  unstaged changes" - Issue [3814]
 * Merge Conflict contextmenu items are disabled in 2.5.0 - Issue [3809]
 * GitExtensions gives continuous System.ArgumentNullException - Issue [3806]
 * SEG FAULT on every git operation. - Issue [3804]
@@ -5599,6 +5576,7 @@
 ### [Version 2.50] (23 June 2017)
 
 #### Features:
+
 * Hotkey for "Stage All" button - Issue [3756]
 * Increased width for 'Open local repository' dialog. - PR [3644]
 * Shortcut key for "Create fixup commit" - Issue [3616]
@@ -5610,24 +5588,24 @@
 * Autonormalise local branch at checkout - Issue [3450]
 * Warn the user if resetting a local branch is non fast forward. - Issue [3438]
 * AppVeyor CI plugin - PR [3426]
-* 2.49 RC2: Branch name not showing in VS 2015  - Issue [3393]
+* 2.49 RC2: Branch name not showing in VS 2015 - Issue [3393]
 * ConEmu settings - Issue [3392]
 * Atlassian Stash is now called Bitbucket Server - Issue [3334]
 * Feature: Support multi Selection in diff tab - Issue [3293]
 * Feature: Allow to run plugins from the scripts - Issue [3248]
 * Better ergonomic around commit form - PR [3245]
 * Feature/tfs2015 build integration - PR [3219]
-* Improve UI in 'merge branches'  - Issue [3208]
+* Improve UI in 'merge branches' - Issue [3208]
 * Add Build server integration for TFS-Build 2015 - Issue [3177]
 * Add Edit functionality in Advanced menu - Issue [3166]
 * "Add to gitignore" should include "/" prefix - Issue [3162]
 * Revert selected lines context option - Issue [3159]
-* Teamcity - log onto teamcity using HTTP NTLM authentication  - Issue [3119]
+* Teamcity - log onto teamcity using HTTP NTLM authentication - Issue [3119]
 * Need staged file count - Issue [3073]
 * Some fixes for a filter in "Commit" dialog - PR [3000]
 * Allow to change merge message - PR [2997]
 * Support for powershell scripts. - PR [2917]
-* Visual Studio 2008: File history/blame shows the current line  - Issue [2839]
+* Visual Studio 2008: File history/blame shows the current line - Issue [2839]
 * Localizable phrases of ProxySwitcher's settings - PR [2802]
 * [Feature request] Improve usability for "revision links" feature - Issue [2768]
 * Detect hashes in commit messages and convert them to hyper links - Issue [2714]
@@ -5645,8 +5623,8 @@
 * allow multi-select in resolve conflict window - Issue [1845]
 * Ability to clear recent repositories. - Issue [1064]
 
-
 #### Fixes:
+
 * "Recover lost object" sometime doesn't show result - Issue [3777]
 * Very slow if "Show first parent" enabled - Issue [3767]
 * Win32Exception when clicking on Revision Link - Issue [3763]
@@ -5668,14 +5646,15 @@
 * Hotkeys lost in 2.49 - Issue [3432]
 * Branch rename does not autonormalise - Issue [3424]
 * Visual Studio 2008 AddIn isn't working anymore - Issue [3423]
-* 2.49RC2 Clean working directory single line log  - Issue [3383]
+* 2.49RC2 Clean working directory single line log - Issue [3383]
 * GitExtensions Merge ODS - Hangs Process - Issue [3218]
 * when merge ms-office-word file,it opened two local version. - Issue [3192]
 * Saving new remote clears URL entry - Issue [3154]
 * Delete selected, poor usability = lost changes - Issue [3127]
 * Revisiongrid doesn't keep the selection - Issue [2956]
 * Cannot paste into commit window - Issue [2926]
-* On Diff/File List pane got exception ArgumentOutOfRangeException InvalidArgument Value of -1 is not valid for index - Issue [2759]
+* On Diff/File List pane got exception ArgumentOutOfRangeException InvalidArgument Value of -1 is not valid for index -
+  Issue [2759]
 * Strip any ANSI escape codes from git command output - PR [2689]
 * Remote Repositories > Separate Push URL not working - Issue [2550]
 * In the statistics plugin, in the "Code by type" tab, allocation of space on the pie chart was wrong. - Issue [2530]
@@ -5683,13 +5662,17 @@
 * 2.47.x IME error with Spell checker - Issue [2301]
 
 ### Version 2.50RC2 (15 June 2017)
+
 #### Fixes:
+
 * fix Teamcity build chooser [3762]
 * Crash after saving settings - Issue [3755]
 * System.ArgumentException on start - Issue [3761]
 
 ### Version 2.50RC1 (10 June 2017)
+
 #### Features:
+
 * Increased width for 'Open local repository' dialog. - PR [3644]
 * Shortcut key for "Create fixup commit" - Issue [3616]
 * Open diff form not in modal - PR [3598]
@@ -5700,24 +5683,24 @@
 * Autonormalise local branch at checkout - Issue [3450]
 * Warn the user if resetting a local branch is non fast forward. - Issue [3438]
 * AppVeyor CI plugin - PR [3426]
-* 2.49 RC2: Branch name not showing in VS 2015  - Issue [3393]
+* 2.49 RC2: Branch name not showing in VS 2015 - Issue [3393]
 * ConEmu settings - Issue [3392]
 * Atlassian Stash is now called Bitbucket Server - Issue [3334]
 * Feature: Support multi Selection in diff tab - Issue [3293]
 * Feature: Allow to run plugins from the scripts - Issue [3248]
 * Better ergonomic around commit form - PR [3245]
 * Feature/tfs2015 build integration - PR [3219]
-* Improve UI in 'merge branches'  - Issue [3208]
+* Improve UI in 'merge branches' - Issue [3208]
 * Add Build server integration for TFS-Build 2015 - Issue [3177]
 * Add Edit functionality in Advanced menu - Issue [3166]
 * "Add to gitignore" should include "/" prefix - Issue [3162]
 * Revert selected lines context option - Issue [3159]
-* Teamcity - log onto teamcity using HTTP NTLM authentication  - Issue [3119]
+* Teamcity - log onto teamcity using HTTP NTLM authentication - Issue [3119]
 * Need staged file count - Issue [3073]
 * Some fixes for a filter in "Commit" dialog - PR [3000]
 * Allow to change merge message - PR [2997]
 * Support for powershell scripts. - PR [2917]
-* Visual Studio 2008: File history/blame shows the current line  - Issue [2839]
+* Visual Studio 2008: File history/blame shows the current line - Issue [2839]
 * Localizable phrases of ProxySwitcher's settings - PR [2802]
 * [Feature request] Improve usability for "revision links" feature - Issue [2768]
 * Detect hashes in commit messages and convert them to hyper links - Issue [2714]
@@ -5736,6 +5719,7 @@
 * Ability to clear recent repositories. - Issue [1064]
 
 #### Fixes:
+
 * The found text is not highlighted when searching in DiffView - Issue [3719]
 * Commit messages are corrupted if there are "mixed" encodings in log - Issue [3707]
 * Bug in Scripts - Issue [3691]
@@ -5752,14 +5736,15 @@
 * Hotkeys lost in 2.49 - Issue [3432]
 * Branch rename does not autonormalise - Issue [3424]
 * Visual Studio 2008 AddIn isn't working anymore - Issue [3423]
-* 2.49RC2 Clean working directory single line log  - Issue [3383]
+* 2.49RC2 Clean working directory single line log - Issue [3383]
 * GitExtensions Merge ODS - Hangs Process - Issue [3218]
 * when merge ms-office-word file,it opened two local version. - Issue [3192]
 * Saving new remote clears URL entry - Issue [3154]
 * Delete selected, poor usability = lost changes - Issue [3127]
 * Revisiongrid doesn't keep the selection - Issue [2956]
 * Cannot paste into commit window - Issue [2926]
-* On Diff/File List pane got exception ArgumentOutOfRangeException InvalidArgument Value of -1 is not valid for index - Issue [2759]
+* On Diff/File List pane got exception ArgumentOutOfRangeException InvalidArgument Value of -1 is not valid for index -
+  Issue [2759]
 * Strip any ANSI escape codes from git command output - PR [2689]
 * Remote Repositories > Separate Push URL not working - Issue [2550]
 * In the statistics plugin, in the "Code by type" tab, allocation of space on the pie chart was wrong. - Issue [2530]
@@ -5767,10 +5752,12 @@
 * 2.47.x IME error with Spell checker - Issue [2301]
 
 ### Version 2.49.03 (26 March 2017)
+
 * Fixed issue #3605. NullReferenceException from CanBeGitUrl when trying to clone git repository from dashboard.
 * Fixed issue #3578. File history and blame not show when path to file contain Cyrillic chars bug reproducible.
 
 ### Version 2.49.02 (22 March 2017)
+
 * Fixed issue #3464. Background fetch plugin - Not working.
 * Fixed issue #3491. 'Enter commit message' does not disappear when you start typing your message bug reproducible.
 * Fixed issue #3394. Gitext Clone in Explorer Context Menu try to clone in the wrong folder bug.
@@ -5782,13 +5769,14 @@
 * Fix problem with incorrect building command line arguments. PR #3551
 
 ### Version 2.49.01 (12 March 2017)
+
 * Fixed issue #3587. Diff view is blank if git configuration is diff.color=always
 * Fixed issue #3427. Pushing to a different remote wrongly ask about new branch bug.
 * Fixed issue #3560. GitExtensions doesn't respect core.commentChar setting in interactive rebase.
 * Fixed issue #3507. Branch normalization strips valid characters from the branch name.
 * Fixed issue #3372. Create tag: set focus to tag name first feature-request UX.
 * Fixed issue #3441. Prompt to commit after resolving merge conflicts even when "Do not commit" is checked bug.
-* Fixed issue #3445. "Reset file(s) to" functionality doesn't work bug.
+* Fixed issue #3445. "Reset file (s) to" functionality doesn't work bug.
 * Fixed issue #2679. "Unsupported file" error with submodules
 * Fixed issue #3434. Filtering commits by Unicode search text fails bug
 * Fixed issue #3412. Fix reset file menu item text.
@@ -5796,6 +5784,7 @@
 * Fix crash when one of the stash is an autostash. PR #3410
 
 ### Version 2.49 (9 November 2016)
+
 * Updated Git for Windows to version 2.10.1. PR #3353
 * Updated Putty to version 0.67
 * KDiff3 rolled back to version 0.9.97
@@ -5822,6 +5811,7 @@
 * Romanian dictionary added. PR #2979
 
 ### Version 2.49RC2 (22 October 2016)
+
 * Updated Git for Windows to version 2.10.1. PR #3353
 * Updated Putty to version 0.67
 * Fixed issue #3356, #3370, #3357: ConEmu integration issues
@@ -5830,6 +5820,7 @@
 * Fixed issue #3365: Exception when search 'diff contains' has a special character
 
 ### Version 2.49RC1 (12 October 2016)
+
 * Updated Git for Windows to version 2.10.0
 * KDiff3 rolled back to version 0.9.97
 * VSIX extension for VS2015. PR #2885, #3331
@@ -5853,7 +5844,6 @@
 * Czech translation added
 * Disabled "Traditional Chinese" translation
 * Romanian dictionary added. PR #2979
-
 
 
 * Added an option to remember the ignore-white-spaces preference for all the diff viewers
@@ -5885,8 +5875,9 @@
 * Improve fixup commits. PR #3264
 * Some changes around .gitignore. PR #3283
 * Search graph row index by commit hash using dictionary. PR #3295
-* FormChooseCommit: Add links helper to find parent(s) of current selected commit. PR #3246
-* --first-parent filtration added, --full-history fixed, hotkeys exposed, context menu in file history window unification. PR #3250
+* FormChooseCommit: Add links helper to find parent (s) of current selected commit. PR #3246
+* --first-parent filtration added, --full-history fixed, hotkeys exposed, context menu in file history window
+  unification. PR #3250
 * Added setting to enable/disable autocompletion in commit dialog. PR #2799
 * Menu entries for improved accessibility. PR #3234
 * Fixed an intermittent bug where ObjectDisposedException occurs on launch
@@ -5902,7 +5893,8 @@
 * Fixed issue #3274: Honour the AutoSetupMerge git config
 * Fixed issue #2924: "Illegal Characters in Path" if %PATH% Contains Quotes
 * Fixed issue #3262: Fix p4merge diff settings
-* Fixed issue #2759: On Diff/File List pane got exception ArgumentOutOfRangeException InvalidArgument Value of -1 is not valid for index
+* Fixed issue #2759: On Diff/File List pane got exception ArgumentOutOfRangeException InvalidArgument Value of -1 is not
+  valid for index
 * Fixed issue #3297: Unable to use '/' or '.' in branch name when creating a new branch
 * Fixed issue #3271: No need to close the "create branch" dialog if failed to create
 * Fixed issue #3054: Changes to global gitignore do not properly propagate to the Commit button
@@ -5942,10 +5934,12 @@
 * Fixed issue #2739: Turn on Treat Warnings As Errors for all projects
 * Fixed issue #2809: Jenkins plugin: Login with default credentials (single sign on)
 * Fixed issue #2731: Move Microsoft.TeamFoundation.Client references from GAC to NuGet
-* Fixed issue #2761: ArgumentOutOfRangeException is thrown when right clicking of the table header of 'Resolve merge conflicts' window
+* Fixed issue #2761: ArgumentOutOfRangeException is thrown when right clicking of the table header of 'Resolve merge
+  conflicts' window
 * Fixed issue #2154, #2645: Branches with comma in their name cannot be deleted
 * Fixed issue #2686: ssh:// with port not working with Putty
-* Fixed issue #2493: After Clone, GitExt shows "Starting a second message loop on a single thread is not a valid operation. Use Form.ShowDialog instead"
+* Fixed issue #2493: After Clone, GitExt shows "Starting a second message loop on a single thread is not a valid
+  operation. Use Form.ShowDialog instead"
 * Fixed issue #2694: typos in .gitignore template text
 * Fixed issue #2453: Autocomplete Display-Bug
 * Fixed issue #2488: AutoCRLF correction when copying a text from the FileViewer
@@ -5966,28 +5960,34 @@
 * Fixed issue #2409: Display correctly windows end of line in git commit message
 
 ### Version 2.48.05 (16 May 2015)
+
 * Fixed issue #2493: StartBrowseDialog failed after clone
 * Fixed issue #2783: Fixed crash when right click on blank line in 'File Tree'
 * Enter/Return in file tree acts as double click
 * Support Git for Windows path for Linux tools
 
 ### Version 2.48.04 (8 May 2015)
+
 * Fixed issue #1643: Do stage of 16506 files and GUI becomes Not Responding
 * Fixed issue #2591: VSAddin solutionItem.ProjectItem == null when selected 'References' item in C# project
 * Fixed issue #2587, #2601: VSAddin fixed StackOverflowException
-* Fixed issue #2584: Escape the last backslash from paths before running GitExtensions to avoid escaping the double-quote
+* Fixed issue #2584: Escape the last backslash from paths before running GitExtensions to avoid escaping the
+  double-quote
 * Fixed issue #2574: MSysGit updated to version 1.9.5-preview20141217
 * Fixed issue #2649: Refreshing the ignored files set every 10 minutes instead of every 500 milliseconds
 * Fixed issue #2525: Additional handling for strings passed to RichTextBox
 * Fixed issue #2700: Fix filtering by branch name
-* Fixed 'ArgumentOutOfRangeException is thrown when right clicking of the table header of 'Resolve merge conflicts' window'
+* Fixed 'ArgumentOutOfRangeException is thrown when right clicking of the table header of 'Resolve merge conflicts'
+  window'
 * Fix performance for RevisionGrid
 
 ### Version 2.48.03 (9 December 2014)
+
 * Fixed issue #2538: Fix crash happening when deleting a remote branch
 * Fixed issue #2498: VS Plugin use solution scope if no active document
 
 ### Version 2.48.02 (29 November 2014)
+
 * Updated msysgit to 1.9.4 20140929
 * VS plugin menu hotkey changed to Alt+I
 * Updated kdiff3 to version 0.9.98-2 64bit
@@ -6007,6 +6007,7 @@
 * Fixed issue #1493: Should fix command bar position saving in some cases
 
 ### Version 2.48 (20 August 2014)
+
 * Git credential helper now optional product
 * Sort branches and tags in commit info and display only first 20
 * Checkout remote branch dialog try find tracking branch first
@@ -6024,6 +6025,7 @@
 * Updated translations
 
 ### Version 2.48RC (13 July 2014)
+
 * Updated msysgit to 1.9.4
 * Implemented auto completion for commit message window.
 * Support integration with TeamCity and Jenkins build server
@@ -6044,13 +6046,16 @@
 * "Back" button and history
 * Disabled by default: include untracked files in stash
 * Committer name added to commit dialog status bar. PR #1812
-* Check ValidSvnWorkindDir before do svn commands. Method GitSvnCommandHelpers.ValidSvnWorkindDir work not correct on submodule repo
-* Fixed undetected working directory in root directory (the additional "dir.rfind" in the while condition stopped the loop **before** e.g. "C:" has been reached)
+* Check ValidSvnWorkindDir before do svn commands. Method GitSvnCommandHelpers.ValidSvnWorkindDir work not correct on
+  submodule repo
+* Fixed undetected working directory in root directory (the additional "dir.rfind" in the while condition stopped the
+  loop **before** e.g. "C:" has been reached)
 * "Initialize repository" renamed to "Create repository"
 * "working dir" and "working tree" renamed to "working directory" to simplify translation
 * Prefer Putty from GitExtensions
 * New settings management
-* Translation format changed to XLIFF (you can help on [Transifex](https://www.transifex.com/organization/git-extensions/dashboard/git-extensions) website)
+* Translation format changed to XLIFF (you can help
+  on [Transifex](https://www.transifex.com/organization/git-extensions/dashboard/git-extensions) website)
 * Fixed issue #2349: Bug fixed with file history for file outside of the solution
 * Fixed issue #2294: Commit dialog hangs for hours on selecting or deselecting many files
 * Fixed issue #2250: Shell Extensions: IsValidGitDir UNC path performance bug fix
@@ -6071,15 +6076,18 @@
 * Updated translations
 
 ### Version 2.47.3 (15 November 2013)
+
 * Fixed issue #2124: GitHub integration not working in 2.47.1
 
 ### Version 2.47.1 (14 November 2013)
+
 * Fixed issue #2006: Check for updates using GitHub api. There is a bug in WebClient that causes AV
 * Fixed issue #2117: Create branch/tag command in VS fixed
 * Fixed issue #2114: "Keep dialog open" doesn't work
 * Added IconFileStatusUnknown - when git exits with error then GitExt crashes with IndexOutOfBounds
 
 ### Version 2.47 (8 November 2013)
+
 * Main menu restructured. Issues: #1576, #1629
 * Added BackgroundFetch plugin in order to allow periodic fetching of all remotes automatically
 * Putty updated to version beta 0.63 (released 2013-08-06)
@@ -6094,7 +6102,7 @@
 * FormCheckoutRevision: make similar to CreateBranch/Tag dialogs and use in RevisionGrid. PR #1685
 * FormChooseCommit: add button that opens the Go to commit dialog that helps to find a specific commit. PR #1723
 * GitPlugin icon transparency fixed
-* FormPuttyError Retry() button fixed
+* FormPuttyError Retry () button fixed
 * Add Help link that opens GitExt manual in browser at predefined section. PR #1739
 * Push dialog now asks pull changes if push was rejected
 * Improvements for FormResetCurrentBranch. PR #1750
@@ -6113,7 +6121,8 @@
 * Menu ShortcutKey improvements. PR #1863
 * FormBrowse: Diff Tab: new context menu item: "Show in File tree". PR #1850
 * File tree tab: "Open containing folder" now also works on directory nodes (instead of file nodes only)
-* Diff tab: If a file does not exist then "Open containing folder" now opens the parent directory of the non-existing file
+* Diff tab: If a file does not exist then "Open containing folder" now opens the parent directory of the non-existing
+  file
 * Add "Archive..." to context menu of File tree tab / Archive filter by path. PR #1868
 * Blame previous revision fixed
 * Combined diff processing improved
@@ -6155,25 +6164,28 @@
 * Added Korean translation
 
 ### Version 2.46 (26 June 2013)
+
 * Fixed issue 1387: Shell extensions not work under Windows XP
 
 ### Version 2.45 (26 June 2013)
+
 * Setup files moved to sourceforge http://sourceforge.net/projects/gitextensions/
 * Putty updated to version 0.62.9768.0 (80% faster for me when cloning repository from GitHub)
 * FormCheckoutBranch behavior fixed again when called from commit dialog
 * Fixed navigation in the blame committer list when double clicking
 * Fixed FormFileHistory selection current revision
-* Fixed issue #1585: IsBinaryAccordingToGitAttribute() rewritten using "git check-attr"
+* Fixed issue #1585: IsBinaryAccordingToGitAttribute () rewritten using "git check-attr"
 * Fixed issue #1590: "Show current branch only" fixed
 * Fixed issue #1622: "Show Changes" from Blame window crash fixed
 * Fixed issue #1631: Font size reading from settings fixed
-* Fixed issue #1687: GetSuperprojectCurrentCheckout() now called asynchronously
+* Fixed issue #1687: GetSuperprojectCurrentCheckout () now called asynchronously
 * Fixed issue #1727: CreatePullRequestForm crash fixed
 * Updated msysgit to build of version 1.8.3
 * Updated French translation
 * Updated German translation
 
 ### Version 2.44 (18 February 2013)
+
 * Fixed issue #710: Added icons to shell extensions
 * Fixed issue #1336: Prefix context menu entries with
 * Fixed issue #1354: Dashboard item description label is cut off at the top
@@ -6193,7 +6205,8 @@
 * Fixed issue #1475: Fixed tab order in create tag dialog
 * Fixed issue #1477: Quick filter by commit sha
 * Fixed issue #1478: Bug fixes and improvements to Gerrit plugin
-* Fixed issue #1483: Staging a file which undoes all current staged changes leaves the file available in "Working dir changes"
+* Fixed issue #1483: Staging a file which undoes all current staged changes leaves the file available in "Working dir
+  changes"
 * Fixed issue #1488: Default pull action not run
 * Fixed issue #1506: Do not refresh revisions in grid when Delete Tag dialog is canceled
 * Fixed issue #1505: New help images for Fetch, Rebase, Merge actions in pull dialog
@@ -6227,6 +6240,7 @@
 * Updated French translation
 
 ### Version 2.43 (31 October 2012)
+
 * Fixed issue #47: Support non-standard SSH port for Test Connection
 * Fixed issue #85: Integrated git-credential-winstore to installer to handle HTTP authentication
 * Fixed issue #407: Added links to parent commit, branches and tags to commit info
@@ -6274,6 +6288,7 @@
 * Updated merge scripts
 
 ### Version 2.41 (22 September 2012)
+
 * Fixed issue #1254: Visual Studio 2005 plugin not working
 * Fixed issue #1225: Visual Studio 2008 plugin not working
 * Fixed window position in multi monitor configuration
@@ -6286,6 +6301,7 @@
 * German translation updated
 
 ### Version 2.40 (19 August 2012)
+
 * fixed issue #79: Don't offer to commit when resolving a stash conflict
 * Fixed issue #875: Show untracked files in stash
 * Fixed issue #980: spell check only covers first 5 visible lines in commit dialog
@@ -6298,7 +6314,8 @@
 * Fixed issue #1076: Added warning before dropping stash
 * Fixed issue #1082: Always show commit button
 * Fixed issue #1089: Fixed "n seconds ago" in revision grid
-* Fixed issue #1092: Launching an external difftool (KDiff, or DiffMerge etc) leaves more and more processes (git, less and perl) open
+* Fixed issue #1092: Launching an external difftool (KDiff, or DiffMerge etc) leaves more and more processes (git, less
+  and perl) open
 * Fixed issue #1113: Show friendly error when deleting current branch
 * Fixed issue #1113: Show friendly error when deleting unmerged branch without selecting force option
 * Fixed issue #1114: Hide remode HEAD
@@ -6320,6 +6337,7 @@
 * Updated msysgit to version 1.7.11
 
 ### Version 2.33 (6 June 2012)
+
 * Fixed issue 843: toolbar is disabled when in a wxs file
 * Fixed issue 922: error during merge conflict resolve
 * Fixed issue 951: install Git Extensions into 'All Programs' instead of 'All Programs\Git Extensions'
@@ -6333,6 +6351,7 @@
 * Many bugfixes and minor changes
 
 ### Version 2.32 (20 May 2012)
+
 * Fixed issue 85: http authentication support
 * Fixed issue 357: commit Author name not using the correct encoding
 * Fixed issue 570: Cut, Copy, Paste, Delete, Select all menu items in the Commit message field
@@ -6363,7 +6382,8 @@
 * Improved commit templates
 * Visual Studio 11 support added
 * Ctrl-g as default hotkey for GoToLine
-* Modified behavior of ToolStrips and MenuStrips to allow click-through behavior, eliminating the need for a double-click if window isn't focused.
+* Modified behavior of ToolStrips and MenuStrips to allow click-through behavior, eliminating the need for a
+  double-click if window isn't focused.
 * Disable menu items which actions require a repository if no repository is selected.
 * Improved "missing SSH key" flow
 * New "reset changes" dialog
@@ -6372,6 +6392,7 @@
 * Many bugfixes and minor changes
 
 ### Version 2.31 (18 March 2012)
+
 * Fixed issue 745: test connection does not work with non-uri
 * Fixed issue 829: Browse submodules menu item does not work
 * Fixed issue 831: Remote Repositories dialog does not show Url
@@ -6379,6 +6400,7 @@
 * Fix for "Index out of range exception" when no recent repositories are present.
 
 ### Version 2.29 (10 March 2012)
+
 * Fixed issue 276: Make splitter visible on Dashboard
 * Fixed issue 745: Test connection does not work with non-uri
 * Fixed issue 756: Push dialog advanced options are cut off
@@ -6406,19 +6428,20 @@
 * German translation updated
 * Many bugfixes and minor changes
 
-
 ### Version 2.28 (11 December 2011)
+
 * Fixed issue 738: RevisionGrid error when option "Show current working dir changes" is enabled
 * Fixed issue: all tabs are trimmed in blame control
 
 ### Version 2.27 (7 December 2011)
+
 * Fixed issue 124: Submodules form now can remove submodule
 * Fixed issue 127: Preview disabled for files larger than 5Mb, but available by link
 * Fixed issue 138: Avoid auto stash when there is nothing to stash
 * Fixed issue 139: Disable image paste in EditNetSpell
 * Fixed issue 460: TortoiseMerge added to diff tools
 * Fixed issue 566: QuickPull with Shift
-* Fixed issue 581: improved revision graph loading performance. Replaced O(n) with O(1).
+* Fixed issue 581: improved revision graph loading performance. Replaced O (n) with O (1).
 * Fixed issue 614: Filter for tags
 * Fixed issue 627: The start page does not refresh upon changing the start pages settings fixed
 * Fixed issue 631: Adding a new item to the start page settings auto-select that item
@@ -6458,6 +6481,7 @@
 * Many bugfixes and minor changes
 
 ### Version 2.26 (29 October 2011)
+
 * Fixed issue 629: Support of separate Fetch/Pull Urls for remotes
 * Fixed issue 685: Unable to set location of global git config file in Environment tab
 * Fixed revert commit dialog
@@ -6469,6 +6493,7 @@
 * Many bugfixes and minor changes
 
 ### Version 2.25 (16 October 2011)
+
 * Fixed issue 283: Splitter position on dashboard is not remembered
 * Fixed issue 543: Show current branch in main screen
 * Fixed issue 533: UI/translation bugs on lost commits recover form
@@ -6501,9 +6526,11 @@
 * Many bugfixes and minor changes
 
 ### Version 2.24 (25 July 2011)
+
 * Fixed revision filter
 
 ### Version 2.23 (23 July 2011)
+
 * Fixed issue 452: "Show repository status" always updates status every second
 * Fixed issue 455: Cannot initialize repository in Visual Studio solution root
 * Fixed issue 464: Added option to add custom script to toolbar in browse dialog
@@ -6531,6 +6558,7 @@
 * Many bugfixes and minor changes
 
 ### Version 2.22 (16 May 2011)
+
 * Fixed issue 142: Changed main window title to repository name instead of path
 * Fixed issue 375: Save on Commit in Visual Studio
 * Fixed issue 436: Cannot order branches by date in "Delete obsolete branches" plugin
@@ -6543,9 +6571,11 @@
 * Added plugin to create local tracking branches for all remote branches
 
 ### Version 2.21 (16 April 2011)
+
 * Fixed issue 423: "GitExtensions has stopped working" at startup
 
 ### Version 2.20 (14 April 2011)
+
 * Fixed issue 406: keyboard language changes in commit dialog
 * Fixed issue 415: Diffs in Stash view are reversed
 * Fixed issue 417: popup complains about missing .gitconfig on Linux
@@ -6559,13 +6589,16 @@
 * Scripts can be executed before and after actions* *
 
 ### Version 2.17 (15 March 2011)
+
 * Fixed exception thrown while loading Visual Studio plugin
 * Fixed refresh issues
 
 ### Version 2.16 (13 March 2011)
+
 * Fixed refresh issues
 
 ### Version 2.15 (10 March 2011)
+
 * Fixed issue 399: blame is showing source code double space
 * Fixed issue 400: commit summary with polish letters in author names shown incorrect
 * Fixed "show ignored files" in commit dialog
@@ -6583,6 +6616,7 @@
 * Various bugfixes and minor changes
 
 ### Version 2.14 (5 March 2011)
+
 * Fixed crash when viewing binary file in blame
 * Fixed settings dialog on Linux host
 * Fixed commit dialog on Linux host
@@ -6591,10 +6625,12 @@
 * Removed shell extensions check when it is not installed
 
 ### Version 2.13 (3 March 2011)
+
 * Fixed issue 391: application crashes when repository favourites contains empty item
 * Double click on line in blame jumps to commit instead of opening commit
 
 ### Version 2.12 (2 March 2011)
+
 * Fixed issue 368: Browse button does not open dialog in HOME dialog
 * Fixed issue 373: Archive command is not working
 * Fixed issue 376: Added "Save As" button to file history
@@ -6610,9 +6646,11 @@
 * Various bugfixes and minor changes
 
 ### Version 2.11 (28 January 2011)
+
 * Fixed crash when refreshing repository grid
 
 ### Version 2.10 (27 January 2011)
+
 * Fixed issue 78: refresh commit dialog on focus (optional)
 * Fixed "Recover lost objects"
 * Fixed layout issues in gource plugin dialog
@@ -6623,13 +6661,14 @@
 * Added option to enter a different author for a commit to the commit dialog options
 * Added syntax for Pascal, Python and Ruby files to Statistics plugin
 * Added Github integration
-* Added "Reset selected line(s)" to context menu in commit dialog
+* Added "Reset selected line (s)" to context menu in commit dialog
 * Added option "Draw non relatives text grey" to render commit message grey when commit is not a relative
 * Added autocomplete to various dropdown boxes
 * Added icons to most messageboxes
 * Added "pull all" button to pull dialog
 
 ### Version 2.09 (30 December 2010)
+
 * Fixed issue 92: added AcceptButton on Push dialog and fixed tab order in push and pull dialog.
 * Fixed issue 289: added support for MonsterId, Identicon and Wavatar when user has no Gravatar
 * Fixed issue 304: cannot load commit log
@@ -6660,6 +6699,7 @@
 * Various bugfixes and minor changes
 
 ### Version 2.08 (25 November 2010)
+
 * Fixed bug: installing MSysGit or KDiff3 using complete setup doesn't work when UAC is enabled
 * Fixed bug: slashes in tag name not supported
 * Fixed bug: filtering does not work with characters outside ASCII range
@@ -6670,6 +6710,7 @@
 * Added stash count to toolbar (is turned off by default)
 
 ### Version 2.07 (15 November 2010)
+
 * Fixed issue 263: spanish translation added
 * Fixed issue 262: application crashes on system where only .Net 4.0 is installed
 * Fixed issue 255, 257, 261, 266: application crashes in Windows 7
@@ -6679,6 +6720,7 @@
 * Added bisect function
 
 ### Version 2.06 (10 November 2010)
+
 * Fixed issue 218: GitCommandLog now in LIFO order
 * Fixed issue 235, 242 and 248: GitExtensions hangs when loading putty key into pageant
 * Fixed bug: comboboxes affected each other in clone dialog
@@ -6691,6 +6733,7 @@
 * Startup speed improved
 
 ### Version 2.05 (30 October 2010)
+
 * Fixed issue 194: Remote branches combo contained tags also
 * Fixed bug: fixed pre-selecting tracking branch in push dialog
 * Fixed bug: pull form no longer shows default remote branch to pull, this caused unwanted behaviour
@@ -6708,6 +6751,7 @@
 * Added option to also show remote branches that contain the selected commit in the commitinfo
 
 ### Version 2.04 (30 September 2010)
+
 * Fixed issue 173: Unhandled exception when selecting files in Commit dialog - Working dir changes
 * Fixed bug: spellings checker allows using Japanese
 * Added possibility to pull non-default remote branch into current branch
@@ -6720,6 +6764,7 @@
 * GitExtensions now can be used in Linux using Mono
 
 ### Version 2.03 (18 September 2010)
+
 * Fixed bug: exception when deleting repository form dashboard using dashboardeditor
 * Fixed bug: Settings for autocrlf are now the same as in the msysgit installer
 * Fixed bug: revision header in commitinfo was not cleard between changing selection
@@ -6733,6 +6778,7 @@
 * Improved cygwin support
 
 ### Version 2.02 (1 September 2010)
+
 * Fixed issue 149: the system just hangs during a fetch
 * Fixed bug: changing encoding in settings is not saved properly
 * Fixed bug: no branches found in remotes dialog
@@ -6745,15 +6791,18 @@
 * Last commit message is stored in settings so it can be used in multiple repositories
 
 ### Version 2.01 (26 August 2010)
+
 * Fixed issue 144: encoding in 'Diff' view ignores settings
 * Fixed issue 143: hitting refresh in browse dialog causes application to freeze
 * Fixed bug where multiple value entries in a config file section were being stripped from config file
 
 ### Version 2.00 (22 August 2010)
+
 * Fixed bug: refreshing and loading gravatars caused GitExtensions to crash
 * Fixed bug: settings check not shown properly when a problem was found
 
 ### Version 1.99
+
 * Fixed issue 81: when staging a file, all partially staged files are removed from unstaged list
 * Fixed issue 107: alt+f4 not working when revisiongrid has focus
 * Fixed issue 111: Annotated Tags Appear Twice in Push Dialog
@@ -6773,6 +6822,7 @@
 * Add search file function to file tree in browse dialog (ctrl+f)
 
 ### Version 1.98
+
 * Fixed issue 105: Allow to open "gitex browse" with a given filter.
 * Fixed issue 106: Show all branches which "contain" a given commit in their history.
 * Fixed issue 107: Alt+f4 and other function keys not working when revision graph has focus.
@@ -6782,9 +6832,11 @@
 * Only administrators can install Git Extensions.
 
 ### Version 1.97
+
 * Fixed bug: Empty local config file is saved to c:\ when not in a repository
 
 ### Version 1.96
+
 * Fixed issue 95: The colored application icons are broken.
 * Fixed issue 96: System.Exception: Invalid section name: submodule
 * Fixed issue 100: Adding a remote and providing a private key file will cause the .git/config file to be corrupted.
@@ -6792,9 +6844,11 @@
 * Fixed issue 103: Added check when initializing repository on a file
 * Fixed bug: Progress dialog could cause application to crash
 * Added branch filter to advanced filter dialog
-* Tweaked the graph to try to keep lanes that get merged together close to each other so there aren't as many lane crossings
+* Tweaked the graph to try to keep lanes that get merged together close to each other so there aren't as many lane
+  crossings
 
 ### Version 1.95
+
 * Fixed bug: difftool only worked in git > 1.7.0
 * Fixed bug: dashboard caused application to crash
 * Fixed bug: refreshing gravatar that was already deleted caused an exception
@@ -6834,6 +6888,7 @@
 * Replaced checkbox on merge branch dialog for more user friendly radio buttons
 
 ### Version 1.93
+
 * Fixed bug: wrong icon drawn in commit dialog for deleted files
 * Reset selected files in the commit dialog asks to delete new files.
 * Author images are only cached for 5 days now
@@ -6845,12 +6900,15 @@
 * Added support for WinMerge as diff tool
 
 ### Version 1.92
+
 * Fixed bug: the application hangs randomly
 * Fixed bug: quotes in local settings were not escaped properly
 * Fixed progress bar when pulling and fetching under git > 1.7.1
 * There is a new installer to address the following issues (thanks to Jacob Stanley)
-* * Updating existing installations
-* * Install both 32bits and 64bits shell extension on 64bit systems
+*
+    * Updating existing installations
+*
+    * Install both 32bits and 64bits shell extension on 64bit systems
 * Added icons to indicate if a files is added, modified or removed
 * Author images from gravatar.com added to commit info panel
 * User Manual updated
@@ -6858,9 +6916,11 @@
 * Added commitinfo panel to blame view
 
 ### Version 1.91
+
 * Fixed bug: tooltips drawn incorrect
 
 ### Version 1.90
+
 * Fixed bug: images in .gif and .ico format could not be displayed.
 * Fixed bug: extra empty lines are shown in the blame view.
 * The application icon can be changed
@@ -6873,6 +6933,7 @@
 * Added tooltip to show long filenames in diff view of browse
 
 ### Version 1.89
+
 * Fixed bug: Changes of an unstaged file are not shown when the file path contains spaces
 * Fixed bug: Filehistory not working when opened from Visual Studio because filename is too long
 * Fixed bug: Copy selected text from file viewer now copies the complete selected text
@@ -6885,53 +6946,64 @@
 * Added drag file support to unstaged items in commit dialog
 
 ### Version 1.88
+
 * Fixed a bug stopping the commit dialog from refreshing after a commit
 * Removed the tooltip delay on recent repository list
 * Fixed settings when using git.exe
 
 ### Version 1.87
+
 * Small fixes in layout commit dialog
 * Only close commit dialog when no modified files are left
 * Added 'Open' and 'Open With' to context menu of commit dialog
 
 ### Version 1.86
+
 * Changed the layout of the commit dialog
 * Added support for Cygwin
 * Added cleanup function
 
 ### Version 1.85
+
 * Added context menu options to manipulate Diff viewer.
 * Fixed alt-c as shortcut to commit.
 * Added cherry pick commit to context menu of revision grid
 * Added 'treat file as text' option to diff viewer
 
 ### Version 1.84
+
 * Added support for Visual Studio 2010 (beta)
 * Fixed 'Add to .gitignore' function in commit dialog.
 
 ### Version 1.83
+
 * Added "Merge with branch" context menu item to the revision grid
 * Added Ctrl+M as a shortcut key for Merge
 * Added Ctrl+. as a shortcut key for Checkout Branch
 
 ### Version 1.82
+
 * Added 'Add to .gitignore' button in context menu in commit dialog
-* When no commit message is entered and 'Amend to last commit' is pressed, the last commit message will be entered as commit message.
+* When no commit message is entered and 'Amend to last commit' is pressed, the last commit message will be entered as
+  commit message.
 * A menu is added to the 'Commit message' label.
 * Menu's under labels in the commit dialog are indicated by a icon
 * 'Show ignored files' option added to the 'Working dir changes' menu in the commit dialog
 
 ### Version 1.81
+
 * Fixed bug in file history
 * Scroll position in blame view will be saved when selecting other revision
 * Follow renames in file history is now optional.
 
 ### Version 1.80
+
 * File history follows file renames
 * Added paragraph about ssh to User Manual
 * Added force option to add files dialog
 
 ### Version 1.79
+
 * Added push force support for branch pushing
 * Added push force support for tag pushing
 * Added appearance tab to settings dialog.
@@ -6948,30 +7020,36 @@
 * Bug fixed that the branch drop down box in the pull dialog was empty.
 
 ### Version 1.78
+
 * Fixed bug causing the commitmessage to contain encoding marker bytes
 * Fixed bug preventing the bash to show
 * Recent repository list is updated when opening submodule or loading from Visual Studio
 * File history fixed for deleted files
 
 ### Version 1.77
+
 * Fixed bug in version 1.76 that file history was broken when started from Visual Studio
 * Commit message now supports multiline (first line is the summary)
 * Revision grid resizes graph column automatically.
-* Settings user.name and user.email are only saved when changed. This to work around a bug that utf8 chars are only allowed when editing the .config file manually.
+* Settings user.name and user.email are only saved when changed. This to work around a bug that utf8 chars are only
+  allowed when editing the .config file manually.
 * Recent repository list handles doubles better.
 
 ### Version 1.76
+
 * Fixed ut8 national chars con### Version
 * Added setting to ignore directories from statistics
 * Added syntax and find to blame view
 * Toolbar in Visual Studio learned to remember the last position
 
 ### Version 1.74
+
 * Diff syntax highlighting improved
 * Various small bug fixes
 * Added statistics plugin
 
 ### Version 1.73
+
 * All dialogs can be closed with the ESC key
 * Modal dialogs are not resizable anymore
 * Added context menu on revision file tree (Save As, Open, Open With)
@@ -6981,10 +7059,12 @@
 * "Auto compile submodules" plugin can be started from menu even when disabled
 
 ### Version 1.72
+
 * Fixed bug in "Auto compile submodules" plugin
 * Added progress dialog to "Check for updates" plugin
 
 ### Version 1.71
+
 * Added support for plugin
 * Added "Check for updates" plugin
 * Added "Auto compile submodules" plugin
@@ -6994,24 +7074,31 @@
 * Packed with KDiff3 0.9.95
 
 ### Version 1.70
+
 * Added support for mergeconflict on submodules
 * Local AutoCRLF now has three options: true, false, input
 * Main windows opens on last position
 * Added shortcuts and default buttons
 
 ### Version 1.69
+
 * Fixed updating submodules recursive when having multiple submodules
 
 ### Version 1.68
-* Improved 'Recover lost objects' dialog. Now all lost objects can be found and finding a specific commit should be much easier now.
+
+* Improved 'Recover lost objects' dialog. Now all lost objects can be found and finding a specific commit should be much
+  easier now.
 * Use Environment.NewLine instead of "\n".
-* Fixed a bug in default .gitignore file, it would show the [Db]ebug directory. It should be [Dd]ebug directory of course.
+* Fixed a bug in default .gitignore file, it would show the [Db]ebug directory. It should be [Dd]ebug directory of
+  course.
 * Added Resharper directories to .gitignore file.
-* Added recursive submode commands. When cloning a submodule containing nested submodules, all nested submodules can be initialized. There are also recursive initialize, update and synchronize commands added to the submodule menu.
+* Added recursive submode commands. When cloning a submodule containing nested submodules, all nested submodules can be
+  initialized. There are also recursive initialize, update and synchronize commands added to the submodule menu.
 * Added checkout branch to the revision graph context menu.
 * When adding a remote repository the remote branches can be configured automatically.
 
 ### Version 1.67
+
 * Fixed exception when AutoCRLF is left empty
 * Clicking 'Rescan changes' twice no longer results in
 * Mergeconflict dialog closes when there are no mergeconflicts left
@@ -7021,19 +7108,23 @@
 * Packed with Git-1.6.3.2
 
 ### Version 1.66
+
 * Fixed exception when AutoCRLF is left empty
 
 ### Version 1.65
+
 * Option added to order revision by date or by branch
 * Patches can be mailed from the format-patch dialog
 * Global AutoCRLF now has three options: true, false, input
 * Bug solved: When an item is staged when opening the commit dialog, unstaging it always marked it as untracked
 
 ### Version 1.64
+
 * Commits are now ordered by date
 * Fixed bug in commit dialog
 
 ### Version 1.63
+
 * Added file filter to revision graph filter
 * Shortened title of browse window
 * Added checkout revision context menu in the Browse list
@@ -7044,25 +7135,31 @@
 * Packed with Git-1.6.3
 
 ### Version 1.62
+
 * Fixed exception when right click on gridheaders in revision log
 * Last selection and scroll position in revision log are remembered
 * Added "Delete brach" function to context menu revision log
 * Packed with Git-1.6.2.2
 
 ### Version 1.61
+
 * Fixed bug that mergeconflicts of files listed in .gitignore are hidden
 
 ### Version 1.60
+
 * Fixed bug in Manage remotes dialog
 
 ### Version 1.59
+
 * Remote branches can be checked out and tracked from the checkout branch dialog
 * Manage remote branch dialog improved
 
 ### Version 1.58
+
 * Added support for Araxis merge and DiffMerge
 
 ### Version 1.57
+
 * Spelling checker performance improved
 * Red wiggly lines added to mark incorrect spelled words
 * Added search dialog to most file viewers
@@ -7080,6 +7177,7 @@
 * Clone and Initialize dialogs start with directory filled in
 
 ### Version 1.56
+
 * Settings are saved when dialog is closed not only on OK
 * Load PuTTY key dialog is closed after loading key
 * Mergeconflicts during apply stash after pull are shown
@@ -7087,6 +7185,7 @@
 * Added spelling checker
 
 ### Version 1.55
+
 * Fetching a branch that does not exists locally will create a new branch with the same name locally
 * Open repository after clone improved
 * Added 'quick' stash and stash pop
@@ -7094,12 +7193,15 @@
 * Packed with Git-1.6.2-preview20090308.exe
 
 ### Version 1.54
+
 * Pull dialog will not be closed if pull failed
 
 ### Version 1.53
+
 * Fixed open repository after clone
 
 ### Version 1.52
+
 * Multiline commit messages can be viewed
 * Fixed bug preventing multiline message to be committed correctly
 * Added option to show relative date in commit log
@@ -7115,6 +7217,7 @@
 * Many small bugfixes
 
 ### Version 1.51
+
 * Staging/unstaging is much faster
 * Whitespaces are ignored in blame view
 * Settings dialog starts up faster
@@ -7123,6 +7226,7 @@
 * Menu's are disabled when not in a repository
 
 ### Version 1.50
+
 * Added double click on file in diff-tree in browse window
 * Process dialog is can now set to close automatically when process succeeds
 * Added waitcursors
@@ -7135,17 +7239,21 @@
 * Added picture viewer to commit dialog
 
 ### Version 1.49
+
 * Fixed crash when loading some repositories (git://git.kernel.org/pub/scm/git/git.git)
 
 ### Version 1.48
+
 * Added ChangeLog
 
 ### Version 1.47
+
 * Commit count per user now counts all branches
 * Fixed bug that local settings could not be saved
 * Fixed bug that remote branches could not be saved
 
 ### Version 1.45
+
 * No more taskbar terror!
 * Added "prune" button in remotes dialog
 * Browse window title includes working dir
@@ -7157,18 +7265,23 @@
 * Fixed some minor bugs
 
 ### Version 1.44
+
 * Fixed some problems in new Visual Studio plugin
 
 ### Version 1.42
+
 * Fixed VS2005 plugin
 
 ### Version 1.41
+
 * Fixed a bug in Visual Studio plugin
 
 ### Version 1.40
+
 * Better Visual Studio integration.
 
 ### Version 1.38
+
 * Most dialogs are closed after a task is finished with success
 * Clone dialog is easier to understand
 * Fixed a spelling mistake
@@ -7176,19 +7289,23 @@
 * Filter feature added
 
 ### Version 1.37
+
 * Added diff highlighting (+/-) highlighting
 * Auto-fix settings refreshes automatically
 
 ### Version 1.36
+
 * Improved performance of commit dialog a lot.
 * Minor changes
 
 ### Version 1.35
+
 * Fixed bug causing multiple config entries
 * Improved solve mergeconflict features
 * Small changes to improve usability
 
 ### Version 1.30
+
 * Added support for custom mergetools
 * Fixed settings for git 1.6.1.xxx
 * Improved patch and rebase features
@@ -7198,6 +7315,7 @@
 * Some small 64bit Windows improvements (auto-settings, some paths)
 
 ### Version 1.28
+
 * Added 64-bit support
 * Added installer that also installs git and kdiff3
 * Added commandline support (gitex.cmd), see gitex help for list of commands
@@ -7206,21 +7324,26 @@
 * Various small improvements
 
 ### Version 1.27
+
 * Removed usage of git-clone.exe because it cause problems.
 
 ### Version 1.26
+
 * Fixed shell extensions....
 
 ### Version 1.25
+
 * PuTTY is working fine not (at least for me)
 * Setup is improved
 * Rebase improved
 * As long as you use PuTTY and not OpenSSH, all is fine.
 
 ### Version 1.21
+
 * Fixed some small bugs that sneeked in version 1.20
 
 ### Version 1.20
+
 * Added PuTTY support.
 * PuTTY can now be used instead of OpenSSH.
 * When using PuTTY the commandline windows that are needed for entering
@@ -7228,16 +7351,19 @@
 * PuTTY private keys can be configured per remote, so key is automatically loaded.
 
 ### Version 1.14
+
 * Improved rebase features a bit.
 * Minor bug fixes.
 
 ### Version 1.13
+
 * I'm still focusing on the push and pull features, because I use this a lot myself.
 * Improved auto-settings-correct features
 * Added rebase features
 * Improved merge conflict handling a bit.
 
 ### Version 1.12
+
 * Fixed lots of remote feature mistakes and added some missing features.
 * Push/pull/fetch should work as supposed to.
 * Added multiple stash support.
@@ -7245,49 +7371,60 @@
 * Know bug: delay loading commit graph is broken, I will fix this in the next release!
 
 ### Version 1.11
+
 * Added remote repository functions push/pull/fetch improved delete improved some small changes and bug fixes
 
 ### Version 1.09
+
 * Added Visual Studio 2005 and Visual Studio 2008 plugin to the setup as options.
 * Added .mailmap edit
 * Minor changes No bugfixes
 
 ### Version 1.08
+
 * Fixed drop down boxes in clone dialog
 * Added archive function
 * Fixed commit count
 * Fixed using " (quote) in commit message
 
 ### Version 1.07
+
 * Path of git.cmd can be edited
 * Format path fixed
 * Auto-config: register files fixed
 
 ### Version 1.06
+
 * Fixed file history diff, broke since using git.cmd
 
 ### Version 1.05
+
 * Unstage files problems fixed Problems cause by replace git.exe for git.cmd fixed (I hope)
 * Added progress dialog for a few commands
 
 ### Version 1.04
+
 * Using git.cmd instead of git.exe.
 
 ### Version 1.03
+
 * Bugs in commit solved
 * Added support for empty repositories
 
 ### Version 1.02
+
 * Added some usability changes
 * Added delete tag function
 * Added "reset branch" function
 
 ### Version 1.01
+
 * Blame function added to file history
 * Fixed working dir detection
 * Small performance improvements
 
 ### Version 1.00
+
 * Bugs in delay loading fixed
 * Added amend to commit dialog
 * Added init dialog
@@ -7298,44 +7435,52 @@
 * Fixed bug in mergetool.keepBackup setting, this should work now
 
 ### Version 0.98
+
 * Performance and stability increased
 * Bug that not all files where staged properly fixed
 * Added commit count per user dialog
 * Memory usage optimized
 
 ### Version 0.93
+
 * Performance of commit is increased (about 2x faster).
 * The installer is not needed anymore.
 * The program will check if it is installed correct and offers to fix the problems.
 * The installer is still recommended, because it adds icons and uninstaller.
 
 ### Version 0.92
+
 * Fixed a bug in clone/push/pull.
 
 * For this version I also added a non-installer version. This is just a zip file that contains the binairy files.
 * Please note that this is just the standalone application without shell extensions!
 
 ### Version 0.91
+
 * Rewritten most of commit logic. This works better now.
 * Colors added on tag/branch/stash labels
 * I also added a directory history on open/push/pull/clone, just to increase usabillity
 
 ### Version 0.9
+
 * Removed Visual Studio plugin
 * First stable release.
 * Please uninstall older versions carefully.
 
 ### Version 0.71
+
 * There was a nasty bug in the shell extensions in the last release, this caused explorer to crash. This is fixed now.
 * Lots of cosmetic changes too.
 * Reinstalling since version 0.7 shouldn't be a pain anymore singe there is no .net registration.
 
 ### Version 0.7
+
 * Rewritten shell extensions in c++, the program is a lot more stable now.
 * Fixed some small bugs, added lots of warnings and messages to prevent users from making mistakes.
 * Some small features added, nothing mayor since 0.6.
 
 ### Version 0.6
+
 * Add files
 * Apply patch
 * Create branch
@@ -7356,6 +7501,7 @@
 * View patch file
 
 ### Version 0.5
+
 * Pull/Push/Patch improved
 * Better feedback when an error occurs
 * Shell extension also works on directories
@@ -7363,17 +7509,21 @@
 * VS2008 doesn't crash on errors anymore (which was very annoying!)
 
 ### Version 0.4
+
 * Apply patch is now working
 * View patch is now ok
 
 ### Version 0.31
+
 * Added icons in the setup
 
 ### Version 0.30
+
 * Added install
 * Many bugfixes
 
 ### Version 0.2
+
 * Added apply patch interactive
 * Added change basic git settings
 * Added syntax highlighting (using ICSharpCode)
@@ -7381,12 +7531,10 @@
 * Many bugfixes
 
 ### Version 0.1
+
 * Added shell extension
 * Added visual studio 2008 plugin
 * Added standalone UI
-
-
-
 
 [Version 2.50]:https://github.com/gitextensions/gitextensions/releases/tag/v2.50
 [3777]:https://github.com/gitextensions/gitextensions/issues/3777

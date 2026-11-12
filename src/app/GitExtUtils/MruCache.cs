@@ -4,23 +4,17 @@ using JetBrains.Annotations;
 namespace GitExtUtils;
 
 /// <summary>
-/// Associative cache with fixed capacity that expires the last used item first.
+///     Associative cache with fixed capacity that expires the last used item first.
 /// </summary>
 /// <typeparam name="TKey">Type of keys in the cache.</typeparam>
 /// <typeparam name="TValue">Type of values in the cache.</typeparam>
 public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : notnull
 {
-    private readonly Dictionary<TKey, LinkedListNode<Entry>> _nodeByKey;
     private readonly LinkedList<Entry> _entries = new();
+    private readonly Dictionary<TKey, LinkedListNode<Entry>> _nodeByKey;
 
     /// <summary>
-    /// Gets the maximum number of entries that this cache will hold.
-    /// When full, attempts to add new entries will expire the last used entry.
-    /// </summary>
-    public int Capacity { get; }
-
-    /// <summary>
-    /// Initialises a new instance of <see cref="MruCache{TKey,TValue}"/>.
+    ///     Initialises a new instance of <see cref="MruCache{TKey,TValue}" />.
     /// </summary>
     /// <param name="capacity">The maximum number of entries the cache will hold.</param>
     public MruCache(int capacity)
@@ -34,13 +28,22 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
         _nodeByKey = new Dictionary<TKey, LinkedListNode<Entry>>(capacity);
     }
 
-    public IReadOnlyList<TKey> Keys => _nodeByKey.Keys.ToList();
+    /// <summary>
+    ///     Gets the maximum number of entries that this cache will hold.
+    ///     When full, attempts to add new entries will expire the last used entry.
+    /// </summary>
+    public int Capacity { get; }
+
+    public IReadOnlyList<TKey> Keys
+    {
+        get => _nodeByKey.Keys.ToList();
+    }
 
     /// <summary>
-    /// Adds an entry to the cache.
+    ///     Adds an entry to the cache.
     /// </summary>
     /// <remarks>
-    /// If an entry already exists with this key, it will be replaced.
+    ///     If an entry already exists with this key, it will be replaced.
     /// </remarks>
     /// <param name="key">The key that uniquely identifies this entry in the cache.</param>
     /// <param name="value">The value to store against the provided key.</param>
@@ -48,7 +51,7 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
     {
         Entry entry = new(key, value);
 
-        if (_nodeByKey.TryGetValue(key, out LinkedListNode<MruCache<TKey, TValue>.Entry>? node))
+        if (_nodeByKey.TryGetValue(key, out var node))
         {
             node.Value = entry;
             _entries.Remove(node);
@@ -58,7 +61,7 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
         {
             if (_entries.Count == Capacity)
             {
-                LinkedListNode<MruCache<TKey, TValue>.Entry>? last = _entries.Last;
+                var last = _entries.Last;
                 _entries.RemoveLast();
                 _nodeByKey.Remove(last!.Value.Key);
             }
@@ -69,7 +72,7 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
     }
 
     /// <summary>
-    /// Clears all items from the cache.
+    ///     Clears all items from the cache.
     /// </summary>
     public void Clear()
     {
@@ -78,14 +81,14 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
     }
 
     /// <summary>
-    /// Finds a cache entry, if it exists.
+    ///     Finds a cache entry, if it exists.
     /// </summary>
     /// <param name="key">The key that uniquely identifies the cache entry.</param>
     /// <param name="value">The cached value if found, otherwise <c>default</c>.</param>
-    /// <returns><c>true</c> if <paramref name="key"/> exists in the cache, otherwise <c>false</c>.</returns>
-    public bool TryGetValue(TKey key, [NotNullWhen(returnValue: true)] out TValue? value)
+    /// <returns><c>true</c> if <paramref name="key" /> exists in the cache, otherwise <c>false</c>.</returns>
+    public bool TryGetValue(TKey key, [NotNullWhen(true)] out TValue? value)
     {
-        if (!_nodeByKey.TryGetValue(key, out LinkedListNode<MruCache<TKey, TValue>.Entry>? node))
+        if (!_nodeByKey.TryGetValue(key, out var node))
         {
             value = default;
             return false;
@@ -99,16 +102,16 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
     }
 
     /// <summary>
-    /// Removes an entry from the cache, if it exists.
+    ///     Removes an entry from the cache, if it exists.
     /// </summary>
     /// <param name="key">The key that uniquely identifies the cache entry.</param>
     /// <param name="value">The removed value if found, otherwise <c>default</c>.</param>
-    /// <returns><c>true</c> if <paramref name="key"/> was removed from the cache, otherwise <c>false</c>.</returns>
+    /// <returns><c>true</c> if <paramref name="key" /> was removed from the cache, otherwise <c>false</c>.</returns>
     [ContractAnnotation("=>true,value:notnull")]
     [ContractAnnotation("=>false,value:null")]
-    public bool TryRemove(TKey key, [NotNullWhen(returnValue: true)] out TValue? value)
+    public bool TryRemove(TKey key, [NotNullWhen(true)] out TValue? value)
     {
-        if (!_nodeByKey.TryGetValue(key, out LinkedListNode<MruCache<TKey, TValue>.Entry>? node))
+        if (!_nodeByKey.TryGetValue(key, out var node))
         {
             value = default;
             return false;
@@ -120,15 +123,9 @@ public sealed class MruCache<TKey, TValue> where TKey : notnull where TValue : n
         return true;
     }
 
-    private readonly struct Entry
+    private readonly struct Entry(TKey key, TValue value)
     {
-        public TKey Key { get; }
-        public TValue Value { get; }
-
-        public Entry(TKey key, TValue value)
-        {
-            Key = key;
-            Value = value;
-        }
+        public TKey Key { get; } = key;
+        public TValue Value { get; } = value;
     }
 }

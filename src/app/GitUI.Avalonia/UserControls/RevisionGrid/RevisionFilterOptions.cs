@@ -1,9 +1,7 @@
-using GitExtUtils;
-
-namespace GitUI;
+namespace GitUI.UserControls.RevisionGrid;
 
 /// <summary>
-///  The history filters that go beyond the text search of the revision grid.
+///     The history filters that go beyond the text search of the revision grid.
 /// </summary>
 public sealed record RevisionFilterOptions
 {
@@ -24,16 +22,19 @@ public sealed record RevisionFilterOptions
     public bool SimplifyByDecoration { get; init; }
 
     /// <summary>
-    ///  Gets a value indicating whether any of the options restricts the history.
+    ///     Gets a value indicating whether any of the options restricts the history.
     /// </summary>
-    public bool IsActive => this != new RevisionFilterOptions();
+    public bool IsActive
+    {
+        get => this != new RevisionFilterOptions();
+    }
 
     /// <summary>
-    ///  Turns a user-entered path into the quoted pathspec passed after <c>--</c> to <c>git log</c>.
+    ///     Turns a user-entered path into the quoted pathspec passed after <c>--</c> to <c>git log</c>.
     /// </summary>
     public static string BuildPathSpec(string? path)
     {
-        string trimmed = path?.Trim() ?? string.Empty;
-        return trimmed.Length == 0 ? string.Empty : trimmed.QuoteIfNotQuotedAndNE();
+        var trimmed = path?.Trim() ?? string.Empty;
+        return trimmed.Length == 0 ? string.Empty : trimmed.QuoteIfNotQuotedAndNe();
     }
 }

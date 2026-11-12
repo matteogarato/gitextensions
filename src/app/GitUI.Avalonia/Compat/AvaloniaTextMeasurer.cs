@@ -2,18 +2,18 @@
 using Avalonia.Media;
 using GitExtensions.Shims.WinForms;
 using Font = GitExtensions.Shims.WinForms.Font;
-using FontStyle = GitExtensions.Shims.WinForms.FontStyle;
+using FontStyle = Avalonia.Media.FontStyle;
 using Size = System.Drawing.Size;
 
 namespace GitUI.Compat;
 
 /// <summary>
-///  Implements the shim <see cref="ITextMeasurer"/> with real Avalonia text shaping,
-///  replacing the shim's built-in approximation.
+///     Implements the shim <see cref="ITextMeasurer" /> with real Avalonia text shaping,
+///     replacing the shim's built-in approximation.
 /// </summary>
 public sealed class AvaloniaTextMeasurer : ITextMeasurer
 {
-    public Size MeasureText(string? text, Font? font)
+    Size ITextMeasurer.MeasureText(string? text, Font? font)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -22,12 +22,12 @@ public sealed class AvaloniaTextMeasurer : ITextMeasurer
 
         Typeface typeface = new(
             font?.Name ?? "sans-serif",
-            font?.Italic is true ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal,
+            font?.Italic is true ? FontStyle.Italic : FontStyle.Normal,
             font?.Bold is true ? FontWeight.Bold : FontWeight.Normal);
 
         // WinForms font sizes are points (1/72 inch); Avalonia takes device-independent pixels (1/96 inch).
-        const double PixelsPerPoint = 96.0 / 72;
-        double fontSizePixels = (font?.Size ?? 9F) * PixelsPerPoint;
+        const double pixelsPerPoint = 96.0 / 72;
+        var fontSizePixels = (font?.Size ?? 9F) * pixelsPerPoint;
 
         FormattedText formatted = new(
             text,
@@ -35,8 +35,9 @@ public sealed class AvaloniaTextMeasurer : ITextMeasurer
             FlowDirection.LeftToRight,
             typeface,
             fontSizePixels,
-            foreground: null);
+            null);
 
-        return new Size((int)Math.Ceiling(formatted.WidthIncludingTrailingWhitespace), (int)Math.Ceiling(formatted.Height));
+        return new Size((int)Math.Ceiling(formatted.WidthIncludingTrailingWhitespace),
+            (int)Math.Ceiling(formatted.Height));
     }
 }

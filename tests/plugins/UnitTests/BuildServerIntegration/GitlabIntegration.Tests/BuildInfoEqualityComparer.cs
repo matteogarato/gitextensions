@@ -5,7 +5,7 @@ namespace GitlabIntegrationTests;
 
 internal class BuildInfoEqualityComparer : IEqualityComparer<BuildInfo>
 {
-    public bool Equals(BuildInfo? x, BuildInfo? y)
+    bool IEqualityComparer<BuildInfo>.Equals(BuildInfo? x, BuildInfo? y)
     {
         if (ReferenceEquals(x, y))
         {
@@ -39,7 +39,7 @@ internal class BuildInfoEqualityComparer : IEqualityComparer<BuildInfo>
                && x.PullRequestUrl == y.PullRequestUrl;
     }
 
-    public int GetHashCode(BuildInfo obj)
+    int IEqualityComparer<BuildInfo>.GetHashCode(BuildInfo obj)
     {
         HashCode hashCode = new();
         hashCode.Add(obj.Id);
@@ -47,7 +47,7 @@ internal class BuildInfoEqualityComparer : IEqualityComparer<BuildInfo>
         hashCode.Add(obj.Duration);
         hashCode.Add((int)obj.Status);
         hashCode.Add(obj.Description);
-        foreach (ObjectId commitHash in obj.CommitHashList)
+        foreach (var commitHash in obj.CommitHashList)
         {
             hashCode.Add(commitHash);
         }

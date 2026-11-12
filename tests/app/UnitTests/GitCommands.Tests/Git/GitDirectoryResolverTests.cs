@@ -5,14 +5,15 @@ using GitCommands.Git;
 using NSubstitute;
 
 namespace GitCommandsTests.Git;
+
 public class GitDirectoryResolverTests
 {
+    private readonly DirectoryBase _directory = null!;
+    private readonly FileBase _file = null!;
+    private readonly IFileSystem _fileSystem = null!;
+    private readonly string _gitFile = null!;
+    private readonly string _gitWorkingDir = null!;
     private readonly string _workingDir = @"c:\dev\repo";
-    private string _gitWorkingDir = null!;
-    private string _gitFile = null!;
-    private FileBase _file = null!;
-    private DirectoryBase _directory = null!;
-    private IFileSystem _fileSystem = null!;
     private GitDirectoryResolver _resolver = null!;
 
     public GitDirectoryResolverTests()
@@ -64,11 +65,12 @@ public class GitDirectoryResolverTests
         _resolver.Resolve(_workingDir).Should().Be(_gitWorkingDir);
     }
 
-    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Fact(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     public void Resolve_should_return_path_from_git_file_if_present()
     {
         _file.Exists(_gitFile).Returns(true);
-        _file.ReadLines(_gitFile).Returns(new[] { "", " ", @"gitdir: c:/dev/repo/.git/modules/Externals/Git.hub", "text" });
+        _file.ReadLines(_gitFile)
+            .Returns(new[] { "", " ", @"gitdir: c:/dev/repo/.git/modules/Externals/Git.hub", "text" });
 
         _resolver.Resolve(_workingDir).Should().Be(@"c:\dev\repo\.git\modules\Externals\Git.hub\");
 
@@ -86,7 +88,7 @@ public class GitDirectoryResolverTests
         _directory.DidNotReceive().Exists(_gitWorkingDir);
     }
 
-    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Fact(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     public void Resolve_should_reconstruct_wsl_unc_path_for_posix_gitdir_in_linked_worktree()
     {
         // Regression test for #13272: committing from a linked worktree in a WSL repo.
@@ -95,8 +97,8 @@ public class GitDirectoryResolverTests
         // lives under the main repo's .git, on a different top-level directory.
         // The resolver must convert that POSIX path back into the \\wsl$ UNC path so that
         // COMMITMESSAGE is written to the same location git reads it from.
-        string workingDir = @"\\wsl$\Ubuntu\home\user\source\MyRepo.wt\ACTIVE";
-        string gitFile = Path.Combine(workingDir, ".git");
+        var workingDir = @"\\wsl$\Ubuntu\home\user\source\MyRepo.wt\ACTIVE";
+        var gitFile = Path.Combine(workingDir, ".git");
 
         _file.Exists(gitFile).Returns(true);
         _file.ReadLines(gitFile).Returns(new[] { "gitdir: /home/user/source/MyRepo/.git/worktrees/ACTIVE" });
@@ -107,12 +109,12 @@ public class GitDirectoryResolverTests
         _directory.DidNotReceive().Exists(gitFile.EnsureTrailingPathSeparator());
     }
 
-    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Fact(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     public void Resolve_should_map_wsl_mnt_path_to_windows_drive()
     {
         // A /mnt/<drive> path (WSL view of a Windows drive) must map back to the drive letter.
-        string workingDir = @"\\wsl$\Ubuntu\mnt\c\dev\repo";
-        string gitFile = Path.Combine(workingDir, ".git");
+        var workingDir = @"\\wsl$\Ubuntu\mnt\c\dev\repo";
+        var gitFile = Path.Combine(workingDir, ".git");
 
         _file.Exists(gitFile).Returns(true);
         _file.ReadLines(gitFile).Returns(new[] { "gitdir: /mnt/c/dev/repo/.git/worktrees/ACTIVE" });
@@ -121,12 +123,13 @@ public class GitDirectoryResolverTests
             .Should().Be(@"C:\dev\repo\.git\worktrees\ACTIVE\");
     }
 
-    [Fact(SkipUnless = nameof(GitCommandsTests.PlatformTestConditions.IsWindows), SkipType = typeof(GitCommandsTests.PlatformTestConditions))]
+    [Fact(SkipUnless = nameof(PlatformTestConditions.IsWindows), SkipType = typeof(PlatformTestConditions))]
     public void Resolve_should_return_unc_gitdir_path_unchanged()
     {
         // A fully qualified UNC gitdir path is already usable and must be returned as-is.
         _file.Exists(_gitFile).Returns(true);
-        _file.ReadLines(_gitFile).Returns(new[] { @"gitdir: \\wsl$\Ubuntu\home\user\source\MyRepo\.git\worktrees\ACTIVE" });
+        _file.ReadLines(_gitFile)
+            .Returns(new[] { @"gitdir: \\wsl$\Ubuntu\home\user\source\MyRepo\.git\worktrees\ACTIVE" });
 
         _resolver.Resolve(_workingDir)
             .Should().Be(@"\\wsl$\Ubuntu\home\user\source\MyRepo\.git\worktrees\ACTIVE\");
@@ -144,7 +147,7 @@ public class GitDirectoryResolverTests
     public void Resolve_submodule_real_filesystem()
     {
         using GitModuleTestHelper helper = new();
-        string submodulePath = Path.Combine(helper.Module.WorkingDir, "External", "Git.hub");
+        var submodulePath = Path.Combine(helper.Module.WorkingDir, "External", "Git.hub");
         helper.CreateFile(submodulePath, ".git", "\r \r\ngitdir: ../../.git/modules/Externals/Git.hub\r\ntext");
         _resolver = new GitDirectoryResolver();
 

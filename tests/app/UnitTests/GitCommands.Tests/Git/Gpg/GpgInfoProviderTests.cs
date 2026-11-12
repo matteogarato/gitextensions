@@ -1,15 +1,13 @@
-﻿using AwesomeAssertions;
-using GitCommands.Git.Gpg;
+﻿using GitCommands.Git.Gpg;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
 using NSubstitute;
 
 namespace GitCommandsTests.Git.Gpg;
 
 public class GpgInfoProviderTests
 {
-    private IGitGpgController _gitGpgController = null!;
-    private GpgInfoProvider _provider = null!;
+    private readonly IGitGpgController _gitGpgController = null!;
+    private readonly GpgInfoProvider _provider = null!;
 
     public GpgInfoProviderTests()
     {
@@ -56,7 +54,7 @@ public class GpgInfoProviderTests
         _gitGpgController.GetRevisionCommitSignatureStatusAsync(revision).Returns(commitStatusSource.Task);
         _gitGpgController.GetRevisionTagSignatureStatusAsync(revision).Returns(tagStatusSource.Task);
 
-        Task<GpgInfo?> loadGpgInfoTask = _provider.LoadGpgInfoAsync(revision, cts.Token);
+        var loadGpgInfoTask = _provider.LoadGpgInfoAsync(revision, cts.Token);
 
         // A newer selection arrives and cancels this in-flight request's token...
         await cts.CancelAsync();

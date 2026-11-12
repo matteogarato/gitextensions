@@ -1,38 +1,41 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace System;
+namespace GitUI.Interops.User32;
 
 internal static partial class NativeMethods
 {
-    public static IntPtr HWND_BROADCAST => (IntPtr)0xFFFF;
+    public static IntPtr HwndBroadcast
+    {
+        get => 0xFFFF;
+    }
 
     [DllImport(Libraries.User32, ExactSpelling = true)]
     public static extern IntPtr PostMessageW(
         IntPtr hWnd,
-        uint Msg,
+        uint msg,
         IntPtr wParam = default,
         IntPtr lParam = default);
 
     public static IntPtr PostMessageW(
         HandleRef hWnd,
-        uint Msg,
+        uint msg,
         IntPtr wParam = default,
         IntPtr lParam = default)
     {
-        IntPtr result = PostMessageW(hWnd.Handle, Msg, wParam, lParam);
+        var result = PostMessageW(hWnd.Handle, msg, wParam, lParam);
         GC.KeepAlive(hWnd.Wrapper);
         return result;
     }
 
     public static unsafe IntPtr PostMessageW<T>(
         IntPtr hWnd,
-        uint Msg,
+        uint msg,
         IntPtr wParam,
         ref T lParam) where T : unmanaged
     {
         fixed (void* l = &lParam)
         {
-            return PostMessageW(hWnd, Msg, wParam, (IntPtr)l);
+            return PostMessageW(hWnd, msg, wParam, (IntPtr)l);
         }
     }
 }

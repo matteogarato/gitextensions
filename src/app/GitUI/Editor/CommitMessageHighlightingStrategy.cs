@@ -1,33 +1,37 @@
 ﻿using GitExtensions.Extensibility.Git;
 using GitExtUtils.GitUI.Theming;
-using ICSharpCode.TextEditor;
 using ICSharpCode.TextEditor.Document;
+using ICSharpCode.TextEditor.Document.HighlightingStrategy;
+using ICSharpCode.TextEditor.Document.LineManager;
+using ICSharpCode.TextEditor.Document.MarkerStrategy;
+using ICSharpCode.TextEditor.Gui;
 
 namespace GitUI.Editor;
 
-internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrategyBase
+internal sealed class CommitMessageHighlightingStrategy(IGitModule module)
+    : GitHighlightingStrategyBase("GitCommitMessage", module)
 {
-    private static HighlightColor ColorSummary { get; } = new(nameof(SystemColors.WindowText), bold: true, italic: false);
+    private readonly TextMarker _markerSpacerNeeded =
+        new(0, 0, TextMarkerType.WaveLine, Color.Red.AdaptBackColor())
+        {
+            ToolTip = "There must be a blank line after the summary."
+        };
+
+    private readonly TextMarker _markerSummaryTooLong =
+        new(0, 0, TextMarkerType.WaveLine, Color.Red.AdaptBackColor()) { ToolTip = "Summary line is too long." };
 
     private readonly List<TextMarker> _overlengthDescriptionMarkers = [];
-
-    private readonly TextMarker _markerSummaryTooLong = new(0, 0, TextMarkerType.WaveLine, Color.Red.AdaptBackColor()) { ToolTip = "Summary line is too long." };
-    private readonly TextMarker _markerSpacerNeeded = new(0, 0, TextMarkerType.WaveLine, Color.Red.AdaptBackColor()) { ToolTip = "There must be a blank line after the summary." };
-
-    public CommitMessageHighlightingStrategy(IGitModule module)
-        : base("GitCommitMessage", module)
-    {
-    }
+    private static HighlightColor ColorSummary { get; } = new(nameof(SystemColors.WindowText), true, false);
 
     // TODO pending issue is that when text is pasted into the editor, validation markers are not updated until their lines are modified (seems like a bug in the editor)
 
     protected override void MarkTokens(IDocument document, IList<LineSegment> lines)
     {
-        int summaryLineNumber = -1;
-        bool seenDividingSpace = false;
-        int descriptionStartLineNumber = -1;
+        var summaryLineNumber = -1;
+        var seenDividingSpace = false;
+        var descriptionStartLineNumber = -1;
 
-        foreach (LineSegment line in document.LineSegmentCollection)
+        foreach (var line in document.LineSegmentCollection)
         {
             if (summaryLineNumber == -1)
             {
@@ -63,18 +67,18 @@ internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrateg
 
         // NOTE the pattern of removing then adding markers might look suboptimal, but tracking their presence isn't reliable as they can be removed without warning
 
-        foreach (LineSegment line in lines)
+        foreach (var line in lines)
         {
-            int lineNumber = line.LineNumber;
+            var lineNumber = line.LineNumber;
 
             if (TryHighlightComment(document, line))
             {
             }
             else
             {
-                HighlightColor color = lineNumber == summaryLineNumber ? ColorSummary : ColorNormal;
+                var color = lineNumber == summaryLineNumber ? ColorSummary : ColorNormal;
 
-                line.Words = [new(document, line, 0, line.Length, color, hasDefaultColor: false)];
+                line.Words = [new TextWord(document, line, 0, line.Length, color, false)];
 
                 if (lineNumber == summaryLineNumber)
                 {
@@ -108,7 +112,7 @@ internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrateg
         {
             if (_overlengthDescriptionMarkers.Count != 0)
             {
-                foreach (TextMarker marker in _overlengthDescriptionMarkers)
+                foreach (var marker in _overlengthDescriptionMarkers)
                 {
                     document.MarkerStrategy.RemoveMarker(marker);
                 }
@@ -119,9 +123,9 @@ internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrateg
             return;
         }
 
-        int markerIndex = 0;
+        var markerIndex = 0;
 
-        foreach (LineSegment line in document.LineSegmentCollection)
+        foreach (var line in document.LineSegmentCollection)
         {
             if (line.LineNumber < descriptionStartLineNumber)
             {
@@ -130,8 +134,8 @@ internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrateg
 
             if (line.Length > maxDescriptionLength)
             {
-                int markerOffset = line.Offset + maxDescriptionLength;
-                int markerLength = line.Length - maxDescriptionLength;
+                var markerOffset = line.Offset + maxDescriptionLength;
+                var markerLength = line.Length - maxDescriptionLength;
 
                 TextMarker overlengthMarker;
                 if (markerIndex < _overlengthDescriptionMarkers.Count)
@@ -140,7 +144,11 @@ internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrateg
                 }
                 else
                 {
-                    overlengthMarker = new TextMarker(markerOffset, markerLength, TextMarkerType.WaveLine, Color.Red.AdaptBackColor()) { ToolTip = "Line is too long." };
+                    overlengthMarker =
+                        new TextMarker(markerOffset, markerLength, TextMarkerType.WaveLine, Color.Red.AdaptBackColor())
+                        {
+                            ToolTip = "Line is too long."
+                        };
                     _overlengthDescriptionMarkers.Add(overlengthMarker);
                     document.MarkerStrategy.AddMarker(overlengthMarker);
                 }
@@ -152,13 +160,13 @@ internal sealed class CommitMessageHighlightingStrategy : GitHighlightingStrateg
             }
         }
 
-        int toRemove = _overlengthDescriptionMarkers.Count - markerIndex;
+        var toRemove = _overlengthDescriptionMarkers.Count - markerIndex;
 
         if (toRemove > 0)
         {
-            for (int i = 0; i < toRemove; i++)
+            for (var i = 0; i < toRemove; i++)
             {
-                TextMarker marker = _overlengthDescriptionMarkers[markerIndex + i];
+                var marker = _overlengthDescriptionMarkers[markerIndex + i];
                 document.MarkerStrategy.RemoveMarker(marker);
             }
 

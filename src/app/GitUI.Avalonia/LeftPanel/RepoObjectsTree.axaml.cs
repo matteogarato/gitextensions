@@ -1,8 +1,6 @@
 ﻿using Avalonia.Controls;
 using GitExtensions.Extensibility.Git;
-using GitUIPluginInterfaces;
-
-using ResourceManager;
+using GitUI.Compat;
 
 namespace GitUI.LeftPanel;
 
@@ -21,34 +19,42 @@ public partial class RepoObjectsTree : GitExtensionsControl
     }
 
     /// <summary>
-    ///  Occurs when the selected node changes.
+    ///     Gets the ref of the selected node, or <see langword="null" /> for group nodes.
+    /// </summary>
+    public IGitRef? SelectedRef
+    {
+        get => (treeMain.SelectedItem as TreeViewItem)?.Tag as IGitRef;
+    }
+
+    /// <summary>
+    ///     Gets the selected stash, or <see langword="null" />.
+    /// </summary>
+    public GitStash? SelectedStash
+    {
+        get => (treeMain.SelectedItem as TreeViewItem)?.Tag as GitStash;
+    }
+
+    /// <summary>
+    ///     Occurs when the selected node changes.
     /// </summary>
     public event EventHandler? SelectionChanged;
 
     /// <summary>
-    ///  Gets the ref of the selected node, or <see langword="null"/> for group nodes.
-    /// </summary>
-    public IGitRef? SelectedRef => (treeMain.SelectedItem as TreeViewItem)?.Tag as IGitRef;
-
-    /// <summary>
-    ///  Gets the selected stash, or <see langword="null"/>.
-    /// </summary>
-    public GitStash? SelectedStash => (treeMain.SelectedItem as TreeViewItem)?.Tag as GitStash;
-
-    /// <summary>
-    ///  Fills the tree from the repository refs and stashes.
+    ///     Fills the tree from the repository refs and stashes.
     /// </summary>
     public void SetRefs(IReadOnlyList<IGitRef> refs, IReadOnlyList<GitStash>? stashes = null)
     {
         stashes ??= [];
         TreeViewItem stashesNode = new()
         {
-            Header = $"{GitUI.TranslatedStrings.Stashes} ({stashes.Count})",
-            ItemsSource = stashes.Select(stash => new TreeViewItem { Header = stash.Summary, Tag = stash }).ToArray(),
+            Header = $"{TranslatedStrings.Stashes} ({stashes.Count})",
+            ItemsSource = stashes.Select(stash => new TreeViewItem { Header = stash.Summary, Tag = stash })
+                .ToArray()
         };
-        TreeViewItem branchesNode = CreateGroupNode(GitUI.TranslatedStrings.Branches, refs.Where(gitRef => gitRef.IsHead && !gitRef.IsTag));
-        TreeViewItem remotesNode = CreateGroupNode(GitUI.TranslatedStrings.Remotes, refs.Where(gitRef => gitRef.IsRemote));
-        TreeViewItem tagsNode = CreateGroupNode(GitUI.TranslatedStrings.Tags, refs.Where(gitRef => gitRef.IsTag));
+        var branchesNode = CreateGroupNode(TranslatedStrings.Branches,
+            refs.Where(gitRef => gitRef.IsHead && !gitRef.IsTag));
+        var remotesNode = CreateGroupNode(TranslatedStrings.Remotes, refs.Where(gitRef => gitRef.IsRemote));
+        var tagsNode = CreateGroupNode(TranslatedStrings.Tags, refs.Where(gitRef => gitRef.IsTag));
         branchesNode.IsExpanded = true;
 
         treeMain.ItemsSource = new[] { branchesNode, remotesNode, tagsNode, stashesNode };
@@ -57,18 +63,16 @@ public partial class RepoObjectsTree : GitExtensionsControl
 
         static TreeViewItem CreateGroupNode(string caption, IEnumerable<IGitRef> groupRefs)
         {
-            TreeViewItem[] children = [.. groupRefs
-                .OrderBy(gitRef => gitRef.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(gitRef => new TreeViewItem
-                {
-                    Header = gitRef.IsSelected ? $"* {gitRef.Name}" : gitRef.Name,
-                    Tag = gitRef
-                })];
-            return new TreeViewItem
-            {
-                Header = $"{caption} ({children.Length})",
-                ItemsSource = children,
-            };
+            TreeViewItem[] children =
+            [
+                .. groupRefs
+                    .OrderBy(gitRef => gitRef.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(gitRef => new TreeViewItem
+                    {
+                        Header = gitRef.IsSelected ? $"* {gitRef.Name}" : gitRef.Name, Tag = gitRef
+                    })
+            ];
+            return new TreeViewItem { Header = $"{caption} ({children.Length})", ItemsSource = children };
         }
     }
 }

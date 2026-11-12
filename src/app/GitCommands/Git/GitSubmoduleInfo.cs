@@ -1,18 +1,11 @@
 ﻿using GitExtensions.Extensibility.Git;
 
-namespace GitCommands;
+namespace GitCommands.Git;
 
 public sealed class GitSubmoduleInfo : IGitSubmoduleInfo
 {
-    public string Name { get; }
-    public string LocalPath { get; }
-    public string RemotePath { get; }
-    public ObjectId CurrentCommitId { get; }
-    public string Branch { get; }
-    public bool IsInitialized { get; }
-    public bool IsUpToDate { get; }
-
-    public GitSubmoduleInfo(string name, string localPath, string remotePath, ObjectId currentCommitId, string branch, bool isInitialized, bool isUpToDate)
+    public GitSubmoduleInfo(string name, string localPath, string remotePath, ObjectId currentCommitId, string branch,
+        bool isInitialized, bool isUpToDate)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         LocalPath = localPath ?? throw new ArgumentNullException(nameof(localPath));
@@ -28,7 +21,15 @@ public sealed class GitSubmoduleInfo : IGitSubmoduleInfo
         IsUpToDate = isUpToDate;
     }
 
-    public string Status
+    string IGitSubmoduleInfo.Name { get; }
+    string IGitSubmoduleInfo.LocalPath { get; }
+    string IGitSubmoduleInfo.RemotePath { get; }
+    ObjectId IGitSubmoduleInfo.CurrentCommitId { get; }
+    string IGitSubmoduleInfo.Branch { get; }
+    bool IGitSubmoduleInfo.IsInitialized { get; }
+    bool IGitSubmoduleInfo.IsUpToDate { get; }
+
+    string IGitSubmoduleInfo.Status
     {
         get
         {

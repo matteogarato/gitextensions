@@ -1,8 +1,8 @@
 ﻿using System.Threading.Channels;
 using GitExtUtils;
-using GitUI;
 
-namespace GitCommandsTests;
+namespace GitExtUtilsTests;
+
 public sealed class AsyncStreamReaderTests
 {
     [Theory]
@@ -32,7 +32,7 @@ public sealed class AsyncStreamReaderTests
         List<string> notifiedTexts = [];
         List<string> expectedTexts = [];
 
-        AsyncStreamReader asyncStreamReader = new(streamReaderMock, notify: text => notifiedTexts.Add(text));
+        AsyncStreamReader asyncStreamReader = new(streamReaderMock, text => notifiedTexts.Add(text));
 
         streamReaderMock.Inject(blockOfEndedLines);
         await Task.Delay(millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
@@ -82,15 +82,16 @@ public sealed class AsyncStreamReaderTests
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.EndOfStream = true;
-        int start = Environment.TickCount;
-        await asyncStreamReader.WaitUntilEofAsync(cancellationToken: TestContext.Current.CancellationToken);
-        int delay = Environment.TickCount - start;
+        var start = Environment.TickCount;
+        await asyncStreamReader.WaitUntilEofAsync(TestContext.Current.CancellationToken);
+        var delay = Environment.TickCount - start;
         delay.Should().BeLessThan(millisecondsDelayForAsyncNotification);
         expectedTexts.AddRange([partialLine]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
 
         streamReaderMock.Inject(blockOfEndedLines);
-        await Task.Delay(millisecondsDelayForPartialLine + millisecondsDelayForAsyncNotification, TestContext.Current.CancellationToken);
+        await Task.Delay(millisecondsDelayForPartialLine + millisecondsDelayForAsyncNotification,
+            TestContext.Current.CancellationToken);
         expectedTexts.AddRange([]);
         notifiedTexts.Should().BeEquivalentTo(expectedTexts);
     }
@@ -98,10 +99,10 @@ public sealed class AsyncStreamReaderTests
     private class StreamReaderMock : IStreamReader
     {
         private readonly Channel<string> _channel = Channel.CreateUnbounded<string>();
-        private bool _endOfStream = false;
         private string _buffer = "";
+        private bool _endOfStream;
 
-        public bool EndOfStream
+        private bool EndOfStream
         {
             get => _endOfStream;
             set
@@ -111,15 +112,20 @@ public sealed class AsyncStreamReaderTests
             }
         }
 
-        public async ValueTask<int> ReadAsync(Memory<char> buffer, CancellationToken cancellationToken)
+        bool IStreamReader.EndOfStream
+        {
+            get => EndOfStream;
+        }
+
+        async ValueTask<int> IStreamReader.ReadAsync(Memory<char> buffer, CancellationToken cancellationToken)
         {
             if (_buffer.Length == 0)
             {
                 _buffer = await _channel.Reader.ReadAsync(cancellationToken);
             }
 
-            int length = Math.Min(_buffer.Length, buffer.Length);
-            for (int index = 0; index < length; ++index)
+            var length = Math.Min(_buffer.Length, buffer.Length);
+            for (var index = 0; index < length; ++index)
             {
                 buffer.Span[index] = _buffer[index];
             }

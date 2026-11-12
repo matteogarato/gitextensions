@@ -1,21 +1,21 @@
-using GitCommands;
+using GitCommands.Settings;
 
 namespace GitUI.LeftPanel;
 
 partial class RepoObjectsTree
 {
     /// <summary>
-    /// We assume tree to position indices are 0-based and sequential. In case this
-    /// is no longer true, because for e.g. user has reverted to an earlier version,
-    /// this function will fix the indices, attempting to maintain the existing order.
+    ///     We assume tree to position indices are 0-based and sequential. In case this
+    ///     is no longer true, because for e.g. user has reverted to an earlier version,
+    ///     this function will fix the indices, attempting to maintain the existing order.
     /// </summary>
     private void FixInvalidTreeToPositionIndices()
     {
         // Sort by index, then force assign 0-based sequential indices
-        Dictionary<Tree, int> treeToIndex = GetTreeToPositionIndex();
+        var treeToIndex = GetTreeToPositionIndex();
 
-        int i = 0;
-        foreach (KeyValuePair<Tree, int> kvp in treeToIndex.OrderBy(kvp => kvp.Value))
+        var i = 0;
+        foreach (var kvp in treeToIndex.OrderBy(kvp => kvp.Value))
         {
             treeToIndex[kvp.Key] = i;
             ++i;
@@ -49,14 +49,14 @@ partial class RepoObjectsTree
 
     private void ReorderTreeNode(TreeNode node, bool up)
     {
-        Tree? tree = (Tree?)node.Tag;
-        Dictionary<Tree, int> treeToIndex = GetTreeToPositionIndex();
-        Dictionary<int, Tree> indexToTree = treeToIndex.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+        var tree = (Tree?)node.Tag;
+        var treeToIndex = GetTreeToPositionIndex();
+        var indexToTree = treeToIndex.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
 
-        int currIndex = treeToIndex[tree!];
+        var currIndex = treeToIndex[tree!];
 
         // Find next visible tree to swap with, if any
-        int swapIndex = currIndex;
+        var swapIndex = currIndex;
         do
         {
             swapIndex = up ? swapIndex - 1 : swapIndex + 1;
@@ -66,10 +66,9 @@ partial class RepoObjectsTree
             {
                 return;
             }
-        }
-        while (!indexToTree[swapIndex].TreeViewNode.IsVisible);
+        } while (!indexToTree[swapIndex].TreeViewNode.IsVisible);
 
-        Tree swapWithTree = indexToTree[swapIndex];
+        var swapWithTree = indexToTree[swapIndex];
 
         // Swap indices
         treeToIndex[tree!] = treeToIndex[swapWithTree];

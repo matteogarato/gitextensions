@@ -1,12 +1,7 @@
 ﻿namespace GitUI.Design;
 
 [AttributeUsage(AttributeTargets.Property)]
-internal sealed class PropertyOrderAttribute : Attribute
+internal sealed class PropertyOrderAttribute(int order) : Attribute
 {
-    public PropertyOrderAttribute(int order)
-    {
-        Order = order;
-    }
-
-    public int Order { get; }
+    public int Order { get; } = order;
 }
